@@ -8,6 +8,10 @@ import {
   deletePost,
   getRecentPosts,
   cheerPost,
+  reactToPost,
+  sharePost,
+  toggleReactionVisibility,
+  moderatePost,
 } from '../controllers/postController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 
@@ -19,10 +23,16 @@ router.get('/recent', getRecentPosts);
 router.get('/slug/:slug', getPostBySlug);
 router.get('/:id', getPostById);
 router.post('/:id/cheer', cheerPost);
+router.post('/:id/share', sharePost);
 
-// Đăng bài viết / tâm sự (Yêu cầu đăng nhập)
+// Tương tác yêu cầu đăng nhập
+router.post('/:id/react', protect, reactToPost);
+router.patch('/:id/reaction-visibility', protect, toggleReactionVisibility);
+
+// Đăng & Quản lý bài viết / tâm sự (Yêu cầu đăng nhập)
 router.post('/', protect, createPost);
 router.put('/:id', protect, updatePost);
 router.delete('/:id', protect, deletePost);
+router.patch('/:id/moderate', protect, moderatePost);
 
 export default router;

@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useChat } from '../../context/ChatContext';
 import { commentService } from '../../services/commentService';
 import { formatDate } from '../../utils/formatDate';
 import { LoadingSpinner } from '../common/LoadingSpinner';
+import { maskSensitiveText } from '../../utils/sensitiveFilter';
 
 const CHEER_TYPES = [
   { id: 'encourage', label: '💪 Cố lên nhé' },
@@ -11,8 +14,20 @@ const CHEER_TYPES = [
   { id: 'general', label: '💬 Đồng cảm' },
 ];
 
-export const CommentSection = ({ postId }) => {
+const CURATED_GIFS = [
+  { id: 'hug', label: '🫂 Gửi cái ôm ấm áp', url: 'https://media.giphy.com/media/l41lI4bYmcsPJX9Go/giphy.gif' },
+  { id: 'heart', label: '❤️ Thả tim yêu thương', url: 'https://media.giphy.com/media/M90mJvfWfd5mbUuULX/giphy.gif' },
+  { id: 'cheer', label: '💪 Bạn đã làm rất tốt', url: 'https://media.giphy.com/media/3oEdv4hwWTzBhWvaU0/giphy.gif' },
+  { id: 'peace', label: '🐱 Mèo vỗ về bình yên', url: 'https://media.giphy.com/media/ICOgUNjpvO0PC/giphy.gif' },
+  { id: 'coffee', label: '☕ Tách cafe thư giãn', url: 'https://media.giphy.com/media/3oKIPnAiaMCws8nOsE/giphy.gif' },
+  { id: 'flower', label: '🌸 Đóa hoa chữa lành', url: 'https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif' },
+  { id: 'highfive', label: '🙌 High five tiếp sức', url: 'https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif' },
+  { id: 'sparkles', label: '✨ Tỏa sáng ngày mới', url: 'https://media.giphy.com/media/dzaUX7CAG0Ihi/giphy.gif' },
+];
+
+export const CommentSection = ({ postId, postAuthorName }) => {
   const { user, isAuthenticated, openLoginModal } = useAuth();
+  const { openChatWithUser, handleAddFriend, friendsList } = useChat();
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newContent, setNewContent] = useState('');
@@ -20,7 +35,38 @@ export const CommentSection = ({ postId }) => {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Tải danh sách bình luận (Khách hay thành viên đều đọc được)
+  // Trạng thái trả lời (Reply / Tagging kiểu Facebook)
+  const [replyingTo, setReplyingTo] = useState(null); // { commentId, userName }
+  const textareaRef = useRef(null);
+
+  // Trạng thái đính kèm ảnh động GIF trong bình luận
+  const [attachedGif, setAttachedGif] = useState('');
+  const [showGifPicker, setShowGifPicker] = useState(false);
+  const commentGifInputRef = useRef(null);
+  const gifPickerRef = useRef(null);
+
+  // Đóng bảng chọn GIF khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (gifPickerRef.current && !gifPickerRef.current.contains(e.target)) {
+        setShowGifPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleGifUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setAttachedGif(ev.target?.result);
+      setShowGifPicker(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const fetchComments = () => {
     commentService
       .getCommentsByPost(postId)
@@ -40,21 +86,71 @@ export const CommentSection = ({ postId }) => {
     }
   }, [postId]);
 
+  const handleStartReply = (commentId, targetUserName) => {
+    if (!isAuthenticated) {
+      openLoginModal();
+      return;
+    }
+    setReplyingTo({ commentId, userName: targetUserName });
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const handleCancelReply = () => {
+    setReplyingTo(null);
+  };
+
+  const handleLikeComment = async (commentId) => {
+    try {
+      const res = await commentService.likeComment(commentId);
+      const newLikes = res.data?.likesCount || 1;
+
+      setComments((prev) =>
+        prev.map((c) => {
+          if (c._id === commentId) {
+            return { ...c, likesCount: newLikes };
+          }
+          if (c.replies && c.replies.length > 0) {
+            return {
+              ...c,
+              replies: c.replies.map((r) =>
+                r._id === commentId ? { ...r, likesCount: newLikes } : r
+              ),
+            };
+          }
+          return c;
+        })
+      );
+    } catch (err) {
+      console.warn('Lỗi thích bình luận:', err);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!newContent.trim()) return;
+    if (!newContent.trim() && !attachedGif) return;
 
     setSubmitting(true);
     setErrorMsg('');
 
     try {
-      const res = await commentService.createComment(postId, {
-        content: newContent,
+      const cleanComment = maskSensitiveText(newContent.trim());
+      const payload = {
+        content: cleanComment || '❤️ [Ảnh động GIF]',
+        gifUrl: attachedGif || '',
         cheerType: selectedCheerType,
-      });
-      // Đưa bình luận mới lên đầu danh sách
-      setComments([res.data, ...comments]);
+        parentComment: replyingTo ? replyingTo.commentId : null,
+        replyToUser: replyingTo ? replyingTo.userName : null,
+      };
+
+      await commentService.createComment(postId, payload);
       setNewContent('');
+      setAttachedGif('');
+      setShowGifPicker(false);
+      setReplyingTo(null);
+      fetchComments();
     } catch (err) {
       setErrorMsg(err.message || 'Không thể gửi bình luận lúc này.');
     } finally {
@@ -66,44 +162,69 @@ export const CommentSection = ({ postId }) => {
     if (!window.confirm('Bạn có chắc muốn xóa lời nhắn này?')) return;
     try {
       await commentService.deleteComment(commentId);
-      setComments(comments.filter((c) => c._id !== commentId));
+      fetchComments();
     } catch (err) {
       alert(err.message || 'Lỗi khi xóa bình luận');
     }
   };
 
+  // Tính tổng số lượng bình luận và phản hồi
+  const totalCommentsCount = comments.reduce(
+    (acc, c) => acc + 1 + (c.replies ? c.replies.length : 0),
+    0
+  );
+
   return (
     <div className="comment-section-box">
       <div className="comment-section-header">
         <h3 className="section-title">
-          💬 Lời Động Viên & Trò Chuyện ({comments.length})
+          💬 Lời Động Viên & Trò Chuyện ({totalCommentsCount})
         </h3>
         <p className="section-subtitle">
-          Một lời nói tử tế có thể thắp sáng cả một ngày u tối của ai đó.
+          Một lời nói tử tế có thể thắp sáng cả một ngày u tối của ai đó. Bạn có thể trò chuyện và trả lời nhau tại đây.
         </p>
       </div>
 
-      {/* Form gửi bình luận */}
+      {/* Form gửi bình luận / Trả lời */}
       {isAuthenticated ? (
         <form onSubmit={handleSubmit} className="comment-form">
           {errorMsg && <div className="modal-error">{errorMsg}</div>}
 
-          {/* Chọn loại tương tác/cảm xúc */}
-          <div className="cheer-type-selector">
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Tâm thế gửi gắm:</span>
-            <div className="cheer-pills">
-              {CHEER_TYPES.map((t) => (
-                <button
-                  type="button"
-                  key={t.id}
-                  className={`cheer-pill-btn ${selectedCheerType === t.id ? 'active' : ''}`}
-                  onClick={() => setSelectedCheerType(t.id)}
-                >
-                  {t.label}
-                </button>
-              ))}
+          {/* Banner báo đang trả lời người khác (Facebook Style) */}
+          {replyingTo && (
+            <div className="replying-banner">
+              <span>
+                ↩️ Đang trả lời <strong>@{replyingTo.userName}</strong>:
+              </span>
+              <button
+                type="button"
+                className="cancel-reply-btn"
+                onClick={handleCancelReply}
+                title="Hủy trả lời"
+              >
+                ✕ Hủy
+              </button>
             </div>
-          </div>
+          )}
+
+          {/* Chọn loại tương tác/cảm xúc (chỉ hiển thị khi bình luận gốc) */}
+          {!replyingTo && (
+            <div className="cheer-type-selector">
+              <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Tâm thế gửi gắm:</span>
+              <div className="cheer-pills">
+                {CHEER_TYPES.map((t) => (
+                  <button
+                    type="button"
+                    key={t.id}
+                    className={`cheer-pill-btn ${selectedCheerType === t.id ? 'active' : ''}`}
+                    onClick={() => setSelectedCheerType(t.id)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="comment-input-wrap">
             <img
@@ -111,28 +232,98 @@ export const CommentSection = ({ postId }) => {
               alt={user?.name}
               className="comment-author-avatar"
             />
-            <textarea
-              className="comment-textarea"
-              placeholder={`Bạn muốn nhắn gửi lời động viên gì tới tác giả bài viết này?`}
-              rows={3}
-              value={newContent}
-              onChange={(e) => setNewContent(e.target.value)}
-              required
-            />
+            <div style={{ flexGrow: 1, minWidth: 0 }}>
+              <textarea
+                ref={textareaRef}
+                className="comment-textarea"
+                placeholder={
+                  replyingTo
+                    ? `Nhập câu trả lời gửi đến @${replyingTo.userName}...`
+                    : `Bạn muốn nhắn gửi lời động viên hay chia sẻ gì tới tác giả bài viết này?`
+                }
+                rows={3}
+                value={newContent}
+                onChange={(e) => setNewContent(e.target.value)}
+              />
+
+              {/* Xem trước GIF đang đính kèm */}
+              {attachedGif && (
+                <div className="comment-attached-preview-box">
+                  <img src={attachedGif} alt="GIF đính kèm" className="comment-preview-gif-img" />
+                  <button
+                    type="button"
+                    className="remove-gif-btn"
+                    onClick={() => setAttachedGif('')}
+                    title="Xóa GIF đính kèm"
+                  >
+                    ✕ Hủy GIF
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div style={{ textAlign: 'right', marginTop: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap', gap: '8px' }}>
+            <div className="comment-toolbar-left" ref={gifPickerRef} style={{ position: 'relative', display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                className={`comment-gif-trigger-btn ${showGifPicker ? 'active' : ''}`}
+                onClick={() => setShowGifPicker(!showGifPicker)}
+                title="Chèn ảnh động GIF vào bình luận"
+              >
+                🎬 Thêm GIF
+              </button>
+
+              <button
+                type="button"
+                className="comment-gif-upload-btn"
+                onClick={() => commentGifInputRef.current?.click()}
+                title="Tải file GIF từ máy tính của bạn"
+              >
+                📁 Tải GIF máy
+              </button>
+              <input
+                type="file"
+                ref={commentGifInputRef}
+                accept="image/*,.gif"
+                style={{ display: 'none' }}
+                onChange={handleGifUpload}
+              />
+
+              {/* Bảng chọn GIF động */}
+              {showGifPicker && (
+                <div className="comment-gif-picker-popover">
+                  <div className="gif-picker-title">Chọn GIF động chữa lành & động viên:</div>
+                  <div className="gif-grid">
+                    {CURATED_GIFS.map((g) => (
+                      <div
+                        key={g.id}
+                        className="gif-grid-item"
+                        onClick={() => {
+                          setAttachedGif(g.url);
+                          setShowGifPicker(false);
+                        }}
+                        title={g.label}
+                      >
+                        <img src={g.url} alt={g.label} loading="lazy" />
+                        <span className="gif-item-label">{g.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               type="submit"
               className="comment-submit-btn"
-              disabled={submitting || !newContent.trim()}
+              disabled={submitting || (!newContent.trim() && !attachedGif)}
             >
-              {submitting ? 'Đang gửi...' : 'Gửi Lời Động Viên ✨'}
+              {submitting ? 'Đang gửi...' : replyingTo ? 'Gửi Câu Trả Lời 💬' : 'Gửi Lời Động Viên ✨'}
             </button>
           </div>
         </form>
       ) : (
-        /* Khách chưa đăng nhập: Banner mời gọi lịch sự */
         <div className="guest-cta-banner">
           <p>
             Bạn có câu chuyện tương tự hoặc muốn gửi lời động viên chân thành tới người viết?
@@ -147,7 +338,7 @@ export const CommentSection = ({ postId }) => {
         </div>
       )}
 
-      {/* Danh sách các bình luận */}
+      {/* Danh sách các bình luận và phản hồi */}
       {loading ? (
         <LoadingSpinner message="Đang tải lời nhắn của cộng đồng..." />
       ) : comments.length === 0 ? (
@@ -160,56 +351,256 @@ export const CommentSection = ({ postId }) => {
             const cheerObj = CHEER_TYPES.find((t) => t.id === c.cheerType);
             const isOwner = user && user._id === c.user?._id;
             const canDelete = isOwner || user?.role === 'admin';
+            const isPostAuthor = postAuthorName && c.user?.name === postAuthorName;
 
             return (
-              <div key={c._id} className="comment-card">
-                <img
-                  src={c.user?.avatar || '/images/man.jpg'}
-                  alt={c.user?.name}
-                  className="comment-avatar"
-                />
-                <div className="comment-body-wrap">
-                  <div className="comment-top-row">
-                    <div>
-                      <span className="comment-user-name">
-                        {c.user?.name || 'Ẩn danh'}
-                      </span>
-                      {c.user?.role === 'admin' && (
-                        <span style={{ background: '#e74c3c', color: '#fff', fontSize: '0.65rem', fontWeight: 'bold', padding: '1px 5px', borderRadius: '4px', marginLeft: '6px' }}>
-                          ADMIN
+              <div key={c._id} className="comment-card-wrapper">
+                <div className="comment-card">
+                  <Link
+                    to={`/profile/${c.user?._id || encodeURIComponent(c.user?.name || 'user')}`}
+                    title={`Xem trang cá nhân của ${c.user?.name || 'người dùng'}`}
+                  >
+                    <img
+                      src={c.user?.avatar || '/images/man.jpg'}
+                      alt={c.user?.name}
+                      className="comment-avatar"
+                    />
+                  </Link>
+                  <div className="comment-body-wrap">
+                    <div className="comment-top-row">
+                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                        <Link
+                          to={`/profile/${c.user?._id || encodeURIComponent(c.user?.name || 'user')}`}
+                          style={{ textDecoration: 'none' }}
+                          title={`Xem trang cá nhân của ${c.user?.name || 'người dùng'}`}
+                        >
+                          <span className="comment-user-name">
+                            {c.user?.name || 'Thành viên'}
+                          </span>
+                        </Link>
+
+                        {isPostAuthor && (
+                          <span className="post-author-badge-tag">
+                            👑 Tác giả bài viết
+                          </span>
+                        )}
+
+                        {c.user?.role === 'admin' && (
+                          <span className="admin-badge-small">
+                            ADMIN
+                          </span>
+                        )}
+
+                        {c.user?.jobTitle && (
+                          <span className="comment-user-job">
+                            • {c.user.jobTitle}
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {cheerObj && (
+                          <span className="comment-cheer-tag">
+                            {cheerObj.label}
+                          </span>
+                        )}
+                        <span className="comment-time">
+                          {formatDate(c.createdAt)}
                         </span>
-                      )}
-                      {c.user?.jobTitle && (
-                        <span className="comment-user-job">
-                          • {c.user.jobTitle}
-                        </span>
-                      )}
+                        {canDelete && (
+                          <button
+                            type="button"
+                            className="comment-del-btn"
+                            onClick={() => handleDelete(c._id)}
+                            title="Xóa bình luận"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {cheerObj && (
-                        <span className="comment-cheer-tag">
-                          {cheerObj.label}
-                        </span>
-                      )}
-                      <span className="comment-time">
-                        {formatDate(c.createdAt)}
-                      </span>
-                      {canDelete && (
-                        <button
-                          type="button"
-                          className="comment-del-btn"
-                          onClick={() => handleDelete(c._id)}
-                          title={user?.role === 'admin' ? "Quản trị viên xóa bình luận" : "Xóa bình luận của bạn"}
-                        >
-                          ✕
-                        </button>
+                    <p className="comment-text">{c.content}</p>
+
+                    {c.gifUrl && (
+                      <div className="comment-attached-gif-wrap">
+                        <img
+                          src={c.gifUrl}
+                          alt="GIF đính kèm"
+                          className="comment-attached-gif-img"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
+
+                    {/* Hàng tương tác dưới bình luận (Thích, Trả lời, Nhắn tin, Kết bạn) */}
+                    <div className="comment-actions-row">
+                      <button
+                        type="button"
+                        className="comment-action-link"
+                        onClick={() => handleLikeComment(c._id)}
+                      >
+                        ❤️ Thích {c.likesCount > 0 ? `(${c.likesCount})` : ''}
+                      </button>
+                      <button
+                        type="button"
+                        className="comment-action-link"
+                        onClick={() => handleStartReply(c._id, c.user?.name || 'bạn')}
+                      >
+                        💬 Trả lời
+                      </button>
+                      {isAuthenticated && !isOwner && c.user && (
+                        <>
+                          <button
+                            type="button"
+                            className="comment-action-link chat-link"
+                            onClick={() => openChatWithUser(c.user)}
+                            title={`Nhắn tin với ${c.user.name}`}
+                          >
+                            ✉️ Nhắn tin
+                          </button>
+                          {friendsList.some((f) => f._id === c.user._id) ? (
+                            <span className="comment-friend-badge">✓ Bạn bè</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="comment-action-link friend-link"
+                              onClick={async () => {
+                                await handleAddFriend(c.user._id);
+                                alert(`Đã kết bạn với ${c.user.name}!`);
+                              }}
+                              title={`Kết bạn với ${c.user.name}`}
+                            >
+                              🤝 Kết bạn
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
-
-                  <p className="comment-text">{c.content}</p>
                 </div>
+
+                {/* Danh sách các câu trả lời (Replies / Thread kiểu Facebook) */}
+                {c.replies && c.replies.length > 0 && (
+                  <div className="comment-replies-list">
+                    {c.replies.map((reply) => {
+                      const isReplyOwner = user && user._id === reply.user?._id;
+                      const canDeleteReply = isReplyOwner || user?.role === 'admin';
+                      const isReplyAuthor = postAuthorName && reply.user?.name === postAuthorName;
+
+                      return (
+                        <div key={reply._id} className="comment-reply-item">
+                          <img
+                            src={reply.user?.avatar || '/images/man.jpg'}
+                            alt={reply.user?.name}
+                            className="reply-avatar"
+                          />
+                          <div className="reply-body-wrap">
+                            <div className="comment-top-row">
+                              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                                <span className="comment-user-name" style={{ fontSize: '0.9rem' }}>
+                                  {reply.user?.name || 'Thành viên'}
+                                </span>
+
+                                {isReplyAuthor && (
+                                  <span className="post-author-badge-tag">
+                                    👑 Tác giả
+                                  </span>
+                                )}
+
+                                {reply.user?.jobTitle && (
+                                  <span className="comment-user-job" style={{ fontSize: '0.78rem' }}>
+                                    • {reply.user.jobTitle}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span className="comment-time" style={{ fontSize: '0.75rem' }}>
+                                  {formatDate(reply.createdAt)}
+                                </span>
+                                {canDeleteReply && (
+                                  <button
+                                    type="button"
+                                    className="comment-del-btn"
+                                    onClick={() => handleDelete(reply._id)}
+                                    title="Xóa câu trả lời"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            <p className="comment-text" style={{ fontSize: '0.9rem', marginTop: '4px' }}>
+                              {reply.replyToUser && (
+                                <span className="reply-mention-tag">
+                                  @{reply.replyToUser}{' '}
+                                </span>
+                              )}
+                              {reply.content}
+                            </p>
+
+                            {reply.gifUrl && (
+                              <div className="comment-attached-gif-wrap reply-gif">
+                                <img
+                                  src={reply.gifUrl}
+                                  alt="GIF câu trả lời"
+                                  className="comment-attached-gif-img"
+                                  loading="lazy"
+                                />
+                              </div>
+                            )}
+
+                            <div className="comment-actions-row">
+                              <button
+                                type="button"
+                                className="comment-action-link"
+                                onClick={() => handleLikeComment(reply._id)}
+                              >
+                                ❤️ Thích {reply.likesCount > 0 ? `(${reply.likesCount})` : ''}
+                              </button>
+                              <button
+                                type="button"
+                                className="comment-action-link"
+                                onClick={() => handleStartReply(c._id, reply.user?.name || 'bạn')}
+                              >
+                                💬 Trả lời
+                              </button>
+                              {isAuthenticated && !isReplyOwner && reply.user && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="comment-action-link chat-link"
+                                    onClick={() => openChatWithUser(reply.user)}
+                                    title={`Nhắn tin với ${reply.user.name}`}
+                                  >
+                                    ✉️ Nhắn tin
+                                  </button>
+                                  {friendsList.some((f) => f._id === reply.user._id) ? (
+                                    <span className="comment-friend-badge">✓ Bạn bè</span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      className="comment-action-link friend-link"
+                                      onClick={async () => {
+                                        await handleAddFriend(reply.user._id);
+                                        alert(`Đã kết bạn với ${reply.user.name}!`);
+                                      }}
+                                      title={`Kết bạn với ${reply.user.name}`}
+                                    >
+                                      🤝 Kết bạn
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -218,4 +609,3 @@ export const CommentSection = ({ postId }) => {
     </div>
   );
 };
-

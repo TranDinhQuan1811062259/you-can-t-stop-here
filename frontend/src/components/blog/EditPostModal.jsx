@@ -4,6 +4,7 @@ import { categoryService } from '../../services/categoryService';
 import { uploadService } from '../../services/uploadService';
 import { RichVisualEditor } from './RichVisualEditor';
 import { formatPostContent } from '../../utils/contentFormatter';
+import { maskSensitiveText, analyzeContentSafety } from '../../utils/sensitiveFilter';
 
 export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
   const [categories, setCategories] = useState([]);
@@ -17,6 +18,8 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
     coverImage: '',
     tags: '',
     views: 1,
+    showReactionCount: true,
+    audioMood: 'auto',
   });
 
   const [activeTab, setActiveTab] = useState('edit');
@@ -42,6 +45,8 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
           coverImage: post.coverImage || '',
           tags: Array.isArray(post.tags) ? post.tags.join(', ') : (post.tags || ''),
           views: post.views !== undefined ? post.views : 1,
+          showReactionCount: post.showReactionCount !== false,
+          audioMood: post.audioMood || 'auto',
         });
         setErrorMsg('');
       }
@@ -101,16 +106,25 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
     setErrorMsg('');
 
     try {
+      const cleanTitle = maskSensitiveText(formData.title.trim());
+      const cleanSummary = maskSensitiveText(formData.summary.trim());
+      const cleanContent = maskSensitiveText(formData.content);
+      const cleanTags = formData.tags
+        ? formData.tags.split(',').map((t) => maskSensitiveText(t.trim().replace(/^#/, ''))).filter(Boolean)
+        : [];
+
       const payload = {
-        title: formData.title.trim(),
+        title: cleanTitle,
         author: formData.author.trim(),
         authorJob: formData.authorJob.trim(),
-        summary: formData.summary.trim(),
-        content: formData.content,
+        summary: cleanSummary,
+        content: cleanContent,
         category: formData.category || undefined,
         coverImage: formData.coverImage || undefined,
-        tags: formData.tags ? formData.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+        tags: cleanTags,
         views: parseInt(formData.views, 10) || 1,
+        showReactionCount: formData.showReactionCount,
+        audioMood: formData.audioMood || 'auto',
       };
 
       const res = await postService.updatePost(post._id, payload);
@@ -143,6 +157,33 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
         </p>
 
         {errorMsg && <div className="modal-error">{errorMsg}</div>}
+
+        {/* Cảnh báo kiểm duyệt an toàn thời gian thực */}
+        {(() => {
+          const safety = analyzeContentSafety(formData.title, formData.summary, formData.content, formData.tags ? formData.tags.split(',') : []);
+          if (!safety.isFlagged) return null;
+          return (
+            <div
+              style={{
+                background: '#fffbeb',
+                border: '1px solid #fde68a',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                marginBottom: '14px',
+                color: '#92400e',
+                fontSize: '0.84rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+              }}
+            >
+              <span style={{ fontSize: '1.25rem' }}>🛡️</span>
+              <div>
+                <strong>Lưu ý an toàn:</strong> Phát hiện yếu tố nhạy cảm / chính trị ({safety.foundWords.join(', ')}). Khi lưu, từ ngữ sẽ tự động được chèn dấu chấm (D.I.E, c.h.ế.t...) và bài viết sẽ chuyển qua chế độ Admin kiểm duyệt để bảo vệ an toàn cho website.
+              </div>
+            </div>
+          );
+        })()}
 
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
@@ -304,6 +345,53 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
               value={formData.tags}
               onChange={handleChange}
             />
+          </div>
+
+          <div className="form-group" style={{ marginTop: '14px', background: 'rgba(99, 102, 241, 0.05)', padding: '12px 14px', borderRadius: '8px', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+            <label style={{ fontWeight: 700, color: '#4338ca', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <span>🎧</span>
+              <span>Cài đặt Giọng đọc & Tâm trạng A.I cho bài viết</span>
+            </label>
+            <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: '#64748b' }}>
+              Người đọc có thể bấm "Nghe đọc" để A.I diễn đọc bài viết bằng giọng tương ứng với cảm xúc bạn chọn.
+            </p>
+            <select
+              name="audioMood"
+              value={formData.audioMood || 'auto'}
+              onChange={handleChange}
+              style={{
+                width: '100%',
+                padding: '9px 12px',
+                borderRadius: '8px',
+                border: '1.5px solid #c7d2fe',
+                fontSize: '0.88rem',
+                background: '#ffffff',
+                fontWeight: 600,
+                color: '#1e1b4b',
+              }}
+            >
+              <option value="auto">✨ Tự động theo tâm trạng (A.I tự phân tích cảm xúc từ ngữ)</option>
+              <option value="melancholic">🌧️ Trầm buồn, sâu lắng & vỗ về (Tâm sự đêm muộn, burnout, áp lực)</option>
+              <option value="uplifting">☀️ Vui tươi, tích cực & hứng khởi (Small wins, khởi sắc, truyền cảm hứng)</option>
+              <option value="child">🎈 Hồn nhiên, trong trẻo (Giọng đọc trẻ em đáng yêu)</option>
+              <option value="podcast">🎙️ Podcast truyền cảm (Chuẩn phát thanh viên Storyteller)</option>
+              <option value="custom_voice">🧬 Giọng A.I nhân bản chính chủ (Dùng giọng thu âm của bạn)</option>
+            </select>
+          </div>
+
+          <div className="form-group" style={{ marginTop: '14px', background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 600, color: 'var(--bg-dark)', marginBottom: 0 }}>
+              <input
+                type="checkbox"
+                checked={formData.showReactionCount}
+                onChange={(e) => setFormData({ ...formData, showReactionCount: e.target.checked })}
+                style={{ width: '18px', height: '18px', accentColor: 'var(--primary-color)', cursor: 'pointer' }}
+              />
+              <span>👁️ Cho phép hiển thị số lượng bày tỏ cảm xúc trên bài viết</span>
+            </label>
+            <p style={{ margin: '4px 0 0 28px', fontSize: '0.82rem', color: '#64748b' }}>
+              Nếu bỏ chọn, người đọc chỉ thấy các biểu tượng cảm xúc (Đồng Cảm 🫂, Stop 🛑, Yêu thích ❤️, Cố Lên 💪) mà không thấy con số cụ thể.
+            </p>
           </div>
 
           <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>

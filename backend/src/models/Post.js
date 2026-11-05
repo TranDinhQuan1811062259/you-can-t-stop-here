@@ -49,6 +49,18 @@ const postSchema = new mongoose.Schema(
       type: String,
       default: 'Người đi làm',
     },
+    authorAvatar: {
+      type: String,
+      default: '/images/man.jpg',
+    },
+    authorSocialLinks: {
+      facebook: { type: String, default: '', trim: true },
+      instagram: { type: String, default: '', trim: true },
+      tiktok: { type: String, default: '', trim: true },
+      x: { type: String, default: '', trim: true },
+      linkedin: { type: String, default: '', trim: true },
+      website: { type: String, default: '', trim: true },
+    },
     views: {
       type: Number,
       default: 0,
@@ -57,9 +69,71 @@ const postSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    reactions: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+        userName: {
+          type: String,
+          default: 'Người dùng',
+        },
+        userAvatar: {
+          type: String,
+          default: '/images/man.jpg',
+        },
+        types: [
+          {
+            type: String,
+            enum: ['sympathy', 'stop', 'love', 'encourage'],
+          },
+        ],
+      },
+    ],
+    reactionCounts: {
+      sympathy: { type: Number, default: 0 },
+      stop: { type: Number, default: 0 },
+      love: { type: Number, default: 0 },
+      encourage: { type: Number, default: 0 },
+      total: { type: Number, default: 0 },
+    },
+    showReactionCount: {
+      type: Boolean,
+      default: true,
+    },
+    sharesCount: {
+      type: Number,
+      default: 0,
+    },
     isPublished: {
       type: Boolean,
       default: true,
+    },
+    audioMood: {
+      type: String,
+      enum: ['auto', 'melancholic', 'uplifting', 'child', 'podcast', 'custom_voice'],
+      default: 'auto',
+    },
+    customVoiceProfile: {
+      voiceName: { type: String, default: '' },
+      sampleAudioUrl: { type: String, default: '' },
+      pitch: { type: Number, default: 1.0 },
+      rate: { type: Number, default: 1.0 },
+      timbre: { type: String, default: 'authentic' },
+    },
+    isFlagged: {
+      type: Boolean,
+      default: false,
+    },
+    flagReason: {
+      type: String,
+      default: '',
+    },
+    moderationStatus: {
+      type: String,
+      enum: ['approved', 'flagged', 'removed'],
+      default: 'approved',
     },
   },
   {

@@ -8,8 +8,8 @@ const PORT = parseInt(process.env.PORT, 10) || 5050;
  * Khởi động Server Backend & Kết nối MongoDB
  */
 const startServer = async () => {
-  // 1. Kết nối MongoDB trước (hoặc chạy song song)
-  connectDB();
+  // 1. Chờ kết nối MongoDB hoàn tất (Atlas hoặc Local) trước khi mở cổng
+  await connectDB();
 
   // 2. Khởi động máy chủ Express lắng nghe cổng
   const server = app.listen(PORT, '0.0.0.0', () => {

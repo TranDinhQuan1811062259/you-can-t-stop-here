@@ -2,27 +2,56 @@ import { useState, useEffect, useCallback } from 'react';
 import { postService } from '../services/postService';
 
 export const usePosts = (queryParams = {}) => {
-  const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState(() => {
+    try {
+      const cached = localStorage.getItem('freedom_cached_posts');
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [pagination, setPagination] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => posts.length === 0);
   const [error, setError] = useState(null);
 
   const fetchPosts = useCallback(() => {
     let isSubscribed = true;
-    setLoading(true);
+    if (posts.length === 0) setLoading(true);
 
     postService
       .getPosts(queryParams)
       .then((res) => {
         if (isSubscribed) {
-          setPosts(res.data || []);
+          const list = res.data || [];
+          setPosts(list);
           setPagination(res.pagination || null);
           setError(null);
+          try {
+            if (list.length > 0) {
+              localStorage.setItem('freedom_cached_posts', JSON.stringify(list));
+            }
+          } catch (e) {}
         }
       })
       .catch((err) => {
         if (isSubscribed) {
-          setError(err.message || 'Lỗi khi tải dữ liệu bài viết');
+          // Nếu đã có bài viết trong cache hoặc state, tiếp tục hiển thị và triệt tiêu lỗi mạng gây khó chịu
+          try {
+            const cached = localStorage.getItem('freedom_cached_posts');
+            if (cached) {
+              const list = JSON.parse(cached);
+              if (Array.isArray(list) && list.length > 0) {
+                setPosts(list);
+                setError(null);
+                return;
+              }
+            }
+          } catch (e) {}
+
+          // Chỉ gán lỗi khi thực sự không có bài viết nào để xem
+          if (posts.length === 0) {
+            setError(err.message || 'Lỗi khi tải dữ liệu bài viết');
+          }
         }
       })
       .finally(() => {

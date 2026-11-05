@@ -23,6 +23,26 @@ const commentSchema = new mongoose.Schema(
       enum: ['encourage', 'hug', 'advice', 'general'],
       default: 'encourage',
     },
+    parentComment: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Comment',
+      default: null,
+      index: true,
+    },
+    replyToUser: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    likesCount: {
+      type: Number,
+      default: 0,
+    },
+    gifUrl: {
+      type: String,
+      default: '',
+      trim: true,
+    },
   },
   {
     timestamps: true,
@@ -30,4 +50,3 @@ const commentSchema = new mongoose.Schema(
 );
 
 export default mongoose.model('Comment', commentSchema);
-

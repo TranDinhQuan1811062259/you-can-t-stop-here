@@ -32,13 +32,25 @@ const isCloudinaryConfigured = () => {
 };
 
 /**
- * Lưu file buffer xuống ổ đĩa cục bộ
+ * Lưu file buffer xuống ổ đĩa cục bộ (Lưu cả vào backend/uploads và frontend/public/uploads)
  */
 const saveFileLocally = (buffer, originalName = 'image.png') => {
   const cleanName = originalName.replace(/[^a-zA-Z0-9.-]/g, '_');
   const fileName = `${Date.now()}-${cleanName}`;
   const filePath = path.join(uploadsDir, fileName);
   fs.writeFileSync(filePath, buffer);
+
+  // Đồng thời lưu vào frontend/public/uploads để trình duyệt luôn xem được vĩnh viễn dù backend đang tắt
+  try {
+    const frontendUploadsDir = path.resolve(__dirname, '../../../frontend/public/uploads');
+    if (!fs.existsSync(frontendUploadsDir)) {
+      fs.mkdirSync(frontendUploadsDir, { recursive: true });
+    }
+    fs.writeFileSync(path.join(frontendUploadsDir, fileName), buffer);
+  } catch (err) {
+    console.warn('Lưu thư mục frontend/public/uploads:', err.message);
+  }
+
   return `/uploads/${fileName}`;
 };
 

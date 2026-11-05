@@ -264,16 +264,16 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
         <button
           type="button"
           className="toolbar-btn"
-          title="Tải ảnh từ máy tính lên nội dung bài"
+          title="Tải ảnh hoặc GIF từ máy tính lên nội dung bài"
           onClick={() => inlineImageInputRef.current?.click()}
           disabled={uploadingImage}
         >
-          {uploadingImage ? '⏳ Đang tải ảnh...' : '🖼️ Tải ảnh từ máy'}
+          {uploadingImage ? '⏳ Đang tải...' : '🎬 Chèn Ảnh/GIF từ máy'}
         </button>
         <input
           type="file"
           ref={inlineImageInputRef}
-          accept="image/*"
+          accept="image/*,.gif"
           style={{ display: 'none' }}
           onChange={handleInlineImageUpload}
         />

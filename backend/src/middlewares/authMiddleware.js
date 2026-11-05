@@ -15,7 +15,16 @@ export const protect = async (req, res, next) => {
       const decoded = await verifyToken(token);
 
       if (isDbConnected) {
-        req.user = await User.findById(decoded.id).select('-password');
+        const query = [];
+        if (decoded.id && String(decoded.id).match(/^[0-9a-fA-F]{24}$/)) {
+          query.push({ _id: decoded.id });
+        }
+        if (decoded.email) {
+          query.push({ email: decoded.email.toLowerCase().trim() });
+        }
+        if (query.length > 0) {
+          req.user = await User.findOne({ $or: query }).select('-password');
+        }
       }
 
       if (!req.user) {
@@ -56,4 +65,46 @@ export const adminOnly = (req, res, next) => {
     message: 'Truy cập bị từ chối! Thao tác này chỉ dành cho Quản Trị Viên (Admin).',
     status: 403,
   });
+};
+
+/**
+ * Middleware xác thực tùy chọn (Không bắt buộc đăng nhập, nhưng nếu có token sẽ giải mã user)
+ */
+export const optionalProtect = async (req, res, next) => {
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    try {
+      token = req.headers.authorization.split(' ')[1];
+      const decoded = await verifyToken(token);
+
+      if (isDbConnected) {
+        const query = [];
+        if (decoded.id && String(decoded.id).match(/^[0-9a-fA-F]{24}$/)) {
+          query.push({ _id: decoded.id });
+        }
+        if (decoded.email) {
+          query.push({ email: decoded.email.toLowerCase().trim() });
+        }
+        if (query.length > 0) {
+          req.user = await User.findOne({ $or: query }).select('-password');
+        }
+      }
+
+      if (!req.user && decoded) {
+        req.user = {
+          _id: decoded.id,
+          name: decoded.name || 'Thành viên cộng đồng',
+          email: decoded.email || '',
+          role: decoded.role || 'user',
+          jobTitle: decoded.jobTitle || 'Người đi làm',
+        };
+      }
+    } catch (e) {
+      // Bỏ qua lỗi token cho route tùy chọn
+    }
+  }
+  return next();
 };

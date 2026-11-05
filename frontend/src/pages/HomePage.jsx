@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { usePosts } from '../hooks/usePosts';
 import { categoryService } from '../services/categoryService';
 import { useAuth } from '../context/AuthContext';
@@ -11,6 +12,8 @@ import { CreatePostModal } from '../components/blog/CreatePostModal';
 
 export const HomePage = () => {
   const { isAuthenticated, openLoginModal } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedTag = searchParams.get('tag') || '';
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -23,8 +26,14 @@ export const HomePage = () => {
       .catch((err) => console.warn('Lỗi tải danh mục:', err));
   }, []);
 
+  // Khi tag thay đổi từ URL, reset về trang 1
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedTag]);
+
   const { posts, pagination, loading, error } = usePosts({
     category: selectedCategory,
+    tag: selectedTag,
     page: currentPage,
     limit: 6,
   });
@@ -32,6 +41,11 @@ export const HomePage = () => {
   const handleCategorySelect = (categorySlug) => {
     setSelectedCategory(categorySlug);
     setCurrentPage(1);
+  };
+
+  const handleClearTag = () => {
+    searchParams.delete('tag');
+    setSearchParams(searchParams);
   };
 
   const handlePageChange = (newPage) => {
@@ -87,7 +101,26 @@ export const HomePage = () => {
           onSelectCategory={handleCategorySelect}
         />
 
-        <ErrorMessage message={error} />
+        {/* Banner hiển thị khi lọc theo hashtag/chủ đề */}
+        {selectedTag && (
+          <div className="active-tag-filter-banner">
+            <div className="tag-filter-info">
+              <span className="tag-filter-icon">🏷️</span>
+              <span>Đang lọc tâm sự theo chủ đề: <strong>#{selectedTag}</strong></span>
+            </div>
+            <button
+              type="button"
+              className="clear-tag-btn"
+              onClick={handleClearTag}
+              title="Xem tất cả bài viết"
+            >
+              ✕ Bỏ lọc chủ đề
+            </button>
+          </div>
+        )}
+
+        {/* Chỉ hiển thị lỗi khi hoàn toàn không có bài viết nào */}
+        {error && posts.length === 0 && <ErrorMessage message={error} />}
 
         {loading ? (
           <LoadingSpinner message="Đang tải những câu chuyện mới nhất..." />

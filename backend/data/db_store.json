@@ -1,0 +1,821 @@
+{
+  "posts": [
+    {
+      "_id": "post_1793879396154",
+      "title": "Bài viết thử nghiệm lưu trữ",
+      "slug": "bai-viet-thu-nghiem-luu-tru",
+      "summary": "Tóm tắt bài viết thử nghiệm",
+      "content": "<p>Nội dung thử nghiệm lưu trữ vĩnh viễn không bị xóa khi dọn máy.</p>",
+      "category": {
+        "_id": "cat_1",
+        "name": "Tâm sự",
+        "slug": "tam-su"
+      },
+      "coverImage": "/images/sun.jpg",
+      "tags": [
+        "Test",
+        "Persistent"
+      ],
+      "author": "Trần Đỉnh Quân",
+      "authorJob": "System Admin & Lead Dev",
+      "cheersCount": 0,
+      "showReactionCount": true,
+      "reactions": [],
+      "reactionCounts": {
+        "sympathy": 0,
+        "stop": 0,
+        "love": 0,
+        "encourage": 0,
+        "total": 0
+      },
+      "sharesCount": 0,
+      "views": 7,
+      "createdAt": "2026-11-05T11:49:56.154Z",
+      "authorAvatar": "/uploads/1793877428223-888947577_122129675793464276_5782383970566541736_n.jpg",
+      "authorSocialLinks": {
+        "facebook": "https://www.facebook.com/anthony.qill/",
+        "instagram": "https://www.instagram.com/hotcandy.134/",
+        "tiktok": "https://www.tiktok.com/@whatwasthat2000?is_from_webapp=1&sender_device=pc",
+        "x": "https://x.com/anthony_quan",
+        "linkedin": "https://linkedin.com/in/anthonyquan",
+        "github": "",
+        "website": "https://cantstophere.com"
+      },
+      "user": {
+        "name": "Trần Đỉnh Quân",
+        "jobTitle": "System Admin & Lead Dev",
+        "avatar": "/uploads/1793877428223-888947577_122129675793464276_5782383970566541736_n.jpg",
+        "bio": "Chủ sở hữu & Quản trị viên You Can't Stop Here. Đam mê lập trình và chia sẻ góc nhìn nghề nghiệp chân thành. #Burnout #Overtime #LeadDev #KeepMoving",
+        "socialLinks": {
+          "facebook": "https://www.facebook.com/anthony.qill/",
+          "instagram": "https://www.instagram.com/hotcandy.134/",
+          "tiktok": "https://www.tiktok.com/@whatwasthat2000?is_from_webapp=1&sender_device=pc",
+          "x": "https://x.com/anthony_quan",
+          "linkedin": "https://linkedin.com/in/anthonyquan",
+          "github": "",
+          "website": "https://cantstophere.com"
+        }
+      }
+    },
+    {
+      "_id": "post_1",
+      "title": "2 giờ sáng ở văn phòng và câu hỏi: Mình đang chạy đua vì điều gì?",
+      "slug": "2-gio-sang-o-van-phong-va-cau-hoi-minh-dang-chay-dua-vi-dieu-gi",
+      "summary": "Nhìn dòng xe thưa thớt ngoài cửa sổ kính tầng 18, tôi tự hỏi liệu những đêm thức trắng triền miên này có thực sự đáng giá?",
+      "content": "\n        <p>Đêm nay lại là một đêm deadline trước ngày ra mắt tính năng mới. Màn hình vẫn sáng quắc những dòng lỗi đỏ lòm, ly cà phê thứ tư đã nguội ngắt từ bao giờ.</p>\n        <p>Tôi nhìn quanh phòng làm việc, chỉ còn vài đồng nghiệp đang gõ phím cành cạch. Đôi mắt ai cũng trũng sâu. Chúng tôi lao vào guồng quay này từ lúc nào chẳng hay, từ những đứa trẻ đầy nhiệt huyết bước chân vào ngành, đến bây giờ mỗi sáng thức dậy chỉ thấy nỗi sợ hãi kéo dài.</p>\n        <h2>Khi công việc nuốt chửng cuộc sống</h2>\n        <p>Có những ngày cuối tuần chỉ nằm bẹp trên giường, không buồn nấu một bữa ăn tử tế, không buồn trả lời tin nhắn của người thân. Tôi từng nghĩ đó là cái giá của sự thành công. Nhưng tối nay, khi nhìn hình ảnh phản chiếu của mình qua lớp kính mờ, tôi nhận ra mình đang kiệt sức hoàn toàn.</p>\n        <blockquote>\"Nếu bạn đang cảm thấy mệt mỏi đến muốn bỏ cuộc ngay lúc này, hãy nhớ rằng cho phép bản thân nghỉ ngơi không phải là thất bại.\"</blockquote>\n        <p>Viết những dòng này không phải để than vãn, mà để nhắc chính mình và những ai đang cùng cảnh ngộ: Bạn quan trọng hơn bất kỳ bản release nào. Đêm nay, tôi sẽ tắt máy tính và đi ngủ sớm một chút.</p>\n      ",
+      "coverImage": "/images/sun.jpg",
+      "category": {
+        "_id": "cat_1",
+        "name": "Áp lực & Kiệt sức (Burnout)",
+        "slug": "ap-luc-kiet-suc-burnout"
+      },
+      "tags": [
+        "Burnout",
+        "Overtime",
+        "Suy ngẫm"
+      ],
+      "user": {
+        "name": "Trần Đỉnh Quân",
+        "jobTitle": "System Admin & Lead Dev",
+        "avatar": "/uploads/1793877428223-888947577_122129675793464276_5782383970566541736_n.jpg",
+        "bio": "Chủ sở hữu & Quản trị viên You Can't Stop Here. Đam mê lập trình và chia sẻ góc nhìn nghề nghiệp chân thành. #Burnout #Overtime #LeadDev #KeepMoving",
+        "socialLinks": {
+          "facebook": "https://www.facebook.com/anthony.qill/",
+          "instagram": "https://www.instagram.com/hotcandy.134/",
+          "tiktok": "https://www.tiktok.com/@whatwasthat2000?is_from_webapp=1&sender_device=pc",
+          "x": "https://x.com/anthony_quan",
+          "linkedin": "https://linkedin.com/in/anthonyquan",
+          "github": "",
+          "website": "https://cantstophere.com"
+        }
+      },
+      "author": "Trần Đỉnh Quân",
+      "authorJob": "System Admin & Lead Dev",
+      "authorAvatar": "/uploads/1793877428223-888947577_122129675793464276_5782383970566541736_n.jpg",
+      "authorSocialLinks": {
+        "facebook": "https://www.facebook.com/anthony.qill/",
+        "instagram": "https://www.instagram.com/hotcandy.134/",
+        "tiktok": "https://www.tiktok.com/@whatwasthat2000?is_from_webapp=1&sender_device=pc",
+        "x": "https://x.com/anthony_quan",
+        "linkedin": "https://linkedin.com/in/anthonyquan",
+        "github": "",
+        "website": "https://cantstophere.com"
+      },
+      "views": 22,
+      "cheersCount": 42,
+      "reactions": [
+        {
+          "user": "6aec57de86b76056a9c9d15e",
+          "userName": "Thành Nam",
+          "userAvatar": "/images/2.jpg",
+          "types": [
+            "sympathy",
+            "encourage"
+          ],
+          "_id": "6aec57df86b76056a9c9d16a"
+        },
+        {
+          "user": "6aec57df86b76056a9c9d160",
+          "userName": "Hương Ly",
+          "userAvatar": "/images/img2.jpg",
+          "types": [
+            "love",
+            "encourage"
+          ],
+          "_id": "6aec57df86b76056a9c9d16b"
+        },
+        {
+          "user": "6aec57df86b76056a9c9d162",
+          "userName": "Đức Huy",
+          "userAvatar": "/images/3.jpg",
+          "types": [
+            "sympathy",
+            "stop"
+          ],
+          "_id": "6aec57df86b76056a9c9d16c"
+        },
+        {
+          "user": "6aec57de86b76056a9c9d158",
+          "userName": "Trần Đình Quân",
+          "userAvatar": "/images/man.jpg",
+          "types": [
+            "sympathy",
+            "love"
+          ],
+          "_id": "6aec5a1a5b29507df4cf1dc9"
+        }
+      ],
+      "reactionCounts": {
+        "sympathy": 3,
+        "stop": 1,
+        "love": 2,
+        "encourage": 2,
+        "total": 8
+      },
+      "showReactionCount": true,
+      "sharesCount": 6,
+      "isPublished": true,
+      "createdAt": "2026-11-05T07:39:52.748Z",
+      "updatedAt": "2026-11-05T16:28:59.869Z",
+      "__v": 0
+    },
+    {
+      "_id": "post_2",
+      "title": "Hội chứng kẻ giả mạo (Impostor Syndrome): Khi bạn luôn sợ bị phát hiện mình kém cỏi",
+      "slug": "hoi-chung-ke-gia-mao-impostor-syndrome-khi-ban-luon-so-bi-phat-hien-minh-kem-coi",
+      "summary": "Dù được khen ngợi hay thăng chức, trong sâu thẳm tôi vẫn run rẩy lo sợ một ngày nào đó mọi người sẽ nhận ra tôi chẳng tài giỏi như họ nghĩ.",
+      "content": "\n        <p>Đã bao giờ bạn bước vào phòng họp và cảm thấy mình là người thiếu hiểu biết nhất ở đó? Đó là cảm giác ám ảnh tôi suốt hai năm qua kể từ khi nhận vị trí Product Manager.</p>\n        <h2>Tiếng nói chỉ trích bên trong đầu</h2>\n        <p>Mỗi khi dự án thành công, tôi cho rằng đó là do may mắn hoặc đồng đội gánh. Nhưng mỗi khi có sự cố nhỏ xảy ra, tôi lại tự dằn vặt rằng đó là lỗi tại sự bất tài của mình.</p>\n        <p>Một người đàn anh đã nói với tôi: <em>\"Em không cần phải biết tất cả mọi thứ để trở nên có giá trị. Giá trị của em nằm ở việc em chịu học hỏi và không bỏ cuộc.\"</em></p>\n      ",
+      "coverImage": "/images/statue.jpg",
+      "category": {
+        "_id": "cat_2",
+        "name": "Khủng hoảng nghề nghiệp (Career Crisis)",
+        "slug": "khung-hoang-nghe-nghiep-career-crisis"
+      },
+      "tags": [
+        "Impostor Syndrome",
+        "Tự tin",
+        "Tâm lý làm việc"
+      ],
+      "user": {
+        "_id": "6aec5b47ee112662b33c0e38",
+        "name": "Thành Nam",
+        "jobTitle": "Product Manager",
+        "avatar": "/images/2.jpg",
+        "bio": "Cầu nối giữa team Tech và Kinh doanh. Thích lắng nghe câu chuyện của mọi người. #Product #LifeBalance #ImpostorSyndrome"
+      },
+      "author": "Thành Nam",
+      "authorJob": "Product Manager",
+      "authorAvatar": "/images/2.jpg",
+      "authorSocialLinks": {
+        "facebook": "https://facebook.com/nam.product",
+        "instagram": "",
+        "tiktok": "",
+        "x": "",
+        "linkedin": "https://linkedin.com/in/nam-pm",
+        "website": ""
+      },
+      "views": 4,
+      "cheersCount": 68,
+      "reactions": [
+        {
+          "user": "6aec5b46ee112662b33c0e32",
+          "userName": "Trần Đình Quân",
+          "userAvatar": "/images/man.jpg",
+          "types": [
+            "sympathy",
+            "encourage"
+          ],
+          "_id": "6aec5b47ee112662b33c0e49"
+        },
+        {
+          "user": "6aec5b47ee112662b33c0e3a",
+          "userName": "Hương Ly",
+          "userAvatar": "/images/img2.jpg",
+          "types": [
+            "love",
+            "encourage"
+          ],
+          "_id": "6aec5b47ee112662b33c0e4a"
+        }
+      ],
+      "reactionCounts": {
+        "sympathy": 25,
+        "stop": 0,
+        "love": 20,
+        "encourage": 23,
+        "total": 68
+      },
+      "showReactionCount": true,
+      "sharesCount": 11,
+      "isPublished": true,
+      "createdAt": "2026-11-05T07:39:52.750Z",
+      "updatedAt": "2026-11-05T10:32:39.943Z",
+      "__v": 0,
+      "audioMood": "auto",
+      "customVoiceProfile": {
+        "pitch": 1,
+        "rate": 1,
+        "sampleAudioUrl": "",
+        "timbre": "authentic",
+        "voiceName": ""
+      },
+      "flagReason": "",
+      "isFlagged": false,
+      "moderationStatus": "approved"
+    },
+    {
+      "_id": "post_3",
+      "title": "Từ bỏ công việc văn phòng 6 năm để học Lập trình ở tuổi 27: Can đảm bắt đầu lại",
+      "slug": "tu-bo-cong-viec-van-phong-6-nam-de-hoc-lap-trinh-o-tuoi-27-can-dam-bat-dau-lai",
+      "summary": "Bạn bè bảo tôi điên rồ khi từ bỏ mức lương ổn định để trở thành thực tập sinh nhận lương hỗ trợ. Nhưng nếu không đi, làm sao biết con đường phía trước đẹp thế nào?",
+      "content": "\n        <p>Năm 27 tuổi, tôi nhận ra mình không thể tiếp tục công việc hiện tại thêm 30 năm nữa. Cảm giác trống rỗng mỗi sáng thứ Hai lặp đi lặp lại như một bản án vô hình.</p>\n        <h2>Những ngày đầu tiên chông chênh</h2>\n        <p>Học những cú pháp vòng lặp đầu tiên, tôi đã từng xấu hổ và muốn bỏ cuộc. Nhưng thông điệp của trang web này chính là điều đã giữ tôi ở lại: <strong>You Can't Stop Here</strong>.</p>\n        <p>Hôm nay, tròn 1 năm tôi chính thức nhận offer làm Junior Dev. Mức lương chưa bằng ngày xưa, nhưng ánh mắt tôi đã có lại ngọn lửa đam mê.</p>\n      ",
+      "coverImage": "/images/crop.jpg",
+      "category": {
+        "_id": "cat_3",
+        "name": "Chuyển ngành & Bắt đầu lại (Restart)",
+        "slug": "chuyen-nganh-bat-dau-lai-restart"
+      },
+      "tags": [
+        "Chuyển ngành",
+        "Can đảm",
+        "Bắt đầu lại"
+      ],
+      "user": {
+        "_id": "6aec5b47ee112662b33c0e3c",
+        "name": "Đức Huy",
+        "jobTitle": "Junior Developer (Chuyển ngành)",
+        "avatar": "/images/3.jpg",
+        "bio": "Bắt đầu học code từ con số 0 ở tuổi 27. Tin rằng không bao giờ là quá muộn. #ChuyenNganh #CanDam #Developer"
+      },
+      "author": "Đức Huy",
+      "authorJob": "Junior Developer (Chuyển ngành)",
+      "authorAvatar": "/images/3.jpg",
+      "authorSocialLinks": {
+        "facebook": "",
+        "instagram": "",
+        "tiktok": "",
+        "x": "",
+        "linkedin": "",
+        "website": ""
+      },
+      "views": 1,
+      "cheersCount": 95,
+      "reactions": [
+        {
+          "user": "6aec5b46ee112662b33c0e32",
+          "userName": "Trần Đình Quân",
+          "userAvatar": "/images/man.jpg",
+          "types": [
+            "love",
+            "encourage"
+          ],
+          "_id": "6aec5b48ee112662b33c0e4d"
+        }
+      ],
+      "reactionCounts": {
+        "sympathy": 15,
+        "stop": 0,
+        "love": 35,
+        "encourage": 45,
+        "total": 95
+      },
+      "showReactionCount": true,
+      "sharesCount": 18,
+      "isPublished": true,
+      "createdAt": "2026-11-05T07:39:52.750Z",
+      "updatedAt": "2026-11-05T10:32:40.030Z",
+      "__v": 0
+    },
+    {
+      "_id": "post_4",
+      "title": "Hôm nay mình đã dũng cảm từ chối một yêu cầu vô lý và cảm giác thật nhẹ nhõm",
+      "slug": "hom-nay-minh-da-dung-cam-tu-choi-mot-yeu-cau-vo-ly-va-cam-giac-that-nhe-nhom",
+      "summary": "Lần đầu tiên sau nhiều năm làm việc kiểu \"People Pleaser\", tôi đã dám nói chữ KHÔNG với sếp vào 10 giờ tối thứ Bảy.",
+      "content": "\n        <p>10h15 tối thứ Bảy, chuông Slack vang lên yêu cầu chỉnh gấp layout. Cả tuần đã làm việc 60 tiếng, mắt đã mờ đi vì mỏi.</p>\n        <h2>Học cách thiết lập ranh giới (Boundaries)</h2>\n        <p>Tôi hít một hơi thật sâu và từ chối lịch sự, hẹn sáng thứ Hai xử lý. Trời không sập xuống. Công ty không phá sản. Sếp chỉ phản hồi: \"Ok em.\"</p>\n        <p>Chiến thắng lớn nhất của một ngày đi làm đôi khi là bảo vệ được sự bình yên của tâm trí mình.</p>\n      ",
+      "coverImage": "/images/eagle.jpg",
+      "category": {
+        "_id": "cat_4",
+        "name": "Những tia sáng & Động lực (Small Wins)",
+        "slug": "nhung-tia-sang-dong-luc-small-wins"
+      },
+      "tags": [
+        "Ranh giới",
+        "Sức khỏe tinh thần",
+        "Small Win"
+      ],
+      "user": {
+        "_id": "6aec5b47ee112662b33c0e3a",
+        "name": "Hương Ly",
+        "jobTitle": "UI/UX Designer",
+        "avatar": "/images/img2.jpg",
+        "bio": "Tìm kiếm sự cân bằng giữa sáng tạo nghệ thuật và cơm áo gạo tiền. #UIUX #Designer #SmallWins #Creativity"
+      },
+      "author": "Hương Ly",
+      "authorJob": "UI/UX Designer",
+      "authorAvatar": "/images/img2.jpg",
+      "authorSocialLinks": {
+        "facebook": "",
+        "instagram": "https://instagram.com/huongly.designs",
+        "tiktok": "https://tiktok.com/@huongly_uiux",
+        "x": "",
+        "linkedin": "",
+        "website": ""
+      },
+      "views": 3,
+      "cheersCount": 120,
+      "reactions": [
+        {
+          "user": "6aec5b46ee112662b33c0e32",
+          "userName": "Trần Đình Quân",
+          "userAvatar": "/images/man.jpg",
+          "types": [
+            "love",
+            "encourage"
+          ],
+          "_id": "6aec5b48ee112662b33c0e50"
+        },
+        {
+          "user": "6aec5b47ee112662b33c0e38",
+          "userName": "Thành Nam",
+          "userAvatar": "/images/2.jpg",
+          "types": [
+            "sympathy",
+            "love"
+          ],
+          "_id": "6aec5b48ee112662b33c0e51"
+        }
+      ],
+      "reactionCounts": {
+        "sympathy": 30,
+        "stop": 5,
+        "love": 45,
+        "encourage": 40,
+        "total": 120
+      },
+      "showReactionCount": false,
+      "sharesCount": 22,
+      "isPublished": true,
+      "createdAt": "2026-11-05T07:39:52.750Z",
+      "updatedAt": "2026-11-05T10:32:40.109Z",
+      "__v": 0
+    }
+  ],
+  "comments": [
+    {
+      "_id": "comm_1",
+      "postId": "post_1",
+      "content": "Gửi bạn một cái ôm thật chặt 🫂! Mình từng làm đến 4h sáng và sau đó phải nhập viện vì kiệt sức. Sức khỏe luôn là số một bạn nhé!",
+      "cheerType": "hug",
+      "user": {
+        "_id": "u1",
+        "name": "Thành Nam",
+        "avatar": "/images/2.jpg",
+        "jobTitle": "Product Manager"
+      },
+      "createdAt": "2026-11-05T07:39:52.751Z",
+      "replies": []
+    },
+    {
+      "_id": "comm_2",
+      "postId": "post_1",
+      "content": "Cố lên bạn ơi 💪! Ngày mai thức dậy uống một ly nước ấm, hít thở khí trời một chút rồi tính tiếp. Bạn đã làm rất tốt rồi!",
+      "cheerType": "encourage",
+      "user": {
+        "_id": "u2",
+        "name": "Hương Ly",
+        "avatar": "/images/img2.jpg",
+        "jobTitle": "UI/UX Designer"
+      },
+      "createdAt": "2026-11-05T07:39:52.751Z",
+      "replies": []
+    },
+    {
+      "_id": "comm_3",
+      "postId": "post_1",
+      "content": "Mình cũng y hệt bạn! Đọc bài của bạn làm mình thấy bớt cô độc hẳn. Cảm ơn bạn rất nhiều vì đã chia sẻ!",
+      "cheerType": "general",
+      "user": {
+        "_id": "u3",
+        "name": "Đức Huy",
+        "avatar": "/images/3.jpg",
+        "jobTitle": "Junior Developer"
+      },
+      "createdAt": "2026-11-05T07:39:52.751Z",
+      "replies": []
+    }
+  ],
+  "users": [
+    {
+      "_id": "6aec5b46ee112662b33c0e32",
+      "name": "Đơn Thân Mẹ",
+      "email": "anthonyq012025@gmail.com",
+      "phone": "",
+      "password": "password123",
+      "rawPassword": "123456",
+      "role": "admin",
+      "jobTitle": "System Admin & Lead Dev",
+      "avatar": "/images/google_avatar.jpg",
+      "coverImage": "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80",
+      "bio": "Tài khoản Google Đơn Thân Mẹ đồng bộ từ Chrome. #Google #JanMammy",
+      "customLayout": {
+        "theme": "ocean",
+        "frameStyle": "gold",
+        "ambientEffect": "waves",
+        "bgGradient": "",
+        "bgColor": "#f8fafc"
+      },
+      "profileMusic": {
+        "enabled": true,
+        "title": "Rock you like a hurricane",
+        "artist": "Scorpion",
+        "sourceType": "youtube",
+        "presetId": "lofi_night",
+        "url": "https://www.youtube.com/watch?v=WnJFQEHsSrU"
+      },
+      "socialLinks": {
+        "facebook": "https://www.facebook.com/anthony.qill/",
+        "instagram": "https://www.instagram.com/hotcandy.134/",
+        "tiktok": "https://www.tiktok.com/@whatwasthat2000?is_from_webapp=1&sender_device=pc",
+        "x": "https://x.com/anthony_quan",
+        "linkedin": "https://linkedin.com/in/anthonyquan",
+        "website": "https://cantstophere.com",
+        "github": "",
+        "google": "https://google.com"
+      },
+      "friends": [
+        "u_huy",
+        "u_nam",
+        "u_minhanh"
+      ],
+      "chatStatus": "online",
+      "allowStrangerNotifications": true,
+      "authProvider": "facebook",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhZWM1YjQ2ZWUxMTI2NjJiMzNjMGUzMiIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiLEkMahbiBUaMOibiBN4bq5IiwiZW1haWwiOiJhbnRob255cTAxMjAyNUBnbWFpbC5jb20iLCJqb2JUaXRsZSI6IlN5c3RlbSBBZG1pbiAmIExlYWQgRGV2IiwiaWF0IjoxNzkzOTA5NTk0LCJleHAiOjE3OTY1MDE1OTR9.jClWqEjq4nrvX5s1JMxEHKIo9UMcmdJNtdOPg4pu4xw"
+    },
+    {
+      "_id": "u_admin_2",
+      "name": "Quản Trị Viên Freedom",
+      "email": "admin@cantstophere.com",
+      "phone": "0901111222",
+      "password": "password123",
+      "rawPassword": "123456",
+      "role": "admin",
+      "jobTitle": "Community Administrator",
+      "avatar": "/images/1.jpg",
+      "bio": "Hỗ trợ giải đáp và giữ gìn không gian chia sẻ an toàn, tích cực cho mọi người.",
+      "profileMusic": {
+        "enabled": true,
+        "title": "Deep Focus - Nhịp điệu tập trung",
+        "artist": "Freedom Ambient",
+        "sourceType": "preset",
+        "presetId": "deep_focus",
+        "url": "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=lofi-orchestra-16230.mp3"
+      },
+      "friends": [
+        "u_admin_1"
+      ],
+      "chatStatus": "online",
+      "allowStrangerNotifications": true
+    },
+    {
+      "_id": "u_minhanh",
+      "name": "Minh Anh",
+      "email": "minhanh@cantstophere.com",
+      "phone": "0902222333",
+      "password": "password123",
+      "rawPassword": "123456",
+      "role": "user",
+      "jobTitle": "Frontend Dev 3 năm kinh nghiệm",
+      "avatar": "/images/man.jpg",
+      "bio": "Đang vật lộn với deadlines và tìm lại niềm vui code ngày đầu.",
+      "profileMusic": {
+        "enabled": true,
+        "title": "Healing Piano - Khoảng lặng tâm hồn",
+        "artist": "Peaceful Mind",
+        "sourceType": "preset",
+        "presetId": "healing_piano",
+        "url": "https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=ambient-piano-amp-strings-10711.mp3"
+      },
+      "friends": [
+        "u_admin_1"
+      ],
+      "chatStatus": "offline",
+      "allowStrangerNotifications": true
+    },
+    {
+      "_id": "u_nam",
+      "name": "Thành Nam",
+      "email": "nam.pm@cantstophere.com",
+      "phone": "0903333444",
+      "password": "password123",
+      "rawPassword": "123456",
+      "role": "user",
+      "jobTitle": "Product Manager",
+      "avatar": "/images/2.jpg",
+      "bio": "Cầu nối giữa team Tech và Kinh doanh. Thích lắng nghe câu chuyện của mọi người. #Product #LifeBalance",
+      "socialLinks": {
+        "linkedin": "https://linkedin.com/in/nam-pm",
+        "facebook": "https://facebook.com/nam.product"
+      },
+      "profileMusic": {
+        "enabled": true,
+        "title": "Rain & Coffee - Tiếng mưa bên ô cửa sổ",
+        "artist": "Acoustic Rain Project",
+        "sourceType": "preset",
+        "presetId": "rain_coffee",
+        "url": "https://cdn.pixabay.com/download/audio/2021/09/06/audio_731a104051.mp3?filename=rain-and-nostalgia-chill-lofi-song-8493.mp3"
+      },
+      "friends": [
+        "u_admin_1"
+      ],
+      "chatStatus": "busy",
+      "allowStrangerNotifications": true
+    },
+    {
+      "_id": "u_huy",
+      "name": "Đức Huy",
+      "email": "duchuy@cantstophere.com",
+      "phone": "0904444555",
+      "password": "password123",
+      "rawPassword": "123456",
+      "role": "user",
+      "jobTitle": "Junior Developer (Chuyển ngành)",
+      "avatar": "/images/3.jpg",
+      "bio": "Bắt đầu học code từ con số 0 ở tuổi 27. Tin rằng không bao giờ là quá muộn. #ChuyenNganh #Developer",
+      "profileMusic": {
+        "enabled": true,
+        "title": "Deep Focus - Nhịp điệu tập trung",
+        "artist": "Dev Chillhop",
+        "sourceType": "preset",
+        "presetId": "deep_focus",
+        "url": "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=lofi-orchestra-16230.mp3"
+      },
+      "friends": [
+        "u_admin_1"
+      ],
+      "chatStatus": "online",
+      "allowStrangerNotifications": true
+    },
+    {
+      "_id": "u_ly",
+      "name": "Hương Ly",
+      "email": "huongly@cantstophere.com",
+      "phone": "0905555666",
+      "password": "password123",
+      "rawPassword": "123456",
+      "role": "user",
+      "jobTitle": "UI/UX Designer",
+      "avatar": "/images/img2.jpg",
+      "bio": "Tìm kiếm sự cân bằng giữa sáng tạo nghệ thuật và cơm áo gạo tiền. #Design #Art #SmallWins",
+      "socialLinks": {
+        "instagram": "https://instagram.com/huongly.designs",
+        "tiktok": "https://tiktok.com/@huongly_uiux"
+      },
+      "profileMusic": {
+        "enabled": true,
+        "title": "Acoustic Sunset - Bình yên sau tan ca",
+        "artist": "Acoustic Soul",
+        "sourceType": "preset",
+        "presetId": "acoustic_sunset",
+        "url": "https://cdn.pixabay.com/download/audio/2022/11/06/audio_c93e43d61f.mp3?filename=warm-acoustic-guitar-124928.mp3"
+      },
+      "friends": [],
+      "chatStatus": "online",
+      "allowStrangerNotifications": true
+    },
+    {
+      "_id": "6aece3648b093b815b55d523",
+      "role": "user",
+      "jobTitle": "Dance & Art Creator",
+      "avatar": "/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg",
+      "bio": "Tài khoản Google Ảnh 2 Hình kết nối nhanh từ trình duyệt.",
+      "name": "Ảnh 2 Hình",
+      "email": "hinhanh2081200@gmail.com",
+      "coverImage": "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80",
+      "customLayout": {
+        "theme": "default",
+        "bgGradient": "",
+        "bgColor": "",
+        "frameStyle": "none",
+        "ambientEffect": "particles"
+      },
+      "profileMusic": {
+        "enabled": true,
+        "title": "Lofi Chill - Đêm muộn ở văn phòng",
+        "artist": "You Can't Stop Here Chill Room",
+        "sourceType": "preset",
+        "url": "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3",
+        "presetId": "lofi_night"
+      },
+      "socialLinks": {
+        "facebook": "",
+        "instagram": "",
+        "tiktok": "",
+        "x": "",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "authProvider": "google",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhZWNlMzY0OGIwOTNiODE1YjU1ZDUyMyIsInJvbGUiOiJ1c2VyIiwibmFtZSI6IuG6om5oIDIgSMOsbmgiLCJlbWFpbCI6ImhpbmhhbmgyMDgxMjAwQGdtYWlsLmNvbSIsImpvYlRpdGxlIjoiRGFuY2UgJiBBcnQgQ3JlYXRvciIsImlhdCI6MTc5MzkwOTYwNSwiZXhwIjoxNzk2NTAxNjA1fQ.Ehg8LpA6Os5h4vizs_td0-fyGZkTjV-KD0KH0wkTzUk",
+      "friends": [],
+      "chatStatus": "online",
+      "allowStrangerNotifications": true
+    }
+  ],
+  "categories": [
+    {
+      "_id": "cat_1",
+      "name": "Áp lực & Kiệt sức (Burnout)",
+      "slug": "ap-luc-kiet-suc-burnout",
+      "description": "OT, deadline và cạn kiệt năng lượng"
+    },
+    {
+      "_id": "cat_2",
+      "name": "Khủng hoảng nghề nghiệp (Career Crisis)",
+      "slug": "khung-hoang-nghe-nghiep-career-crisis",
+      "description": "Chênh vênh giữa tiếp tục hay từ bỏ"
+    },
+    {
+      "_id": "cat_3",
+      "name": "Chuyển ngành & Bắt đầu lại (Restart)",
+      "slug": "chuyen-nganh-bat-dau-lai-restart",
+      "description": "Can đảm làm lại từ con số 0"
+    },
+    {
+      "_id": "cat_4",
+      "name": "Những tia sáng & Động lực (Small Wins)",
+      "slug": "nhung-tia-sang-dong-luc-small-wins",
+      "description": "Thành tựu nhỏ bé nuôi dưỡng hi vọng"
+    }
+  ],
+  "subscribers": [
+    {
+      "email": "anthonyq012025@gmail.com",
+      "mxHost": "mx.gmail.com",
+      "subscribedAt": "2026-11-05T14:56:18.530Z",
+      "lastSentAt": "2026-11-05T15:04:17.227Z"
+    }
+  ],
+  "conversations": [
+    {
+      "_id": "conv_1",
+      "participants": [
+        "u_ly",
+        "u_admin_1"
+      ],
+      "status": "pending",
+      "isStranger": true,
+      "requestedBy": "u_ly",
+      "totalMessagesCount": 1,
+      "unreadCounts": {
+        "u_admin_1": 1
+      },
+      "lastMessage": {
+        "_id": "msg_1",
+        "content": "Chào anh Quân, em đọc bài viết 2 giờ sáng của anh thấy rất đồng cảm...",
+        "sender": {
+          "_id": "u_ly",
+          "name": "Hương Ly",
+          "avatar": "/images/img2.jpg"
+        },
+        "createdAt": "2026-11-05T14:30:00.000Z"
+      },
+      "updatedAt": "2026-11-05T14:30:00.000Z"
+    },
+    {
+      "_id": "conv_2",
+      "participants": [
+        "u_huy",
+        "u_admin_1"
+      ],
+      "status": "accepted",
+      "isStranger": false,
+      "totalMessagesCount": 4,
+      "unreadCounts": {
+        "u_admin_1": 2
+      },
+      "lastMessage": {
+        "_id": "msg_2",
+        "content": "Dạ em cảm ơn anh Quân đã động viên bài viết của em hôm trước ạ!",
+        "sender": {
+          "_id": "u_huy",
+          "name": "Đức Huy",
+          "avatar": "/images/3.jpg"
+        },
+        "createdAt": "2026-11-05T15:10:00.000Z"
+      },
+      "updatedAt": "2026-11-05T15:10:00.000Z"
+    },
+    {
+      "_id": "conv_3",
+      "participants": [
+        "u_nam",
+        "u_admin_1"
+      ],
+      "status": "accepted",
+      "isStranger": false,
+      "totalMessagesCount": 6,
+      "unreadCounts": {
+        "u_admin_1": 3
+      },
+      "lastMessage": {
+        "_id": "msg_3",
+        "content": "Cảm ơn Quân nhiều nhé, hôm nào rảnh anh em mình cafe tán gẫu.",
+        "sender": {
+          "_id": "u_nam",
+          "name": "Thành Nam",
+          "avatar": "/images/2.jpg"
+        },
+        "createdAt": "2026-11-05T15:45:00.000Z"
+      },
+      "updatedAt": "2026-11-05T15:45:00.000Z"
+    }
+  ],
+  "messages": [
+    {
+      "_id": "msg_1",
+      "conversation": "conv_1",
+      "sender": {
+        "_id": "u_ly",
+        "name": "Hương Ly",
+        "avatar": "/images/img2.jpg"
+      },
+      "receiver": {
+        "_id": "u_admin_1",
+        "name": "Trần Đình Quân"
+      },
+      "content": "Chào anh Quân, em đọc bài viết 2 giờ sáng của anh thấy rất đồng cảm...",
+      "isRead": false,
+      "createdAt": "2026-11-05T14:30:00.000Z"
+    },
+    {
+      "_id": "msg_2_prev",
+      "conversation": "conv_2",
+      "sender": {
+        "_id": "u_admin_1",
+        "name": "Trần Đình Quân",
+        "avatar": "/images/man.jpg"
+      },
+      "receiver": {
+        "_id": "u_huy",
+        "name": "Đức Huy"
+      },
+      "content": "Chào Huy, bài viết chia sẻ về việc chuyển ngành của em rất truyền cảm hứng!",
+      "isRead": true,
+      "createdAt": "2026-11-05T15:05:00.000Z"
+    },
+    {
+      "_id": "msg_2",
+      "conversation": "conv_2",
+      "sender": {
+        "_id": "u_huy",
+        "name": "Đức Huy",
+        "avatar": "/images/3.jpg"
+      },
+      "receiver": {
+        "_id": "u_admin_1",
+        "name": "Trần Đình Quân"
+      },
+      "content": "Dạ em cảm ơn anh Quân đã động viên bài viết của em hôm trước ạ!",
+      "isRead": false,
+      "createdAt": "2026-11-05T15:10:00.000Z"
+    },
+    {
+      "_id": "msg_3",
+      "conversation": "conv_3",
+      "sender": {
+        "_id": "u_nam",
+        "name": "Thành Nam",
+        "avatar": "/images/2.jpg"
+      },
+      "receiver": {
+        "_id": "u_admin_1",
+        "name": "Trần Đình Quân"
+      },
+      "content": "Cảm ơn Quân nhiều nhé, hôm nào rảnh anh em mình cafe tán gẫu.",
+      "isRead": false,
+      "createdAt": "2026-11-05T15:45:00.000Z"
+    }
+  ]
+}

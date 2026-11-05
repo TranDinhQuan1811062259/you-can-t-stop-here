@@ -4,6 +4,7 @@ import { categoryService } from '../../services/categoryService';
 import { uploadService } from '../../services/uploadService';
 import { RichVisualEditor } from './RichVisualEditor';
 import { formatPostContent } from '../../utils/contentFormatter';
+import { maskSensitiveText, analyzeContentSafety } from '../../utils/sensitiveFilter';
 
 export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
   const [categories, setCategories] = useState([]);
@@ -14,6 +15,8 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
     category: '',
     coverImage: '',
     tags: '',
+    showReactionCount: true,
+    audioMood: 'auto',
   });
 
   const [activeTab, setActiveTab] = useState('edit'); // 'edit' hoặc 'preview'
@@ -183,13 +186,23 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
     setErrorMsg('');
 
     try {
+      // Tự động chèn dấu chấm vào từ ngữ nhạy cảm (ví dụ Die -> D.I.E, chết -> c.h.ế.t)
+      const cleanTitle = maskSensitiveText(formData.title.trim());
+      const cleanSummary = maskSensitiveText(formData.summary.trim());
+      const cleanContent = maskSensitiveText(formData.content);
+      const cleanTags = formData.tags
+        ? formData.tags.split(',').map((t) => maskSensitiveText(t.trim().replace(/^#/, ''))).filter(Boolean)
+        : [];
+
       const res = await postService.createPost({
-        title: formData.title,
-        summary: formData.summary,
-        content: formData.content,
+        title: cleanTitle,
+        summary: cleanSummary,
+        content: cleanContent,
         category: formData.category,
         coverImage: formData.coverImage || undefined,
-        tags: formData.tags ? formData.tags.split(',').map((t) => t.trim()) : [],
+        tags: cleanTags,
+        showReactionCount: formData.showReactionCount,
+        audioMood: formData.audioMood || 'auto',
       });
 
       if (onPostCreated) {
@@ -262,6 +275,33 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
           />
         </div>
 
+        {/* Cảnh báo kiểm duyệt an toàn thời gian thực */}
+        {(() => {
+          const safety = analyzeContentSafety(formData.title, formData.summary, formData.content, formData.tags ? formData.tags.split(',') : []);
+          if (!safety.isFlagged) return null;
+          return (
+            <div
+              style={{
+                background: '#fffbeb',
+                border: '1px solid #fde68a',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                marginBottom: '14px',
+                color: '#92400e',
+                fontSize: '0.84rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+              }}
+            >
+              <span style={{ fontSize: '1.25rem' }}>🛡️</span>
+              <div>
+                <strong>Lưu ý an toàn:</strong> Nội dung có chứa từ ngữ nhạy cảm ({safety.foundWords.join(', ')}). Hệ thống sẽ tự động chèn dấu chấm (D.I.E, c.h.ế.t...) và gắn cờ để Admin kiểm duyệt nhằm bảo vệ website không bị vi phạm.
+              </div>
+            </div>
+          );
+        })()}
+
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
             <label>Tiêu đề bài viết / cảm nghĩ *</label>
@@ -291,20 +331,28 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
             </select>
           </div>
 
-          {/* Ảnh bìa bài viết */}
+          {/* Ảnh bìa bài viết (Hỗ trợ Ảnh JPG/PNG và Ảnh động GIF 🎬) */}
           <div className="form-group">
-            <label>Ảnh bìa bài viết</label>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <label>Ảnh bìa bài viết (Hỗ trợ Ảnh tĩnh & Ảnh động GIF 🎬)</label>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,.gif"
                 onChange={handleCoverImageChange}
                 disabled={uploadingCover}
                 style={{ fontSize: '0.85rem' }}
               />
+              <span style={{ fontSize: '0.8rem', color: '#64748b' }}>hoặc dán link GIF:</span>
+              <input
+                type="url"
+                placeholder="https://.../cover.gif"
+                value={formData.coverImage?.startsWith('http') ? formData.coverImage : ''}
+                onChange={(e) => setFormData((prev) => ({ ...prev, coverImage: e.target.value }))}
+                style={{ flex: 1, minWidth: '180px', fontSize: '0.85rem', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              />
               {uploadingCover && (
                 <span style={{ fontSize: '0.85rem', color: 'var(--primary-hover)', fontWeight: 600 }}>
-                  ☁️ Đang xử lý ảnh bìa...
+                  ☁️ Đang xử lý ảnh bìa/GIF...
                 </span>
               )}
             </div>
@@ -313,7 +361,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
               <div className="cover-preview-box">
                 <img
                   src={formData.coverImage}
-                  alt="Ảnh bìa bài viết đã chọn"
+                  alt="Ảnh bìa bài viết hoặc GIF đã chọn"
                   className="cover-preview-img"
                 />
                 <button
@@ -388,6 +436,53 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
               value={formData.tags}
               onChange={handleChange}
             />
+          </div>
+
+          <div className="form-group" style={{ marginTop: '14px', background: 'rgba(99, 102, 241, 0.05)', padding: '12px 14px', borderRadius: '8px', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+            <label style={{ fontWeight: 700, color: '#4338ca', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <span>🎧</span>
+              <span>Cài đặt Giọng đọc & Tâm trạng A.I cho bài viết</span>
+            </label>
+            <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: '#64748b' }}>
+              Người đọc có thể bấm "Nghe đọc" để A.I diễn đọc bài viết bằng giọng tương ứng với cảm xúc bạn chọn.
+            </p>
+            <select
+              name="audioMood"
+              value={formData.audioMood || 'auto'}
+              onChange={handleChange}
+              style={{
+                width: '100%',
+                padding: '9px 12px',
+                borderRadius: '8px',
+                border: '1.5px solid #c7d2fe',
+                fontSize: '0.88rem',
+                background: '#ffffff',
+                fontWeight: 600,
+                color: '#1e1b4b',
+              }}
+            >
+              <option value="auto">✨ Tự động theo tâm trạng (A.I tự phân tích cảm xúc từ ngữ)</option>
+              <option value="melancholic">🌧️ Trầm buồn, sâu lắng & vỗ về (Tâm sự đêm muộn, burnout, áp lực)</option>
+              <option value="uplifting">☀️ Vui tươi, tích cực & hứng khởi (Small wins, khởi sắc, truyền cảm hứng)</option>
+              <option value="child">🎈 Hồn nhiên, trong trẻo (Giọng đọc trẻ em đáng yêu)</option>
+              <option value="podcast">🎙️ Podcast truyền cảm (Chuẩn phát thanh viên Storyteller)</option>
+              <option value="custom_voice">🧬 Giọng A.I nhân bản chính chủ (Dùng giọng thu âm của bạn)</option>
+            </select>
+          </div>
+
+          <div className="form-group" style={{ marginTop: '14px', background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 600, color: 'var(--bg-dark)', marginBottom: 0 }}>
+              <input
+                type="checkbox"
+                checked={formData.showReactionCount}
+                onChange={(e) => setFormData({ ...formData, showReactionCount: e.target.checked })}
+                style={{ width: '18px', height: '18px', accentColor: 'var(--primary-color)', cursor: 'pointer' }}
+              />
+              <span>👁️ Cho phép hiển thị số lượng bày tỏ cảm xúc trên bài viết</span>
+            </label>
+            <p style={{ margin: '4px 0 0 28px', fontSize: '0.82rem', color: '#64748b' }}>
+              Nếu bỏ chọn, bài viết chỉ hiển thị các biểu tượng cảm xúc (Đồng Cảm 🫂, Stop 🛑, Yêu thích ❤️, Cố Lên 💪) mà không hiển thị con số cụ thể.
+            </p>
           </div>
 
           <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>

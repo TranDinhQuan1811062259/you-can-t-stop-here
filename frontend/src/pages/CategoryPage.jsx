@@ -42,7 +42,7 @@ export const CategoryPage = () => {
 
       {/* Main Content */}
       <section className="container" style={{ padding: '40px 20px' }}>
-        <ErrorMessage message={error} />
+        {error && posts.length === 0 && <ErrorMessage message={error} />}
 
         {loading ? (
           <LoadingSpinner message="Đang tải các bài viết trong chủ đề này..." />

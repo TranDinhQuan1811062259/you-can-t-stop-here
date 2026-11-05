@@ -31,9 +31,9 @@ apiClient.interceptors.response.use(
 
     if (!message) {
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
-        message = 'Không thể kết nối đến Backend (Cổng 5050)! Bạn hãy chắc chắn đã mở terminal chạy npm run dev trong thư mục backend nhé.';
+        message = 'Không thể kết nối mạng. Vui lòng kiểm tra lại kết nối.';
       } else if (error.response?.status === 500 && !error.response?.data?.message) {
-        message = 'Máy chủ Backend (cổng 5050) đang tắt hoặc chưa kết nối được. Vui lòng bật backend bằng lệnh: npm run dev trong thư mục backend';
+        message = 'Máy chủ đang bận. Vui lòng thử lại sau.';
       } else {
         message = error.message || 'Không thể kết nối đến máy chủ API.';
       }

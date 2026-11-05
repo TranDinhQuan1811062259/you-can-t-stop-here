@@ -1,7 +1,58 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { newsletterService } from '../../services/newsletterService';
 
 export const Footer = () => {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState('idle'); // 'idle' | 'loading' | 'success' | 'error'
+  const [message, setMessage] = useState('');
+  const [previewUrl, setPreviewUrl] = useState('');
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    if (!email || !email.trim()) {
+      setStatus('error');
+      setMessage('Vui lòng nhập địa chỉ email của bạn!');
+      return;
+    }
+
+    setLoading(true);
+    setStatus('loading');
+    setMessage('Đang kiểm tra địa chỉ email & chuẩn bị gửi thư...');
+    setPreviewUrl('');
+
+    try {
+      const res = await newsletterService.subscribe(email.trim());
+      setStatus('success');
+      setMessage(
+        res.data?.message ||
+        `✓ Đã xác nhận email tồn tại và gửi thư thành công tới ${email}! Vui lòng kiểm tra hộp thư đến (hoặc hòm thư rác/spam).`
+      );
+      if (res.data?.data?.previewUrl) {
+        setPreviewUrl(res.data.data.previewUrl);
+      }
+      setEmail('');
+    } catch (err) {
+      setStatus('error');
+      setMessage(
+        err.message || 'Địa chỉ email này không hợp lệ hoặc không thể nhận thư. Vui lòng kiểm tra lại!'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const footerTags = [
+    { label: '#Burnout', tag: 'Burnout' },
+    { label: '#Overtime', tag: 'Overtime' },
+    { label: '#CareerCrisis', tag: 'CareerCrisis' },
+    { label: '#ChuyểnNgành', tag: 'ChuyểnNgành' },
+    { label: '#SmallWins', tag: 'SmallWins' },
+    { label: '#SứcKhỏeTinhThần', tag: 'SứcKhỏeTinhThần' },
+    { label: '#ImpostorSyndrome', tag: 'ImpostorSyndrome' },
+  ];
+
   return (
     <footer className="site-footer" id="footer-contact">
       <div className="container">
@@ -15,17 +66,21 @@ export const Footer = () => {
             </p>
           </div>
 
-          {/* Column 2: Thẻ từ khóa (Tags) */}
+          {/* Column 2: Thẻ từ khóa (Tags) - Có thể bấm vào để lọc bài viết */}
           <div className="footer-col">
             <h3>Chủ Đề Quan Tâm</h3>
             <div className="footer-tags">
-              <span className="footer-tag-item">#Burnout</span>
-              <span className="footer-tag-item">#Overtime</span>
-              <span className="footer-tag-item">#CareerCrisis</span>
-              <span className="footer-tag-item">#ChuyểnNgành</span>
-              <span className="footer-tag-item">#SmallWins</span>
-              <span className="footer-tag-item">#SứcKhỏeTinhThần</span>
-              <span className="footer-tag-item">#ImpostorSyndrome</span>
+              {footerTags.map((item, idx) => (
+                <Link
+                  key={idx}
+                  to={`/?tag=${encodeURIComponent(item.tag)}`}
+                  className="footer-tag-item"
+                  title={`Xem các bài viết về ${item.label}`}
+                  style={{ textDecoration: 'none' }}
+                >
+                  {item.label}
+                </Link>
+              ))}
             </div>
           </div>
 
@@ -35,34 +90,112 @@ export const Footer = () => {
             <p style={{ marginBottom: '12px' }}>
               Mỗi tuần một câu chuyện tiếp thêm sức mạnh tinh thần được gửi vào hòm thư:
             </p>
-            <form onSubmit={(e) => e.preventDefault()} style={{ display: 'flex', gap: '8px' }}>
-              <input
-                type="email"
-                placeholder="Nhập email của bạn..."
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  border: '1px solid #4a5568',
-                  background: '#1a202c',
-                  color: '#fff',
-                  flexGrow: 1,
-                  fontSize: '0.85rem',
-                }}
-              />
-              <button
-                type="submit"
-                style={{
-                  padding: '8px 14px',
-                  background: 'var(--primary-color)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '4px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Nhận tin
-              </button>
+
+            <form onSubmit={handleSubscribe} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="email"
+                  placeholder="Nhập email của bạn (ví dụ: anthonyq012025@gmail.com)"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (status !== 'idle') setStatus('idle');
+                  }}
+                  disabled={loading}
+                  required
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #4a5568',
+                    background: '#1a202c',
+                    color: '#fff',
+                    flexGrow: 1,
+                    fontSize: '0.85rem',
+                    outline: 'none',
+                    transition: 'border-color 0.2s',
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    padding: '8px 16px',
+                    background: loading ? '#475569' : 'var(--primary-color)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {loading ? '⏳ Đang gửi...' : 'Nhận tin'}
+                </button>
+              </div>
+
+              {/* Thông báo trạng thái xác thực và gửi mail */}
+              {status === 'loading' && (
+                <div
+                  style={{
+                    fontSize: '0.78rem',
+                    color: '#38bdf8',
+                    marginTop: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <span>🔄</span>
+                  <span>{message}</span>
+                </div>
+              )}
+
+              {status === 'success' && (
+                <div
+                  style={{
+                    fontSize: '0.8rem',
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    border: '1px solid #10b981',
+                    color: '#a7f3d0',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    marginTop: '4px',
+                    lineHeight: '1.4',
+                  }}
+                >
+                  {message}
+                  {previewUrl && (
+                    <div style={{ marginTop: '4px' }}>
+                      <a
+                        href={previewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#34d399', textDecoration: 'underline', fontWeight: 600 }}
+                      >
+                        📩 Xem trực tiếp nội dung thư đã gửi &rarr;
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {status === 'error' && (
+                <div
+                  style={{
+                    fontSize: '0.8rem',
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    border: '1px solid #ef4444',
+                    color: '#fca5a5',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    marginTop: '4px',
+                    lineHeight: '1.4',
+                  }}
+                >
+                  ⚠️ {message}
+                </div>
+              )}
             </form>
           </div>
         </div>

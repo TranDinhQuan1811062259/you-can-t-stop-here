@@ -1,66 +1,112 @@
-import 'dotenv/config';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dns from 'dns';
+import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Category from '../models/Category.js';
 import Post from '../models/Post.js';
 import Comment from '../models/Comment.js';
+import Conversation from '../models/Conversation.js';
+import Message from '../models/Message.js';
 import { slugify } from './slugify.js';
+
+// Đặt DNS Google và Cloudflare giải quyết SRV record
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+} catch (e) {}
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(process.cwd(), 'backend/.env') });
+dotenv.config();
 
 // Danh sách tài khoản Admin & User (TẤT CẢ MẬT KHẨU MẶC ĐỊNH LÀ: 123456)
 const sampleUsers = [
   {
-    name: 'Đình Quân Trần',
+    name: 'Trần Đình Quân',
     email: 'anthonyq012025@gmail.com',
-    password: 'password123',
+    password: '123456',
     role: 'admin',
+    chatStatus: 'online',
     jobTitle: 'System Admin & Lead Dev',
     avatar: '/images/man.jpg',
-    bio: 'Chủ sở hữu & Quản trị viên hệ thống You Can\'t Stop Here.',
+    bio: 'Chủ sở hữu & Quản trị viên You Can\'t Stop Here. Đam mê lập trình và chia sẻ góc nhìn nghề nghiệp chân thành. #Burnout #Overtime #LeadDev #KeepMoving',
+    socialLinks: {
+      facebook: 'https://facebook.com/anthony.quan',
+      instagram: 'https://instagram.com/anthony_quan',
+      tiktok: 'https://tiktok.com/@anthonyquan',
+      x: 'https://x.com/anthony_quan',
+      linkedin: 'https://linkedin.com/in/anthonyquan',
+      website: 'https://cantstophere.com',
+    },
   },
   {
     name: 'Quản Trị Viên Freedom',
     email: 'admin@cantstophere.com',
-    password: 'password123',
+    password: '123456',
     role: 'admin',
+    chatStatus: 'online',
     jobTitle: 'Community Administrator',
     avatar: '/images/1.jpg',
-    bio: 'Hỗ trợ giải đáp và giữ gìn không gian chia sẻ an toàn, tích cực cho mọi người.',
+    bio: 'Hỗ trợ giải đáp và giữ gìn không gian chia sẻ an toàn, tích cực cho mọi người. #Community #Freedom #SmallWins',
+    socialLinks: {
+      facebook: 'https://facebook.com/cantstophere',
+      website: 'https://cantstophere.com',
+    },
   },
   {
     name: 'Minh Anh',
     email: 'minhanh@cantstophere.com',
-    password: 'password123',
+    password: '123456',
     role: 'user',
+    chatStatus: 'busy',
     jobTitle: 'Frontend Dev 3 năm kinh nghiệm',
     avatar: '/images/man.jpg',
-    bio: 'Đang vật lộn với deadlines và tìm lại niềm vui code ngày đầu.',
+    bio: 'Đang vật lộn với deadlines và tìm lại niềm vui code ngày đầu. #Burnout #Frontend',
+    socialLinks: {
+      x: 'https://x.com/minhanh_fe',
+      linkedin: 'https://linkedin.com/in/minhanh-dev',
+    },
   },
   {
     name: 'Thành Nam',
     email: 'nam.pm@cantstophere.com',
-    password: 'password123',
+    password: '123456',
     role: 'user',
+    chatStatus: 'online',
     jobTitle: 'Product Manager',
     avatar: '/images/2.jpg',
-    bio: 'Cầu nối giữa team Tech và Kinh doanh. Thích lắng nghe câu chuyện của mọi người.',
+    bio: 'Cầu nối giữa team Tech và Kinh doanh. Thích lắng nghe câu chuyện của mọi người. #Product #LifeBalance #ImpostorSyndrome',
+    socialLinks: {
+      linkedin: 'https://linkedin.com/in/nam-pm',
+      facebook: 'https://facebook.com/nam.product',
+    },
   },
   {
     name: 'Hương Ly',
     email: 'huongly@cantstophere.com',
-    password: 'password123',
+    password: '123456',
     role: 'user',
+    chatStatus: 'busy',
     jobTitle: 'UI/UX Designer',
     avatar: '/images/img2.jpg',
-    bio: 'Tìm kiếm sự cân bằng giữa sáng tạo nghệ thuật và cơm áo gạo tiền.',
+    bio: 'Tìm kiếm sự cân bằng giữa sáng tạo nghệ thuật và cơm áo gạo tiền. #UIUX #Designer #SmallWins #Creativity',
+    socialLinks: {
+      instagram: 'https://instagram.com/huongly.designs',
+      tiktok: 'https://tiktok.com/@huongly_uiux',
+    },
   },
   {
     name: 'Đức Huy',
     email: 'duchuy@cantstophere.com',
-    password: 'password123',
+    password: '123456',
     role: 'user',
+    chatStatus: 'offline',
     jobTitle: 'Junior Developer (Chuyển ngành)',
     avatar: '/images/3.jpg',
-    bio: 'Bắt đầu học code từ con số 0 ở tuổi 27. Tin rằng không bao giờ là quá muộn.',
+    bio: 'Bắt đầu học code từ con số 0 ở tuổi 27. Tin rằng không bao giờ là quá muộn. #ChuyenNganh #CanDam #Developer',
   },
 ];
 
@@ -91,7 +137,7 @@ const seedDatabase = async () => {
     }
 
     console.log(`[Seed] Đang kết nối đến MongoDB Atlas: ${mongoUri.split('@')[1] || mongoUri}...`);
-    await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 8000 });
+    await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 15000, family: 4 });
     console.log('[Seed] ✅ Đã kết nối MongoDB thành công');
 
     // Xóa sạch dữ liệu cũ
@@ -100,6 +146,8 @@ const seedDatabase = async () => {
       Category.deleteMany({}),
       Post.deleteMany({}),
       Comment.deleteMany({}),
+      Conversation.deleteMany({}),
+      Message.deleteMany({}),
     ]);
     console.log('[Seed] 🧹 Đã làm sạch dữ liệu cũ trên MongoDB Atlas');
 
@@ -152,6 +200,35 @@ const seedDatabase = async () => {
         authorJob: 'System Admin & Lead Dev',
         tags: ['Burnout', 'Overtime', 'Suy ngẫm'],
         cheersCount: 42,
+        reactionCounts: {
+          sympathy: 18,
+          stop: 4,
+          love: 12,
+          encourage: 8,
+          total: 42,
+        },
+        reactions: [
+          {
+            user: userMap['nam.pm@cantstophere.com']._id,
+            userName: 'Thành Nam',
+            userAvatar: '/images/2.jpg',
+            types: ['sympathy', 'encourage'],
+          },
+          {
+            user: userMap['huongly@cantstophere.com']._id,
+            userName: 'Hương Ly',
+            userAvatar: '/images/img2.jpg',
+            types: ['love', 'encourage'],
+          },
+          {
+            user: userMap['duchuy@cantstophere.com']._id,
+            userName: 'Đức Huy',
+            userAvatar: '/images/3.jpg',
+            types: ['sympathy', 'stop'],
+          },
+        ],
+        showReactionCount: true,
+        sharesCount: 6,
         views: 1,
       },
       {
@@ -172,6 +249,23 @@ const seedDatabase = async () => {
         authorJob: userMap['nam.pm@cantstophere.com'].jobTitle,
         tags: ['Impostor Syndrome', 'Tự tin', 'Tâm lý làm việc'],
         cheersCount: 68,
+        reactionCounts: { sympathy: 25, stop: 0, love: 20, encourage: 23, total: 68 },
+        reactions: [
+          {
+            user: userMap['anthonyq012025@gmail.com']._id,
+            userName: 'Trần Đình Quân',
+            userAvatar: '/images/man.jpg',
+            types: ['sympathy', 'encourage'],
+          },
+          {
+            user: userMap['huongly@cantstophere.com']._id,
+            userName: 'Hương Ly',
+            userAvatar: '/images/img2.jpg',
+            types: ['love', 'encourage'],
+          },
+        ],
+        showReactionCount: true,
+        sharesCount: 11,
         views: 1,
       },
       {
@@ -192,6 +286,17 @@ const seedDatabase = async () => {
         authorJob: userMap['duchuy@cantstophere.com'].jobTitle,
         tags: ['Chuyển ngành', 'Can đảm', 'Bắt đầu lại'],
         cheersCount: 95,
+        reactionCounts: { sympathy: 15, stop: 0, love: 35, encourage: 45, total: 95 },
+        reactions: [
+          {
+            user: userMap['anthonyq012025@gmail.com']._id,
+            userName: 'Trần Đình Quân',
+            userAvatar: '/images/man.jpg',
+            types: ['love', 'encourage'],
+          },
+        ],
+        showReactionCount: true,
+        sharesCount: 18,
         views: 1,
       },
       {
@@ -213,16 +318,40 @@ const seedDatabase = async () => {
         authorJob: userMap['huongly@cantstophere.com'].jobTitle,
         tags: ['Ranh giới', 'Sức khỏe tinh thần', 'Small Win'],
         cheersCount: 120,
+        reactionCounts: { sympathy: 30, stop: 5, love: 45, encourage: 40, total: 120 },
+        reactions: [
+          {
+            user: userMap['anthonyq012025@gmail.com']._id,
+            userName: 'Trần Đình Quân',
+            userAvatar: '/images/man.jpg',
+            types: ['love', 'encourage'],
+          },
+          {
+            user: userMap['nam.pm@cantstophere.com']._id,
+            userName: 'Thành Nam',
+            userAvatar: '/images/2.jpg',
+            types: ['sympathy', 'love'],
+          },
+        ],
+        showReactionCount: false, // Thử nghiệm 1 bài tác giả chọn ẨN số lượng để kiểm tra giao diện!
+        sharesCount: 22,
         views: 1,
       },
     ];
 
     const insertedPosts = [];
     for (const p of samplePosts) {
+      const authorUser = Object.values(userMap).find(
+        (u) => u._id.toString() === p.user.toString()
+      );
+      const socialLinksObj = authorUser?.socialLinks?.toObject
+        ? authorUser.socialLinks.toObject()
+        : (authorUser?.socialLinks || {});
       const createdPost = await Post.create({
         ...p,
         slug: slugify(p.title),
         isPublished: true,
+        authorSocialLinks: socialLinksObj,
       });
       insertedPosts.push(createdPost);
     }
@@ -262,6 +391,120 @@ const seedDatabase = async () => {
 
     await Comment.insertMany(sampleComments);
     console.log(`[Seed] 💬 Đã tạo ${sampleComments.length} bình luận động viên mẫu`);
+
+    // Tạo danh bạ bạn bè & cuộc trò chuyện mẫu
+    const quan = userMap['anthonyq012025@gmail.com'];
+    const nam = userMap['nam.pm@cantstophere.com'];
+    const huy = userMap['duchuy@cantstophere.com'];
+    const adminUser = userMap['admin@cantstophere.com'];
+    const ly = userMap['huongly@cantstophere.com'];
+
+    // Kết bạn: Quân kết bạn với Nam, Huy, Quản trị viên
+    quan.friends = [nam._id, huy._id, adminUser._id];
+    nam.friends = [quan._id];
+    huy.friends = [quan._id];
+    adminUser.friends = [quan._id];
+    await Promise.all([quan.save(), nam.save(), huy.save(), adminUser.save()]);
+    console.log('[Seed] 🤝 Đã liên kết danh bạ bạn bè mẫu');
+
+    // 1. Cuộc trò chuyện giữa Quân và Nam (Bạn bè, 3 tin nhắn)
+    const convNam = await Conversation.create({
+      participants: [quan._id, nam._id],
+      status: 'accepted',
+      isStranger: false,
+      totalMessagesCount: 3,
+      lastMessage: {
+        content: 'Cảm ơn Quân nhiều nhé, hôm nào rảnh anh em mình cafe tâm sự tiếp nha! ☕',
+        sender: nam._id,
+        createdAt: new Date(Date.now() - 1000 * 60 * 30),
+      },
+      updatedAt: new Date(Date.now() - 1000 * 60 * 30),
+    });
+
+    await Message.create([
+      {
+        conversation: convNam._id,
+        sender: quan._id,
+        receiver: nam._id,
+        content: 'Chào Nam, dạo này dự án bên cậu thế nào rồi? Có bị OT nhiều không?',
+        createdAt: new Date(Date.now() - 1000 * 60 * 120),
+        isRead: true,
+      },
+      {
+        conversation: convNam._id,
+        sender: nam._id,
+        receiver: quan._id,
+        content: 'Cũng đỡ hơn rồi Quân ạ, đợt này team bắt đầu cân bằng lại công việc.',
+        createdAt: new Date(Date.now() - 1000 * 60 * 60),
+        isRead: true,
+      },
+      {
+        conversation: convNam._id,
+        sender: nam._id,
+        receiver: quan._id,
+        content: 'Cảm ơn Quân nhiều nhé, hôm nào rảnh anh em mình cafe tâm sự tiếp nha! ☕',
+        createdAt: new Date(Date.now() - 1000 * 60 * 30),
+        isRead: true,
+      },
+    ]);
+
+    // 2. Cuộc trò chuyện giữa Quân và Huy (Bạn bè, 2 tin nhắn)
+    const convHuy = await Conversation.create({
+      participants: [quan._id, huy._id],
+      status: 'accepted',
+      isStranger: false,
+      totalMessagesCount: 2,
+      lastMessage: {
+        content: 'Dạ em cảm ơn anh Quân đã động viên bài viết của em ạ! 🎉',
+        sender: huy._id,
+        createdAt: new Date(Date.now() - 1000 * 60 * 15),
+      },
+      updatedAt: new Date(Date.now() - 1000 * 60 * 15),
+    });
+
+    await Message.create([
+      {
+        conversation: convHuy._id,
+        sender: quan._id,
+        receiver: huy._id,
+        content: 'Chúc mừng Huy đã tìm lại được niềm đam mê lập trình nhé!',
+        createdAt: new Date(Date.now() - 1000 * 60 * 45),
+        isRead: true,
+      },
+      {
+        conversation: convHuy._id,
+        sender: huy._id,
+        receiver: quan._id,
+        content: 'Dạ em cảm ơn anh Quân đã động viên bài viết của em ạ! 🎉',
+        createdAt: new Date(Date.now() - 1000 * 60 * 15),
+        isRead: true,
+      },
+    ]);
+
+    // 3. Cuộc trò chuyện từ Hương Ly (Người lạ - Chưa kết bạn, gửi yêu cầu trò chuyện)
+    const convLy = await Conversation.create({
+      participants: [quan._id, ly._id],
+      status: 'pending',
+      isStranger: true,
+      requestedBy: ly._id,
+      totalMessagesCount: 1,
+      lastMessage: {
+        content: 'Chào anh Quân, em đọc bài viết 2 giờ sáng của anh thấy rất đồng cảm, em muốn xin lời khuyên về thiết kế UI ạ! ✨',
+        sender: ly._id,
+        createdAt: new Date(Date.now() - 1000 * 60 * 5),
+      },
+      updatedAt: new Date(Date.now() - 1000 * 60 * 5),
+    });
+
+    await Message.create({
+      conversation: convLy._id,
+      sender: ly._id,
+      receiver: quan._id,
+      content: 'Chào anh Quân, em đọc bài viết 2 giờ sáng của anh thấy rất đồng cảm, em muốn xin lời khuyên về thiết kế UI ạ! ✨',
+      createdAt: new Date(Date.now() - 1000 * 60 * 5),
+      isRead: false,
+    });
+    console.log('[Seed] 💬 Đã tạo 3 cuộc trò chuyện mẫu (Bạn bè & Người lạ)');
 
     await mongoose.disconnect();
     console.log('\n======================================================');
