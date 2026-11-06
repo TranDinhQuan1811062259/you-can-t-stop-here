@@ -7,6 +7,7 @@ import uploadRoutes from './uploadRoutes.js';
 import chatRoutes from './chatRoutes.js';
 import newsletterRoutes from './newsletterRoutes.js';
 import musicRoutes from './musicRoutes.js';
+import eventRoutes from './eventRoutes.js';
 
 const router = express.Router();
 
@@ -18,6 +19,7 @@ router.use('/upload', uploadRoutes);
 router.use('/chat', chatRoutes);
 router.use('/newsletter', newsletterRoutes);
 router.use('/music', musicRoutes);
+router.use('/events', eventRoutes);
 
 // Health check endpoint
 router.get('/health', (req, res) => {

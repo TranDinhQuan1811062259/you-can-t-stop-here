@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   MOOD_VOICE_PRESETS,
+  VIETNAMESE_VOICE_GENDERS,
+  VIETNAMESE_VOICE_REGIONS,
   detectPostEmotion,
   aiVoicePlayer,
   cleanTextForSpeech,
+  formatTime,
 } from '../../utils/aiVoiceEngine';
 import { useAuth } from '../../context/AuthContext';
 import { VoiceCloningModal } from './VoiceCloningModal';
@@ -14,8 +17,12 @@ export const FloatingAiAudioPlayer = () => {
   const [currentPost, setCurrentPost] = useState(null);
   const [playbackState, setPlaybackState] = useState('idle'); // 'idle' | 'playing' | 'paused'
   const [progress, setProgress] = useState(0);
+  const [currentSeconds, setCurrentSeconds] = useState(0);
+  const [totalDurationSeconds, setTotalDurationSeconds] = useState(0);
   const [currentSentence, setCurrentSentence] = useState('');
   const [selectedMood, setSelectedMood] = useState('auto');
+  const [selectedGender, setSelectedGender] = useState('female');
+  const [selectedRegion, setSelectedRegion] = useState('north');
   const [speed, setSpeed] = useState(1.0);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isCloningOpen, setIsCloningOpen] = useState(false);
@@ -40,6 +47,46 @@ export const FloatingAiAudioPlayer = () => {
     return `${currentPost.title || ''}. ${cleanTextForSpeech(content)}`;
   }, [currentPost]);
 
+  // Ước tính tổng thời lượng nghe theo giây
+  useEffect(() => {
+    if (fullText) {
+      const wordCount = fullText.split(/\s+/).filter(Boolean).length;
+      const initialTotal = Math.max(10, Math.round((wordCount / (140 / 60)) / speed));
+      setTotalDurationSeconds(initialTotal);
+    }
+  }, [fullText, speed]);
+
+  // Tự động thông báo và nâng các widget nổi khác (như Nightmode, Chat) để chống va chạm và đè chữ
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const hasPlayer = Boolean(currentPost);
+    if (hasPlayer) {
+      document.body.classList.add('has-floating-audio-player');
+      if (isMinimized) {
+        document.body.classList.add('floating-audio-minimized');
+      } else {
+        document.body.classList.remove('floating-audio-minimized');
+      }
+    } else {
+      document.body.classList.remove('has-floating-audio-player', 'floating-audio-minimized');
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('freedom_ai_player_visibility', {
+        detail: { active: hasPlayer, isMinimized },
+      })
+    );
+
+    return () => {
+      document.body.classList.remove('has-floating-audio-player', 'floating-audio-minimized');
+      window.dispatchEvent(
+        new CustomEvent('freedom_ai_player_visibility', {
+          detail: { active: false, isMinimized: false },
+        })
+      );
+    };
+  }, [currentPost, isMinimized]);
+
   // Phát sóng trạng thái phát ra toàn bộ ứng dụng để các thẻ PostCard đổi icon
   const broadcastAudioState = (postId, state) => {
     window.dispatchEvent(
@@ -53,11 +100,15 @@ export const FloatingAiAudioPlayer = () => {
   };
 
   // Khởi động phát âm thanh cho 1 bài viết cụ thể
-  const startPlayingPost = (post, moodOverride = null) => {
+  const startPlayingPost = (post, moodOverride = null, genderOverride = null, regionOverride = null) => {
     if (!post) return;
     setCurrentPost(post);
     const targetMood = moodOverride || post.audioMood || selectedMood || 'auto';
+    const targetGender = genderOverride || post.voiceGender || selectedGender || 'female';
+    const targetRegion = regionOverride || post.voiceRegion || selectedRegion || 'north';
     setSelectedMood(targetMood);
+    setSelectedGender(targetGender);
+    setSelectedRegion(targetRegion);
 
     const postEmotion = detectPostEmotion(post);
     const textToRead = `${post.title || ''}. ${cleanTextForSpeech(post.content || post.summary || '')}`;
@@ -65,16 +116,24 @@ export const FloatingAiAudioPlayer = () => {
     aiVoicePlayer.play({
       text: textToRead,
       moodId: targetMood,
+      gender: targetGender,
+      region: targetRegion,
       speed,
       detectedMood: postEmotion,
       customVoiceProfile: activeVoiceProfile,
-      onProgress: (percent, chunkIdx, chunkText) => {
+      onProgress: (percent, chunkIdx, chunkText, curSec, totSec) => {
         setProgress(percent);
         setCurrentSentence(chunkText);
+        if (curSec !== undefined) setCurrentSeconds(curSec);
+        if (totSec !== undefined) setTotalDurationSeconds(totSec);
       },
       onStateChange: (state) => {
         setPlaybackState(state);
         broadcastAudioState(post._id || post.slug, state);
+      },
+      onTimeUpdate: (curSec, totSec) => {
+        setCurrentSeconds(curSec);
+        if (totSec) setTotalDurationSeconds(totSec);
       },
     });
   };
@@ -130,6 +189,22 @@ export const FloatingAiAudioPlayer = () => {
     setCurrentPost(null);
   };
 
+  // Đổi Giới tính Nam / Nữ
+  const handleGenderToggle = () => {
+    playClickSound();
+    const nextGender = selectedGender === 'female' ? 'male' : 'female';
+    setSelectedGender(nextGender);
+    aiVoicePlayer.setGender(nextGender);
+  };
+
+  // Đổi Vùng miền Bắc / Trung / Nam
+  const handleRegionSelect = (e) => {
+    const nextRegion = e.target.value;
+    playClickSound();
+    setSelectedRegion(nextRegion);
+    aiVoicePlayer.setRegion(nextRegion);
+  };
+
   // Đổi tốc độ đọc
   const handleSpeedToggle = () => {
     playClickSound();
@@ -150,11 +225,13 @@ export const FloatingAiAudioPlayer = () => {
     }
   };
 
-  // Tua tiến độ
+  // Tua tiến độ chính xác theo giây
   const handleSeek = (e) => {
-    const val = Number(e.target.value);
-    setProgress(val);
-    aiVoicePlayer.seekTo(val, detectedMood);
+    const sec = Number(e.target.value);
+    setCurrentSeconds(sec);
+    const pct = totalDurationSeconds > 0 ? Math.round((sec / totalDurationSeconds) * 100) : 0;
+    setProgress(pct);
+    aiVoicePlayer.seekToSecond(sec, detectedMood);
   };
 
   // Khi chưa có bài viết nào được chọn để nghe, ẩn player
@@ -173,6 +250,19 @@ export const FloatingAiAudioPlayer = () => {
           <div className="mini-audio-pill-wrap" onClick={() => setIsMinimized(false)}>
             <span className="mini-pulse-icon">{playbackState === 'playing' ? '🔊' : '⏸'}</span>
             <span className="mini-post-title">{currentPost.title}</span>
+            <span
+              style={{
+                fontSize: '0.74rem',
+                color: '#38bdf8',
+                fontWeight: 600,
+                background: 'rgba(56, 189, 248, 0.12)',
+                padding: '2px 6px',
+                borderRadius: '6px',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {formatTime(currentSeconds)} / {formatTime(totalDurationSeconds)}
+            </span>
             <button
               type="button"
               className="mini-play-toggle"
@@ -198,21 +288,43 @@ export const FloatingAiAudioPlayer = () => {
         ) : (
           /* Trạng thái Mở Rộng Đầy Đủ */
           <div className="floating-audio-card">
-            {/* Thanh tiến trình siêu mảnh trên đỉnh */}
+            {/* Thanh tiến trình & đồng hồ phút:giây chuẩn xác */}
             <div className="floating-audio-progress-bar-wrap">
               <input
                 type="range"
                 min="0"
-                max="100"
-                value={progress}
+                max={totalDurationSeconds || 100}
+                value={currentSeconds}
                 onChange={handleSeek}
                 className="floating-audio-progress-range"
-                title={`Tiến trình đọc: ${progress}%`}
+                title={`Đang nghe: ${formatTime(currentSeconds)} / ${formatTime(totalDurationSeconds)} (${progress}%)`}
               />
               <div
                 className="floating-audio-progress-fill"
-                style={{ width: `${progress}%`, background: currentPresetInfo.color || '#0d9488' }}
+                style={{
+                  width: `${totalDurationSeconds > 0 ? (currentSeconds / totalDurationSeconds) * 100 : progress}%`,
+                  background: currentPresetInfo.color || '#0d9488',
+                }}
               />
+            </div>
+
+            {/* Dải hiển thị thời gian chính xác */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '2px 14px 0',
+                fontSize: '0.72rem',
+                color: '#94a3b8',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              <span style={{ color: '#0d9488', fontWeight: 600 }}>⏱ {formatTime(currentSeconds)}</span>
+              <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                {playbackState === 'playing' ? 'Đang phát...' : playbackState === 'paused' ? 'Tạm dừng' : 'Chờ phát'}
+              </span>
+              <span>{formatTime(totalDurationSeconds)}</span>
             </div>
 
             <div className="floating-audio-inner">
@@ -259,8 +371,30 @@ export const FloatingAiAudioPlayer = () => {
                 </div>
               </div>
 
-              {/* Cụm 3: Cụm điều khiển chính (Play/Pause, Tốc độ, Mood, Thu âm) */}
+              {/* Cụm 3: Cụm điều khiển chính (Play/Pause, Tốc độ, Giới tính, Vùng miền, Mood, Thu âm) */}
               <div className="floating-audio-actions-col">
+                {/* Nút Đổi Giới Tính Nam / Nữ */}
+                <button
+                  type="button"
+                  className="floating-gender-toggle-btn"
+                  onClick={handleGenderToggle}
+                  title={`Đổi giới tính giọng đọc (Hiện tại: ${selectedGender === 'male' ? 'Giọng Nam 👨' : 'Giọng Nữ 👩'})`}
+                >
+                  {selectedGender === 'male' ? '👨 Nam' : '👩 Nữ'}
+                </button>
+
+                {/* Chọn Vùng Miền Việt Nam */}
+                <select
+                  value={selectedRegion}
+                  onChange={handleRegionSelect}
+                  className="floating-region-select"
+                  title="Chọn ngữ điệu vùng miền Việt Nam"
+                >
+                  <option value="north">🏛️ Bắc</option>
+                  <option value="central">🏖️ Trung</option>
+                  <option value="south">🌴 Nam</option>
+                </select>
+
                 {/* Chọn Ngữ Điệu Cảm Xúc */}
                 <div className="floating-mood-selector-wrap">
                   <select

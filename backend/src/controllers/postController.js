@@ -51,7 +51,7 @@ export const getPosts = async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.max(1, parseInt(req.query.limit) || 6);
-    const { category, tag, q } = req.query;
+    const { category, tag, q, sort = 'newest', visibility = 'all' } = req.query;
 
     const store = loadStore();
     let allPosts = [...(store.posts || [])];
@@ -129,8 +129,52 @@ export const getPosts = async (req, res) => {
       );
     }
 
-    // Sắp xếp bài viết mới nhất lên đầu
-    filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    // Lọc theo chế độ hiển thị (visibility: 'public' | 'friends')
+    if (visibility === 'public') {
+      filtered = filtered.filter((p) => !p.visibility || p.visibility === 'public');
+    } else if (visibility === 'friends') {
+      filtered = filtered.filter((p) => p.visibility === 'friends');
+    }
+
+    // Sắp xếp bài viết linh hoạt theo yêu cầu người dùng
+    if (sort === 'oldest') {
+      filtered.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+    } else if (sort === 'az') {
+      filtered.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'vi'));
+    } else if (sort === 'za') {
+      filtered.sort((a, b) => (b.title || '').localeCompare(a.title || '', 'vi'));
+    } else if (sort === 'most_engaged') {
+      filtered.sort((a, b) => {
+        const scoreA =
+          (a.views || 0) * 1 +
+          (a.cheersCount || 0) * 2 +
+          (a.reactionCounts?.total || a.reactions?.length || 0) * 3 +
+          (a.sharesCount || a.repostCount || 0) * 4;
+        const scoreB =
+          (b.views || 0) * 1 +
+          (b.cheersCount || 0) * 2 +
+          (b.reactionCounts?.total || b.reactions?.length || 0) * 3 +
+          (b.sharesCount || b.repostCount || 0) * 4;
+        return scoreB - scoreA;
+      });
+    } else if (sort === 'least_engaged') {
+      filtered.sort((a, b) => {
+        const scoreA =
+          (a.views || 0) * 1 +
+          (a.cheersCount || 0) * 2 +
+          (a.reactionCounts?.total || a.reactions?.length || 0) * 3 +
+          (a.sharesCount || a.repostCount || 0) * 4;
+        const scoreB =
+          (b.views || 0) * 1 +
+          (b.cheersCount || 0) * 2 +
+          (b.reactionCounts?.total || b.reactions?.length || 0) * 3 +
+          (b.sharesCount || b.repostCount || 0) * 4;
+        return scoreA - scoreB;
+      });
+    } else {
+      // Mặc định: Mới nhất lên đầu
+      filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    }
 
     const total = filtered.length;
     const totalPages = Math.ceil(total / limit) || 1;
@@ -171,12 +215,11 @@ export const getPostBySlug = async (req, res) => {
         .populate('user', 'name avatar jobTitle bio socialLinks');
 
       if (post) {
-        // Tự động gán đúng tác giả và avatar mới nhất cho bài viết
+        // CHỈ cập nhật thông tin nếu là bài viết của chính admin/tác giả cụ thể, tuyệt đối không đè lên bài người khác
         if (
-          !post.user ||
+          slug === '2-gio-sang-o-van-phong-va-cau-hoi-minh-dang-chay-dua-vi-dieu-gi' ||
           post.author === 'Trần Đình Quân' ||
-          post.author === 'Đình Quân Trần' ||
-          slug === '2-gio-sang-o-van-phong-va-cau-hoi-minh-dang-chay-dua-vi-dieu-gi'
+          post.author === 'Đình Quân Trần'
         ) {
           const adminUser = await User.findOne({ email: 'anthonyq012025@gmail.com' });
           if (adminUser) {
@@ -186,11 +229,11 @@ export const getPostBySlug = async (req, res) => {
             post.authorAvatar = adminUser.avatar;
             post.authorSocialLinks = adminUser.socialLinks;
           }
-        } else if (post.user && post.user.avatar) {
-          post.authorAvatar = post.user.avatar;
+        } else if (post.user && post.user.name) {
           post.author = post.user.name;
-          post.authorJob = post.user.jobTitle;
-          post.authorSocialLinks = post.user.socialLinks;
+          post.authorJob = post.user.jobTitle || post.authorJob;
+          post.authorAvatar = post.user.avatar || post.authorAvatar;
+          post.authorSocialLinks = post.user.socialLinks || post.authorSocialLinks;
         }
 
         // Tăng lượt đọc thực tế
@@ -643,6 +686,8 @@ export const createPost = async (req, res) => {
       authorJob,
       showReactionCount,
       audioMood,
+      voiceGender,
+      voiceRegion,
       customVoiceProfile,
     } = req.body;
 
@@ -713,8 +758,13 @@ export const createPost = async (req, res) => {
       reactions: [],
       reactionCounts: { sympathy: 0, stop: 0, love: 0, encourage: 0, total: 0 },
       sharesCount: 0,
+      repostCount: 0,
+      repostedBy: [],
+      visibility: req.body.visibility === 'friends' ? 'friends' : 'public',
       isPublished: true,
       audioMood: audioMood || 'auto',
+      voiceGender: voiceGender || 'female',
+      voiceRegion: voiceRegion || 'north',
       customVoiceProfile: customVoiceProfile || req.user?.customVoiceProfile || {},
       isFlagged: safetyCheck.isFlagged,
       flagReason: safetyCheck.reason || '',
@@ -761,6 +811,8 @@ export const createPost = async (req, res) => {
           sharesCount: 0,
           isPublished: true,
           audioMood: newPostData.audioMood,
+          voiceGender: newPostData.voiceGender,
+          voiceRegion: newPostData.voiceRegion,
           customVoiceProfile: newPostData.customVoiceProfile,
           isFlagged: newPostData.isFlagged,
           flagReason: newPostData.flagReason,
@@ -806,6 +858,8 @@ export const updatePost = async (req, res) => {
       isPublished,
       showReactionCount,
       audioMood,
+      voiceGender,
+      voiceRegion,
       customVoiceProfile,
     } = req.body;
     const parsedTags = tags !== undefined
@@ -857,7 +911,10 @@ export const updatePost = async (req, res) => {
         isPublished: isPublished !== undefined ? Boolean(isPublished) : existing.isPublished,
         showReactionCount: showReactionCount !== undefined ? Boolean(showReactionCount) : existing.showReactionCount,
         audioMood: audioMood !== undefined ? audioMood : existing.audioMood || 'auto',
+        voiceGender: voiceGender !== undefined ? voiceGender : existing.voiceGender || 'female',
+        voiceRegion: voiceRegion !== undefined ? voiceRegion : existing.voiceRegion || 'north',
         customVoiceProfile: customVoiceProfile !== undefined ? customVoiceProfile : existing.customVoiceProfile || {},
+        visibility: req.body.visibility !== undefined ? (req.body.visibility === 'friends' ? 'friends' : 'public') : existing.visibility || 'public',
         isFlagged: safety.isFlagged,
         flagReason: safety.reason || '',
         moderationStatus: safety.isFlagged ? 'flagged' : 'approved',
@@ -892,6 +949,9 @@ export const updatePost = async (req, res) => {
           if (views !== undefined && !isNaN(views)) post.views = Math.max(0, parseInt(views, 10));
           if (isPublished !== undefined) post.isPublished = Boolean(isPublished);
           if (showReactionCount !== undefined) post.showReactionCount = Boolean(showReactionCount);
+          if (audioMood !== undefined) post.audioMood = audioMood;
+          if (voiceGender !== undefined) post.voiceGender = voiceGender;
+          if (voiceRegion !== undefined) post.voiceRegion = voiceRegion;
           await post.save();
         }
       } catch (dbErr) {
@@ -1026,3 +1086,153 @@ export const getRecentPosts = async (req, res) => {
     return sendSuccess(res, { data: (store.posts || []).slice(0, 4) });
   }
 };
+
+/**
+ * Lấy danh sách các Hashtag gợi ý hệ thống (tổng hợp từ posts + custom store)
+ */
+export const getHashtags = async (req, res) => {
+  try {
+    const store = loadStore();
+    const defaultTags = [
+      'burnout', 'smallwins', 'chuyennghe', 'tamsu', 'congso',
+      'deadline', 'healing', 'laptrinh', 'it_developer', 'khoinghiep',
+      'overthinking', 'khoanglang', 'chualanh', 'ot_dem', 'apluc'
+    ];
+
+    const tagSet = new Set(defaultTags);
+
+    // Bổ sung các tags từ bài viết
+    (store.posts || []).forEach((p) => {
+      if (Array.isArray(p.tags)) {
+        p.tags.forEach((t) => {
+          if (t && typeof t === 'string') {
+            const clean = t.trim().replace(/^#/, '').toLowerCase();
+            if (clean) tagSet.add(clean);
+          }
+        });
+      }
+    });
+
+    // Bổ sung các custom hashtags đã lưu
+    if (Array.isArray(store.customHashtags)) {
+      store.customHashtags.forEach((t) => {
+        if (t && typeof t === 'string') {
+          const clean = t.trim().replace(/^#/, '').toLowerCase();
+          if (clean) tagSet.add(clean);
+        }
+      });
+    }
+
+    return sendSuccess(res, {
+      message: 'Lấy danh sách hashtags thành công',
+      data: Array.from(tagSet),
+    });
+  } catch (error) {
+    return sendError(res, { message: error.message, status: 500 });
+  }
+};
+
+/**
+ * Đăng ký lưu thêm một hashtag mới vào hệ thống
+ */
+export const addHashtag = async (req, res) => {
+  try {
+    const { tag } = req.body;
+    if (!tag || typeof tag !== 'string') {
+      return sendError(res, { message: 'Hashtag không hợp lệ', status: 400 });
+    }
+
+    const clean = tag.trim().replace(/^#/, '').toLowerCase();
+    if (!clean) {
+      return sendError(res, { message: 'Hashtag rỗng', status: 400 });
+    }
+
+    const store = loadStore();
+    store.customHashtags = store.customHashtags || [];
+    if (!store.customHashtags.includes(clean)) {
+      store.customHashtags.push(clean);
+      saveStore(store);
+    }
+
+    return sendSuccess(res, {
+      message: 'Đã lưu hashtag mới thành công',
+      data: clean,
+    });
+  } catch (error) {
+    return sendError(res, { message: error.message, status: 500 });
+  }
+};
+
+/**
+ * Chia sẻ bài viết về trang cá nhân (Repost / Share to profile)
+ */
+export const repostPost = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = req.user;
+    if (!user) {
+      return sendError(res, { message: 'Vui lòng đăng nhập để chia sẻ bài viết về trang cá nhân', status: 401 });
+    }
+
+    const store = loadStore();
+    store.posts = store.posts || [];
+    let post = store.posts.find((p) => p._id === id || p.slug === id);
+
+    if (checkDbReady()) {
+      try {
+        let dbPost = await Post.findOne({
+          $or: [
+            { _id: id && String(id).match(/^[0-9a-fA-F]{24}$/) ? id : null },
+            { slug: id },
+          ].filter(Boolean),
+        });
+        if (dbPost) {
+          if (!Array.isArray(dbPost.repostedBy)) dbPost.repostedBy = [];
+          const already = dbPost.repostedBy.some((r) => r.user?.toString() === user._id?.toString());
+          if (!already) {
+            dbPost.repostedBy.push({
+              user: user._id,
+              userName: user.name,
+              userAvatar: user.avatar || '/images/man.jpg',
+              repostedAt: new Date(),
+            });
+            dbPost.repostCount = (dbPost.repostCount || 0) + 1;
+            dbPost.sharesCount = (dbPost.sharesCount || 0) + 1;
+            await dbPost.save();
+          }
+        }
+      } catch (err) {
+        console.warn('Lỗi repost trong db:', err.message);
+      }
+    }
+
+    if (post) {
+      if (!Array.isArray(post.repostedBy)) post.repostedBy = [];
+      const already = post.repostedBy.some((r) => String(r.user?._id || r.user) === String(user._id));
+      if (!already) {
+        post.repostedBy.push({
+          user: {
+            _id: user._id,
+            name: user.name,
+            avatar: user.avatar || '/images/man.jpg',
+          },
+          userName: user.name,
+          userAvatar: user.avatar || '/images/man.jpg',
+          repostedAt: new Date().toISOString(),
+        });
+        post.repostCount = (post.repostCount || 0) + 1;
+        post.sharesCount = (post.sharesCount || 0) + 1;
+        saveStore(store);
+      }
+      return sendSuccess(res, {
+        message: 'Đã chia sẻ bài viết về trang cá nhân của bạn!',
+        data: { repostCount: post.repostCount, sharesCount: post.sharesCount },
+      });
+    }
+
+    return sendError(res, { message: 'Không tìm thấy bài viết', status: 404 });
+  } catch (error) {
+    return sendError(res, { message: error.message, status: 500 });
+  }
+};
+

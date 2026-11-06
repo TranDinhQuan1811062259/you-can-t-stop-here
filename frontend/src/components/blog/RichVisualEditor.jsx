@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { uploadService } from '../../services/uploadService';
-import { extractYouTubeId, createYouTubeEmbed } from '../../utils/contentFormatter';
+import { extractYouTubeId } from '../../utils/contentFormatter';
+import { postService } from '../../services/postService';
+import { chatService } from '../../services/chatService';
+import { MediaCameraCaptureModal } from './MediaCameraCaptureModal';
 
 const CURATED_EMOJIS = [
   '🫂', '❤️', '💔', '🥀', '🌧️', '☕', '🥺', '😢', '🩹', '🕊️', '🧘', '💭', '🫶', '🕯️',
@@ -9,7 +12,9 @@ const CURATED_EMOJIS = [
 
 export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải mái viết ra những gì bạn đang trăn trở...' }) => {
   const editorRef = useRef(null);
+  const containerRef = useRef(null);
   const inlineImageInputRef = useRef(null);
+  const savedRangeRef = useRef(null);
 
   // Modal trạng thái chèn Video YouTube
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
@@ -24,15 +29,115 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
 
+  // Modal Chụp ảnh & Quay video bằng Camera / Webcam
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+
+  // Hệ thống Auto-suggest: # Hashtag & @ Mention Bạn bè
+  const [suggestionMode, setSuggestionMode] = useState(null); // 'hashtag' | 'mention' | null
+  const [suggestionQuery, setSuggestionQuery] = useState('');
+  const [suggestionCoords, setSuggestionCoords] = useState({ top: 0, left: 0 });
+  const [availableHashtags, setAvailableHashtags] = useState([
+    'chuyennnganh', 'burnout', 'smallwins', 'congso', 'khoinghiep', 'tamsu', 'tamsucongso', 'vuotkho'
+  ]);
+  const [friendsList, setFriendsList] = useState([]);
+  const [selectedSuggestIndex, setSelectedSuggestIndex] = useState(0);
+
+  // Tải danh sách Hashtag & Bạn bè khi component mount
+  useEffect(() => {
+    postService
+      .getHashtags()
+      .then((res) => {
+        if (Array.isArray(res?.data) && res.data.length > 0) {
+          setAvailableHashtags(res.data);
+        }
+      })
+      .catch(() => {});
+
+    chatService
+      .getFriends()
+      .then((res) => {
+        if (Array.isArray(res?.data)) {
+          setFriendsList(res.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Cập nhật nội dung ban đầu vào contentEditable
   useEffect(() => {
     if (editorRef.current && value !== undefined) {
-      // Chỉ gán nếu nội dung thực sự khác biệt để tránh nhảy con trỏ
       if (editorRef.current.innerHTML !== value) {
         editorRef.current.innerHTML = value || '';
       }
     }
   }, [value]);
+
+  // ===============================================
+  // LỌC KÝ TỰ RÁC KHI PASTE TỪ PDF / WORD
+  // ===============================================
+  const handlePaste = (e) => {
+    e.preventDefault();
+
+    // Ưu tiên lấy văn bản thuần túy để lọc sạch ký tự rác từ PDF
+    const rawText = e.clipboardData.getData('text/plain');
+    const rawHtml = e.clipboardData.getData('text/html');
+
+    // Nếu có HTML sạch từ web (không phải PDF), dùng HTML
+    if (rawHtml && !rawText.includes('Ξ') && !rawText.includes('≡') && !rawText.includes('Ô') && rawText.length < rawHtml.length * 2) {
+      // Làm sạch HTML trước khi chèn: giữ định dạng cơ bản, bỏ tag nguy hiểm
+      const cleanedHtml = sanitizeHtmlForPaste(rawHtml);
+      document.execCommand('insertHTML', false, cleanedHtml);
+    } else {
+      // PDF/Word: chỉ lấy text thuần và làm sạch ký tự lạ
+      const cleanText = sanitizePdfText(rawText);
+      document.execCommand('insertText', false, cleanText);
+    }
+
+    handleInput();
+  };
+
+  // Làm sạch văn bản từ PDF (loại bỏ ký tự điều khiển, ký tự mã hóa lạ)
+  const sanitizePdfText = (text) => {
+    if (!text) return '';
+    return text
+      // Xóa ký tự điều khiển (control characters) trừ \n, \r, \t
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+      // Chuẩn hóa dấu xuống dòng
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      // Xóa các ký tự biến thể Unicode lạ của PDF encoding (Latin Extended và ký tự mapping sai)
+      .replace(/[\uFFFD\uFFFE\uFFFF]/g, '')
+      // Chuẩn hóa khoảng trắng liên tiếp
+      .replace(/[ \t]{3,}/g, '  ')
+      // Giữ lại nguyên văn bản hợp lệ
+      .trim();
+  };
+
+  // Làm sạch HTML khi paste từ web (giữ định dạng cơ bản)
+  const sanitizeHtmlForPaste = (html) => {
+    if (!html) return '';
+    const div = document.createElement('div');
+    div.innerHTML = html;
+
+    // Xóa script, style, link, meta, event attrs
+    div.querySelectorAll('script,style,link,meta,iframe,object,embed').forEach(el => el.remove());
+    div.querySelectorAll('*').forEach(el => {
+      // Chỉ giữ lại một số thẻ định dạng cơ bản an toàn
+      const allowed = ['b','strong','i','em','u','s','strike','br','p','h1','h2','h3','h4','ul','ol','li','blockquote','a','span','img'];
+      if (!allowed.includes(el.tagName.toLowerCase())) {
+        el.replaceWith(...el.childNodes);
+        return;
+      }
+      // Xóa tất cả attribute nguy hiểm, chỉ giữ href, src, alt
+      Array.from(el.attributes).forEach(attr => {
+        if (!['href','src','alt','title'].includes(attr.name)) {
+          el.removeAttribute(attr.name);
+        }
+      });
+    });
+
+    return div.innerHTML;
+  };
 
   const handleInput = () => {
     if (editorRef.current) {
@@ -52,18 +157,16 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
     handleInput();
   };
 
-  // Hoàn tác / Làm lại
   const handleUndo = () => executeCmd('undo');
   const handleRedo = () => executeCmd('redo');
 
-  // Chèn Emoji
   const handleInsertEmoji = (emoji) => {
     executeCmd('insertText', emoji);
     setShowEmojiPicker(false);
   };
 
   // ===============================================
-  // XỬ LÝ CHÈN VIDEO YOUTUBE (POPUP RIÊNG - KHÔNG DÙNG PROMPT)
+  // XỬ LÝ CHÈN VIDEO YOUTUBE
   // ===============================================
   const handleOpenVideoModal = () => {
     setVideoUrlInput('');
@@ -120,7 +223,6 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
         setUploadingImage(false);
       }
 
-      // Chèn thẻ hình ảnh trực quan (người dùng thấy ảnh thật, không thấy chuỗi Base64)
       const imgHtml = `<p><img src="${finalUrl}" alt="${file.name}" style="max-width: 100%; border-radius: 8px; margin: 14px 0; display: block;" /></p><p><br></p>`;
       executeCmd('insertHTML', imgHtml);
     };
@@ -141,8 +243,254 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
     setImageUrlInput('');
   };
 
+  // ===============================================
+  // XỬ LÝ ẢNH & VIDEO TỪ CAMERA / WEBCAM
+  // ===============================================
+  const handleMediaCaptured = (media) => {
+    if (!media || !media.dataUrl) return;
+
+    if (media.type === 'image') {
+      const imgHtml = `<p><img src="${media.dataUrl}" alt="Ảnh chụp trực tiếp từ Camera" style="max-width: 100%; border-radius: 8px; margin: 14px 0; display: block; box-shadow: 0 4px 14px rgba(0,0,0,0.15);" /></p><p><br></p>`;
+      executeCmd('insertHTML', imgHtml);
+    } else if (media.type === 'video') {
+      const vidHtml = `<div class="editor-captured-video-wrap" contenteditable="false" style="margin: 14px 0;">
+        <video controls playsinline src="${media.dataUrl}" style="max-width: 100%; width: 100%; border-radius: 10px; background: #000; display: block; box-shadow: 0 4px 16px rgba(0,0,0,0.2);"></video>
+      </div><p><br></p>`;
+      executeCmd('insertHTML', vidHtml);
+    }
+    setIsCameraModalOpen(false);
+  };
+
+  // ===============================================
+  // HỆ THỐNG GỢI Ý # (HASHTAG) VÀ @ (MENTION BẠN BÈ)
+  // ===============================================
+  const checkAutoSuggest = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) {
+      setSuggestionMode(null);
+      return;
+    }
+
+    const range = sel.getRangeAt(0);
+    const node = range.startContainer;
+
+    if (node && node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent || '';
+      const caretOffset = range.startOffset;
+      const textBefore = text.slice(0, caretOffset);
+
+      // Nhận diện #hashtag
+      const hashtagMatch = textBefore.match(/(?:^|[\s\u00A0])#([a-zA-Z0-9_\u00C0-\u024F\u1E00-\u1EFF]*)$/);
+      // Nhận diện @mention
+      const mentionMatch = textBefore.match(/(?:^|[\s\u00A0])@([a-zA-Z0-9_\u00C0-\u024F\u1E00-\u1EFF]*)$/);
+
+      if (hashtagMatch) {
+        const query = hashtagMatch[1];
+        setSuggestionMode('hashtag');
+        setSuggestionQuery(query);
+        setSelectedSuggestIndex(0);
+        savedRangeRef.current = range.cloneRange();
+
+        // Tính vị trí tương đối so với container
+        calculatePopoverPosition(range);
+        return;
+      } else if (mentionMatch) {
+        const query = mentionMatch[1];
+        setSuggestionMode('mention');
+        setSuggestionQuery(query);
+        setSelectedSuggestIndex(0);
+        savedRangeRef.current = range.cloneRange();
+
+        calculatePopoverPosition(range);
+        return;
+      }
+    }
+
+    setSuggestionMode(null);
+  };
+
+  const calculatePopoverPosition = (range) => {
+    try {
+      const rect = range.getBoundingClientRect();
+      const containerRect = containerRef.current?.getBoundingClientRect();
+
+      if (containerRect) {
+        let left = rect.left - containerRect.left;
+        let top = rect.bottom - containerRect.top + 8;
+
+        // Tránh popover bị tràn ra mép container
+        if (left + 260 > containerRect.width) {
+          left = Math.max(10, containerRect.width - 270);
+        }
+        setSuggestionCoords({ top, left: Math.max(10, left) });
+      }
+    } catch (e) {
+      setSuggestionCoords({ top: 120, left: 20 });
+    }
+  };
+
+  // Chèn hashtag được chọn
+  const handleSelectHashtag = (tag) => {
+    const cleanTag = tag.replace(/^#/, '').trim();
+    if (!cleanTag) return;
+
+    if (savedRangeRef.current) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(savedRangeRef.current);
+
+      const node = savedRangeRef.current.startContainer;
+      if (node && node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent;
+        const caretPos = savedRangeRef.current.startOffset;
+        const textBefore = text.slice(0, caretPos);
+        const match = textBefore.match(/(?:^|[\s\u00A0])#([a-zA-Z0-9_\u00C0-\u024F\u1E00-\u1EFF]*)$/);
+
+        if (match) {
+          const matchedFull = match[0];
+          const queryPart = '#' + match[1];
+          const startIdx = textBefore.lastIndexOf(queryPart);
+
+          if (startIdx >= 0) {
+            const replaceRange = document.createRange();
+            replaceRange.setStart(node, startIdx);
+            replaceRange.setEnd(node, caretPos);
+            replaceRange.deleteContents();
+
+            // Chèn pill hashtag đẹp mắt
+            const span = document.createElement('span');
+            span.className = 'editor-hashtag-pill';
+            span.textContent = `#${cleanTag}`;
+            span.contentEditable = 'false';
+            replaceRange.insertNode(span);
+
+            const space = document.createTextNode('\u00A0');
+            span.after(space);
+
+            const newRange = document.createRange();
+            newRange.setStartAfter(space);
+            newRange.setEndAfter(space);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+          }
+        }
+      }
+    }
+
+    // Đăng ký lưu thêm hashtag nếu chưa có trong kho
+    if (!availableHashtags.some((t) => t.toLowerCase() === cleanTag.toLowerCase())) {
+      postService.addHashtag(cleanTag).catch(() => {});
+      setAvailableHashtags((prev) => [...prev, cleanTag]);
+    }
+
+    handleInput();
+    setSuggestionMode(null);
+  };
+
+  // Chèn mention bạn bè
+  const handleSelectFriend = (friend) => {
+    if (!friend) return;
+    const friendName = friend.name || 'Bạn bè';
+
+    if (savedRangeRef.current) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(savedRangeRef.current);
+
+      const node = savedRangeRef.current.startContainer;
+      if (node && node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent;
+        const caretPos = savedRangeRef.current.startOffset;
+        const textBefore = text.slice(0, caretPos);
+        const match = textBefore.match(/(?:^|[\s\u00A0])@([a-zA-Z0-9_\u00C0-\u024F\u1E00-\u1EFF]*)$/);
+
+        if (match) {
+          const queryPart = '@' + match[1];
+          const startIdx = textBefore.lastIndexOf(queryPart);
+
+          if (startIdx >= 0) {
+            const replaceRange = document.createRange();
+            replaceRange.setStart(node, startIdx);
+            replaceRange.setEnd(node, caretPos);
+            replaceRange.deleteContents();
+
+            // Chèn pill mention có class và metadata user
+            const span = document.createElement('span');
+            span.className = 'editor-mention-pill';
+            span.setAttribute('data-user-id', friend._id || '');
+            span.textContent = `@${friendName}`;
+            span.contentEditable = 'false';
+            replaceRange.insertNode(span);
+
+            const space = document.createTextNode('\u00A0');
+            span.after(space);
+
+            const newRange = document.createRange();
+            newRange.setStartAfter(space);
+            newRange.setEndAfter(space);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+          }
+        }
+      }
+    }
+
+    handleInput();
+    setSuggestionMode(null);
+  };
+
+  // Điều hướng bằng bàn phím trong danh sách gợi ý
+  const handleKeyDown = (e) => {
+    if (!suggestionMode) return;
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setSuggestionMode(null);
+      return;
+    }
+
+    // Nếu ấn Enter hoặc Tab và danh sách đang hiển thị
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      if (suggestionMode === 'hashtag') {
+        const filtered = availableHashtags.filter((t) =>
+          t.toLowerCase().includes(suggestionQuery.toLowerCase())
+        );
+        const targetTag = filtered[selectedSuggestIndex] || suggestionQuery.trim();
+        if (targetTag) {
+          e.preventDefault();
+          handleSelectHashtag(targetTag);
+        }
+      } else if (suggestionMode === 'mention') {
+        const filtered = friendsList.filter((f) =>
+          (f.name || '').toLowerCase().includes(suggestionQuery.toLowerCase())
+        );
+        if (filtered[selectedSuggestIndex]) {
+          e.preventDefault();
+          handleSelectFriend(filtered[selectedSuggestIndex]);
+        }
+      }
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedSuggestIndex((prev) => prev + 1);
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedSuggestIndex((prev) => Math.max(0, prev - 1));
+    }
+  };
+
+  // Lọc danh sách hiển thị
+  const filteredHashtags = availableHashtags.filter((t) =>
+    t.toLowerCase().includes(suggestionQuery.toLowerCase())
+  );
+  const filteredFriends = friendsList.filter((f) =>
+    (f.name || '').toLowerCase().includes(suggestionQuery.toLowerCase())
+  );
+
   return (
-    <div className="rich-visual-editor-container">
+    <div className="rich-visual-editor-container" ref={containerRef} style={{ position: 'relative' }}>
       {/* Thanh công cụ định dạng chuyên nghiệp */}
       <div className="visual-toolbar">
         {/* Undo / Redo */}
@@ -249,7 +597,18 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
           )}
         </div>
 
-        {/* Chèn Video YouTube (Mở modal riêng) */}
+        {/* Chụp Ảnh / Quay Video bằng Camera / Webcam */}
+        <button
+          type="button"
+          className="toolbar-btn toolbar-btn-camera"
+          title="Chụp ảnh hoặc quay video trực tiếp bằng Camera điện thoại hoặc Webcam máy tính"
+          onClick={() => setIsCameraModalOpen(true)}
+          style={{ background: '#ecfdf5', borderColor: '#6ee7b7', color: '#047857', fontWeight: 600 }}
+        >
+          📸 Camera / 🎥 Webcam
+        </button>
+
+        {/* Chèn Video YouTube */}
         <button
           type="button"
           className="toolbar-btn"
@@ -257,7 +616,7 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
           onClick={handleOpenVideoModal}
           style={{ background: '#fef2f2', borderColor: '#fca5a5', color: '#dc2626', fontWeight: 600 }}
         >
-          🎬 Chèn Video YouTube
+          🎬 Video YouTube
         </button>
 
         {/* Tải ảnh từ máy tính */}
@@ -268,7 +627,7 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
           onClick={() => inlineImageInputRef.current?.click()}
           disabled={uploadingImage}
         >
-          {uploadingImage ? '⏳ Đang tải...' : '🎬 Chèn Ảnh/GIF từ máy'}
+          {uploadingImage ? '⏳ Đang tải...' : '🖼️ Ảnh/GIF từ máy'}
         </button>
         <input
           type="file"
@@ -301,6 +660,11 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
         </button>
       </div>
 
+      {/* Hướng dẫn phím tắt # và @ */}
+      <div className="editor-hint-bar">
+        <span>💡 Gõ <strong>#</strong> để gợi ý & tạo hashtag mới • Gõ <strong>@</strong> để tag bạn bè (chỉ tag khi chọn bạn, nếu không sẽ giữ nguyên văn bản)</span>
+      </div>
+
       {/* Khung soạn thảo Visual Trực quan (WYSIWYG) */}
       <div
         ref={editorRef}
@@ -308,11 +672,184 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
         contentEditable={true}
         suppressContentEditableWarning={true}
         onInput={handleInput}
+        onKeyUp={checkAutoSuggest}
+        onKeyDown={handleKeyDown}
+        onClick={checkAutoSuggest}
+        onPaste={handlePaste}
         data-placeholder={placeholder}
       />
 
       {/* ========================================================
-          CỬA SỔ PHỤ: CHÈN VIDEO YOUTUBE (GIAO DIỆN CHUẨN XỊN)
+          POPOVER GỢI Ý # (HASHTAG)
+          ======================================================== */}
+      {suggestionMode === 'hashtag' && (
+        <div
+          className="editor-suggestion-popover hashtag-popover"
+          style={{ top: `${suggestionCoords.top}px`, left: `${suggestionCoords.left}px` }}
+        >
+          <div className="suggestion-popover-header">
+            <span>🏷️ Gợi ý Hashtag</span>
+            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Gõ tiếp hoặc click chọn</span>
+          </div>
+
+          <div className="suggestion-list">
+            {filteredHashtags.map((tag, idx) => (
+              <button
+                key={tag}
+                type="button"
+                className={`suggestion-item ${idx === selectedSuggestIndex ? 'active' : ''}`}
+                onClick={() => handleSelectHashtag(tag)}
+              >
+                <span className="suggestion-hash">#</span>
+                <span className="suggestion-name">{tag}</span>
+              </button>
+            ))}
+
+            {/* Mục tạo hashtag mới nếu từ khóa chưa tồn tại */}
+            {suggestionQuery.trim() &&
+              !availableHashtags.some((t) => t.toLowerCase() === suggestionQuery.trim().toLowerCase()) && (
+                <button
+                  type="button"
+                  className="suggestion-item suggestion-item-create"
+                  onClick={() => handleSelectHashtag(suggestionQuery.trim())}
+                >
+                  <span className="suggestion-plus">✨</span>
+                  <span className="suggestion-name">
+                    Tạo hashtag mới: <strong>#{suggestionQuery.trim()}</strong>
+                  </span>
+                </button>
+              )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          POPOVER GỢI Ý @ (MENTION BẠN BÈ)
+          ======================================================== */}
+      {suggestionMode === 'mention' && (
+        <div
+          className="editor-suggestion-popover mention-popover"
+          style={{ top: `${suggestionCoords.top}px`, left: `${suggestionCoords.left}px` }}
+        >
+          <div className="suggestion-popover-header">
+            <span>👥 Gắn thẻ Bạn bè</span>
+            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Danh bạ bạn bè của bạn</span>
+          </div>
+
+          <div className="suggestion-list">
+            {filteredFriends.length > 0 ? (
+              filteredFriends.map((friend, idx) => (
+                <button
+                  key={friend._id}
+                  type="button"
+                  className={`suggestion-item friend-item ${idx === selectedSuggestIndex ? 'active' : ''}`}
+                  onClick={() => handleSelectFriend(friend)}
+                >
+                  <img
+                    src={friend.avatar || '/images/man.jpg'}
+                    alt={friend.name}
+                    className="suggestion-avatar"
+                  />
+                  <div className="friend-info">
+                    <span className="friend-name">{friend.name}</span>
+                    <span className="friend-role">{friend.jobTitle || friend.role || 'Bạn bè'}</span>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="suggestion-empty-tip">
+                {friendsList.length === 0 ? (
+                  <span>Bạn chưa có bạn bè trong danh bạ để tag. Hãy kết bạn ở mục Tin nhắn!</span>
+                ) : (
+                  <span>Không tìm thấy bạn nào khớp với "@<strong>{suggestionQuery}</strong>". Bạn cứ viết tiếp văn bản bình thường nha!</span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL CAMERA & WEBCAM CHỤP ẢNH / QUAY VIDEO TRỰC TIẾP
+          ======================================================== */}
+      <MediaCameraCaptureModal
+        isOpen={isCameraModalOpen}
+        onClose={() => setIsCameraModalOpen(false)}
+        onMediaCaptured={handleMediaCaptured}
+      />
+
+      {/* ========================================================
+          BẢNG GỢI Ý HASHTAG INLINE - Hiển thị ngay dưới editor
+          ======================================================== */}
+      <div className="editor-inline-panel">
+        <div className="inline-panel-section">
+          <span className="inline-panel-label">🏷️ Hashtag gợi ý <em>(click để chèn vào bài)</em></span>
+          <div className="inline-hashtag-cloud">
+            {availableHashtags.slice(0, 20).map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                className="inline-hashtag-chip"
+                title={`Chèn hashtag #${tag} vào bài`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  // Focus lại editor trước khi chèn
+                  if (editorRef.current) {
+                    editorRef.current.focus();
+                    // Nếu savedRange còn hiệu lực, dùng nó; nếu không, chèn ở cuối
+                    if (savedRangeRef.current) {
+                      const sel = window.getSelection();
+                      sel.removeAllRanges();
+                      sel.addRange(savedRangeRef.current);
+                    }
+                  }
+                  handleSelectHashtag(tag);
+                }}
+              >
+                #{tag}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {friendsList.length > 0 && (
+          <div className="inline-panel-section">
+            <span className="inline-panel-label">👥 Bạn bè <em>(click @ để tag)</em></span>
+            <div className="inline-friends-row">
+              {friendsList.slice(0, 10).map((friend) => (
+                <button
+                  key={friend._id}
+                  type="button"
+                  className="inline-friend-chip"
+                  title={`Tag @${friend.name || 'bạn bè'} vào bài`}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    if (editorRef.current) {
+                      editorRef.current.focus();
+                      if (savedRangeRef.current) {
+                        const sel = window.getSelection();
+                        sel.removeAllRanges();
+                        sel.addRange(savedRangeRef.current);
+                      }
+                    }
+                    handleSelectFriend(friend);
+                  }}
+                >
+                  <img
+                    src={friend.avatar || '/images/man.jpg'}
+                    alt={friend.name}
+                    className="inline-friend-avatar"
+                  />
+                  <span>@{friend.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================
+          CỬA SỔ PHỤ: CHÈN VIDEO YOUTUBE
           ======================================================== */}
       {isVideoModalOpen && (
         <div className="sub-modal-overlay" onClick={() => setIsVideoModalOpen(false)}>
@@ -345,7 +882,6 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
               />
             </div>
 
-            {/* Xem trước video YouTube trước khi chèn */}
             {videoPreviewId ? (
               <div style={{ marginBottom: '16px' }}>
                 <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
@@ -459,4 +995,3 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
     </div>
   );
 };
-

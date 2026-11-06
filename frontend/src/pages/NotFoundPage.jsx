@@ -13,7 +13,7 @@ export const NotFoundPage = () => {
       <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>
         Địa chỉ bạn đang tìm kiếm có thể đã bị xóa hoặc đường dẫn không chính xác.
       </p>
-      <Link to="/" className="page-btn active">
+      <Link to="/" className="back-home-btn">
         &larr; Trở về Trang Chủ
       </Link>
     </div>

@@ -6,7 +6,7 @@ const GOOGLE_ACCOUNTS = [
   {
     name: 'Đơn Thân Mẹ',
     email: 'anthonyq012025@gmail.com',
-    avatar: '/images/google_avatar.jpg',
+    avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
     jobTitle: 'System Admin & Lead Dev',
     role: 'admin',
     bio: 'Tài khoản Google Đơn Thân Mẹ đồng bộ từ Chrome. #Google #JanMammy',
@@ -187,7 +187,7 @@ export const GoogleOneTapPrompt = () => {
                     alt={acc.name}
                     className="google-one-tap-avatar"
                     onError={(e) => {
-                      e.target.src = '/images/google_avatar.jpg';
+                      e.target.src = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
                     }}
                   />
                   {isLoading && <span className="google-one-tap-spinner" />}

@@ -522,6 +522,25 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
           >
             🎵 Nhạc Nền Trang Cá Nhân
           </button>
+          {user?.role === 'admin' && (
+            <button
+              type="button"
+              className="modal-tab"
+              onClick={() => {
+                onClose();
+                window.dispatchEvent(new Event('freedom_open_moderation'));
+              }}
+              style={{
+                background: 'rgba(239, 68, 68, 0.12)',
+                color: '#ef4444',
+                borderColor: 'rgba(239, 68, 68, 0.35)',
+                fontWeight: 700,
+              }}
+              title="Mở Trung tâm kiểm duyệt an toàn nội dung cộng đồng (Admin)"
+            >
+              🛡️ Kiểm Duyệt (Admin)
+            </button>
+          )}
         </div>
 
         {errorMsg && <div className="modal-error">{errorMsg}</div>}

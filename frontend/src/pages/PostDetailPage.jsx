@@ -6,8 +6,10 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { CommentSection } from '../components/blog/CommentSection';
 import { EditPostModal } from '../components/blog/EditPostModal';
+import { AdminModerationModal } from '../components/admin/AdminModerationModal';
 import { PostReactionsBar } from '../components/blog/PostReactionsBar';
 import { PostAudioPlayer } from '../components/blog/PostAudioPlayer';
+import { SharePostModal } from '../components/blog/SharePostModal';
 import { formatPostContent } from '../utils/contentFormatter';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
@@ -25,6 +27,8 @@ export const PostDetailPage = () => {
   const [cheers, setCheers] = useState(0);
   const [hasCheered, setHasCheered] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isModerationOpen, setIsModerationOpen] = useState(false);
   const [adminDeleting, setAdminDeleting] = useState(false);
   const [adminApproving, setAdminApproving] = useState(false);
 
@@ -69,6 +73,21 @@ export const PostDetailPage = () => {
         setCheers(res.data.cheersCount || 0);
       })
       .catch((err) => {
+        // Dự phòng tải bài viết từ Cache trình duyệt nếu mất kết nối backend tạm thời
+        try {
+          const cached = localStorage.getItem('freedom_cached_posts');
+          if (cached) {
+            const list = JSON.parse(cached);
+            const found = list.find((p) => p.slug === slug || p._id === slug);
+            if (found) {
+              setPost(found);
+              setCheers(found.cheersCount || found.reactionsCount || found.reactionCounts?.total || 0);
+              setError(null);
+              return;
+            }
+          }
+        } catch (e) {}
+
         setError(err.message || 'Không tìm thấy bài viết.');
       })
       .finally(() => {
@@ -88,7 +107,15 @@ export const PostDetailPage = () => {
       .then((res) => {
         setRecentPosts(res.data || []);
       })
-      .catch((err) => console.warn(err));
+      .catch((err) => {
+        try {
+          const cached = localStorage.getItem('freedom_cached_posts');
+          if (cached) {
+            const list = JSON.parse(cached);
+            setRecentPosts(list.slice(0, 4));
+          }
+        } catch (e) {}
+      });
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -135,45 +162,56 @@ export const PostDetailPage = () => {
 
   if (error || !post) {
     return (
-      <div className="container" style={{ padding: '80px 0' }}>
+      <div className="container" style={{ padding: '80px 0', textAlign: 'center' }}>
         <ErrorMessage message={error || 'Tâm sự không tồn tại.'} />
-        <div style={{ textAlign: 'center', marginTop: '20px' }}>
-          <Link to="/" className="page-btn">
-            &larr; Về trang chủ
+        <div style={{ textAlign: 'center', marginTop: '24px' }}>
+          <Link
+            to="/"
+            className="back-home-btn"
+          >
+            <span>&larr;</span>
+            <span>Về trang chủ</span>
           </Link>
         </div>
       </div>
     );
   }
 
-  // Kiểm tra xem tài khoản đang đăng nhập có phải tác giả bài viết này không
-  const isCurrentUserAuthor =
+  // Kiểm tra chính xác xem tài khoản đang đăng nhập có phải tác giả bài viết này không (Đồng bộ tuyệt đối thông tin chính chủ)
+  const isCurrentUserAuthor = Boolean(
     user &&
-    ((post.user && (post.user._id === user._id || post.user === user._id)) ||
-      post.author === user.name ||
-      (user.role === 'admin' &&
-        (post.author === 'Trần Đình Quân' ||
-          post.author === 'Đình Quân Trần' ||
-          user.email === 'anthonyq012025@gmail.com')));
+    ((post.user && (post.user._id || post.user)?.toString() === user._id?.toString()) ||
+      (post.author && user.name && post.author.trim().toLowerCase() === user.name.trim().toLowerCase()) ||
+      (user.role === 'admin' && (post.author === 'Đơn Thân Mẹ' || post.author === 'Trần Đình Quân' || post.author === 'Trần Đỉnh Quân')))
+  );
 
-  // Tác giả và thông tin người viết chính xác (Ưu tiên đồng nhất với thông tin tài khoản hiện tại nếu là tác giả)
-  const authorName = (isCurrentUserAuthor && user?.name) ? user.name : (post.author || post.user?.name || 'Trần Đình Quân');
-  const authorJob = (isCurrentUserAuthor && user?.jobTitle) ? user.jobTitle : (post.authorJob || post.user?.jobTitle || 'System Admin & Lead Dev');
-  const authorAvatar = (isCurrentUserAuthor && user?.avatar) ? user.avatar : (post.authorAvatar || post.user?.avatar || '/images/man.jpg');
-  const authorFrame = (isCurrentUserAuthor && user?.customLayout?.frameStyle)
-    ? user.customLayout.frameStyle
-    : (post.user?.customLayout?.frameStyle || 'none');
-  const authorBio = (isCurrentUserAuthor && user?.bio) ? user.bio : (post.user?.bio || 'Chủ sở hữu & Quản trị viên hệ thống You Can\'t Stop Here.');
-  const authorSocial = (isCurrentUserAuthor && user?.socialLinks) ? user.socialLinks : (post.user?.socialLinks || post.authorSocialLinks || {});
+  // Giữ đúng tác giả của bài viết; nếu là chính chủ đang đăng nhập thì đồng bộ 100% tên & avatar hiện tại
+  const cleanAdminAvatar = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
+  const authorName = isCurrentUserAuthor ? user.name : (post.author || post.user?.name || 'Tác giả');
+  const authorJob = isCurrentUserAuthor ? (user.jobTitle || 'System Admin & Lead Dev') : (post.authorJob || post.user?.jobTitle || 'Thành viên cộng đồng');
+  const rawAuthorAvatar = isCurrentUserAuthor ? user.avatar : (post.authorAvatar || post.user?.avatar || '/images/man.jpg');
+  const authorAvatar = (rawAuthorAvatar && !rawAuthorAvatar.includes('google_avatar.jpg') && !rawAuthorAvatar.includes('man.jpg'))
+    ? rawAuthorAvatar
+    : (post.author === 'Đơn Thân Mẹ' || post.authorJob?.includes('Admin') || isCurrentUserAuthor ? cleanAdminAvatar : '/images/man.jpg');
+  const authorFrame = user?.customLayout?.frameStyle && isCurrentUserAuthor ? user.customLayout.frameStyle : (post.user?.customLayout?.frameStyle || 'none');
+  const authorBio = post.user?.bio || (isCurrentUserAuthor ? user?.bio : 'Thành viên chia sẻ tâm sự tại You Can\'t Stop Here.');
+  const authorSocial = post.user?.socialLinks || post.authorSocialLinks || (isCurrentUserAuthor ? user?.socialLinks : {});
   const authorProfileUrl = `/profile/${post.user?._id || post.user || encodeURIComponent(authorName)}`;
 
-  // Kiểm tra quyền chỉnh sửa (Tác giả bài viết hoặc Admin)
-  const canEdit =
-    user &&
-    (user.role === 'admin' ||
-      user._id === post.user?._id ||
-      user._id === post.user ||
-      authorName === user.name);
+  // CHỈ CHÍNH CHỦ bài viết mới có quyền sửa bài viết của mình
+  // Admin không can thiệp sửa nội dung tâm sự của người khác, Admin chỉ hỗ trợ kiểm duyệt & xóa bài vi phạm
+  const canEdit = isCurrentUserAuthor;
+
+  // Kiểm tra quyền xem nội dung Bạn Bè (Friends-only protection)
+  const isFriend = friendsList.some(
+    (f) => String(f._id) === String(post.user?._id || post.user) || f.name === authorName
+  );
+  const canViewFull =
+    !post.visibility ||
+    post.visibility === 'public' ||
+    isCurrentUserAuthor ||
+    isFriend ||
+    user?.role === 'admin';
 
   return (
     <div className="post-detail-wrap">
@@ -263,16 +301,32 @@ export const PostDetailPage = () => {
                 </div>
               )}
 
-              <span className="post-header-badge">
-                {post.category?.name || 'Tâm sự'}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <span className="post-header-badge">
+                  {post.category?.name || 'Tâm sự'}
+                </span>
+                <span
+                  className={`card-visibility-pill ${post.visibility === 'friends' ? 'is-friends' : 'is-public'}`}
+                  title={post.visibility === 'friends' ? 'Chế độ: Chỉ bạn bè mới xem được' : 'Chế độ: Công khai cho tất cả'}
+                >
+                  {post.visibility === 'friends' ? '👥 Chỉ bạn bè' : '🌐 Công khai'}
+                </span>
+              </div>
 
               <h1 className="post-full-title">{post.title}</h1>
 
               <div className="post-author-bar">
                 <div className="post-author-left">
-                  <Link to={authorProfileUrl} title={`Xem trang cá nhân của ${authorName}`}>
-                    <img src={authorAvatar} alt={authorName} className={`post-author-avatar-lg frame-${authorFrame}`} />
+                  <Link
+                    to={authorProfileUrl}
+                    className="post-author-avatar-link"
+                    title={`Xem trang cá nhân của ${authorName}`}
+                  >
+                    <img
+                      src={authorAvatar}
+                      alt={authorName}
+                      className={`post-author-avatar-lg frame-${authorFrame}`}
+                    />
                   </Link>
                   <div className="post-author-details">
                     <div className="post-author-name-row">
@@ -312,23 +366,74 @@ export const PostDetailPage = () => {
                   </div>
                 </div>
 
-                <div className="post-stats-pill" style={{ whiteSpace: 'nowrap' }}>
-                  <span className="post-stat-item" style={{ whiteSpace: 'nowrap' }}>
+                <div className="post-stats-pill">
+                  <span className="post-stat-item">
                     <span>🗓️</span>
-                    <span style={{ whiteSpace: 'nowrap' }}>{formatDate(post.createdAt)}</span>
+                    <span>{formatDate(post.createdAt)}</span>
                   </span>
-                  <span className="post-stat-item" style={{ whiteSpace: 'nowrap' }}>
+                  <span className="post-stat-item">
                     <span>👁️</span>
-                    <span style={{ whiteSpace: 'nowrap' }}>{post.views || 1} lượt đọc</span>
+                    <span>{post.views || 1} lượt đọc</span>
                   </span>
+
+                  {/* Nút Chia sẻ Đa Năng */}
+                  <button
+                    type="button"
+                    className="post-share-trigger-btn"
+                    onClick={() => setIsShareOpen(true)}
+                    title="Chia sẻ bài viết lên trang cá nhân hoặc mạng xã hội"
+                    style={{
+                      background: 'rgba(13, 148, 136, 0.15)',
+                      border: '1px solid #0d9488',
+                      color: '#0d9488',
+                      padding: '5px 12px',
+                      borderRadius: '6px',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                    }}
+                  >
+                    💌 Chia sẻ
+                  </button>
+
+                  {/* Nút Sửa bài viết CHỈ hiển thị cho chính chủ tác giả */}
                   {canEdit && (
                     <button
                       type="button"
                       className="edit-post-trigger-btn"
                       onClick={() => setIsEditModalOpen(true)}
-                      title="Chỉnh sửa bài viết này"
+                      title="Chỉnh sửa bài viết này (Dành riêng cho tác giả)"
                     >
                       ✏️ Sửa bài viết
+                    </button>
+                  )}
+
+                  {/* Nút Kiểm duyệt dành cho Admin (dời từ Header vào thẳng bài viết) */}
+                  {user?.role === 'admin' && (
+                    <button
+                      type="button"
+                      className="admin-moderation-pill-btn"
+                      onClick={() => setIsModerationOpen(true)}
+                      title="Mở Bảng kiểm duyệt an toàn nội dung cộng đồng (Admin)"
+                      style={{
+                        background: 'rgba(59, 130, 246, 0.15)',
+                        border: '1px solid #3b82f6',
+                        color: '#60a5fa',
+                        padding: '5px 12px',
+                        borderRadius: '6px',
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                      }}
+                    >
+                      <span>🛡️ Kiểm duyệt</span>
                     </button>
                   )}
 
@@ -348,6 +453,9 @@ export const PostDetailPage = () => {
                         fontSize: '0.8rem',
                         cursor: 'pointer',
                         boxShadow: '0 2px 6px rgba(220, 38, 38, 0.25)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
                       }}
                       title="Quyền Admin: Xóa ngang bài viết khỏi toàn hệ thống"
                     >
@@ -368,11 +476,47 @@ export const PostDetailPage = () => {
               {/* Trình Đọc Bài Viết A.I Thông Minh Bằng Giọng Cảm Xúc & Giọng Nhân Bản */}
               <PostAudioPlayer post={post} />
 
-              {/* Body */}
-              <div
-                className="post-body"
-                dangerouslySetInnerHTML={{ __html: formatPostContent(post.content) }}
-              />
+              {/* Body: Nếu là chế độ bạn bè và chưa kết bạn, khóa nội dung an toàn */}
+              {canViewFull ? (
+                <div
+                  className="post-body"
+                  dangerouslySetInnerHTML={{ __html: formatPostContent(post.content) }}
+                />
+              ) : (
+                <div className="friends-only-lock-card">
+                  <span className="friends-lock-icon">🔒</span>
+                  <h3 className="friends-lock-title">Nội dung chỉ dành riêng cho Bạn Bè</h3>
+                  <p className="friends-lock-desc">
+                    Tác giả <strong>{authorName}</strong> đã cài đặt bài viết này ở chế độ <strong>"Chỉ bạn bè"</strong>. Hãy kết bạn với {authorName} để mở khóa toàn bộ câu chuyện và cùng nhau chia sẻ nhé!
+                  </p>
+                  {post.summary && (
+                    <div className="friends-lock-summary-box">
+                      <strong>Tóm tắt cảm xúc:</strong>
+                      <p>"{post.summary}"</p>
+                    </div>
+                  )}
+                  {user ? (
+                    <button
+                      type="button"
+                      className="friends-lock-action-btn"
+                      onClick={async () => {
+                        const targetId = post.user?._id || post.user;
+                        if (targetId) {
+                          await handleAddFriend(targetId);
+                          alert(`Đã kết bạn với ${authorName}! Bạn có thể đọc bài ngay.`);
+                          window.location.reload();
+                        }
+                      }}
+                    >
+                      🤝 Kết bạn với {authorName} để mở khóa nội dung
+                    </button>
+                  ) : (
+                    <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginTop: '10px' }}>
+                      (Vui lòng đăng nhập để kết bạn và đọc bài viết này)
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Tags (Hashtags hoạt động - bấm vào để lọc bài liên quan) */}
               {post.tags && post.tags.length > 0 && (
@@ -419,11 +563,11 @@ export const PostDetailPage = () => {
                   src={authorAvatar}
                   alt={authorName}
                   className={`frame-${authorFrame}`}
-                  style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover' }}
+                  style={{ width: '64px', height: '64px', minWidth: '64px', maxWidth: '64px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
                 />
                 <div>
-                  <h4 style={{ fontSize: '1.05rem', color: 'var(--bg-dark)' }}>{authorName}</h4>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--primary-hover)', fontWeight: 600 }}>
+                  <h4 className="post-sidebar-author-name">{authorName}</h4>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--primary-color)', fontWeight: 600 }}>
                     {authorJob}
                   </span>
                 </div>
@@ -597,13 +741,36 @@ export const PostDetailPage = () => {
         </div>
       </div>
 
-      {/* Popup chỉnh sửa bài viết */}
+      {/* Popup chỉnh sửa bài viết (Dành riêng cho chính chủ tác giả) */}
       {isEditModalOpen && (
         <EditPostModal
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           post={post}
           onPostUpdated={handlePostUpdated}
+        />
+      )}
+
+      {/* Modal Chia Sẻ Bài Viết (Cá nhân & Mạng xã hội) */}
+      <SharePostModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        post={post}
+        onShareSuccess={() => {
+          setPost((prev) => prev ? { ...prev, sharesCount: (prev.sharesCount || 0) + 1 } : prev);
+        }}
+      />
+
+      {/* Bảng kiểm duyệt nội dung cộng đồng (Admin) */}
+      {user?.role === 'admin' && isModerationOpen && (
+        <AdminModerationModal
+          isOpen={isModerationOpen}
+          onClose={() => setIsModerationOpen(false)}
+          onPostDeleted={(deletedId) => {
+            if (deletedId === post._id || deletedId === post.slug) {
+              navigate('/', { replace: true });
+            }
+          }}
         />
       )}
     </div>

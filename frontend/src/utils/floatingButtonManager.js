@@ -9,7 +9,7 @@
 
 export const FAB_SIZES = {
   chat: { width: 58, height: 58 },
-  write: { width: 145, height: 46 },
+  write: { width: 170, height: 48 },
 };
 
 /**
@@ -18,7 +18,7 @@ export const FAB_SIZES = {
 export const ensureInBounds = (type, pos) => {
   if (typeof window === 'undefined') return pos;
   const size = FAB_SIZES[type] || { width: 60, height: 60 };
-  const margin = 16;
+  const margin = 20;
   const maxX = Math.max(margin, window.innerWidth - size.width - margin);
   const maxY = Math.max(margin, window.innerHeight - size.height - margin);
 
@@ -176,18 +176,25 @@ export const resolveAntiCollision = (movingType, candidatePos) => {
 
 /**
  * Hít vào mép màn hình thông minh (Snap to nearest screen edge)
+ * Tự động hút dạt về mép trái hoặc mép phải tùy theo bên nghiêng khi người dùng thả tay
  */
 export const snapToNearestEdge = (type, pos) => {
   if (typeof window === 'undefined') return pos;
-  const size = FAB_SIZES[type];
+  const size = FAB_SIZES[type] || { width: 170, height: 48 };
   const midX = window.innerWidth / 2;
-  const margin = 16;
+  const margin = 24;
 
-  // Hít về lề trái hoặc lề phải
-  const snappedX = pos.x < midX ? margin : Math.max(margin, window.innerWidth - size.width - margin);
-  const candidate = { x: snappedX, y: pos.y };
+  // Tính tâm của nút để xác định nghiêng hẳn về bên trái hay bên phải
+  const buttonCenterX = pos.x + size.width / 2;
+  const snappedX =
+    buttonCenterX < midX
+      ? margin
+      : Math.max(margin, window.innerWidth - size.width - margin);
 
-  // Kiểm tra chống va chạm sau khi hít
+  // Đảm bảo toạ độ Y nằm trong phạm vi hiển thị an toàn
+  const candidate = ensureInBounds(type, { x: snappedX, y: pos.y });
+
+  // Kiểm tra chống va chạm sau khi hít vào mép (né nút Chat nếu cùng mép)
   return resolveAntiCollision(type, candidate);
 };
 

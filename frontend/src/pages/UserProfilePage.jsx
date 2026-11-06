@@ -84,7 +84,7 @@ export const UserProfilePage = () => {
     return (
       <div className="container" style={{ padding: '60px 0', textAlign: 'center' }}>
         <ErrorMessage message={error || 'Không tìm thấy người dùng này.'} />
-        <Link to="/" className="page-btn" style={{ marginTop: '20px', display: 'inline-block' }}>
+        <Link to="/" className="back-home-btn" style={{ marginTop: '20px', display: 'inline-block' }}>
           &larr; Về trang chủ
         </Link>
       </div>
@@ -186,8 +186,17 @@ export const UserProfilePage = () => {
         <div className="profile-header-content">
           <div className="profile-avatar-wrap">
             <img
-              src={user.avatar || '/images/man.jpg'}
+              src={
+                user.avatar && !user.avatar.includes('google_avatar')
+                  ? user.avatar
+                  : ((user.role === 'admin' || user.email === 'anthonyq012025@gmail.com')
+                      ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg'
+                      : '/images/man.jpg')
+              }
               alt={user.name}
+              onError={(e) => {
+                e.target.src = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
+              }}
               className={`profile-avatar-img frame-${user.customLayout?.frameStyle || 'none'}`}
             />
             {user.role === 'admin' && (

@@ -8,10 +8,7 @@ const PORT = parseInt(process.env.PORT, 10) || 5050;
  * Khởi động Server Backend & Kết nối MongoDB
  */
 const startServer = async () => {
-  // 1. Chờ kết nối MongoDB hoàn tất (Atlas hoặc Local) trước khi mở cổng
-  await connectDB();
-
-  // 2. Khởi động máy chủ Express lắng nghe cổng
+  // 1. Khởi động máy chủ Express lắng nghe cổng ngay lập tức để không bị chậm trễ
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`===============================================`);
     console.log(`🚀 Server Backend Node.js + Express đã khởi động!`);
@@ -19,6 +16,11 @@ const startServer = async () => {
     console.log(`📡 Health Check: http://127.0.0.1:${PORT}/api/health`);
     console.log(`🌿 Cổng Backend: ${PORT}`);
     console.log(`===============================================`);
+  });
+
+  // 2. Kết nối Database song song trong nền (không làm nghẽn mở cổng)
+  connectDB().catch((err) => {
+    console.warn('⚠️ Lỗi kết nối DB:', err.message);
   });
 
   server.on('error', (err) => {

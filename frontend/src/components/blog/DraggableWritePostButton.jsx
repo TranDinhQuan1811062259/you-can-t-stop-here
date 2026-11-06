@@ -3,6 +3,7 @@ import {
   getFabPos,
   saveFabPos,
   resolveAntiCollision,
+  snapToNearestEdge,
   ensureInBounds,
   FAB_SIZES,
 } from '../../utils/floatingButtonManager';
@@ -111,10 +112,10 @@ export const DraggableWritePostButton = ({ onClick }) => {
 
       if (hasMovedRef.current) {
         setBtnPos((current) => {
-          // Tự động kiểm tra chống va chạm với nút Chat:
-          const resolved = resolveAntiCollision('write', current);
-          saveFabPos('write', resolved);
-          return resolved;
+          // Tự động hít dạt về mép gần nhất (trái hoặc phải) theo bên nghiêng:
+          const snapped = snapToNearestEdge('write', current);
+          saveFabPos('write', snapped);
+          return snapped;
         });
       }
     };

@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { formatDate } from '../../utils/formatDate';
 import { postService } from '../../services/postService';
 import { playClickSound } from '../../utils/soundEffects';
+import { SharePostModal } from './SharePostModal';
 
 export const PostCard = ({ post }) => {
   const { user } = useAuth();
@@ -13,6 +14,8 @@ export const PostCard = ({ post }) => {
   const postId = post._id || post.slug;
 
   const [isPlayingAi, setIsPlayingAi] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [localSharesCount, setLocalSharesCount] = useState(post.sharesCount || post.repostCount || 0);
 
   // Lắng nghe trạng thái phát âm thanh A.I toàn cục
   useEffect(() => {
@@ -44,22 +47,23 @@ export const PostCard = ({ post }) => {
     );
   };
 
-  // Kiểm tra xem bài viết có phải do người đang đăng nhập viết không
-  const isCurrentUserAuthor =
+  // Kiểm tra xem bài viết có phải do người đang đăng nhập viết không (Đồng bộ tuyệt đối thông tin chính chủ)
+  const isCurrentUserAuthor = Boolean(
     user &&
-    ((post.user && (post.user._id === user._id || post.user === user._id)) ||
-      post.author === user.name ||
-      (user.role === 'admin' &&
-        (post.author === 'Trần Đình Quân' ||
-          post.author === 'Đình Quân Trần' ||
-          user.email === 'anthonyq012025@gmail.com')));
+    ((post.user && (post.user._id || post.user)?.toString() === user._id?.toString()) ||
+      (post.author && user.name && post.author.trim().toLowerCase() === user.name.trim().toLowerCase()) ||
+      (user.role === 'admin' && (post.author === 'Đơn Thân Mẹ' || post.author === 'Trần Đình Quân' || post.author === 'Trần Đỉnh Quân')))
+  );
 
-  const authorName = (isCurrentUserAuthor && user?.name) ? user.name : (post.author || post.user?.name || 'Trần Đình Quân');
-  const authorJob = (isCurrentUserAuthor && user?.jobTitle) ? user.jobTitle : (post.authorJob || post.user?.jobTitle || 'System Admin & Lead Dev');
-  const authorAvatar = (isCurrentUserAuthor && user?.avatar) ? user.avatar : (post.authorAvatar || post.user?.avatar || '/images/man.jpg');
-  const authorFrame = (isCurrentUserAuthor && user?.customLayout?.frameStyle)
-    ? user.customLayout.frameStyle
-    : (post.user?.customLayout?.frameStyle || 'none');
+  // Giữ đúng tác giả của từng bài viết; nếu là chính chủ đang đăng nhập thì đồng bộ 100% tên & avatar hiện tại
+  const cleanAdminAvatar = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
+  const authorName = isCurrentUserAuthor ? user.name : (post.author || post.user?.name || 'Thành viên');
+  const authorJob = isCurrentUserAuthor ? (user.jobTitle || 'System Admin & Lead Dev') : (post.authorJob || post.user?.jobTitle || 'Thành viên cộng đồng');
+  const rawAuthorAvatar = isCurrentUserAuthor ? user.avatar : (post.authorAvatar || post.user?.avatar || '/images/man.jpg');
+  const authorAvatar = (rawAuthorAvatar && !rawAuthorAvatar.includes('google_avatar.jpg') && !rawAuthorAvatar.includes('man.jpg'))
+    ? rawAuthorAvatar
+    : (post.author === 'Đơn Thân Mẹ' || post.authorJob?.includes('Admin') || isCurrentUserAuthor ? cleanAdminAvatar : '/images/man.jpg');
+  const authorFrame = user?.customLayout?.frameStyle && isCurrentUserAuthor ? user.customLayout.frameStyle : (post.user?.customLayout?.frameStyle || 'none');
 
   const [deleting, setDeleting] = useState(false);
   const [approving, setApproving] = useState(false);
@@ -100,7 +104,7 @@ export const PostCard = ({ post }) => {
   return (
     <article className={`post-card ${post.isFlagged ? 'is-flagged-card' : ''}`}>
       <div className="card-img-wrap">
-        <Link to={`/post/${post.slug}`}>
+        <Link to={`/post/${post.slug}`} className="card-img-link" title={post.title}>
           <img
             src={post.coverImage || '/images/sun.jpg'}
             alt={post.title}
@@ -109,38 +113,46 @@ export const PostCard = ({ post }) => {
           />
         </Link>
 
-        {/* Thanh Huy Hiệu Trên Đầu Ảnh - Thiết kế Flexbox chống tràn & chống đè chữ tuyệt đối */}
+        {/* Thanh Huy Hiệu Trên Đầu Ảnh (Category + Chế độ xem) - Rộng rãi, không bị đè */}
         <div className="card-top-badges-bar">
-          <span className="card-category-badge" title={categoryName}>
-            {categoryName}
-          </span>
-
-          <div className="card-top-actions-group">
-            {/* Huy hiệu cảnh báo bài nhạy cảm Chính Trị */}
-            {post.isFlagged && (
-              <span
-                className="card-flagged-badge"
-                title={post.flagReason || 'Bài viết chứa yếu tố nhạy cảm Chính Trị'}
-              >
-                ⚠️ Nhạy Cảm
-              </span>
-            )}
-
-            {/* Nút Nghe A.I Đọc Bài Viết Cảm Xúc (Đã kích hoạt click và hoạt ảnh âm thanh) */}
-            <button
-              type="button"
-              className={`card-audio-mood-btn ${isPlayingAi ? 'is-active-playing' : ''}`}
-              onClick={handleToggleAiAudio}
-              title={
-                isPlayingAi
-                  ? 'Đang phát bài viết này. Bấm để tạm dừng đọc'
-                  : `Bấm để kích hoạt A.I đọc bài viết: "${post.title}"`
-              }
+          <div className="card-badges-left">
+            <span className="card-category-badge" title={categoryName}>
+              {categoryName}
+            </span>
+            <span
+              className={`card-visibility-pill ${post.visibility === 'friends' ? 'is-friends' : 'is-public'}`}
+              title={post.visibility === 'friends' ? 'Chế độ: Chỉ bạn bè mới xem được' : 'Chế độ: Công khai cho tất cả'}
             >
-              <span className="audio-btn-icon">{isPlayingAi ? '⏸' : '🎧'}</span>
-              <span className="audio-btn-label">{isPlayingAi ? 'Đang đọc...' : 'Nghe AI đọc'}</span>
-            </button>
+              {post.visibility === 'friends' ? '👥' : '🌐'}
+            </span>
           </div>
+
+          {/* Huy hiệu cảnh báo bài nhạy cảm Chính Trị (nếu có) */}
+          {post.isFlagged && (
+            <span
+              className="card-flagged-badge"
+              title={post.flagReason || 'Bài viết chứa yếu tố nhạy cảm Chính Trị'}
+            >
+              ⚠️ Nhạy Cảm
+            </span>
+          )}
+        </div>
+
+        {/* Nút Nghe A.I Đọc Bài Viết Cảm Xúc - Đặt riêng ở góc dưới bên phải ảnh, thoáng đãng không bị cắt chữ */}
+        <div className="card-bottom-audio-bar">
+          <button
+            type="button"
+            className={`card-audio-mood-btn ${isPlayingAi ? 'is-active-playing' : ''}`}
+            onClick={handleToggleAiAudio}
+            title={
+              isPlayingAi
+                ? 'Đang phát bài viết này. Bấm để tạm dừng đọc'
+                : `Bấm để kích hoạt A.I đọc bài viết: "${post.title}"`
+            }
+          >
+            <span className="audio-btn-icon">{isPlayingAi ? '⏸' : '🎧'}</span>
+            <span className="audio-btn-label">{isPlayingAi ? 'Đang đọc...' : 'Nghe AI đọc'}</span>
+          </button>
         </div>
       </div>
 
@@ -196,10 +208,26 @@ export const PostCard = ({ post }) => {
           </Link>
 
           {/* Nút hành động đọc bài - Rõ ràng, không bị chèn ép hay rớt dòng */}
-          <Link to={`/post/${post.slug}`} className="card-read-action-btn" title="Đọc bài viết và trò chuyện">
-            <span>Đọc & Trò chuyện</span>
-            <span className="read-arrow">&rarr;</span>
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              className="card-share-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsShareOpen(true);
+              }}
+              title="Chia sẻ bài viết lên trang cá nhân hoặc mạng xã hội"
+            >
+              <span>💌</span>
+              <span>Chia sẻ</span>
+            </button>
+
+            <Link to={`/post/${post.slug}`} className="card-read-action-btn" title="Đọc bài viết và trò chuyện">
+              <span>Đọc</span>
+              <span className="read-arrow">&rarr;</span>
+            </Link>
+          </div>
         </div>
 
         {/* Thanh công cụ kiểm duyệt & Xóa ngang dành riêng cho Admin */}
@@ -267,6 +295,14 @@ export const PostCard = ({ post }) => {
           </div>
         )}
       </div>
+
+      {/* Modal Chia Sẻ Bài Viết Đa Năng */}
+      <SharePostModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        post={post}
+        onShareSuccess={() => setLocalSharesCount((prev) => prev + 1)}
+      />
     </article>
   );
 };

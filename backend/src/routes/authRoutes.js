@@ -8,11 +8,28 @@ import {
   getUserProfile,
   sendLoginOtp,
   verifyOtpAndLogin,
+  initiateOAuth,
+  handleOAuthCallback,
+  generateQrSession,
+  checkQrSessionStatus,
+  verifyQrSession,
+  simulateQrSessionScan,
 } from '../controllers/authController.js';
 import { protect, optionalProtect } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
+// OAuth 2.0 chuyển hướng trực tiếp qua nền tảng thực tế (Google, Facebook, GitHub,...)
+router.get('/oauth/:provider', initiateOAuth);
+router.get('/oauth/:provider/callback', handleOAuthCallback);
+
+// Hệ thống Đăng nhập bằng mã QR tự sinh (QR Code Login)
+router.get('/qr/generate', generateQrSession);
+router.get('/qr/status/:sessionId', checkQrSessionStatus);
+router.post('/qr/verify', protect, verifyQrSession);
+router.post('/qr/simulate', simulateQrSessionScan);
+
+// Xác thực & Tài khoản
 router.post('/register', register);
 router.post('/login', login);
 router.post('/send-otp', sendLoginOtp);

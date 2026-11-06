@@ -24,4 +24,10 @@ export const authService = {
 
   // Lấy trang cá nhân công khai theo userId hoặc tên
   getUserProfile: (userId) => apiClient.get(`/auth/user/${userId}`),
+
+  // Hệ thống Đăng nhập bằng mã QR (QR Code Login)
+  generateQrSession: () => apiClient.get('/auth/qr/generate'),
+  checkQrStatus: (sessionId) => apiClient.get(`/auth/qr/status/${sessionId}`),
+  verifyQrSession: (sessionId) => apiClient.post('/auth/qr/verify', { sessionId }),
+  simulateQrScan: (sessionId, email) => apiClient.post('/auth/qr/simulate', { sessionId, email }),
 };

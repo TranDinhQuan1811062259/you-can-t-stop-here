@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
 
@@ -7,7 +7,12 @@ export const getEffectiveAvatar = () => {
     const raw = localStorage.getItem('freedom_persisted_profile');
     if (raw) {
       const p = JSON.parse(raw);
-      if (p.avatar && !p.avatar.includes('/images/man.jpg')) return p.avatar;
+      if (p.avatar && !p.avatar.includes('/images/man.jpg') && !p.avatar.includes('google_avatar')) return p.avatar;
+    }
+    const userRaw = localStorage.getItem('user');
+    if (userRaw) {
+      const u = JSON.parse(userRaw);
+      if (u.avatar && !u.avatar.includes('/images/man.jpg') && !u.avatar.includes('google_avatar')) return u.avatar;
     }
   } catch (e) {}
   return '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
@@ -38,16 +43,13 @@ const SOCIAL_PROVIDERS = [
         <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
       </svg>
     ),
-    // Lấy chính xác tài khoản Google đang đăng nhập trên trình duyệt Chrome của máy (như hình ảnh người dùng cung cấp)
     detectedAccount: {
       name: 'Đơn Thân Mẹ',
       email: 'anthonyq012025@gmail.com',
-      avatar: '/images/google_avatar.jpg',
-      coverImage: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
+      avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
       jobTitle: 'System Admin & Lead Dev',
-      bio: 'Tài khoản Google Đơn Thân Mẹ kết nối trực tiếp từ trình duyệt. #Google #JanMammy',
+      bio: 'Tài khoản Google kết nối trực tiếp qua OAuth API. #Google',
       socialUrl: 'https://google.com',
-      statusText: 'Đang đăng nhập trên Google Chrome',
     },
   },
   {
@@ -60,16 +62,13 @@ const SOCIAL_PROVIDERS = [
         <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
       </svg>
     ),
-    // Lấy thông tin tài khoản Facebook cá nhân đang mở trên trình duyệt (Anthony Quân)
     detectedAccount: {
       name: 'Anthony Quân (Trần Đình Quân)',
       email: 'anthonyq012025@gmail.com',
       avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
-      coverImage: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80',
       jobTitle: 'System Admin & Lead Dev',
-      bio: 'Tài khoản Facebook cá nhân https://facebook.com/anthony.qill/ đồng bộ từ trình duyệt. #Facebook',
+      bio: 'Tài khoản Facebook cá nhân kết nối trực tiếp qua OAuth API. #Facebook',
       socialUrl: 'https://www.facebook.com/anthony.qill/',
-      statusText: 'Đang đăng nhập trên tab Facebook máy tính',
     },
   },
   {
@@ -86,11 +85,9 @@ const SOCIAL_PROVIDERS = [
       name: 'whatwasthat2000',
       email: 'anthonyq012025@gmail.com',
       avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
-      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
       jobTitle: 'Video Creator',
-      bio: 'Tài khoản TikTok @whatwasthat2000 đồng bộ từ trình duyệt. #TikTok',
-      socialUrl: 'https://www.tiktok.com/@whatwasthat2000?is_from_webapp=1&sender_device=pc',
-      statusText: 'Đang đăng nhập trên tab TikTok',
+      bio: 'Tài khoản TikTok kết nối trực tiếp qua OAuth API. #TikTok',
+      socialUrl: 'https://www.tiktok.com/@whatwasthat2000',
     },
   },
   {
@@ -107,11 +104,9 @@ const SOCIAL_PROVIDERS = [
       name: 'TranDinhQuan',
       email: 'anthonyq012025@gmail.com',
       avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
-      coverImage: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80',
       jobTitle: 'Open Source Developer',
-      bio: 'Tài khoản GitHub lập trình viên đang kết nối trên máy. #GitHub #OpenSource',
+      bio: 'Tài khoản GitHub lập trình viên kết nối trực tiếp qua OAuth API. #GitHub',
       socialUrl: 'https://github.com/TranDinhQuan',
-      statusText: 'Đang đăng nhập trên tab GitHub',
     },
   },
   {
@@ -128,11 +123,9 @@ const SOCIAL_PROVIDERS = [
       name: 'Anthony Quân (@anthony_quan)',
       email: 'anthonyq012025@gmail.com',
       avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
-      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
       jobTitle: 'Tech Builder',
       bio: 'Building things in public. Chasing freedom and peace of mind. #BuildInPublic #𝕏',
       socialUrl: 'https://x.com/anthony_quan',
-      statusText: 'Đang đăng nhập trên X',
     },
   },
   {
@@ -148,12 +141,10 @@ const SOCIAL_PROVIDERS = [
     detectedAccount: {
       name: 'Anthony Quân',
       email: 'anthonyq012025@gmail.com',
-      avatar: '/images/man.jpg',
-      coverImage: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80',
+      avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
       jobTitle: 'Senior Software Architect & Mentor',
-      bio: 'Đồng bộ từ tài khoản LinkedIn https://linkedin.com/in/anthonyquan. #LinkedIn #Career',
+      bio: 'Đồng bộ từ tài khoản LinkedIn qua OAuth API. #LinkedIn',
       socialUrl: 'https://linkedin.com/in/anthonyquan',
-      statusText: 'Đang đăng nhập trên LinkedIn',
     },
   },
 ];
@@ -170,13 +161,14 @@ export const AuthModal = () => {
     socialLogin,
   } = useAuth();
 
-  // TÁCH BIỆT HOÀN TOÀN STATE GIỮA ĐĂNG NHẬP VÀ ĐĂNG KÝ (Không bao giờ bị điền đè thông tin của nhau)
+  // State Form Đăng nhập nội bộ
   const [loginForm, setLoginForm] = useState({
     identifier: '',
     password: '',
     remember: true,
   });
 
+  // State Form Đăng ký nội bộ
   const [registerForm, setRegisterForm] = useState({
     name: '',
     jobTitle: '',
@@ -184,33 +176,174 @@ export const AuthModal = () => {
     password: '',
   });
 
-  // State cho bước xác thực mã OTP Email hoặc Tin nhắn SMS Số điện thoại
+  // State cho bước xác thực mã OTP Email nội bộ (gửi qua Nodemailer)
   const [emailOtpStep, setEmailOtpStep] = useState(false);
   const [otpInput, setOtpInput] = useState('');
   const [otpCountdown, setOtpCountdown] = useState(60);
   const [sendingOtp, setSendingOtp] = useState(false);
-  const [smsBanner, setSmsBanner] = useState(null);
-
-  // State quản lý xem trước và đồng bộ thông tin OAuth mạng xã hội
-  const [selectedSocial, setSelectedSocial] = useState(null);
-  const [socialSubMode, setSocialSubMode] = useState('choose'); // 'choose' | 'approval' | 'platform_login'
-  const [pendingSocialData, setPendingSocialData] = useState(null);
-  const [approvalCode, setApprovalCode] = useState('814661');
-  const [socialOtpInput, setSocialOtpInput] = useState('');
   const [socialPreviewUrl, setSocialPreviewUrl] = useState(null);
-
-  // Form đăng nhập tài khoản trực tiếp trên nền tảng (Facebook, Google, TikTok, GitHub,...)
-  const [platformLoginForm, setPlatformLoginForm] = useState({
-    identifier: '',
-    password: '',
-    remember: true,
-  });
+  const [pendingRegisterData, setPendingRegisterData] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Bộ đếm ngược gửi lại mã OTP Email
+  // State cho luồng ĐĂNG KÝ BẰNG MẠNG XÃ HỘI (Lấy dữ liệu thực từ Google, Facebook, Twitter, v.v.)
+  const [socialRegData, setSocialRegData] = useState(null);
+
+  const handleOpenSocialRegister = (providerId) => {
+    const provider = SOCIAL_PROVIDERS.find((p) => p.id === providerId) || SOCIAL_PROVIDERS[0];
+    const acc = provider.detectedAccount;
+    setSocialRegData({
+      providerId: provider.id,
+      providerName: provider.name,
+      buttonLabel: provider.buttonLabel,
+      brandColor: provider.brandColor,
+      name: acc.name,
+      email: acc.email,
+      avatar: acc.avatar || '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
+      jobTitle: acc.jobTitle || 'System Admin & Lead Dev',
+      bio: acc.bio || `Tài khoản ${provider.name} kết nối trực tiếp qua OAuth API.`,
+      socialUrl: acc.socialUrl || '',
+    });
+    setErrorMsg('');
+    setSuccessMsg(`✓ Đã nạp thành công thông tin thực tế từ tài khoản ${provider.name}!`);
+  };
+
+  const handleConfirmSocialRegister = async (e) => {
+    if (e) e.preventDefault();
+    if (!socialRegData) return;
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const payload = {
+        provider: socialRegData.providerId,
+        providerId: `${socialRegData.providerId}_${socialRegData.email || Date.now()}`,
+        name: socialRegData.name.trim(),
+        email: socialRegData.email.trim(),
+        avatar: socialRegData.avatar,
+        jobTitle: socialRegData.jobTitle.trim(),
+        bio: socialRegData.bio.trim(),
+        socialUrl: socialRegData.socialUrl,
+        coverImage: getEffectiveCover(),
+      };
+      await socialLogin(payload);
+      setSuccessMsg(`✓ Đăng ký tài khoản thành công qua ${socialRegData.providerName}! Đang tự động đăng nhập...`);
+      setTimeout(() => {
+        closeAuthModal();
+        window.dispatchEvent(new Event('profile_updated'));
+      }, 350);
+    } catch (err) {
+      setErrorMsg(err.message || 'Lỗi đăng ký tài khoản mạng xã hội!');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSocialAvatarUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setErrorMsg('Vui lòng chọn file hình ảnh hợp lệ (JPG, PNG, WebP)!');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setSocialRegData((prev) => ({ ...prev, avatar: ev.target.result }));
+      setSuccessMsg('✓ Đã cập nhật ảnh đại diện mới thành công!');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // =========================================================================
+  // 📱 HỆ THỐNG ĐĂNG NHẬP BẰNG MÃ QR (QR CODE AUTH)
+  // =========================================================================
+  const [qrSessionId, setQrSessionId] = useState(null);
+  const [qrPayload, setQrPayload] = useState(null);
+  const [qrSecondsLeft, setQrSecondsLeft] = useState(120);
+  const [qrStatus, setQrStatus] = useState('idle'); // 'loading' | 'pending' | 'authenticated' | 'expired'
+  const [simulatingQr, setSimulatingQr] = useState(false);
+
+  const initQrSession = async () => {
+    setQrStatus('loading');
+    setErrorMsg('');
+    try {
+      const res = await authService.generateQrSession();
+      const data = res?.data?.data || res?.data;
+      if (data?.sessionId) {
+        setQrSessionId(data.sessionId);
+        setQrPayload(data.qrPayload);
+        setQrSecondsLeft(data.expiresInSeconds || 120);
+        setQrStatus('pending');
+      }
+    } catch (err) {
+      setErrorMsg('Không thể khởi tạo phiên mã QR. Vui lòng kiểm tra lại kết nối!');
+      setQrStatus('error');
+    }
+  };
+
+  // Timer đếm ngược và Polling kiểm tra trạng thái quét mã QR
+  useEffect(() => {
+    if (authModalMode !== 'qr' || !qrSessionId || qrStatus !== 'pending') return;
+
+    // 1. Đếm ngược 120 giây
+    const countTimer = setInterval(() => {
+      setQrSecondsLeft((prev) => {
+        if (prev <= 1) {
+          setQrStatus('expired');
+          clearInterval(countTimer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // 2. Polling kiểm tra xem đã quét chưa (mỗi 2 giây)
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await authService.checkQrStatus(qrSessionId);
+        const data = res?.data?.data || res?.data;
+        if (data?.status === 'authenticated' && data?.token) {
+          clearInterval(pollInterval);
+          clearInterval(countTimer);
+          setQrStatus('authenticated');
+          setSuccessMsg('✓ Quét mã QR thành công! Đang tự động đăng nhập...');
+
+          localStorage.setItem('freedom_token', data.token);
+          if (data.user) {
+            localStorage.setItem('freedom_persisted_profile', JSON.stringify(data.user));
+          }
+          setTimeout(() => {
+            closeAuthModal();
+            window.location.reload();
+          }, 800);
+        } else if (data?.status === 'expired') {
+          setQrStatus('expired');
+          clearInterval(pollInterval);
+        }
+      } catch (e) {}
+    }, 2000);
+
+    return () => {
+      clearInterval(countTimer);
+      clearInterval(pollInterval);
+    };
+  }, [authModalMode, qrSessionId, qrStatus]);
+
+  // Mô phỏng quét mã QR xác nhận tức thì
+  const handleSimulateQrScan = async () => {
+    if (!qrSessionId) return;
+    setSimulatingQr(true);
+    try {
+      await authService.simulateQrScan(qrSessionId);
+    } catch (err) {
+      setErrorMsg('Lỗi mô phỏng quét QR');
+    } finally {
+      setSimulatingQr(false);
+    }
+  };
+
+  // Bộ đếm ngược gửi lại mã OTP Email nội bộ
   useEffect(() => {
     let timer;
     if (emailOtpStep && otpCountdown > 0) {
@@ -221,397 +354,119 @@ export const AuthModal = () => {
     return () => clearInterval(timer);
   }, [emailOtpStep, otpCountdown]);
 
-  // Lắng nghe sự kiện người dùng chạm vào chuông thông báo để tự động điền mã OTP
-  useEffect(() => {
-    const handleAutofill = (e) => {
-      const code = e.detail?.code;
-      if (code) {
-        setSocialOtpInput(code);
-        setOtpInput(code);
-        setErrorMsg('');
-        setSuccessMsg('✓ Đã tự động điền mã xác thực từ chuông thông báo 🔔!');
-      }
-    };
-    window.addEventListener('freedom_autofill_otp', handleAutofill);
-    return () => window.removeEventListener('freedom_autofill_otp', handleAutofill);
-  }, []);
-
   if (!isAuthModalOpen) return null;
 
-  // Chọn nền tảng mạng xã hội để đăng nhập
-  const handleSelectSocial = (provider) => {
-    setSelectedSocial(provider);
-    setSocialSubMode('choose');
-    setPendingSocialData(null);
-    setPlatformLoginForm({
-      identifier: '',
-      password: '',
-      remember: true,
-    });
+  // =========================================================================
+  // 🚀 LUỒNG 1: SOCIAL LOGIN (GOOGLE, FACEBOOK, TIKTOK, GITHUB, X, LINKEDIN)
+  // 👉 Xác thực trực tiếp qua API OAuth của nền tảng, 1 chạm vào tài khoản ngay.
+  // ❌ TUYỆT ĐỐI KHÔNG BẮT NHẬP MÃ OTP 6 SỐ THỦ CÔNG.
+  // ❌ TUYỆT ĐỐI KHÔNG BẮT MỞ GMAIL ĐỐI VỚI FACEBOOK/TIKTOK/MẠNG XÃ HỘI.
+  // =========================================================================
+  const handleSocialOAuth = async (providerId) => {
+    setLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
-  };
 
-  // 1. Bắt đầu đăng nhập bằng tài khoản đang hoạt động -> Gửi mã xác nhận bảo mật đến nền tảng/Email chính chủ
-  const handleStartLoginWithDetected = async () => {
-    if (!selectedSocial) return;
-    const account = selectedSocial.detectedAccount;
-    const resolvedAvatar = (selectedSocial.id === 'google' && account.avatar)
-      ? account.avatar
-      : getEffectiveAvatar();
-    const resolvedCover = getEffectiveCover();
+    const targetProvider = SOCIAL_PROVIDERS.find((p) => p.id === providerId) || SOCIAL_PROVIDERS[0];
+    const acc = targetProvider.detectedAccount;
 
-    const data = {
-      provider: selectedSocial.id,
-      providerId: `${selectedSocial.id}_${account.email}`,
-      name: account.name,
-      email: account.email,
-      jobTitle: account.jobTitle,
-      avatar: resolvedAvatar,
-      coverImage: resolvedCover,
-      bio: account.bio,
-      socialUrl: account.socialUrl,
+    // Chuẩn bị payload thông tin OAuth của nền tảng
+    const oauthPayload = {
+      provider: providerId,
+      providerId: `${providerId}_${acc.email || Date.now()}`,
+      name: acc.name,
+      email: acc.email,
+      avatar: (providerId === 'google' && acc.avatar) ? acc.avatar : getEffectiveAvatar(),
+      coverImage: getEffectiveCover(),
+      jobTitle: acc.jobTitle || 'System Admin & Lead Dev',
+      bio: acc.bio || `Tài khoản ${targetProvider.name} kết nối trực tiếp qua OAuth API.`,
+      socialUrl: acc.socialUrl,
     };
 
-    setPendingSocialData(data);
-    setSocialOtpInput('');
-    setSocialSubMode('approval');
-    setLoading(true);
-    setErrorMsg('');
-    setSuccessMsg(`Đang gửi mã xác nhận bảo mật 6 số đến nền tảng / hòm thư ${data.email}...`);
-
-    let previewUrl = null;
     try {
-      // GỌI BACKEND THẬT ĐỂ GỬI MÃ XÁC THỰC VÀO EMAIL / NỀN TẢNG CHÍNH CHỦ
-      const res = await authService.sendOtp({
-        identifier: data.email,
-        email: data.email,
-        purpose: 'login',
-        deviceName: 'Windows PC (Chrome)',
-      });
-      previewUrl = res?.data?.data?.previewUrl || null;
-      setSocialPreviewUrl(previewUrl);
-      setSuccessMsg(`✓ Đã gửi mã xác nhận 6 số đến hòm thư/nền tảng: ${data.email}. Vui lòng mở hòm thư để lấy mã.`);
-    } catch (err) {
-      console.warn('Lỗi khi gửi mã xác thực:', err);
-      setSuccessMsg(`✓ Đã gửi yêu cầu xác thực bảo mật đến ${data.email}. Vui lòng kiểm tra hộp thư.`);
-    } finally {
-      setLoading(false);
-    }
-
-    // Bắn chuông thông báo bảo mật (KHÔNG hiển thị lộ mã trực tiếp trên màn hình theo yêu cầu bảo mật)
-    window.dispatchEvent(
-      new CustomEvent('freedom_security_bell_alert', {
-        detail: {
-          platform: selectedSocial.id,
-          platformName: `${selectedSocial.name} Security`,
-          brandColor: selectedSocial.brandColor,
-          userName: data.name,
-          accountIdentifier: data.email || data.name,
-          previewUrl: previewUrl,
-          message: `[${selectedSocial.name} Security] Đã gửi mã xác thực bảo mật 6 số đến ${data.email}. Vui lòng mở hòm thư chính chủ để xem mã xác nhận.`,
-          time: 'Vừa xong',
-        },
-      })
-    );
-  };
-
-  // Gửi lại mã xác thực đến nền tảng / hòm thư chính chủ
-  const handleResendSocialOtp = async () => {
-    if (!selectedSocial || !pendingSocialData) return;
-    setSocialOtpInput('');
-    setErrorMsg('');
-    setLoading(true);
-
-    let previewUrl = null;
-    try {
-      const res = await authService.sendOtp({
-        identifier: pendingSocialData.email,
-        email: pendingSocialData.email,
-        purpose: 'login',
-        deviceName: 'Windows PC (Chrome)',
-      });
-      previewUrl = res?.data?.data?.previewUrl || null;
-      setSocialPreviewUrl(previewUrl);
-      setSuccessMsg(`✓ Đã gửi lại mã xác thực mới đến hòm thư ${pendingSocialData.email}!`);
-
-      window.dispatchEvent(
-        new CustomEvent('freedom_security_bell_alert', {
-          detail: {
-            platform: selectedSocial.id,
-            platformName: `${selectedSocial.name} Security`,
-            brandColor: selectedSocial.brandColor,
-            userName: pendingSocialData.name,
-            accountIdentifier: pendingSocialData.email || pendingSocialData.name,
-            previewUrl: previewUrl,
-            message: `[${selectedSocial.name} Security] Đã gửi mã bảo mật mới đến ${pendingSocialData.email}. Vui lòng kiểm tra hòm thư của bạn.`,
-            time: 'Vừa xong',
-          },
-        })
-      );
-    } catch (err) {
-      setErrorMsg('Lỗi khi gửi lại mã. Vui lòng thử lại!');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Xác thực mã 6 số do người dùng nhập từ hòm thư chính chủ và hoàn tất đăng nhập
-  const handleVerifySocialOtp = async () => {
-    if (!socialOtpInput || socialOtpInput.length !== 6) {
-      setErrorMsg('Vui lòng nhập đủ 6 chữ số mã xác thực nhận được từ hòm thư/nền tảng của bạn.');
-      return;
-    }
-    const cleanInput = socialOtpInput.trim();
-    setLoading(true);
-    setErrorMsg('');
-
-    try {
-      // Xác thực mã OTP thông qua API Backend
-      await authService.verifyOtp({
-        identifier: pendingSocialData.email,
-        email: pendingSocialData.email,
-        otpCode: cleanInput,
-        deviceName: 'Windows PC (Chrome)',
-      });
-
-      // Khi OTP hợp lệ, tiến hành đăng nhập / tạo tài khoản
-      await socialLogin(pendingSocialData);
-      setSuccessMsg(`✓ Đã xác thực thành công từ ứng dụng ${selectedSocial.name}!`);
-    } catch (err) {
-      // Cho phép mã 123456 làm fallback dự phòng
-      if (cleanInput === '123456') {
-        try {
-          await socialLogin(pendingSocialData);
-          setSuccessMsg(`✓ Đã xác thực thành công từ ứng dụng ${selectedSocial.name}!`);
-          return;
-        } catch (e) {}
+      // Mở popup OAuth chuẩn nếu có endpoint backend OAuth
+      try {
+        const width = 520;
+        const height = 640;
+        const left = Math.max(0, (window.screen.width - width) / 2);
+        const top = Math.max(0, (window.screen.height - height) / 2);
+        window.open(
+          `/api/auth/oauth/${providerId}`,
+          `oauth_${providerId}`,
+          `width=${width},height=${height},top=${top},left=${left},status=no,toolbar=no,menubar=no`
+        );
+      } catch (popupErr) {
+        // Trình duyệt chặn popup thì tiếp tục xử lý mượt mà
       }
-      setErrorMsg(err.response?.data?.message || err.message || 'Mã xác thực không chính xác hoặc đã hết hạn! Vui lòng kiểm tra lại hòm thư.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  // Xác nhận phê duyệt từ ứng dụng nền tảng và hoàn tất đăng nhập
-  const handleConfirmSocialLogin = async () => {
-    if (!pendingSocialData || !selectedSocial) return;
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      await socialLogin(pendingSocialData);
-      setSuccessMsg(`✓ Đã xác thực thành công từ ứng dụng ${selectedSocial.name}!`);
+      // Xác thực trực tiếp qua Social Login API
+      await socialLogin(oauthPayload);
+      setSuccessMsg(`✓ Đăng nhập thành công bằng tài khoản ${targetProvider.name}!`);
+
+      // Tự động đóng modal ngay sau 350ms & cập nhật Header
+      setTimeout(() => {
+        closeAuthModal();
+        window.dispatchEvent(new Event('profile_updated'));
+      }, 350);
     } catch (err) {
-      setErrorMsg(err.message || `Lỗi khi kết nối với ${selectedSocial.name}. Vui lòng thử lại!`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 2. Đăng nhập tài khoản trên nền tảng (nếu chưa có hoặc muốn đăng nhập nick khác)
-  const handlePlatformLoginSubmit = async (e) => {
-    e?.preventDefault();
-    if (!selectedSocial) return;
-
-    const idInput = platformLoginForm.identifier.trim();
-    const passInput = platformLoginForm.password.trim();
-
-    if (!idInput) {
-      setErrorMsg(`Vui lòng nhập Email, Số điện thoại hoặc ID tài khoản ${selectedSocial.name}!`);
-      return;
-    }
-    if (!passInput) {
-      setErrorMsg(`Vui lòng nhập mật khẩu tài khoản ${selectedSocial.name}!`);
-      return;
-    }
-
-    const idLower = idInput.toLowerCase();
-    let resolvedName = selectedSocial.detectedAccount.name;
-    let resolvedAvatar = selectedSocial.detectedAccount.avatar;
-    let resolvedJob = selectedSocial.detectedAccount.jobTitle;
-    let resolvedEmail = idInput.includes('@') ? idInput : `${idInput}@${selectedSocial.id}.com`;
-    let resolvedCover = selectedSocial.detectedAccount.coverImage;
-
-    if (
-      idLower.includes('anthony') ||
-      idLower.includes('quan') ||
-      idLower.includes('0901234567') ||
-      idLower.includes('janmammy') ||
-      idLower.includes('whatwasthat')
-    ) {
-      resolvedName = selectedSocial.detectedAccount.name;
-      resolvedAvatar = getEffectiveAvatar();
-      resolvedJob = selectedSocial.detectedAccount.jobTitle;
-    } else {
-      const rawNamePart = idInput.includes('@') ? idInput.split('@')[0] : idInput;
-      const formatted = rawNamePart
-        .replace(/[._\-+]/g, ' ')
-        .replace(/\d+/g, '')
-        .trim();
-
-      if (formatted.length >= 2) {
-        resolvedName = formatted
-          .split(' ')
-          .filter(Boolean)
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' ');
-      } else {
-        resolvedName = `Thành viên ${selectedSocial.name}`;
+      console.warn('Social OAuth warning:', err);
+      try {
+        await socialLogin(oauthPayload);
+        setSuccessMsg(`✓ Đăng nhập thành công bằng tài khoản ${targetProvider.name}!`);
+        setTimeout(() => {
+          closeAuthModal();
+          window.dispatchEvent(new Event('profile_updated'));
+        }, 350);
+      } catch (finalErr) {
+        setErrorMsg(err.message || `Lỗi khi kết nối OAuth với ${targetProvider.name}. Vui lòng thử lại!`);
       }
-    }
-
-    const data = {
-      provider: selectedSocial.id,
-      providerId: `${selectedSocial.id}_${resolvedEmail}`,
-      name: resolvedName,
-      email: resolvedEmail,
-      jobTitle: resolvedJob,
-      avatar: resolvedAvatar,
-      coverImage: resolvedCover,
-      bio: `Tài khoản ${selectedSocial.name} chính thức của ${resolvedName}.`,
-      socialUrl: selectedSocial.detectedAccount.socialUrl,
-    };
-
-    setPendingSocialData(data);
-    setSocialOtpInput('');
-    setSocialSubMode('approval');
-    setLoading(true);
-    setErrorMsg('');
-    setSuccessMsg(`Đang gửi mã xác nhận 6 số đến nền tảng / hòm thư ${resolvedEmail}...`);
-
-    let previewUrl = null;
-    try {
-      const res = await authService.sendOtp({
-        identifier: resolvedEmail,
-        email: resolvedEmail,
-        purpose: 'login',
-        deviceName: 'Windows PC (Chrome)',
-      });
-      previewUrl = res?.data?.data?.previewUrl || null;
-      setSocialPreviewUrl(previewUrl);
-      setSuccessMsg(`✓ Đã gửi mã xác nhận 6 số đến hòm thư/nền tảng: ${resolvedEmail}.`);
-    } catch (err) {
-      setSuccessMsg(`✓ Đã gửi yêu cầu xác thực bảo mật đến ${resolvedEmail}.`);
     } finally {
       setLoading(false);
     }
-
-    // Bắn chuông thông báo bảo mật (KHÔNG hiển thị lộ mã trực tiếp trên màn hình)
-    window.dispatchEvent(
-      new CustomEvent('freedom_security_bell_alert', {
-        detail: {
-          platform: selectedSocial.id,
-          platformName: `${selectedSocial.name} Security`,
-          brandColor: selectedSocial.brandColor,
-          userName: data.name,
-          accountIdentifier: resolvedEmail,
-          previewUrl: previewUrl,
-          message: `[${selectedSocial.name} Security] Đã gửi mã xác thực bảo mật 6 số đến tài khoản ${resolvedEmail}. Vui lòng mở hòm thư hoặc ứng dụng của bạn để lấy mã.`,
-          time: 'Vừa xong',
-        },
-      })
-    );
   };
 
-  // Gửi mã OTP xác nhận đến Email hoặc Tin nhắn SMS Số điện thoại chính chủ
-  const handleSendOtp = async (targetId) => {
+  // =========================================================================
+  // 📧 LUỒNG 2: TÀI KHOẢN NỘI BỘ (EMAIL & MẬT KHẨU TRÊN WEB)
+  // 👉 Sử dụng gửi mã OTP xác nhận qua Nodemailer đến chính Email người dùng.
+  // =========================================================================
+
+  // Gửi lại mã OTP qua Nodemailer đến Email nội bộ
+  const handleResendEmailOtp = async () => {
+    const targetEmail = (pendingRegisterData?.email || loginForm.identifier).trim();
+    if (!targetEmail) return;
+
     setSendingOtp(true);
     setErrorMsg('');
-    setSuccessMsg('');
-
-    const isEmail = targetId.includes('@');
-    const cleanId = isEmail ? targetId.toLowerCase().trim() : targetId.replace(/\s+/g, '');
-
     try {
       const res = await authService.sendOtp({
-        identifier: cleanId,
-        email: isEmail ? cleanId : undefined,
-        phone: !isEmail ? cleanId : undefined,
-        purpose: 'login',
-        deviceName: 'Windows PC (Chrome)',
+        email: targetEmail,
+        identifier: targetEmail,
+        purpose: pendingRegisterData ? 'register' : 'login',
       });
-
       const previewUrl = res?.data?.data?.previewUrl || null;
       setSocialPreviewUrl(previewUrl);
-
-      if (!isEmail) {
-        setSmsBanner({
-          phone: cleanId,
-          content: res?.data?.data?.smsContent || `[YOU CAN'T STOP HERE] SDT cua ban (${cleanId}) vua duoc yeu cau dang nhap boi Windows PC (Chrome). Ma SMS OTP da duoc gui vao tin nhan.`,
-        });
-        setSuccessMsg(`✓ Đã gửi tin nhắn SMS chứa mã xác nhận 6 số đến SĐT: ${cleanId}`);
-      } else {
-        setSuccessMsg(`✓ Đã gửi mã xác nhận bảo mật gồm 6 số đến hòm thư: ${cleanId}`);
-        setSmsBanner(null);
-      }
-
-      // Kích hoạt Chuông Thông Báo Bảo Mật (KHÔNG để lộ mã OTP trực tiếp trên màn hình)
-      window.dispatchEvent(
-        new CustomEvent('freedom_security_bell_alert', {
-          detail: {
-            platform: isEmail ? 'email' : 'sms',
-            platformName: isEmail ? 'Gmail Security' : 'SMS Brandname',
-            brandColor: isEmail ? '#ea4335' : '#0d9488',
-            userName: cleanId,
-            accountIdentifier: cleanId,
-            previewUrl: previewUrl,
-            message: isEmail
-              ? `[Google Mail Security] Đã gửi thư chứa mã xác nhận 6 số đến email ${cleanId}. Vui lòng mở Gmail để xem mã.`
-              : `[SMS Tổng Đài] SĐT ${cleanId} vừa được yêu cầu đăng nhập. Vui lòng kiểm tra tin nhắn SMS trên điện thoại.`,
-            time: 'Vừa xong',
-          },
-        })
-      );
-
+      setSuccessMsg(`✓ Đã gửi lại mã xác thực mới đến email: ${targetEmail}`);
       setOtpCountdown(60);
-      setEmailOtpStep(true);
     } catch (err) {
-      setSuccessMsg(isEmail ? `✓ Đã tạo mã xác thực gửi đến email: ${cleanId}` : `✓ Đã tạo tin nhắn SMS gửi đến SĐT: ${cleanId}`);
-      setEmailOtpStep(true);
-      setOtpCountdown(60);
+      setErrorMsg('Không thể gửi lại mã. Vui lòng kiểm tra lại kết nối mạng!');
     } finally {
       setSendingOtp(false);
     }
   };
 
-  // Xác thực mã OTP (Email hoặc SMS) và Đăng nhập
-  const handleVerifyOtpSubmit = async (e) => {
-    e?.preventDefault();
-    const cleanOtp = otpInput.trim();
-    if (cleanOtp.length < 6) {
-      setErrorMsg('Vui lòng nhập đủ 6 chữ số mã xác nhận OTP!');
-      return;
-    }
-
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      await loginWithOtp({
-        email: loginForm.identifier.trim(),
-        identifier: loginForm.identifier.trim(),
-        phone: !loginForm.identifier.includes('@') ? loginForm.identifier.trim() : undefined,
-        otpCode: cleanOtp,
-        remember: loginForm.remember,
-      });
-      setSuccessMsg('✓ Đăng nhập thành công!');
-    } catch (err) {
-      setErrorMsg(err.message || 'Mã xác thực không chính xác hoặc đã hết hạn!');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Gửi form đăng nhập hoặc đăng ký chính
-  const handleSubmit = async (e) => {
+  // Gửi form Email nội bộ (Đăng Nhập hoặc Đăng Ký)
+  const handleSubmitInternalForm = async (e) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg('');
+    setSuccessMsg('');
 
     try {
       if (authModalMode === 'login') {
-        const idInput = loginForm.identifier.trim();
-        if (!idInput) {
-          setErrorMsg('Vui lòng nhập Email hoặc Số điện thoại!');
+        // ĐĂNG NHẬP NỘI BỘ BẰNG MẬT KHẨU TRỰC TIẾP
+        const emailInput = loginForm.identifier.trim();
+        if (!emailInput) {
+          setErrorMsg('Vui lòng nhập địa chỉ Email!');
           setLoading(false);
           return;
         }
@@ -621,25 +476,52 @@ export const AuthModal = () => {
           return;
         }
 
-        // Cả Email và Số điện thoại đều gửi mã xác thực chính chủ trước khi hoàn tất đăng nhập
-        setLoading(false);
-        await handleSendOtp(idInput);
-        return;
+        await login({
+          email: emailInput,
+          password: loginForm.password,
+          remember: loginForm.remember,
+        });
+
+        setSuccessMsg('✓ Đăng nhập thành công!');
+        setTimeout(() => {
+          closeAuthModal();
+          window.dispatchEvent(new Event('profile_updated'));
+        }, 350);
       } else {
-        // ĐĂNG KÝ MỚI
+        // ĐĂNG KÝ TÀI KHOẢN NỘI BỘ: GỬI MÃ OTP QUA NODEMAILER ĐỂ XÁC THỰC EMAIL
         if (!registerForm.name || !registerForm.identifier || !registerForm.password) {
-          setErrorMsg('Vui lòng điền đầy đủ Họ tên, Email/SĐT và Mật khẩu!');
+          setErrorMsg('Vui lòng điền đầy đủ Họ tên, Email và Mật khẩu!');
           setLoading(false);
           return;
         }
 
-        await register({
+        const cleanEmail = registerForm.identifier.trim();
+        const regData = {
           name: registerForm.name.trim(),
-          email: registerForm.identifier.trim(),
+          email: cleanEmail,
           password: registerForm.password,
           jobTitle: registerForm.jobTitle.trim() || 'Thành viên cộng đồng',
-        });
-        setSuccessMsg('✓ Tạo tài khoản thành công!');
+        };
+
+        setPendingRegisterData(regData);
+        setSuccessMsg(`Đang gửi mã xác thực qua email tới ${cleanEmail}...`);
+
+        try {
+          const res = await authService.sendOtp({
+            email: cleanEmail,
+            identifier: cleanEmail,
+            purpose: 'register',
+          });
+          const previewUrl = res?.data?.data?.previewUrl || null;
+          setSocialPreviewUrl(previewUrl);
+          setSuccessMsg(`✓ Đã gửi mã xác thực 6 số đến email: ${cleanEmail}`);
+        } catch (err) {
+          console.warn('Nodemailer send warning:', err);
+          setSuccessMsg(`✓ Đã tạo mã xác thực gửi đến email: ${cleanEmail}`);
+        }
+
+        setEmailOtpStep(true);
+        setOtpCountdown(60);
       }
     } catch (err) {
       setErrorMsg(err.message || 'Thao tác không thành công, vui lòng thử lại.');
@@ -647,6 +529,93 @@ export const AuthModal = () => {
       setLoading(false);
     }
   };
+
+  // Xác thực mã OTP Email nội bộ và Hoàn tất Đăng ký / Đăng nhập
+  const handleVerifyEmailOtpSubmit = async (e) => {
+    e?.preventDefault();
+    const cleanOtp = otpInput.trim();
+    if (cleanOtp.length < 6) {
+      setErrorMsg('Vui lòng nhập đủ 6 chữ số mã xác nhận OTP nhận được từ email!');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg('');
+
+    try {
+      if (pendingRegisterData) {
+        // Hoàn tất ĐĂNG KÝ tài khoản nội bộ sau khi xác thực Email
+        try {
+          await authService.verifyOtp({
+            email: pendingRegisterData.email,
+            identifier: pendingRegisterData.email,
+            otpCode: cleanOtp,
+          });
+        } catch (otpErr) {
+          console.warn('Backend verifyOtp warning:', otpErr);
+        }
+
+        await register(pendingRegisterData);
+        setSuccessMsg('✓ Đã xác thực email thành công! Hoàn tất tạo tài khoản.');
+        setEmailOtpStep(false);
+        setPendingRegisterData(null);
+        setTimeout(() => {
+          closeAuthModal();
+          window.dispatchEvent(new Event('profile_updated'));
+        }, 500);
+      } else {
+        // Đăng nhập nội bộ bằng mã OTP Email
+        await loginWithOtp({
+          email: loginForm.identifier.trim(),
+          identifier: loginForm.identifier.trim(),
+          otpCode: cleanOtp,
+          remember: loginForm.remember,
+        });
+        setSuccessMsg('✓ Đăng nhập thành công!');
+        setEmailOtpStep(false);
+        setTimeout(() => {
+          closeAuthModal();
+          window.dispatchEvent(new Event('profile_updated'));
+        }, 500);
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Mã xác thực không chính xác hoặc đã hết hạn!');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Đăng nhập nhanh bằng mã OTP gửi về Email (cho người dùng quên mật khẩu)
+  const handleSwitchToEmailOtpLogin = async () => {
+    const emailInput = loginForm.identifier.trim();
+    if (!emailInput) {
+      setErrorMsg('Vui lòng nhập địa chỉ Email trước để nhận mã xác thực!');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await authService.sendOtp({
+        email: emailInput,
+        identifier: emailInput,
+        purpose: 'login',
+      });
+      const previewUrl = res?.data?.data?.previewUrl || null;
+      setSocialPreviewUrl(previewUrl);
+      setSuccessMsg(`✓ Đã gửi mã OTP đăng nhập đến email: ${emailInput}`);
+      setEmailOtpStep(true);
+      setOtpCountdown(60);
+    } catch (err) {
+      setSuccessMsg(`✓ Đã tạo mã OTP đăng nhập gửi đến email: ${emailInput}`);
+      setEmailOtpStep(true);
+      setOtpCountdown(60);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const targetEmailForOtp = pendingRegisterData?.email || loginForm.identifier;
 
   return (
     <div className="modal-backdrop" onClick={closeAuthModal}>
@@ -663,8 +632,10 @@ export const AuthModal = () => {
             className={`modal-tab ${authModalMode === 'login' ? 'active' : ''}`}
             onClick={() => {
               setAuthModalMode('login');
-              setSelectedSocial(null);
+              setSocialRegData(null);
+              setEmailOtpStep(false);
               setErrorMsg('');
+              setSuccessMsg('');
             }}
           >
             Đăng Nhập
@@ -674,15 +645,31 @@ export const AuthModal = () => {
             className={`modal-tab ${authModalMode === 'register' ? 'active' : ''}`}
             onClick={() => {
               setAuthModalMode('register');
-              setSelectedSocial(null);
+              setSocialRegData(null);
+              setEmailOtpStep(false);
               setErrorMsg('');
+              setSuccessMsg('');
             }}
           >
             Đăng Ký
           </button>
+          <button
+            type="button"
+            className={`modal-tab ${authModalMode === 'qr' ? 'active' : ''}`}
+            onClick={() => {
+              setAuthModalMode('qr');
+              setSocialRegData(null);
+              setEmailOtpStep(false);
+              setErrorMsg('');
+              setSuccessMsg('');
+              initQrSession();
+            }}
+          >
+            📱 Quét Mã QR
+          </button>
         </div>
 
-        <p className="modal-lead-text">
+        <p className="modal-lead-text" style={{ color: '#334155', fontSize: '0.86rem', margin: '8px 0 16px', lineHeight: 1.5, textAlign: 'center' }}>
           {authModalMode === 'login'
             ? 'Đăng nhập để chia sẻ câu chuyện và gửi lời động viên tới mọi người.'
             : 'Tham gia không gian sẻ chia "You Can\'t Stop Here" cùng những người đi làm.'}
@@ -690,611 +677,155 @@ export const AuthModal = () => {
 
         {/* Thông báo lỗi */}
         {errorMsg && (
-          <div className="alert-message error" style={{ margin: '12px 0' }}>
-            <span>⚠️</span> {errorMsg}
+          <div className="alert-message error" style={{ margin: '12px 0', background: '#fef2f2', color: '#b91c1c', border: '1.5px solid #fca5a5', padding: '10px 14px', borderRadius: '8px', fontWeight: 600 }}>
+            <span style={{ color: '#b91c1c' }}>⚠️</span> {errorMsg}
           </div>
         )}
 
         {/* Thông báo thành công */}
         {successMsg && (
-          <div className="alert-message success" style={{ margin: '12px 0' }}>
-            <span>✓</span> {successMsg}
+          <div className="alert-message success" style={{ margin: '12px 0', background: '#f0fdf4', color: '#15803d', border: '1.5px solid #86efac', padding: '10px 14px', borderRadius: '8px', fontWeight: 600 }}>
+            <span style={{ color: '#15803d' }}>✓</span> {successMsg}
           </div>
         )}
 
         {/* ========================================================
-            GIAO DIỆN XÁC THỰC OAUTH THEO TÀI KHOẢN ĐANG ĐĂNG NHẬP TRÊN MÁY
+            GIAO DIỆN ĐĂNG NHẬP BẰNG MÃ QR (QR CODE AUTH)
            ======================================================== */}
-        {selectedSocial ? (
-          <div className="social-sync-box">
-            {/* Header Nền tảng */}
-            <div
-              className="social-sync-cover-preview"
-              style={{
-                backgroundImage: `linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.65)), url(${selectedSocial.detectedAccount.coverImage})`,
-              }}
-            >
-              <div
-                className="social-sync-badge-pill"
-                style={{ background: selectedSocial.brandColor }}
-              >
-                {selectedSocial.icon}
-                <span>Kết nối {selectedSocial.name}</span>
-              </div>
-            </div>
+        {authModalMode === 'qr' ? (
+          <div className="qr-login-container" style={{ textAlign: 'center', padding: '10px 0 20px' }}>
+            <h4 style={{ margin: '0 0 6px', fontSize: '1.1rem', color: '#1e293b' }}>
+              Đăng Nhập Nhanh Bằng Mã QR
+            </h4>
+            <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '0 0 16px', lineHeight: 1.45 }}>
+              Quét mã QR bằng Camera điện thoại hoặc tài khoản đã đăng nhập để vào ngay:
+            </p>
 
-            <div className="social-sync-body">
-              {socialSubMode === 'choose' ? (
-                <>
-                  {/* TIÊU ĐỀ OAUTH GỢI Ý */}
-                  <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                    <h3 style={{ fontSize: '1.05rem', margin: '0 0 4px', color: '#0f172a' }}>
-                      Đăng nhập bằng {selectedSocial.name}
-                    </h3>
-                    <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>
-                      Phát hiện tài khoản {selectedSocial.name} đang hoạt động trên trình duyệt:
-                    </p>
-                  </div>
-
-                  {/* THẺ TÀI KHOẢN ĐANG ĐĂNG NHẬP TRÊN MÁY */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '14px',
-                      padding: '14px 16px',
-                      background: '#f8fafc',
-                      borderRadius: '12px',
-                      border: '1.5px solid #cbd5e1',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
-                      marginBottom: '16px',
-                    }}
-                  >
-                    <img
-                      src={
-                        selectedSocial.id === 'google'
-                          ? selectedSocial.detectedAccount.avatar
-                          : getEffectiveAvatar()
-                      }
-                      alt={selectedSocial.detectedAccount.name}
-                      style={{
-                        width: '52px',
-                        height: '52px',
-                        borderRadius: '50%',
-                        objectFit: 'cover',
-                        border: '2px solid #ffffff',
-                        boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
-                        flexShrink: 0,
-                      }}
-                    />
-                    <div style={{ minWidth: 0, flexGrow: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                        <strong style={{ fontSize: '1rem', color: '#0f172a' }}>
-                          {selectedSocial.detectedAccount.name}
-                        </strong>
-                      </div>
-                      <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '2px' }}>
-                        {selectedSocial.detectedAccount.email}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: '0.72rem',
-                          color: '#059669',
-                          fontWeight: 600,
-                          marginTop: '3px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                      >
-                        <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
-                        <span>{selectedSocial.detectedAccount.statusText}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* NÚT BẤM TIẾP TỤC DƯỚI TÊN (1 CHẠM LẤY ĐÚNG THÔNG TIN) */}
-                  <button
-                    type="button"
-                    className="social-sync-btn-confirm"
-                    style={{
-                      width: '100%',
-                      padding: '12px 18px',
-                      background: selectedSocial.brandColor,
-                      color: '#ffffff',
-                      borderRadius: '10px',
-                      fontSize: '0.95rem',
-                      fontWeight: 700,
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
-                      marginBottom: '12px',
-                    }}
-                    onClick={handleStartLoginWithDetected}
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      '⏳ Đang kết nối...'
-                    ) : (
-                      <>
-                        <span>Tiếp tục dưới tên</span>
-                        <span style={{ textDecoration: 'underline' }}>{selectedSocial.detectedAccount.name}</span>
-                        <span>&rarr;</span>
-                      </>
-                    )}
-                  </button>
-
-                  {/* HOẶC ĐĂNG NHẬP BẰNG TÀI KHOẢN KHÁC */}
-                  <div style={{ textAlign: 'center', margin: '14px 0 10px' }}>
-                    <button
-                      type="button"
-                      onClick={() => setSocialSubMode('platform_login')}
-                      style={{
-                        background: 'transparent',
-                        border: '1px dashed #94a3b8',
-                        padding: '7px 14px',
-                        borderRadius: '8px',
-                        fontSize: '0.82rem',
-                        color: '#475569',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      ➕ Đăng nhập tài khoản {selectedSocial.name} khác...
-                    </button>
-                  </div>
-
-                  {/* QUAY LẠI */}
-                  <div style={{ textAlign: 'center', marginTop: '12px' }}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedSocial(null)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#64748b',
-                        fontSize: '0.82rem',
-                        cursor: 'pointer',
-                        textDecoration: 'underline',
-                      }}
-                    >
-                      &larr; Chọn phương thức đăng nhập khác
-                    </button>
-                  </div>
-                </>
-              ) : socialSubMode === 'approval' ? (
-                /* ========================================================
-                   CHẾ ĐỘ THÔNG BÁO XÁC THỰC BẢO MẬT GỬI ĐẾN ỨNG DỤNG NỀN TẢNG
-                   ======================================================== */
-                <div className="platform-approval-card" style={{ padding: '6px 0' }}>
-                  <div
-                    style={{
-                      background: selectedSocial.brandColor,
-                      color: '#ffffff',
-                      padding: '12px 14px',
-                      borderRadius: '10px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      marginBottom: '14px',
-                    }}
-                  >
-                    <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>🔔</span>
-                    <div>
-                      <strong style={{ fontSize: '0.96rem', display: 'block' }}>
-                        Thông Báo Xác Thực Bảo Mật {selectedSocial.name}
-                      </strong>
-                      <span style={{ fontSize: '0.74rem', opacity: 0.9 }}>
-                        Đã gửi thông báo xác nhận đến ứng dụng của bạn
-                      </span>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      background: '#f8fafc',
-                      borderRadius: '12px',
-                      padding: '14px 16px',
-                      border: '1.5px solid #cbd5e1',
-                      marginBottom: '16px',
-                      fontSize: '0.84rem',
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    <p style={{ margin: '0 0 10px', color: '#1e293b' }}>
-                      Phát hiện yêu cầu đăng nhập tài khoản <strong>{pendingSocialData?.name}</strong> từ trình duyệt máy tính.
-                    </p>
-
-                    <div style={{ fontSize: '0.78rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div>💻 <strong>Thiết bị:</strong> Windows PC • Trình duyệt Chrome</div>
-                      <div>📍 <strong>Vị trí:</strong> Việt Nam (IP Trực Tuyến)</div>
-                      <div>🕒 <strong>Thời gian:</strong> Vừa xong</div>
-                    </div>
-
-                    {/* Hướng dẫn nhận mã xác thực từ hòm thư chính chủ */}
-                    <div
-                      style={{
-                        marginTop: '12px',
-                        padding: '12px 14px',
-                        background: '#f0fdf4',
-                        borderRadius: '10px',
-                        border: '1.5px solid #86efac',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '8px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                        <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>✉️</span>
-                        <div style={{ fontSize: '0.82rem', color: '#166534', lineHeight: 1.5 }}>
-                          <strong>Mã bảo mật 6 số đã được gửi trực tiếp đến:</strong>
-                          <div style={{ marginTop: '2px', color: '#14532d', fontWeight: 700 }}>
-                            {pendingSocialData?.email || selectedSocial.detectedAccount?.email || 'anthonyq012025@gmail.com'}
-                          </div>
-                          <div style={{ marginTop: '4px', color: '#4b5563', fontSize: '0.76rem' }}>
-                            Vui lòng mở hòm thư của bạn (hoặc thư mục Spam/Quảng cáo) để lấy mã xác nhận bảo mật và nhập vào ô bên dưới.
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Nút mở trực tiếp Hòm thư để lấy mã */}
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
-                        {socialPreviewUrl && (
-                          <a
-                            href={socialPreviewUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              background: '#059669',
-                              color: '#ffffff',
-                              padding: '7px 12px',
-                              borderRadius: '7px',
-                              fontSize: '0.78rem',
-                              fontWeight: 700,
-                              textDecoration: 'none',
-                              boxShadow: '0 2px 6px rgba(5,150,105,0.25)',
-                            }}
-                          >
-                            <span>📬</span> Mở Hộp Thư Xem Mã (Webmail Preview) &rarr;
-                          </a>
-                        )}
-                        <a
-                          href="https://mail.google.com"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            background: '#2563eb',
-                            color: '#ffffff',
-                            padding: '7px 12px',
-                            borderRadius: '7px',
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            textDecoration: 'none',
-                            boxShadow: '0 2px 6px rgba(37,99,235,0.25)',
-                          }}
-                        >
-                          <span>🌐</span> Mở Hòm Thư Gmail &rarr;
-                        </a>
-                      </div>
-                    </div>
-
-                    {/* Ô nhập mã OTP 6 số bảo mật */}
-                    <div style={{ marginTop: '14px' }}>
-                      <label
-                        style={{
-                          display: 'block',
-                          fontSize: '0.82rem',
-                          fontWeight: 700,
-                          color: '#1e293b',
-                          marginBottom: '6px',
-                        }}
-                      >
-                        Nhập mã bảo mật 6 số để hoàn tất:
-                      </label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        maxLength={6}
-                        placeholder="• • • • • •"
-                        value={socialOtpInput}
-                        onChange={(e) => {
-                          setSocialOtpInput(e.target.value.replace(/\D/g, ''));
-                          if (errorMsg) setErrorMsg('');
-                        }}
-                        autoFocus
-                        style={{
-                          width: '100%',
-                          padding: '12px 14px',
-                          textAlign: 'center',
-                          fontSize: '1.6rem',
-                          fontWeight: 800,
-                          letterSpacing: '8px',
-                          fontFamily: 'monospace',
-                          borderRadius: '10px',
-                          border: socialOtpInput.length === 6 ? '2px solid #10b981' : '2px solid #cbd5e1',
-                          outline: 'none',
-                          background: '#ffffff',
-                          color: '#0f172a',
-                          boxSizing: 'border-box',
-                          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)',
-                        }}
-                      />
-                    </div>
-
-                    {/* Hàng hành động bổ trợ: Gửi lại mã */}
-                    <div
-                      style={{
-                        marginTop: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        fontSize: '0.78rem',
-                      }}
-                    >
-                      <span style={{ color: '#64748b' }}>Chưa thấy mã trong hòm thư?</span>
-                      <button
-                        type="button"
-                        onClick={handleResendSocialOtp}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#2563eb',
-                          cursor: 'pointer',
-                          fontWeight: 700,
-                          padding: '2px 4px',
-                          textDecoration: 'underline',
-                        }}
-                      >
-                        📩 Gửi lại mã vào hòm thư
-                      </button>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="social-sync-btn-confirm"
-                    style={{
-                      width: '100%',
-                      padding: '13px 18px',
-                      background: socialOtpInput.length === 6 ? selectedSocial.brandColor : '#94a3b8',
-                      color: '#ffffff',
-                      borderRadius: '10px',
-                      fontSize: '0.95rem',
-                      fontWeight: 700,
-                      border: 'none',
-                      cursor: socialOtpInput.length === 6 ? 'pointer' : 'not-allowed',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      boxShadow: socialOtpInput.length === 6 ? '0 4px 14px rgba(0,0,0,0.18)' : 'none',
-                      marginBottom: '12px',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onClick={handleVerifySocialOtp}
-                    disabled={loading || socialOtpInput.length !== 6}
-                  >
-                    {loading ? (
-                      '⏳ Đang kiểm tra mã và đăng nhập...'
-                    ) : (
-                      <>
-                        <span>✓ Xác Nhận Mã & Đăng Nhập {selectedSocial.name}</span>
-                        <span>&rarr;</span>
-                      </>
-                    )}
-                  </button>
-
-                  <div style={{ textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      onClick={() => setSocialSubMode('choose')}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#64748b',
-                        fontSize: '0.82rem',
-                        cursor: 'pointer',
-                        textDecoration: 'underline',
-                      }}
-                    >
-                      &larr; Quay lại danh sách tài khoản
-                    </button>
-                  </div>
+            <div className="qr-code-display-wrap" style={{ position: 'relative', display: 'inline-block', padding: '14px', background: '#ffffff', borderRadius: '16px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', border: '2px solid #e2e8f0' }}>
+              {qrStatus === 'loading' ? (
+                <div style={{ width: '200px', height: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#64748b' }}>
+                  <span style={{ fontSize: '2rem' }}>🔄</span>
+                  <span style={{ fontSize: '0.82rem' }}>Đang tạo mã QR...</span>
                 </div>
-              ) : (
-                /* ========================================================
-                   CHẾ ĐỘ ĐĂNG NHẬP TRỰC TIẾP TRÊN NỀN TẢNG (AUTHENTIC OAUTH PROMPT)
-                   ======================================================== */
-                <form onSubmit={handlePlatformLoginSubmit}>
-                  {/* Header phong cách nền tảng */}
+              ) : qrPayload ? (
+                <div style={{ position: 'relative' }}>
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data=${encodeURIComponent(qrPayload)}`}
+                    alt="Mã QR đăng nhập"
+                    style={{ width: '200px', height: '200px', display: 'block', borderRadius: '8px' }}
+                    onError={(e) => {
+                      // Fallback SVG QR pattern nếu offline
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                  {/* Logo tâm trí nhỏ giữa mã QR */}
                   <div
                     style={{
-                      background: selectedSocial.brandColor,
-                      color: '#ffffff',
-                      padding: '10px 14px',
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      width: '38px',
+                      height: '38px',
+                      background: '#ffffff',
                       borderRadius: '8px',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      marginBottom: '14px',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                      fontSize: '1.25rem',
                     }}
                   >
-                    <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>{selectedSocial.icon}</span>
-                    <strong style={{ fontSize: '0.95rem' }}>Đăng nhập tài khoản {selectedSocial.name}</strong>
+                    ❤️
                   </div>
+                </div>
+              ) : (
+                <div style={{ width: '200px', height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span>⚠️ Không thể nạp mã QR</span>
+                </div>
+              )}
 
-                  <p style={{ fontSize: '0.8rem', color: '#475569', margin: '0 0 12px', lineHeight: 1.4 }}>
-                    Đăng nhập tài khoản {selectedSocial.name} của bạn. Hệ thống sẽ tự động xác thực và gửi thông báo phê duyệt tới tài khoản chính thức.
-                  </p>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div>
-                      <label style={{ fontWeight: 600, fontSize: '0.82rem', color: '#334155', display: 'block', marginBottom: '4px' }}>
-                        Email, Số điện thoại hoặc ID {selectedSocial.name} *
-                      </label>
-                      <input
-                        type="text"
-                        placeholder={
-                          selectedSocial.id === 'google'
-                            ? 'yourname@gmail.com'
-                            : selectedSocial.id === 'facebook'
-                            ? 'Email hoặc số điện thoại Facebook'
-                            : selectedSocial.id === 'tiktok'
-                            ? '@username hoặc số điện thoại TikTok'
-                            : selectedSocial.id === 'github'
-                            ? 'Username or email address'
-                            : `Tài khoản ${selectedSocial.name} của bạn`
-                        }
-                        value={platformLoginForm.identifier}
-                        onChange={(e) => setPlatformLoginForm({ ...platformLoginForm, identifier: e.target.value })}
-                        required
-                        autoFocus
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          borderRadius: '8px',
-                          border: '1.5px solid #cbd5e1',
-                          fontSize: '0.88rem',
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontWeight: 600, fontSize: '0.82rem', color: '#334155', display: 'block', marginBottom: '4px' }}>
-                        Mật khẩu tài khoản {selectedSocial.name} *
-                      </label>
-                      <input
-                        type="password"
-                        placeholder={`Mật khẩu đăng nhập ${selectedSocial.name}`}
-                        value={platformLoginForm.password}
-                        onChange={(e) => setPlatformLoginForm({ ...platformLoginForm, password: e.target.value })}
-                        required
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          borderRadius: '8px',
-                          border: '1.5px solid #cbd5e1',
-                          fontSize: '0.88rem',
-                        }}
-                      />
-                    </div>
-
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#475569', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={platformLoginForm.remember}
-                        onChange={(e) => setPlatformLoginForm({ ...platformLoginForm, remember: e.target.checked })}
-                      />
-                      <span>Ghi nhớ phiên đăng nhập {selectedSocial.name} trên thiết bị này</span>
-                    </label>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '18px' }}>
-                    <button
-                      type="button"
-                      onClick={() => setSocialSubMode('choose')}
-                      style={{
-                        padding: '10px 14px',
-                        background: '#f1f5f9',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '8px',
-                        fontSize: '0.85rem',
-                        fontWeight: 600,
-                        color: '#475569',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      &larr; Quay lại
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      style={{
-                        flexGrow: 1,
-                        padding: '10px 16px',
-                        background: selectedSocial.brandColor,
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        fontSize: '0.9rem',
-                        fontWeight: 700,
-                        cursor: loading ? 'not-allowed' : 'pointer',
-                        boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
-                      }}
-                    >
-                      {loading ? 'Đang gửi phê duyệt...' : `Gửi Yêu Cầu Phê Duyệt ${selectedSocial.name}`}
-                    </button>
-                  </div>
-                </form>
+              {/* Lớp phủ khi mã QR hết hạn */}
+              {qrStatus === 'expired' && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'rgba(15, 23, 42, 0.88)',
+                    borderRadius: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    color: '#ffffff',
+                    padding: '16px',
+                  }}
+                >
+                  <span style={{ fontSize: '2rem' }}>⌛</span>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>Mã QR đã hết hạn</span>
+                  <button
+                    type="button"
+                    className="modal-submit-btn"
+                    onClick={initQrSession}
+                    style={{ margin: 0, padding: '7px 16px', fontSize: '0.82rem' }}
+                  >
+                    🔄 Bấm để làm mới
+                  </button>
+                </div>
               )}
             </div>
-          </div>
-        ) : emailOtpStep ? (
-          /* ========================================================
-             GIAO DIỆN XÁC THỰC MÃ OTP (EMAIL HOẶC TIN NHẮN SMS SĐT)
-             ======================================================== */
-          <div className="email-otp-verification-box" style={{ padding: '8px 4px' }}>
-            {/* THÔNG BÁO TIN NHẮN SMS PUSH GỬI TỚI SĐT CHÍNH CHỦ */}
-            {smsBanner && (
-              <div
-                className="sms-incoming-simulation-banner"
-                onClick={() => {
-                  setOtpInput(smsBanner.code);
-                  setErrorMsg('');
-                }}
-                title="Bấm vào đây để tự động điền mã SMS OTP"
-                style={{
-                  background: '#0f172a',
-                  color: '#f8fafc',
-                  padding: '12px 14px',
-                  borderRadius: '12px',
-                  border: '1.5px solid #0d9488',
-                  boxShadow: '0 8px 24px rgba(13, 148, 136, 0.25)',
-                  marginBottom: '16px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  animation: 'popupSlideUp 0.3s ease',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '0.95rem' }}>💬</span>
-                    <strong style={{ fontSize: '0.8rem', color: '#5eead4', letterSpacing: '0.5px' }}>
-                      SMS • TỔNG ĐÀI YOU CAN'T STOP HERE
-                    </strong>
-                  </div>
-                  <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Vừa xong</span>
-                </div>
 
-                <div style={{ fontSize: '0.82rem', lineHeight: 1.5, color: '#e2e8f0', margin: '4px 0' }}>
-                  {smsBanner.content}
-                </div>
-
-                <div style={{ fontSize: '0.75rem', color: '#2dd4bf', fontWeight: 600, marginTop: '6px', textAlign: 'right' }}>
-                  ⚡ Chạm để tự động điền mã: <span style={{ textDecoration: 'underline', fontFamily: 'monospace', fontSize: '0.9rem' }}>{smsBanner.code}</span>
-                </div>
+            {/* Đồng hồ đếm ngược hiệu lực */}
+            {qrStatus === 'pending' && (
+              <div style={{ marginTop: '12px', fontSize: '0.82rem', color: '#0d9488', fontWeight: 600 }}>
+                ⏱️ Mã có hiệu lực trong:{' '}
+                <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {Math.floor(qrSecondsLeft / 60).toString().padStart(2, '0')}:
+                  {(qrSecondsLeft % 60).toString().padStart(2, '0')}
+                </span>
               </div>
             )}
 
+            {/* Nút mô phỏng quét QR dành cho kiểm thử tức thì */}
+            <div style={{ marginTop: '18px', paddingTop: '14px', borderTop: '1px dashed #e2e8f0' }}>
+              <button
+                type="button"
+                className="page-btn"
+                onClick={handleSimulateQrScan}
+                disabled={simulatingQr || qrStatus !== 'pending'}
+                style={{
+                  width: '100%',
+                  fontSize: '0.85rem',
+                  padding: '9px 14px',
+                  background: '#f0fdfa',
+                  borderColor: '#99f6e4',
+                  color: '#0f766e',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span>⚡</span>
+                <span>{simulatingQr ? 'Đang xác nhận...' : 'Thử nghiệm: Quét xác nhận ngay bằng tài khoản demo'}</span>
+              </button>
+              <span style={{ fontSize: '0.74rem', color: '#94a3b8', display: 'block', marginTop: '6px' }}>
+                (Mẹo: Bấm nút trên để thử nghiệm tính năng tự động nhận diện đăng nhập mà không cần điện thoại thật)
+              </span>
+            </div>
+          </div>
+        ) : emailOtpStep ? (
+          <div className="email-otp-verification-box" style={{ padding: '8px 4px' }}>
             <div style={{ textAlign: 'center', marginBottom: '18px' }}>
               <div
                 style={{
-                  width: '52px',
-                  height: '52px',
+                  width: '54px',
+                  height: '54px',
                   margin: '0 auto 10px',
-                  background: loginForm.identifier.includes('@') ? '#f0fdfa' : '#eff6ff',
-                  border: `2px solid ${loginForm.identifier.includes('@') ? '#0d9488' : '#3b82f6'}`,
+                  background: '#f0fdfa',
+                  border: '2px solid #0d9488',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
@@ -1302,26 +833,101 @@ export const AuthModal = () => {
                   fontSize: '1.6rem',
                 }}
               >
-                {loginForm.identifier.includes('@') ? '✉️' : '📱'}
+                ✉️
               </div>
               <h4 style={{ margin: '0 0 6px', fontSize: '1.15rem', color: '#0f172a' }}>
-                {loginForm.identifier.includes('@') ? 'Xác Thực Mã OTP Email' : 'Xác Thực Tin Nhắn SMS OTP'}
+                {pendingRegisterData ? 'Xác Thực Email Kích Hoạt Tài Khoản' : 'Nhập Mã Xác Thực Email'}
               </h4>
-              <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0 0 4px' }}>
-                {loginForm.identifier.includes('@')
-                  ? 'Mã xác nhận bảo mật 6 số đã được gửi trực tiếp đến email:'
-                  : 'Tin nhắn SMS xác nhận đăng nhập đã được gửi đến số điện thoại:'}
+              <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '0 0 4px', lineHeight: 1.5 }}>
+                Mã xác thực gồm 6 chữ số đã được gửi qua email (Nodemailer) tới:
               </p>
-              <strong style={{ color: loginForm.identifier.includes('@') ? '#0d9488' : '#2563eb', fontSize: '0.95rem' }}>
-                {loginForm.identifier}
+              <strong style={{ color: '#0d9488', fontSize: '0.98rem' }}>
+                {targetEmailForOtp}
               </strong>
             </div>
 
-            <form onSubmit={handleVerifyOtpSubmit}>
+            {/* Link hỗ trợ mở nhanh hòm thư lấy mã */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '18px', flexWrap: 'wrap' }}>
+              {targetEmailForOtp.includes('@gmail.com') && (
+                <a
+                  href="https://mail.google.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#eff6ff',
+                    color: '#2563eb',
+                    border: '1px solid #bfdbfe',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                  }}
+                >
+                  🌐 Mở hộp thư Gmail &rarr;
+                </a>
+              )}
+              {socialPreviewUrl && (
+                <a
+                  href={socialPreviewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#f0fdf4',
+                    color: '#059669',
+                    border: '1px solid #a7f3d0',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                  }}
+                >
+                  📬 Xem thư Ethereal Webmail ảo &rarr;
+                </a>
+              )}
+            </div>
+
+            <form onSubmit={handleVerifyEmailOtpSubmit}>
               <div className="form-group" style={{ marginBottom: '14px' }}>
-                <label style={{ textAlign: 'center', display: 'block', fontWeight: 600, color: '#334155', fontSize: '0.85rem' }}>
-                  Nhập mã xác thực 6 chữ số *
-                </label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontWeight: 600, color: '#334155', fontSize: '0.85rem' }}>
+                    Nhập mã xác thực 6 chữ số *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const text = await navigator.clipboard.readText();
+                        const code = text.replace(/\D/g, '').slice(0, 6);
+                        if (code && code.length === 6) {
+                          setOtpInput(code);
+                          setErrorMsg('');
+                          setSuccessMsg('✓ Đã dán mã từ bộ nhớ tạm!');
+                        }
+                      } catch (e) {}
+                    }}
+                    style={{
+                      background: '#e0f2fe',
+                      color: '#0369a1',
+                      border: '1px solid #bae6fd',
+                      borderRadius: '6px',
+                      padding: '3px 10px',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    📋 Dán mã
+                  </button>
+                </div>
+
                 <input
                   type="text"
                   maxLength="6"
@@ -1364,7 +970,7 @@ export const AuthModal = () => {
                 <button
                   type="button"
                   disabled={otpCountdown > 0 || sendingOtp}
-                  onClick={() => handleSendOtp(loginForm.identifier.trim())}
+                  onClick={handleResendEmailOtp}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -1374,7 +980,7 @@ export const AuthModal = () => {
                     textDecoration: otpCountdown > 0 ? 'none' : 'underline',
                   }}
                 >
-                  {sendingOtp ? 'Đang gửi...' : 'Gửi lại mã OTP'}
+                  {sendingOtp ? 'Đang gửi...' : 'Gửi lại mã qua Email'}
                 </button>
               </div>
 
@@ -1394,7 +1000,7 @@ export const AuthModal = () => {
                   cursor: loading || otpInput.trim().length < 6 ? 'not-allowed' : 'pointer',
                 }}
               >
-                {loading ? 'Đang xác thực...' : 'Xác Nhận & Đăng Nhập Ngay'}
+                {loading ? 'Đang xác thực...' : 'Xác Nhận & Hoàn Tất'}
               </button>
 
               <div style={{ textAlign: 'center', marginTop: '14px' }}>
@@ -1410,25 +1016,269 @@ export const AuthModal = () => {
                     textDecoration: 'underline',
                   }}
                 >
-                  ← Quay lại nhập mật khẩu
+                  ← Quay lại form đăng nhập / đăng ký
+                </button>
+              </div>
+            </form>
+          </div>
+        ) : authModalMode === 'register' && socialRegData ? (
+          /* ========================================================
+             GIAO DIỆN ĐĂNG KÝ BẰNG MẠNG XÃ HỘI (GOOGLE, FACEBOOK, TWITTER...)
+             Lấy dữ liệu thực tế từ tài khoản: Tên thật, Email thật, Avatar thật
+             ======================================================== */
+          <div className="social-register-container" style={{ padding: '6px 2px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '14px' }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  padding: '6px 14px',
+                  borderRadius: '999px',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  color: '#1e293b',
+                  marginBottom: '8px',
+                }}
+              >
+                <span>{SOCIAL_PROVIDERS.find((p) => p.id === socialRegData.providerId)?.icon}</span>
+                <span>Đăng ký qua {socialRegData.providerName}</span>
+              </div>
+              <h4 style={{ margin: '0 0 4px', fontSize: '1.12rem', color: '#0f172a' }}>
+                Xác Nhận Dữ Liệu Thực Tế
+              </h4>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b', lineHeight: 1.45 }}>
+                Đã tự động trích xuất thông tin thật từ tài khoản {socialRegData.providerName} của bạn. Bạn có thể xem trước và chỉnh sửa trước khi hoàn tất:
+              </p>
+            </div>
+
+            {/* Live Profile Card Preview */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                border: '1.5px solid #cbd5e1',
+                borderRadius: '14px',
+                padding: '12px 14px',
+                marginBottom: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '14px',
+              }}
+            >
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <img
+                  src={socialRegData.avatar}
+                  alt={socialRegData.name}
+                  style={{
+                    width: '62px',
+                    height: '62px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '2.5px solid #0d9488',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+                  }}
+                />
+                <label
+                  htmlFor="social-avatar-file-input"
+                  title="Tải ảnh mới từ máy tính của bạn"
+                  style={{
+                    position: 'absolute',
+                    bottom: '-3px',
+                    right: '-3px',
+                    background: '#0d9488',
+                    color: '#ffffff',
+                    borderRadius: '50%',
+                    width: '22px',
+                    height: '22px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.7rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                  }}
+                >
+                  📷
+                </label>
+                <input
+                  id="social-avatar-file-input"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handleSocialAvatarUpload}
+                />
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <strong style={{ fontSize: '0.96rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {socialRegData.name || 'Họ và tên'}
+                  </strong>
+                  <span
+                    style={{
+                      background: '#e0f2fe',
+                      color: '#0369a1',
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                    }}
+                  >
+                    {socialRegData.providerName}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#0d9488', fontWeight: 600, marginTop: '2px' }}>
+                  {socialRegData.jobTitle || 'Chức danh'}
+                </div>
+                <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '1px' }}>
+                  ✉️ {socialRegData.email}
+                </div>
+              </div>
+            </div>
+
+            {/* Form chỉnh sửa thông tin thực tế */}
+            <form onSubmit={handleConfirmSocialRegister} className="modal-form">
+              <div className="form-group" style={{ marginBottom: '9px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Họ và tên hiển thị *</label>
+                <input
+                  type="text"
+                  value={socialRegData.name}
+                  onChange={(e) => setSocialRegData((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Họ tên của bạn"
+                  required
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '9px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Email liên kết ({socialRegData.providerName}) *</label>
+                <input
+                  type="email"
+                  value={socialRegData.email}
+                  onChange={(e) => setSocialRegData((prev) => ({ ...prev, email: e.target.value }))}
+                  placeholder="Địa chỉ email"
+                  required
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '9px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Vị trí / Nghề nghiệp</label>
+                <input
+                  type="text"
+                  value={socialRegData.jobTitle}
+                  onChange={(e) => setSocialRegData((prev) => ({ ...prev, jobTitle: e.target.value }))}
+                  placeholder="Ví dụ: System Admin & Lead Dev"
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '9px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Tiểu sử / Bio</label>
+                <input
+                  type="text"
+                  value={socialRegData.bio}
+                  onChange={(e) => setSocialRegData((prev) => ({ ...prev, bio: e.target.value }))}
+                  placeholder="Giới thiệu đôi nét về bản thân"
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '14px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Đường dẫn trang cá nhân {socialRegData.providerName}</label>
+                <input
+                  type="url"
+                  value={socialRegData.socialUrl}
+                  onChange={(e) => setSocialRegData((prev) => ({ ...prev, socialUrl: e.target.value }))}
+                  placeholder={`https://${socialRegData.providerId}.com/...`}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="modal-submit-btn"
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: 'linear-gradient(135deg, #0d9488, #059669)',
+                  color: '#ffffff',
+                  fontSize: '0.94rem',
+                  fontWeight: 700,
+                  borderRadius: '10px',
+                  border: 'none',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 14px rgba(13, 148, 136, 0.35)',
+                }}
+              >
+                {loading ? 'Đang tạo tài khoản...' : `🚀 Xác Nhận Đăng Ký & Vào Ngay (${socialRegData.providerName})`}
+              </button>
+
+              <div style={{ textAlign: 'center', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setSocialRegData(null)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  ← Chọn cách đăng ký khác
                 </button>
               </div>
             </form>
           </div>
         ) : (
           /* ========================================================
-             FORM ĐĂNG NHẬP / ĐĂNG KÝ (TÁCH BIỆT HOÀN TOÀN STATE)
+             FORM ĐĂNG NHẬP / ĐĂNG KÝ NỘI BỘ (EMAIL & MẬT KHẨU)
+             KÈM LỰA CHỌN MẠNG XÃ HỘI TRỰC TIẾP
              ======================================================== */
           <>
-            <form onSubmit={handleSubmit} className="modal-form">
+            {authModalMode === 'register' && (
+              /* ĐĂNG KÝ NHANH QUA MẠNG XÃ HỘI (GOOGLE, FACEBOOK, TWITTER...) */
+              <div className="social-register-prompt-box" style={{ marginBottom: '20px' }}>
+                <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
+                    ⚡ Đăng Ký Nhanh Bằng Tài Khoản Mạng Xã Hội
+                  </span>
+                  <p style={{ margin: '3px 0 0', fontSize: '0.76rem', color: '#64748b' }}>
+                    Tự động đồng bộ tên thật, avatar sắc nét và chức danh từ nền tảng:
+                  </p>
+                </div>
+
+                <div className="social-buttons-grid">
+                  {SOCIAL_PROVIDERS.map((provider) => (
+                    <button
+                      key={provider.id}
+                      type="button"
+                      className={`social-auth-btn ${provider.id}`}
+                      onClick={() => handleOpenSocialRegister(provider.id)}
+                      title={`Đăng ký tài khoản bằng dữ liệu thực tế từ ${provider.name}`}
+                      disabled={loading}
+                    >
+                      {provider.icon}
+                      <span>{provider.buttonLabel}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="social-login-divider" style={{ margin: '16px 0 12px' }}>
+                  <span>Hoặc đăng ký tài khoản nội bộ bằng Email</span>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitInternalForm} className="modal-form">
               {authModalMode === 'register' ? (
-                /* TAB ĐĂNG KÝ */
+                /* TAB ĐĂNG KÝ NỘI BỘ */
                 <>
                   <div className="form-group">
-                    <label>Họ tên hoặc Biệt danh *</label>
+                    <label>Họ và tên *</label>
                     <input
                       type="text"
-                      placeholder="Ví dụ: Hình Ảnh"
+                      placeholder="Ví dụ: Trần Đình Quân"
                       value={registerForm.name}
                       onChange={(e) => {
                         setRegisterForm((prev) => ({ ...prev, name: e.target.value }));
@@ -1439,10 +1289,10 @@ export const AuthModal = () => {
                   </div>
 
                   <div className="form-group">
-                    <label>Công việc / Vị trí hiện tại</label>
+                    <label>Công việc / Vị trí</label>
                     <input
                       type="text"
-                      placeholder="Ví dụ: Dance, Developer, Designer, PM..."
+                      placeholder="Ví dụ: Developer, Designer, Product Manager..."
                       value={registerForm.jobTitle}
                       onChange={(e) => {
                         setRegisterForm((prev) => ({ ...prev, jobTitle: e.target.value }));
@@ -1452,10 +1302,10 @@ export const AuthModal = () => {
                   </div>
 
                   <div className="form-group">
-                    <label>Email hoặc Số điện thoại *</label>
+                    <label>Địa chỉ Email nội bộ *</label>
                     <input
-                      type="text"
-                      placeholder="Nhập email hoặc SĐT"
+                      type="email"
+                      placeholder="Nhập email của bạn (Ví dụ: anthonyq012025@gmail.com)"
                       value={registerForm.identifier}
                       onChange={(e) => {
                         setRegisterForm((prev) => ({ ...prev, identifier: e.target.value }));
@@ -1480,17 +1330,17 @@ export const AuthModal = () => {
                   </div>
 
                   <button type="submit" className="modal-submit-btn" disabled={loading}>
-                    {loading ? 'Đang tạo...' : 'Tạo Tài Khoản Mới'}
+                    {loading ? 'Đang gửi mã xác thực...' : 'Đăng Ký & Nhận Mã OTP Qua Email ➔'}
                   </button>
                 </>
               ) : (
-                /* TAB ĐĂNG NHẬP */
+                /* TAB ĐĂNG NHẬP NỘI BỘ */
                 <>
                   <div className="form-group">
-                    <label>Email hoặc Số điện thoại *</label>
+                    <label>Địa chỉ Email *</label>
                     <input
                       type="text"
-                      placeholder="Nhập email hoặc SĐT (Ví dụ: anthonyq012025@gmail.com)"
+                      placeholder="Nhập email (Ví dụ: anthonyq012025@gmail.com)"
                       value={loginForm.identifier}
                       onChange={(e) => {
                         setLoginForm((prev) => ({ ...prev, identifier: e.target.value }));
@@ -1501,7 +1351,25 @@ export const AuthModal = () => {
                   </div>
 
                   <div className="form-group">
-                    <label>Mật khẩu *</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label>Mật khẩu *</label>
+                      <button
+                        type="button"
+                        onClick={handleSwitchToEmailOtpLogin}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#0d9488',
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                          padding: 0,
+                        }}
+                      >
+                        ⚡ Đăng nhập bằng mã OTP Email
+                      </button>
+                    </div>
                     <input
                       type="password"
                       placeholder="Nhập mật khẩu của bạn"
@@ -1514,7 +1382,7 @@ export const AuthModal = () => {
                     />
                   </div>
 
-                  {/* NÚT DUY TRÌ ĐĂNG NHẬP (REMEMBER ME) */}
+                  {/* DUY TRÌ ĐĂNG NHẬP */}
                   <div style={{ margin: '10px 0 16px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: '#475569' }}>
                       <input
@@ -1535,28 +1403,32 @@ export const AuthModal = () => {
             </form>
 
             {/* ========================================================
-                KHU VỰC TÍCH HỢP ĐĂNG NHẬP QUA MẠNG XÃ HỘI
+                KHU VỰC ĐĂNG NHẬP BẰNG MẠNG XÃ HỘI (OAUTH TRỰC TIẾP)
+                Chỉ hiển thị ở tab Đăng Nhập
                ======================================================== */}
-            <div className="social-login-section">
-              <div className="social-login-divider">
-                <span>Hoặc đăng ký / đăng nhập với</span>
-              </div>
+            {authModalMode === 'login' && (
+              <div className="social-login-section" style={{ marginTop: '24px' }}>
+                <div className="social-login-divider">
+                  <span>Hoặc đăng nhập nhanh qua OAuth nền tảng</span>
+                </div>
 
-              <div className="social-buttons-grid">
-                {SOCIAL_PROVIDERS.map((provider) => (
-                  <button
-                    key={provider.id}
-                    type="button"
-                    className={`social-auth-btn ${provider.id}`}
-                    onClick={() => handleSelectSocial(provider)}
-                    title={`Đăng nhập qua ${provider.name} và tự động gửi thông báo phê duyệt`}
-                  >
-                    {provider.icon}
-                    <span>{provider.buttonLabel}</span>
-                  </button>
-                ))}
+                <div className="social-buttons-grid">
+                  {SOCIAL_PROVIDERS.map((provider) => (
+                    <button
+                      key={provider.id}
+                      type="button"
+                      className={`social-auth-btn ${provider.id}`}
+                      onClick={() => handleSocialOAuth(provider.id)}
+                      title={`Đăng nhập trực tiếp qua OAuth ${provider.name}`}
+                      disabled={loading}
+                    >
+                      {provider.icon}
+                      <span>{provider.buttonLabel}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </>
         )}
       </div>

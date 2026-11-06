@@ -49,9 +49,14 @@ export const usePosts = (queryParams = {}) => {
           } catch (e) {}
 
           // Chỉ gán lỗi khi thực sự không có bài viết nào để xem
-          if (posts.length === 0) {
-            setError(err.message || 'Lỗi khi tải dữ liệu bài viết');
-          }
+          setPosts((currentPosts) => {
+            if (!currentPosts || currentPosts.length === 0) {
+              setError(err.message || 'Lỗi khi tải dữ liệu bài viết');
+            } else {
+              setError(null);
+            }
+            return currentPosts;
+          });
         }
       })
       .finally(() => {
@@ -67,6 +72,8 @@ export const usePosts = (queryParams = {}) => {
     queryParams.category,
     queryParams.tag,
     queryParams.q,
+    queryParams.sort,
+    queryParams.visibility,
   ]);
 
   useEffect(() => {

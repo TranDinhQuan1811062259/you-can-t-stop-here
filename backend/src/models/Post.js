@@ -106,6 +106,35 @@ const postSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    repostCount: {
+      type: Number,
+      default: 0,
+    },
+    repostedBy: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+        userName: {
+          type: String,
+          default: '',
+        },
+        userAvatar: {
+          type: String,
+          default: '/images/man.jpg',
+        },
+        repostedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    visibility: {
+      type: String,
+      enum: ['public', 'friends'],
+      default: 'public',
+    },
     isPublished: {
       type: Boolean,
       default: true,
@@ -114,6 +143,16 @@ const postSchema = new mongoose.Schema(
       type: String,
       enum: ['auto', 'melancholic', 'uplifting', 'child', 'podcast', 'custom_voice'],
       default: 'auto',
+    },
+    voiceGender: {
+      type: String,
+      enum: ['female', 'male'],
+      default: 'female',
+    },
+    voiceRegion: {
+      type: String,
+      enum: ['north', 'central', 'south'],
+      default: 'north',
     },
     customVoiceProfile: {
       voiceName: { type: String, default: '' },

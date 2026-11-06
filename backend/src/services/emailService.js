@@ -1,3 +1,16 @@
+/**
+ * =========================================================================
+ * 📧 DỊCH VỤ GỬI EMAIL XÁC THỰC BẢO MẬT (YOU CAN'T STOP HERE)
+ * =========================================================================
+ * 👉 CÁCH GỬI THƯ THẬT 100% VÀO GMAIL CHÍNH THỨC CỦA BẠN:
+ * 
+ * BẠN CÓ THỂ ĐIỀN TRỰC TIẾP VÀO 2 DÒNG DƯỚI ĐÂY (NGAY DÒNG 16 - 17):
+ *    1. Link lấy Mật khẩu ứng dụng 16 ký tự: https://myaccount.google.com/apppasswords
+ *    2. Điền Gmail và Mật khẩu 16 ký tự vào:
+ */
+export const DIRECT_GMAIL_USER = '';     // Điền Gmail của bạn (VD: 'anthonyq012025@gmail.com')
+export const DIRECT_GMAIL_APP_PASS = ''; // Điền Mật khẩu ứng dụng 16 chữ cái (VD: 'abcd efgh ijkl mnop')
+
 import nodemailer from 'nodemailer';
 
 /**
@@ -8,23 +21,32 @@ let cachedTransporter = null;
 const getTransporter = async () => {
   if (cachedTransporter) return cachedTransporter;
 
-  const emailUser = process.env.EMAIL_USER;
-  const emailPass = process.env.EMAIL_PASS;
+  const emailUser = (DIRECT_GMAIL_USER || process.env.EMAIL_USER || '').trim();
+  const emailPass = (DIRECT_GMAIL_APP_PASS || process.env.EMAIL_PASS || '').replace(/\s+/g, '');
 
-  // Nếu người dùng đã cài đặt Gmail hoặc SMTP trong .env
-  if (emailUser && emailPass) {
-    cachedTransporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: emailUser,
-        pass: emailPass,
-      },
-    });
-    return cachedTransporter;
+  // Nếu người dùng đã cài đặt Gmail trong file này hoặc trong .env
+  if (emailUser && emailPass && emailPass !== 'xxxx' && !emailPass.includes('xxxx')) {
+    try {
+      console.log(`[EMAIL SERVICE] 🚀 Đang kết nối máy chủ gửi thư Gmail SMTP thật: ${emailUser}`);
+      cachedTransporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: emailUser,
+          pass: emailPass,
+        },
+        tls: {
+          rejectUnauthorized: false,
+        },
+      });
+      return cachedTransporter;
+    } catch (err) {
+      console.warn('[EMAIL SERVICE] ❌ Không thể kết nối Gmail SMTP, chuyển sang Test Ethereal:', err.message);
+    }
   }
 
   // Nếu chưa cấu hình mật khẩu Gmail trong .env, sử dụng tài khoản Test Ethereal an toàn
   try {
+    console.log(`[EMAIL SERVICE] Đang dùng dịch vụ Webmail Ethereal ảo để tạo thư xem trước (previewUrl) an toàn...`);
     const testAccount = await nodemailer.createTestAccount();
     cachedTransporter = nodemailer.createTransport({
       host: testAccount.smtp.host,
@@ -214,8 +236,15 @@ export const sendOtpEmail = async (toEmail, otpCode, type = 'login') => {
       html: htmlContent,
     };
 
+    console.log(`[EMAIL SERVICE] 📤 Đang gửi thư chứa mã OTP [${otpCode}] tới: ${toEmail}...`);
     const info = await transporter.sendMail(mailOptions);
     const previewUrl = nodemailer.getTestMessageUrl(info) || null;
+
+    if (previewUrl) {
+      console.log(`[EMAIL SERVICE] ℹ️ Đã tạo thư Webmail Ethereal ảo (xem mã tại): ${previewUrl}`);
+    } else {
+      console.log(`[EMAIL SERVICE] ✅ ĐÃ GỬI THÀNH CÔNG VÀO HÒM THƯ GMAIL THẬT: ${toEmail} (ID: ${info.messageId})`);
+    }
 
     return {
       success: true,
@@ -225,7 +254,7 @@ export const sendOtpEmail = async (toEmail, otpCode, type = 'login') => {
       otpCode,
     };
   } catch (error) {
-    console.error('Lỗi khi gửi OTP qua Email:', error.message);
+    console.error('❌ Lỗi khi gửi OTP qua Email:', error.message);
     return {
       success: true,
       simulated: true,

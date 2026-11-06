@@ -44,8 +44,8 @@ export const connectDB = async () => {
 
   try {
     const conn = await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 15000, // Đợi tối đa 15s
-      connectTimeoutMS: 15000,
+      serverSelectionTimeoutMS: 5000, // Đợi tối đa 5s
+      connectTimeoutMS: 5000,
       family: 4,                      // Ép dùng IPv4, tránh treo DNS IPv6 trên Windows
       autoIndex: true,
     });

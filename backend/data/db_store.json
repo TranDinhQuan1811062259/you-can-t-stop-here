@@ -16,22 +16,30 @@
         "Test",
         "Persistent"
       ],
-      "author": "Trần Đỉnh Quân",
+      "author": "Đơn Thân Mẹ",
       "authorJob": "System Admin & Lead Dev",
-      "cheersCount": 0,
+      "authorAvatar": "/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg",
+      "cheersCount": 1,
       "showReactionCount": true,
-      "reactions": [],
+      "reactions": [
+        {
+          "userName": "Đơn Thân Mẹ",
+          "userAvatar": "/images/man.jpg",
+          "types": [
+            "stop"
+          ]
+        }
+      ],
       "reactionCounts": {
         "sympathy": 0,
-        "stop": 0,
+        "stop": 1,
         "love": 0,
         "encourage": 0,
-        "total": 0
+        "total": 1
       },
       "sharesCount": 0,
-      "views": 7,
+      "views": 13,
       "createdAt": "2026-11-05T11:49:56.154Z",
-      "authorAvatar": "/uploads/1793877428223-888947577_122129675793464276_5782383970566541736_n.jpg",
       "authorSocialLinks": {
         "facebook": "https://www.facebook.com/anthony.qill/",
         "instagram": "https://www.instagram.com/hotcandy.134/",
@@ -42,9 +50,9 @@
         "website": "https://cantstophere.com"
       },
       "user": {
-        "name": "Trần Đỉnh Quân",
+        "name": "Đơn Thân Mẹ",
         "jobTitle": "System Admin & Lead Dev",
-        "avatar": "/uploads/1793877428223-888947577_122129675793464276_5782383970566541736_n.jpg",
+        "avatar": "/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg",
         "bio": "Chủ sở hữu & Quản trị viên You Can't Stop Here. Đam mê lập trình và chia sẻ góc nhìn nghề nghiệp chân thành. #Burnout #Overtime #LeadDev #KeepMoving",
         "socialLinks": {
           "facebook": "https://www.facebook.com/anthony.qill/",
@@ -75,9 +83,9 @@
         "Suy ngẫm"
       ],
       "user": {
-        "name": "Trần Đỉnh Quân",
+        "name": "Đơn Thân Mẹ",
         "jobTitle": "System Admin & Lead Dev",
-        "avatar": "/uploads/1793877428223-888947577_122129675793464276_5782383970566541736_n.jpg",
+        "avatar": "/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg",
         "bio": "Chủ sở hữu & Quản trị viên You Can't Stop Here. Đam mê lập trình và chia sẻ góc nhìn nghề nghiệp chân thành. #Burnout #Overtime #LeadDev #KeepMoving",
         "socialLinks": {
           "facebook": "https://www.facebook.com/anthony.qill/",
@@ -89,9 +97,9 @@
           "website": "https://cantstophere.com"
         }
       },
-      "author": "Trần Đỉnh Quân",
+      "author": "Đơn Thân Mẹ",
       "authorJob": "System Admin & Lead Dev",
-      "authorAvatar": "/uploads/1793877428223-888947577_122129675793464276_5782383970566541736_n.jpg",
+      "authorAvatar": "/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg",
       "authorSocialLinks": {
         "facebook": "https://www.facebook.com/anthony.qill/",
         "instagram": "https://www.instagram.com/hotcandy.134/",
@@ -101,7 +109,7 @@
         "github": "",
         "website": "https://cantstophere.com"
       },
-      "views": 22,
+      "views": 28,
       "cheersCount": 42,
       "reactions": [
         {
@@ -157,7 +165,18 @@
       "isPublished": true,
       "createdAt": "2026-11-05T07:39:52.748Z",
       "updatedAt": "2026-11-05T16:28:59.869Z",
-      "__v": 0
+      "__v": 0,
+      "audioMood": "auto",
+      "customVoiceProfile": {
+        "pitch": 1,
+        "rate": 1,
+        "sampleAudioUrl": "",
+        "timbre": "authentic",
+        "voiceName": ""
+      },
+      "flagReason": "",
+      "isFlagged": false,
+      "moderationStatus": "approved"
     },
     {
       "_id": "post_2",
@@ -194,7 +213,7 @@
         "linkedin": "https://linkedin.com/in/nam-pm",
         "website": ""
       },
-      "views": 4,
+      "views": 22,
       "cheersCount": 68,
       "reactions": [
         {
@@ -241,7 +260,12 @@
       },
       "flagReason": "",
       "isFlagged": false,
-      "moderationStatus": "approved"
+      "moderationStatus": "approved",
+      "repostCount": 0,
+      "repostedBy": [],
+      "visibility": "public",
+      "voiceGender": "female",
+      "voiceRegion": "north"
     },
     {
       "_id": "post_3",
@@ -278,7 +302,7 @@
         "linkedin": "",
         "website": ""
       },
-      "views": 1,
+      "views": 13,
       "cheersCount": 95,
       "reactions": [
         {
@@ -304,7 +328,18 @@
       "isPublished": true,
       "createdAt": "2026-11-05T07:39:52.750Z",
       "updatedAt": "2026-11-05T10:32:40.030Z",
-      "__v": 0
+      "__v": 0,
+      "audioMood": "auto",
+      "customVoiceProfile": {
+        "pitch": 1,
+        "rate": 1,
+        "sampleAudioUrl": "",
+        "timbre": "authentic",
+        "voiceName": ""
+      },
+      "flagReason": "",
+      "isFlagged": false,
+      "moderationStatus": "approved"
     },
     {
       "_id": "post_4",
@@ -434,9 +469,9 @@
       "rawPassword": "123456",
       "role": "admin",
       "jobTitle": "System Admin & Lead Dev",
-      "avatar": "/images/google_avatar.jpg",
+      "avatar": "/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg",
       "coverImage": "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80",
-      "bio": "Tài khoản Google Đơn Thân Mẹ đồng bộ từ Chrome. #Google #JanMammy",
+      "bio": "Tài khoản Google kết nối trực tiếp qua OAuth API. #Google",
       "customLayout": {
         "theme": "ocean",
         "frameStyle": "gold",
@@ -470,7 +505,7 @@
       "chatStatus": "online",
       "allowStrangerNotifications": true,
       "authProvider": "facebook",
-      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhZWM1YjQ2ZWUxMTI2NjJiMzNjMGUzMiIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiLEkMahbiBUaMOibiBN4bq5IiwiZW1haWwiOiJhbnRob255cTAxMjAyNUBnbWFpbC5jb20iLCJqb2JUaXRsZSI6IlN5c3RlbSBBZG1pbiAmIExlYWQgRGV2IiwiaWF0IjoxNzkzOTA5NTk0LCJleHAiOjE3OTY1MDE1OTR9.jClWqEjq4nrvX5s1JMxEHKIo9UMcmdJNtdOPg4pu4xw"
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhZWM1YjQ2ZWUxMTI2NjJiMzNjMGUzMiIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiLEkMahbiBUaMOibiBN4bq5IiwiZW1haWwiOiJhbnRob255cTAxMjAyNUBnbWFpbC5jb20iLCJqb2JUaXRsZSI6IlN5c3RlbSBBZG1pbiAmIExlYWQgRGV2IiwiaWF0IjoxNzkzOTg0ODkwLCJleHAiOjE3OTY1NzY4OTB9.voyhYgx7WSJjFzNwrGDNwVXMYpTGuweZ9xlJJn29i6Q"
     },
     {
       "_id": "u_admin_2",
@@ -817,5 +852,242 @@
       "isRead": false,
       "createdAt": "2026-11-05T15:45:00.000Z"
     }
-  ]
+  ],
+  "festiveEvents": [
+    {
+      "id": "giai_phong_30_4",
+      "name": "30/4 & 1/5: Giải Phóng Miền Nam & Quốc Tế Lao Động",
+      "shortName": "30/4 & 1/5",
+      "icon": "🇻🇳",
+      "bannerTitle": "Mừng Đại Thắng Mùa Xuân 30/4 & Quốc Tế Lao Động 1/5",
+      "bannerDesc": "Tri ân thế hệ cha anh, tự hào non sông thống nhất một dải và tôn vinh những người lao động Việt Nam",
+      "startDay": 30,
+      "startMonth": 4,
+      "durationDays": 3,
+      "particles": [
+        "🇻🇳",
+        "⭐",
+        "🕊️",
+        "✨",
+        "🎆"
+      ],
+      "particleType": "vietnam_flag",
+      "themeColor": "#dc2626",
+      "accentColor": "#facc15",
+      "isActive": true,
+      "isBuiltin": true
+    },
+    {
+      "id": "quoc_khanh_2_9",
+      "name": "Quốc Khánh Việt Nam 2/9 (Ngày Độc Lập)",
+      "shortName": "Quốc Khánh 2/9",
+      "icon": "🇻🇳",
+      "bannerTitle": "Chào Mừng Ngày Quốc Khánh Nước CHXHCN Việt Nam 2/9",
+      "bannerDesc": "Bản Tuyên ngôn Độc lập vang vọng ngàn đời • Độc lập - Tự do - Hạnh phúc",
+      "startDay": 1,
+      "startMonth": 9,
+      "durationDays": 3,
+      "particles": [
+        "🇻🇳",
+        "⭐",
+        "🎆",
+        "🕊️",
+        "✨"
+      ],
+      "particleType": "independence_day",
+      "themeColor": "#b91c1c",
+      "accentColor": "#eab308",
+      "isActive": true,
+      "isBuiltin": true
+    },
+    {
+      "id": "quoc_te_phu_nu_8_3",
+      "name": "Ngày Quốc Tế Phụ Nữ 8/3",
+      "shortName": "Quốc Tế Phụ Nữ 8/3",
+      "icon": "🌹",
+      "bannerTitle": "Chúc Mừng Ngày Quốc Tế Phụ Nữ 8/3",
+      "bannerDesc": "Gửi trọn yêu thương & sự biết ơn tới những người phụ nữ tuyệt vời quanh ta",
+      "startDay": 7,
+      "startMonth": 3,
+      "durationDays": 3,
+      "particles": [
+        "🌹",
+        "🌷",
+        "🌸",
+        "🎀",
+        "💖",
+        "✨"
+      ],
+      "particleType": "flower_petals",
+      "themeColor": "#ec4899",
+      "accentColor": "#f472b6",
+      "isActive": true,
+      "isBuiltin": true
+    },
+    {
+      "id": "quoc_te_thieu_nhi_1_6",
+      "name": "Ngày Quốc Tế Thiếu Nhi 1/6",
+      "shortName": "Thiếu Nhi 1/6",
+      "icon": "🎈",
+      "bannerTitle": "Chúc Mừng Ngày Quốc Tế Thiếu Nhi 1/6",
+      "bannerDesc": "Giữ mãi nụ cười hồn nhiên, trong trẻo và nuôi dưỡng ước mơ bay cao",
+      "startDay": 1,
+      "startMonth": 6,
+      "durationDays": 2,
+      "particles": [
+        "🎈",
+        "🍭",
+        "🎡",
+        "🧸",
+        "⭐",
+        "✨"
+      ],
+      "particleType": "balloons",
+      "themeColor": "#06b6d4",
+      "accentColor": "#f97316",
+      "isActive": true,
+      "isBuiltin": true
+    },
+    {
+      "id": "tet_duong_lich",
+      "name": "Tết Dương Lịch (New Year Countdown)",
+      "shortName": "Tết Dương Lịch",
+      "icon": "🎆",
+      "bannerTitle": "Chào Đón Năm Mới • Happy New Year",
+      "bannerDesc": "Khép lại năm cũ, vững vàng khởi đầu chặng đường mới rực rỡ và thành công",
+      "startDay": 31,
+      "startMonth": 12,
+      "durationDays": 3,
+      "particles": [
+        "🎆",
+        "✨",
+        "🍾",
+        "🎊",
+        "🎉",
+        "🥂"
+      ],
+      "particleType": "fireworks",
+      "themeColor": "#f59e0b",
+      "accentColor": "#fbbf24",
+      "isActive": true,
+      "isBuiltin": true
+    },
+    {
+      "id": "tet_nguyen_dan",
+      "name": "Tết Nguyên Đán (Tết Cổ Truyền Việt Nam)",
+      "shortName": "Tết Nguyên Đán",
+      "icon": "🧧",
+      "bannerTitle": "Chúc Mừng Năm Mới • Vạn Sự Như Ý • An Khang Thịnh Vượng",
+      "bannerDesc": "Tết đoàn viên, mai đào khoe sắc, gói trọn bình an và tài lộc tới mọi nhà",
+      "startDay": 28,
+      "startMonth": 1,
+      "durationDays": 8,
+      "particles": [
+        "🌸",
+        "🌼",
+        "🧧",
+        "🏮",
+        "🧨",
+        "✨"
+      ],
+      "particleType": "tet_blossoms",
+      "themeColor": "#dc2626",
+      "accentColor": "#facc15",
+      "isActive": true,
+      "isBuiltin": true
+    },
+    {
+      "id": "tet_trung_thu",
+      "name": "Tết Trung Thu (Rằm Tháng Tám)",
+      "shortName": "Tết Trung Thu",
+      "icon": "🏮",
+      "bannerTitle": "Vui Hội Trăng Rằm • Tết Trung Thu Đoàn Viên",
+      "bannerDesc": "Đèn lồng thắp sáng ước mơ, ngắm trăng rằm sum vầy ấm cúng",
+      "startDay": 15,
+      "startMonth": 9,
+      "durationDays": 3,
+      "particles": [
+        "🏮",
+        "🌕",
+        "🥮",
+        "⭐",
+        "✨"
+      ],
+      "particleType": "lanterns",
+      "themeColor": "#ea580c",
+      "accentColor": "#fde047",
+      "isActive": true,
+      "isBuiltin": true
+    },
+    {
+      "id": "phu_nu_viet_nam_20_10",
+      "name": "Ngày Phụ Nữ Việt Nam 20/10",
+      "shortName": "Phụ Nữ VN 20/10",
+      "icon": "💐",
+      "bannerTitle": "Chúc Mừng Ngày Phụ Nữ Việt Nam 20/10",
+      "bannerDesc": "Tôn vinh vẻ đẹp kiên cường, đảm đang và duyên dáng của người phụ nữ Việt Nam",
+      "startDay": 19,
+      "startMonth": 10,
+      "durationDays": 3,
+      "particles": [
+        "💐",
+        "🌸",
+        "💖",
+        "🌷",
+        "✨"
+      ],
+      "particleType": "flower_petals",
+      "themeColor": "#db2777",
+      "accentColor": "#f472b6",
+      "isActive": true,
+      "isBuiltin": true
+    },
+    {
+      "id": "nha_giao_viet_nam_20_11",
+      "name": "Ngày Nhà Giáo Việt Nam 20/11",
+      "shortName": "Nhà Giáo 20/11",
+      "icon": "🌻",
+      "bannerTitle": "Tri Ân Ngày Nhà Giáo Việt Nam 20/11",
+      "bannerDesc": "Tôn sư trọng đạo • Gửi lời tri ân sâu sắc tới những người lái đò thầm lặng",
+      "startDay": 19,
+      "startMonth": 11,
+      "durationDays": 3,
+      "particles": [
+        "🌻",
+        "📖",
+        "🖋️",
+        "💐",
+        "✨"
+      ],
+      "particleType": "sunflowers",
+      "themeColor": "#0284c7",
+      "accentColor": "#facc15",
+      "isActive": true,
+      "isBuiltin": true
+    },
+    {
+      "id": "giang_sinh_noel",
+      "name": "Giáng Sinh (Merry Christmas)",
+      "shortName": "Giáng Sinh",
+      "icon": "🎄",
+      "bannerTitle": "Merry Christmas • Mùa Giáng Sinh An Lành & Ấm Áp",
+      "bannerDesc": "Những ngọn nến lung linh và giai điệu Giáng sinh sưởi ấm tâm hồn",
+      "startDay": 23,
+      "startMonth": 12,
+      "durationDays": 4,
+      "particles": [
+        "❄️",
+        "🎄",
+        "🔔",
+        "🎁",
+        "🎅"
+      ],
+      "particleType": "christmas",
+      "themeColor": "#15803d",
+      "accentColor": "#ef4444",
+      "isActive": true,
+      "isBuiltin": true
+    }
+  ],
+  "adminPreviewEventId": "tet_duong_lich"
 }

@@ -6,8 +6,11 @@ import { AuthModal } from '../auth/AuthModal';
 import { CreatePostModal } from '../blog/CreatePostModal';
 import { EditProfileModal } from '../auth/EditProfileModal';
 import { AdminModerationModal } from '../admin/AdminModerationModal';
+import { FestiveEventManagerModal } from '../admin/FestiveEventManagerModal';
+import { FestiveShowcaseModal } from '../common/FestiveShowcaseModal';
 import { postService } from '../../services/postService';
-import { isSoundEnabled, toggleSound } from '../../utils/soundEffects';
+import { eventService } from '../../services/eventService';
+import { isSoundEnabled, toggleSound, playClickSound, playFestiveEventSound } from '../../utils/soundEffects';
 import { getActiveSeason, setActiveSeason, SEASONS } from '../../utils/seasonUtils';
 import { chatService } from '../../services/chatService';
 import { formatDate } from '../../utils/formatDate';
@@ -88,6 +91,16 @@ export const Header = () => {
   const [currentTheme, setCurrentTheme] = useState(() => getActiveTheme());
   const [isModerationOpen, setIsModerationOpen] = useState(false);
   const [flaggedCount, setFlaggedCount] = useState(0);
+  const [isEventManagerOpen, setIsEventManagerOpen] = useState(false);
+  const [isShowcaseModalOpen, setIsShowcaseModalOpen] = useState(false);
+  const [activeFestiveEvent, setActiveFestiveEvent] = useState(null);
+
+  const fetchFestiveEvent = () => {
+    eventService
+      .getActiveEvent()
+      .then((res) => setActiveFestiveEvent(res?.data || null))
+      .catch(() => setActiveFestiveEvent(null));
+  };
 
   // Quét số lượng bài viết bị gắn cờ nhạy cảm để báo cho Admin
   const checkFlaggedPosts = () => {
@@ -105,8 +118,30 @@ export const Header = () => {
 
   useEffect(() => {
     checkFlaggedPosts();
+    fetchFestiveEvent();
+
     window.addEventListener('post_updated', checkFlaggedPosts);
-    return () => window.removeEventListener('post_updated', checkFlaggedPosts);
+    window.addEventListener('freedom_festive_event_changed', fetchFestiveEvent);
+
+    const handleOpenMod = () => {
+      if (user?.role === 'admin') {
+        setIsModerationOpen(true);
+      }
+    };
+    const handleOpenShowcase = (e) => {
+      if (e?.detail) setActiveFestiveEvent(e.detail);
+      setIsShowcaseModalOpen(true);
+    };
+
+    window.addEventListener('freedom_open_moderation', handleOpenMod);
+    window.addEventListener('freedom_open_festive_showcase', handleOpenShowcase);
+
+    return () => {
+      window.removeEventListener('post_updated', checkFlaggedPosts);
+      window.removeEventListener('freedom_festive_event_changed', fetchFestiveEvent);
+      window.removeEventListener('freedom_open_moderation', handleOpenMod);
+      window.removeEventListener('freedom_open_festive_showcase', handleOpenShowcase);
+    };
   }, [user]);
 
   // Dropdown danh sách tin nhắn gần nhất từ nút Tin nhắn trên Header
@@ -287,7 +322,37 @@ export const Header = () => {
               )}
             </div>
 
-            {/* Nút Ngày / Đêm trên Header (Đồng bộ cùng nút nổi bên dưới) */}
+            {/* Festive Event Pill (Sự kiện lễ hội đặc biệt đang diễn ra - Rút gọn thông minh chống tràn Header) */}
+            {activeFestiveEvent && (
+              <div
+                className="header-festive-event-pill"
+                onClick={() => {
+                  playClickSound();
+                  playFestiveEventSound(activeFestiveEvent);
+                  setIsShowcaseModalOpen(true);
+                }}
+                title={`${activeFestiveEvent.name} • ${activeFestiveEvent.bannerDesc || ''}. Bấm để xem không gian sự kiện đặc biệt!`}
+              >
+                <span className="festive-pill-icon">{activeFestiveEvent.icon || activeFestiveEvent.themeIcon || '🎊'}</span>
+                <span className="festive-pill-name">
+                  {activeFestiveEvent.shortName || (activeFestiveEvent.name.includes(':') ? activeFestiveEvent.name.split(':')[0].trim() : activeFestiveEvent.name)}
+                </span>
+                {user?.role === 'admin' && (
+                  <span
+                    className="festive-pill-badge"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsEventManagerOpen(true);
+                    }}
+                    title="Cài đặt lịch sự kiện (Admin)"
+                  >
+                    ⚙️
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Nút Ngày / Đêm trên Header dạng icon tròn tinh gọn chống tràn */}
             <button
               type="button"
               className={`header-theme-toggle-btn theme-${currentTheme}`}
@@ -297,12 +362,12 @@ export const Header = () => {
               }}
               title={
                 currentTheme === 'light'
-                  ? 'Chế độ Ngày: Bấm để đổi sang Đêm 🌙'
-                  : 'Chế độ Đêm: Bấm để đổi sang Ngày ☀️'
+                  ? 'Chế độ Ngày (Ánh vàng ấm). Bấm để chuyển sang Chế độ Đêm 🌙'
+                  : 'Chế độ Đêm (Màu tối dịu mắt). Bấm để chuyển sang Chế độ Ngày ☀️'
               }
+              aria-label="Đổi chế độ Ngày/Đêm"
             >
               <span className="theme-toggle-icon">{currentTheme === 'light' ? '☀️' : '🌙'}</span>
-              <span className="theme-toggle-text">{currentTheme === 'light' ? 'Ngày' : 'Đêm'}</span>
             </button>
           </div>
 
@@ -367,11 +432,20 @@ export const Header = () => {
                     title={user?.name}
                   >
                     <img
-                      src={user?.avatar || '/images/man.jpg'}
+                      src={
+                        user?.avatar && !user?.avatar.includes('google_avatar')
+                          ? user?.avatar
+                          : ((user?.role === 'admin' || user?.email === 'anthonyq012025@gmail.com')
+                              ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg'
+                              : '/images/man.jpg')
+                      }
                       alt={user?.name}
+                      onError={(e) => {
+                        e.target.src = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
+                      }}
                       className="header-avatar"
                     />
-                    <span className="header-username-text" style={{ maxWidth: '125px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span className="header-username-text">
                       {user?.name?.split('(')[0]?.trim() || user?.name}
                     </span>
                     {user?.role === 'admin' && (
@@ -395,46 +469,19 @@ export const Header = () => {
                     <span>Tài khoản</span>
                   </button>
 
-                  {/* Nút Kiểm duyệt dành riêng cho Admin */}
-                  {user?.role === 'admin' && (
+                  {/* Nút Quản lý Lễ Hội (Chỉ Admin) - Chỉ hiển thị khi chưa có sự kiện nào kích hoạt trên thanh để tránh trùng lặp */}
+                  {user?.role === 'admin' && !activeFestiveEvent && (
                     <button
                       type="button"
-                      className="header-moderation-btn"
+                      className="header-festive-btn"
                       onClick={() => {
-                        setIsModerationOpen(true);
+                        setIsEventManagerOpen(true);
                         closeNav();
                       }}
-                      title="Trung tâm kiểm duyệt nội dung & An toàn web (Admin)"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        background: flaggedCount > 0 ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.12)',
-                        border: flaggedCount > 0 ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '999px',
-                        padding: '5px 11px',
-                        color: flaggedCount > 0 ? '#fca5a5' : '#ffffff',
-                        fontSize: '0.82rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                      }}
+                      title="Quản lý sự kiện lễ hội trong năm (30/4, 2/9, 8/3, 1/6, Tết...)"
+                      style={{ padding: '5px 8px', minWidth: '32px' }}
                     >
-                      <span>🛡️ Kiểm duyệt</span>
-                      {flaggedCount > 0 && (
-                        <span
-                          style={{
-                            background: '#ef4444',
-                            color: '#ffffff',
-                            borderRadius: '999px',
-                            padding: '1px 6px',
-                            fontSize: '0.72rem',
-                            fontWeight: 800,
-                          }}
-                        >
-                          {flaggedCount}
-                        </span>
-                      )}
+                      <span className="btn-icon">🎊</span>
                     </button>
                   )}
 
@@ -607,6 +654,24 @@ export const Header = () => {
         <AdminModerationModal
           isOpen={isModerationOpen}
           onClose={() => setIsModerationOpen(false)}
+        />
+      )}
+
+      {/* Festive Showcase Modal (Không gian chào mừng sự kiện 30/4, 2/9, 8/3 với đồ họa bay dẻo dẻo) */}
+      <FestiveShowcaseModal
+        isOpen={isShowcaseModalOpen}
+        onClose={() => setIsShowcaseModalOpen(false)}
+        event={activeFestiveEvent}
+        onOpenAdminManager={() => setIsEventManagerOpen(true)}
+        user={user}
+      />
+
+      {/* Admin Festive Event Manager Modal (Quản lý các sự kiện lễ hội 30/4, 2/9, 8/3, 1/6, Tết...) */}
+      {user?.role === 'admin' && (
+        <FestiveEventManagerModal
+          isOpen={isEventManagerOpen}
+          onClose={() => setIsEventManagerOpen(false)}
+          onEventUpdated={fetchFestiveEvent}
         />
       )}
     </>

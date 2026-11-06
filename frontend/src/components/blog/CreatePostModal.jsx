@@ -3,6 +3,7 @@ import { postService } from '../../services/postService';
 import { categoryService } from '../../services/categoryService';
 import { uploadService } from '../../services/uploadService';
 import { RichVisualEditor } from './RichVisualEditor';
+import { MediaCameraCaptureModal } from './MediaCameraCaptureModal';
 import { formatPostContent } from '../../utils/contentFormatter';
 import { maskSensitiveText, analyzeContentSafety } from '../../utils/sensitiveFilter';
 
@@ -16,11 +17,15 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
     coverImage: '',
     tags: '',
     showReactionCount: true,
+    visibility: 'public',
     audioMood: 'auto',
+    voiceGender: 'female',
+    voiceRegion: 'north',
   });
 
   const [activeTab, setActiveTab] = useState('edit'); // 'edit' hoặc 'preview'
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [isCoverCameraOpen, setIsCoverCameraOpen] = useState(false);
   const [importingDoc, setImportingDoc] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -89,6 +94,14 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
   const handleRemoveCover = () => {
     setFormData((prev) => ({ ...prev, coverImage: '' }));
     setInfoMsg('');
+  };
+
+  const handleCoverCameraCaptured = (media) => {
+    if (media?.dataUrl) {
+      setFormData((prev) => ({ ...prev, coverImage: media.dataUrl }));
+      setInfoMsg('✓ Đã chụp ảnh bìa trực tiếp từ Camera/Webcam!');
+    }
+    setIsCoverCameraOpen(false);
   };
 
   // ==========================================
@@ -203,6 +216,8 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
         tags: cleanTags,
         showReactionCount: formData.showReactionCount,
         audioMood: formData.audioMood || 'auto',
+        voiceGender: formData.voiceGender || 'female',
+        voiceRegion: formData.voiceRegion || 'north',
       });
 
       if (onPostCreated) {
@@ -333,7 +348,28 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
 
           {/* Ảnh bìa bài viết (Hỗ trợ Ảnh JPG/PNG và Ảnh động GIF 🎬) */}
           <div className="form-group">
-            <label>Ảnh bìa bài viết (Hỗ trợ Ảnh tĩnh & Ảnh động GIF 🎬)</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ margin: 0 }}>Ảnh bìa bài viết (Hỗ trợ JPG/PNG, GIF & Chụp trực tiếp 🎬)</label>
+              <button
+                type="button"
+                className="page-btn"
+                onClick={() => setIsCoverCameraOpen(true)}
+                style={{
+                  fontSize: '0.8rem',
+                  padding: '4px 10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  background: '#ecfdf5',
+                  borderColor: '#6ee7b7',
+                  color: '#047857',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                📸 Chụp từ Camera/Webcam
+              </button>
+            </div>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
               <input
                 type="file"
@@ -438,36 +474,156 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
             />
           </div>
 
-          <div className="form-group" style={{ marginTop: '14px', background: 'rgba(99, 102, 241, 0.05)', padding: '12px 14px', borderRadius: '8px', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-            <label style={{ fontWeight: 700, color: '#4338ca', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+          <div className="form-group" style={{ marginTop: '14px', background: 'rgba(99, 102, 241, 0.05)', padding: '14px 16px', borderRadius: '10px', border: '1px solid rgba(99, 102, 241, 0.25)' }}>
+            <label style={{ fontWeight: 700, color: '#4338ca', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', fontSize: '0.95rem' }}>
               <span>🎧</span>
-              <span>Cài đặt Giọng đọc & Tâm trạng A.I cho bài viết</span>
+              <span>Cài đặt Giọng đọc A.I Tiếng Việt & Ngữ điệu vùng miền</span>
             </label>
-            <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: '#64748b' }}>
-              Người đọc có thể bấm "Nghe đọc" để A.I diễn đọc bài viết bằng giọng tương ứng với cảm xúc bạn chọn.
+            <p style={{ margin: '0 0 12px', fontSize: '0.8rem', color: '#64748b' }}>
+              Bạn có thể chọn giọng đọc Nam hoặc Nữ, ngữ điệu vùng miền (Bắc / Trung / Nam) và tâm trạng mặc định khi người đọc bấm nút "Nghe AI đọc".
             </p>
-            <select
-              name="audioMood"
-              value={formData.audioMood || 'auto'}
-              onChange={handleChange}
-              style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: '1.5px solid #c7d2fe',
-                fontSize: '0.88rem',
-                background: '#ffffff',
-                fontWeight: 600,
-                color: '#1e1b4b',
-              }}
-            >
-              <option value="auto">✨ Tự động theo tâm trạng (A.I tự phân tích cảm xúc từ ngữ)</option>
-              <option value="melancholic">🌧️ Trầm buồn, sâu lắng & vỗ về (Tâm sự đêm muộn, burnout, áp lực)</option>
-              <option value="uplifting">☀️ Vui tươi, tích cực & hứng khởi (Small wins, khởi sắc, truyền cảm hứng)</option>
-              <option value="child">🎈 Hồn nhiên, trong trẻo (Giọng đọc trẻ em đáng yêu)</option>
-              <option value="podcast">🎙️ Podcast truyền cảm (Chuẩn phát thanh viên Storyteller)</option>
-              <option value="custom_voice">🧬 Giọng A.I nhân bản chính chủ (Dùng giọng thu âm của bạn)</option>
-            </select>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '10px' }}>
+              {/* Chọn Giới Tính Giọng Đọc */}
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                  👤 Giới tính giọng đọc:
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, voiceGender: 'female' }))}
+                    style={{
+                      flex: 1,
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: formData.voiceGender === 'female' ? '2px solid #0d9488' : '1px solid #cbd5e1',
+                      background: formData.voiceGender === 'female' ? 'rgba(13, 148, 136, 0.1)' : '#ffffff',
+                      color: formData.voiceGender === 'female' ? '#0d9488' : '#475569',
+                      fontWeight: formData.voiceGender === 'female' ? 700 : 500,
+                      cursor: 'pointer',
+                      fontSize: '0.84rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span>👩</span>
+                    <span>Giọng Nữ</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, voiceGender: 'male' }))}
+                    style={{
+                      flex: 1,
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: formData.voiceGender === 'male' ? '2px solid #0d9488' : '1px solid #cbd5e1',
+                      background: formData.voiceGender === 'male' ? 'rgba(13, 148, 136, 0.1)' : '#ffffff',
+                      color: formData.voiceGender === 'male' ? '#0d9488' : '#475569',
+                      fontWeight: formData.voiceGender === 'male' ? 700 : 500,
+                      cursor: 'pointer',
+                      fontSize: '0.84rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span>👨</span>
+                    <span>Giọng Nam</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Chọn Ngôn Ngữ Vùng Miền */}
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                  📍 Vùng miền đặc trưng:
+                </label>
+                <select
+                  name="voiceRegion"
+                  value={formData.voiceRegion || 'north'}
+                  onChange={handleChange}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: '1.5px solid #c7d2fe',
+                    fontSize: '0.84rem',
+                    background: '#ffffff',
+                    fontWeight: 600,
+                    color: '#1e1b4b',
+                  }}
+                >
+                  <option value="north">🏛️ Miền Bắc (Hà Nội - Chuẩn thanh lịch, đĩnh đạc)</option>
+                  <option value="central">🏖️ Miền Trung (Huế & Đà Nẵng - Da diết, sâu lắng)</option>
+                  <option value="south">🌴 Miền Nam (Sài Gòn - Ngọt ngào, phóng khoáng)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Chọn Cảm Xúc Bài Viết */}
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '4px' }}>
+                🎭 Tâm trạng ngữ điệu:
+              </label>
+              <select
+                name="audioMood"
+                value={formData.audioMood || 'auto'}
+                onChange={handleChange}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1.5px solid #c7d2fe',
+                  fontSize: '0.86rem',
+                  background: '#ffffff',
+                  fontWeight: 600,
+                  color: '#1e1b4b',
+                }}
+              >
+                <option value="auto">✨ Tự động theo tâm trạng (A.I tự phân tích cảm xúc từ ngữ)</option>
+                <option value="melancholic">🌧️ Trầm buồn, sâu lắng & vỗ về (Tâm sự đêm muộn, burnout, áp lực)</option>
+                <option value="uplifting">☀️ Vui tươi, tích cực & hứng khởi (Small wins, khởi sắc, truyền cảm hứng)</option>
+                <option value="child">🎈 Hồn nhiên, trong trẻo (Giọng đọc trẻ em đáng yêu)</option>
+                <option value="podcast">🎙️ Podcast truyền cảm (Chuẩn phát thanh viên Storyteller)</option>
+                <option value="custom_voice">🧬 Giọng A.I nhân bản chính chủ (Dùng giọng thu âm của bạn)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Chế độ hiển thị bài viết (Công khai hoặc Chỉ bạn bè) */}
+          <div className="form-group" style={{ marginTop: '14px', background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <label style={{ fontWeight: 700, color: 'var(--bg-dark)', marginBottom: '8px', display: 'block' }}>
+              🔒 Chế độ hiển thị bài viết
+            </label>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem' }}>
+                <input
+                  type="radio"
+                  name="visibility"
+                  value="public"
+                  checked={formData.visibility === 'public'}
+                  onChange={() => setFormData({ ...formData, visibility: 'public' })}
+                />
+                <span>🌐 <strong>Công khai</strong> (Tất cả mọi người đều đọc được)</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem' }}>
+                <input
+                  type="radio"
+                  name="visibility"
+                  value="friends"
+                  checked={formData.visibility === 'friends'}
+                  onChange={() => setFormData({ ...formData, visibility: 'friends' })}
+                />
+                <span>👥 <strong>Chỉ bạn bè</strong> (Chỉ bạn bè đã kết bạn mới xem được)</span>
+              </label>
+            </div>
           </div>
 
           <div className="form-group" style={{ marginTop: '14px', background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
@@ -505,6 +661,13 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
           </div>
         </form>
       </div>
+
+      {/* Modal Camera / Webcam chụp ảnh bìa trực tiếp */}
+      <MediaCameraCaptureModal
+        isOpen={isCoverCameraOpen}
+        onClose={() => setIsCoverCameraOpen(false)}
+        onMediaCaptured={handleCoverCameraCaptured}
+      />
     </div>
   );
 };

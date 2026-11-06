@@ -19,6 +19,9 @@ export const postService = {
   // Chia sẻ bài viết
   sharePost: (id) => apiClient.post(`/posts/${id}/share`),
 
+  // Chia sẻ bài viết về trang cá nhân (Repost)
+  repostPost: (id) => apiClient.post(`/posts/${id}/repost`),
+
   // Bật/tắt hiển thị số lượng cảm xúc
   toggleReactionVisibility: (id, showReactionCount) =>
     apiClient.patch(`/posts/${id}/reaction-visibility`, { showReactionCount }),
@@ -37,5 +40,11 @@ export const postService = {
 
   // Kiểm duyệt bài viết nhạy cảm (Admin)
   moderatePost: (id, { action, reason }) => apiClient.patch(`/posts/${id}/moderate`, { action, reason }),
+
+  // Lấy danh sách hashtags gợi ý hệ thống
+  getHashtags: () => apiClient.get('/posts/hashtags/list'),
+
+  // Đăng ký lưu thêm một hashtag mới
+  addHashtag: (tag) => apiClient.post('/posts/hashtags/register', { tag }),
 };
 

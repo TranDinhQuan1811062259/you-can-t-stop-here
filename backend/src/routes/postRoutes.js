@@ -12,10 +12,17 @@ import {
   sharePost,
   toggleReactionVisibility,
   moderatePost,
+  getHashtags,
+  addHashtag,
+  repostPost,
 } from '../controllers/postController.js';
-import { protect } from '../middlewares/authMiddleware.js';
+import { protect, optionalProtect } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
+
+// Danh sách hashtags gợi ý
+router.get('/hashtags/list', getHashtags);
+router.post('/hashtags/register', addHashtag);
 
 // Công khai (Khách và Thành viên đều xem được)
 router.get('/', getPosts);
@@ -24,6 +31,7 @@ router.get('/slug/:slug', getPostBySlug);
 router.get('/:id', getPostById);
 router.post('/:id/cheer', cheerPost);
 router.post('/:id/share', sharePost);
+router.post('/:id/repost', protect, repostPost);
 
 // Tương tác yêu cầu đăng nhập
 router.post('/:id/react', protect, reactToPost);
