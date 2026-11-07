@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useChat } from '../../context/ChatContext';
 import { AuthModal } from '../auth/AuthModal';
 import { CreatePostModal } from '../blog/CreatePostModal';
 import { EditProfileModal } from '../auth/EditProfileModal';
@@ -13,63 +12,16 @@ import { postService } from '../../services/postService';
 import { eventService } from '../../services/eventService';
 import { isSoundEnabled, toggleSound, playClickSound, playFestiveEventSound } from '../../utils/soundEffects';
 import { getActiveSeason, setActiveSeason, SEASONS } from '../../utils/seasonUtils';
-import { chatService } from '../../services/chatService';
 import { formatDate } from '../../utils/formatDate';
-import { getActiveTheme, toggleTheme, THEMES } from '../../utils/themeUtils';
-
-const MOCK_RECENT_CONVERSATIONS = [
-  {
-    _id: 'conv_huong_ly',
-    otherUser: {
-      _id: 'user_huong_ly',
-      name: 'Hương Ly',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-      chatStatus: 'online',
-      isFriend: false,
-    },
-    isStranger: true,
-    status: 'pending',
-    unreadCount: 1,
-    lastMessage: {
-      content: 'Chào anh Quân, em đọc bài viết burnout của anh thấy đồng cảm quá...',
-      createdAt: '2026-11-05T15:20:00.000Z',
-    },
-  },
-  {
-    _id: 'conv_duc_huy',
-    otherUser: {
-      _id: '67c9c0000000000000000003',
-      name: 'Đức Huy',
-      avatar: '/images/man.jpg',
-      chatStatus: 'online',
-      isFriend: true,
-    },
-    isStranger: false,
-    status: 'accepted',
-    unreadCount: 0,
-    lastMessage: {
-      content: 'Dạ em cảm ơn anh Quân đã động viên và góp ý bài viết cho em nha!',
-      createdAt: '2026-11-05T14:45:00.000Z',
-    },
-  },
-  {
-    _id: 'conv_thanh_nam',
-    otherUser: {
-      _id: '67c9c0000000000000000004',
-      name: 'Thành Nam',
-      avatar: '/images/man.jpg',
-      chatStatus: 'online',
-      isFriend: true,
-    },
-    isStranger: false,
-    status: 'accepted',
-    unreadCount: 0,
-    lastMessage: {
-      content: 'Cảm ơn Quân nhiều nhé, hôm nào rảnh anh em mình cafe tán gẫu tiếp.',
-      createdAt: '2026-11-05T10:15:00.000Z',
-    },
-  },
-];
+import {
+  startWeatherAmbient,
+  stopWeatherAmbient,
+  startEventAmbient,
+  stopEventAmbient,
+  getAmbientState,
+  setMelodicSeason,
+  MELODIC_SEASONS,
+} from '../../utils/ambientSoundEngine';
 
 export const Header = () => {
   const {
@@ -82,20 +34,40 @@ export const Header = () => {
     openProfileModal,
     closeProfileModal,
   } = useAuth();
-  const { openDrawer, openChatWithUser, unreadCount } = useChat();
 
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
   const [activeSeason, setLocalSeason] = useState(() => getActiveSeason());
   const [isSeasonOpen, setIsSeasonOpen] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState(() => getActiveTheme());
   const [isModerationOpen, setIsModerationOpen] = useState(false);
   const [flaggedCount, setFlaggedCount] = useState(0);
   const [isEventManagerOpen, setIsEventManagerOpen] = useState(false);
   const [isShowcaseModalOpen, setIsShowcaseModalOpen] = useState(false);
   const [activeFestiveEvent, setActiveFestiveEvent] = useState(null);
   const [isWellnessOpen, setIsWellnessOpen] = useState(false);
+
+  // States cho Âm Thanh Môi Trường Duy Trì (Ambient Soundscape Engine)
+  const [ambientState, setAmbientState] = useState(() => getAmbientState());
+  const [isAmbientMenuOpen, setIsAmbientMenuOpen] = useState(false);
+  const ambientMenuRef = useRef(null);
+
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') || '');
+
+  useEffect(() => {
+    setSearchTerm(searchParams.get('q') || '');
+  }, [searchParams]);
+
+  const handleSearchSubmit = (e) => {
+    e?.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/?q=${encodeURIComponent(searchTerm.trim())}`);
+    } else {
+      navigate('/');
+    }
+  };
 
   const fetchFestiveEvent = () => {
     eventService
@@ -160,23 +132,7 @@ export const Header = () => {
     };
   }, [user]);
 
-  // Dropdown danh sách tin nhắn gần nhất từ nút Tin nhắn trên Header
-  const [isMsgDropdownOpen, setIsMsgDropdownOpen] = useState(false);
-  const [recentConvList, setRecentConvList] = useState([]);
-  const [loadingConvs, setLoadingConvs] = useState(false);
-
   const seasonRef = useRef(null);
-  const msgDropdownRef = useRef(null);
-  const navigate = useNavigate();
-
-  // Lắng nghe đổi theme Ngày / Đêm
-  useEffect(() => {
-    const handleThemeChange = (e) => {
-      setCurrentTheme(e.detail || getActiveTheme());
-    };
-    window.addEventListener('freedom_theme_changed', handleThemeChange);
-    return () => window.removeEventListener('freedom_theme_changed', handleThemeChange);
-  }, []);
 
   // Lắng nghe toggle sound
   useEffect(() => {
@@ -196,50 +152,28 @@ export const Header = () => {
     return () => window.removeEventListener('freedom_season_changed', handleSeasonChange);
   }, []);
 
-  // Đóng dropdown mùa & dropdown tin nhắn khi click ra ngoài
+  // Lắng nghe thay đổi âm thanh môi trường duy trì
+  useEffect(() => {
+    const handleAmbientChange = (e) => {
+      setAmbientState(e.detail || getAmbientState());
+    };
+    window.addEventListener('freedom_ambient_sound_changed', handleAmbientChange);
+    return () => window.removeEventListener('freedom_ambient_sound_changed', handleAmbientChange);
+  }, []);
+
+  // Đóng dropdown mùa & âm thanh môi trường khi click ra ngoài
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (seasonRef.current && !seasonRef.current.contains(e.target)) {
         setIsSeasonOpen(false);
       }
-      if (msgDropdownRef.current && !msgDropdownRef.current.contains(e.target)) {
-        setIsMsgDropdownOpen(false);
+      if (ambientMenuRef.current && !ambientMenuRef.current.contains(e.target)) {
+        setIsAmbientMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Mở/Đóng dropdown tin nhắn & Tải các cuộc trò chuyện gần nhất
-  const handleToggleMsgDropdown = () => {
-    const nextState = !isMsgDropdownOpen;
-    setIsMsgDropdownOpen(nextState);
-
-    if (nextState) {
-      setLoadingConvs(true);
-      chatService
-        .getConversations({ sortBy: 'recent' })
-        .then((res) => {
-          if (res.data && res.data.length > 0) {
-            setRecentConvList(res.data);
-          } else {
-            setRecentConvList(MOCK_RECENT_CONVERSATIONS);
-          }
-        })
-        .catch(() => {
-          // Dự phòng an toàn nếu backend offline
-          setRecentConvList(MOCK_RECENT_CONVERSATIONS);
-        })
-        .finally(() => setLoadingConvs(false));
-    }
-  };
-
-  // Bấm vào 1 người trong list tin nhắn: Mở chi tiết cuộc trò chuyện ngay bên chatbox!
-  const handleOpenConversation = (targetUser) => {
-    setIsMsgDropdownOpen(false);
-    closeNav();
-    openChatWithUser(targetUser);
-  };
 
   const toggleNav = () => setIsNavOpen((prev) => !prev);
   const closeNav = () => setIsNavOpen(false);
@@ -253,7 +187,61 @@ export const Header = () => {
     const nextSeason = setActiveSeason(seasonId);
     setLocalSeason(nextSeason);
     setIsSeasonOpen(false);
+    if (ambientState.isWeatherSoundActive) {
+      startWeatherAmbient(nextSeason.id);
+    }
+    // Tự động đồng bộ bài ngân nga theo mùa mới
+    setMelodicSeason(nextSeason.id);
   };
+
+  const handleToggleWeatherAmbient = () => {
+    playClickSound();
+    if (ambientState.isWeatherSoundActive) {
+      stopWeatherAmbient();
+    } else {
+      startWeatherAmbient(activeSeason.id);
+    }
+  };
+
+  const handleToggleEventAmbient = () => {
+    playClickSound();
+    if (ambientState.isEventSoundActive) {
+      stopEventAmbient();
+    } else {
+      const targetMelody = ambientState.currentMelodicSeasonId || activeSeason?.id || 'winter';
+      startEventAmbient(targetMelody);
+    }
+  };
+
+  const handleSelectMelodicSeason = (seasonId) => {
+    playClickSound();
+    setMelodicSeason(seasonId);
+    if (!ambientState.isEventSoundActive) {
+      startEventAmbient(seasonId);
+    }
+  };
+
+  const handleSelectFestiveEventMelody = () => {
+    playClickSound();
+    if (activeFestiveEvent) {
+      startEventAmbient(activeFestiveEvent.id || 'festive');
+    }
+  };
+
+  const isSpecialEventMelodyPlaying =
+    ambientState.isEventSoundActive &&
+    !['spring', 'summer', 'autumn', 'winter'].includes(ambientState.currentEventId);
+
+  const activeMelodyKey = ambientState.currentMelodicSeasonId || activeSeason?.id || 'winter';
+  const currentMelodyMeta = isSpecialEventMelodyPlaying && activeFestiveEvent
+    ? {
+        id: activeFestiveEvent.id,
+        name: activeFestiveEvent.name,
+        title: activeFestiveEvent.shortName || activeFestiveEvent.name,
+        desc: activeFestiveEvent.bannerDesc || 'Bản hòa tấu sự kiện lễ hội tưng bừng',
+        icon: activeFestiveEvent.icon || '🎊',
+      }
+    : (MELODIC_SEASONS[activeMelodyKey] || MELODIC_SEASONS.winter);
 
   return (
     <>
@@ -368,310 +356,343 @@ export const Header = () => {
               </div>
             )}
 
-            {/* Nút Ngày / Đêm trên Header dạng icon tròn tinh gọn chống tràn */}
-            <button
-              type="button"
-              className={`header-theme-toggle-btn theme-${currentTheme}`}
-              onClick={() => {
-                const next = toggleTheme();
-                setCurrentTheme(next);
-              }}
-              title={
-                currentTheme === 'light'
-                  ? 'Chế độ Ngày (Ánh vàng ấm). Bấm để chuyển sang Chế độ Đêm 🌙'
-                  : 'Chế độ Đêm (Màu tối dịu mắt). Bấm để chuyển sang Chế độ Ngày ☀️'
-              }
-              aria-label="Đổi chế độ Ngày/Đêm"
-            >
-              <span className="theme-toggle-icon">{currentTheme === 'light' ? '☀️' : '🌙'}</span>
-            </button>
-          </div>
-
-          {/* Mobile Hamburger Toggle Button */}
-          <button
-            className="mobile-menu-btn"
-            onClick={toggleNav}
-            aria-label="Toggle Navigation"
-          >
-            {isNavOpen ? '✕' : '☰'}
-          </button>
-
-          {/* Navigation Links & Action cluster (Spacious, beautifully aligned) */}
-          <ul className={`nav-menu ${isNavOpen ? 'open' : ''}`}>
-            <li>
-              <NavLink
-                to="/"
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                onClick={closeNav}
-                end
-              >
-                Trang Chủ
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="/category/ap-luc-kiet-suc-burnout"
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                onClick={closeNav}
-              >
-                Burnout
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="/category/chuyen-nganh-bat-dau-lai-restart"
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                onClick={closeNav}
-              >
-                Bắt Đầu Lại
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="/category/nhung-tia-sang-dong-luc-small-wins"
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-                onClick={closeNav}
-              >
-                Small Wins
-              </NavLink>
-            </li>
-            <li>
+            {/* Cụm Điều Khiển Âm Thanh Môi Trường Duy Trì (Ambient Soundscape Engine) */}
+            <div className="header-ambient-sound-wrap" ref={ambientMenuRef} style={{ position: 'relative' }}>
               <button
                 type="button"
-                className="nav-link header-wellness-btn"
+                className={`header-ambient-btn ${ambientState.isWeatherSoundActive || ambientState.isEventSoundActive ? 'is-active' : ''}`}
                 onClick={() => {
-                  setIsWellnessOpen(true);
-                  closeNav();
+                  playClickSound();
+                  setIsAmbientMenuOpen((prev) => !prev);
                 }}
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: ambientState.isWeatherSoundActive || ambientState.isEventSoundActive
+                    ? 'linear-gradient(135deg, #0d9488, #059669)'
+                    : 'rgba(255, 255, 255, 0.08)',
+                  border: ambientState.isWeatherSoundActive || ambientState.isEventSoundActive
+                    ? '1.5px solid #2dd4bf'
+                    : '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#ffffff',
+                  display: 'flex',
                   alignItems: 'center',
-                  gap: '5px',
-                  color: '#0d9488',
-                  fontWeight: 700,
-                  fontSize: '0.86rem',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: '0.88rem',
+                  position: 'relative',
+                  transition: 'all 0.2s ease',
+                  boxShadow: ambientState.isWeatherSoundActive || ambientState.isEventSoundActive
+                    ? '0 2px 10px rgba(13, 148, 136, 0.4)'
+                    : 'none',
                 }}
-                title="Trạm xả stress, máy xé giấy deadline & bài tập thở 4-7-8"
+                title={
+                  ambientState.isCombined
+                    ? 'Đang phát Hòa âm Kết hợp (Thời tiết 4 mùa + Sự kiện lễ hội)'
+                    : ambientState.isWeatherSoundActive
+                    ? `Đang phát Âm thanh Thời tiết ${activeSeason.name}`
+                    : ambientState.isEventSoundActive
+                    ? 'Đang phát Âm thanh Sự kiện Lễ hội'
+                    : 'Cài đặt âm thanh môi trường duy trì (Gió mùa đông, sóng biển, tiếng chim hót...)'
+                }
+                aria-label="Âm thanh môi trường duy trì"
               >
-                <span>🌿</span>
-                <span>Xả Stress</span>
-              </button>
-            </li>
-
-            {/* Auth Actions inside Nav (Spacious & Clean Layout) */}
-            <li className="header-auth-group">
-              {(isAuthenticated || !!user) ? (
-                <div className="header-user-badge">
-                  {/* Bấm vào avatar hoặc tên để xem trang cá nhân */}
-                  <Link
-                    to={`/profile/${user?._id}`}
-                    className="header-profile-click"
-                    onClick={closeNav}
-                    title={user?.name}
-                  >
-                    <img
-                      src={
-                        user?.avatar && !user?.avatar.includes('google_avatar')
-                          ? user?.avatar
-                          : ((user?.role === 'admin' || user?.email === 'anthonyq012025@gmail.com')
-                              ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg'
-                              : '/images/man.jpg')
-                      }
-                      alt={user?.name}
-                      onError={(e) => {
-                        e.target.src = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
-                      }}
-                      className="header-avatar"
-                    />
-                    <span className="header-username-text">
-                      {user?.name?.split('(')[0]?.trim() || user?.name}
-                    </span>
-                    {user?.role === 'admin' && (
-                      <span className="admin-badge-tag">
-                        ADMIN
-                      </span>
-                    )}
-                  </Link>
-
-                  {/* Nút Tài khoản */}
-                  <button
-                    type="button"
-                    className="header-account-btn"
-                    onClick={() => {
-                      openProfileModal();
-                      closeNav();
+                <span>
+                  {ambientState.isCombined ? '🎶' : ambientState.isWeatherSoundActive ? activeSeason.icon : ambientState.isEventSoundActive ? '🎊' : '🔈'}
+                </span>
+                {(ambientState.isWeatherSoundActive || ambientState.isEventSoundActive) && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-1px',
+                      right: '-1px',
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      background: '#4ade80',
+                      border: '1.5px solid #ffffff',
+                      animation: 'pulseDot 1.2s infinite alternate',
                     }}
-                    title="Cài đặt thông tin tài khoản, giao diện & nhạc nền"
-                  >
-                    <span className="btn-icon">⚙️</span>
-                    <span>Tài khoản</span>
-                  </button>
+                  />
+                )}
+              </button>
 
-                  {/* Nút Quản lý Lễ Hội (Chỉ Admin) - Chỉ hiển thị khi chưa có sự kiện nào kích hoạt trên thanh để tránh trùng lặp */}
-                  {user?.role === 'admin' && !activeFestiveEvent && (
-                    <button
-                      type="button"
-                      className="header-festive-btn"
-                      onClick={() => {
-                        setIsEventManagerOpen(true);
-                        closeNav();
-                      }}
-                      title="Quản lý sự kiện lễ hội trong năm (30/4, 2/9, 8/3, 1/6, Tết...)"
-                      style={{ padding: '5px 8px', minWidth: '32px' }}
-                    >
-                      <span className="btn-icon">🎊</span>
-                    </button>
-                  )}
-
-                  {/* Nút Tin nhắn kèm Dropdown Danh sách tin nhắn mới nhất */}
-                  <div className="header-chat-dropdown-wrap" ref={msgDropdownRef}>
-                    <button
-                      type="button"
-                      className={`header-chat-btn ${isMsgDropdownOpen ? 'active' : ''}`}
-                      onClick={handleToggleMsgDropdown}
-                      title="Bấm để xem danh sách tin nhắn gửi cuối cùng"
-                    >
-                      <span className="btn-icon">💬</span>
-                      <span>Tin nhắn</span>
-                      {unreadCount > 0 && <span className="header-chat-badge">{unreadCount}</span>}
-                      <span className="header-chat-arrow">{isMsgDropdownOpen ? '▴' : '▾'}</span>
-                    </button>
-
-                    {/* Dropdown danh sách tin nhắn mới nhất */}
-                    {isMsgDropdownOpen && (
-                      <div className="header-msg-dropdown-popover">
-                        <div className="header-msg-dropdown-header">
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <strong style={{ fontSize: '0.88rem', color: '#0f172a' }}>
-                              💬 Hộp Thư Tin Nhắn
-                            </strong>
-                            <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Gần đây</span>
-                          </div>
-                          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
-                            Bấm vào để xem và nhắn tin chi tiết ngay trong chatbox
-                          </span>
-                        </div>
-
-                        <div className="header-msg-dropdown-list">
-                          {loadingConvs ? (
-                            <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '0.82rem' }}>
-                              Đang tải danh sách tin nhắn...
-                            </div>
-                          ) : recentConvList.length === 0 ? (
-                            <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '0.82rem' }}>
-                              Chưa có cuộc trò chuyện nào
-                            </div>
-                          ) : (
-                            recentConvList.map((c) => {
-                              const other = c.otherUser || {};
-                              const isPendingStranger = c.isStranger && c.status === 'pending';
-
-                              return (
-                                <div
-                                  key={c._id}
-                                  className={`header-msg-conv-item ${c.unreadCount > 0 ? 'unread' : ''}`}
-                                  onClick={() => handleOpenConversation(other)}
-                                  title={`Xem chi tiết tin nhắn với ${other.name}`}
-                                >
-                                  <div className="header-msg-avatar-box">
-                                    <img
-                                      src={other.avatar || '/images/man.jpg'}
-                                      alt={other.name}
-                                      className="header-msg-avatar"
-                                    />
-                                    <span
-                                      className={`header-msg-status-dot ${
-                                        other.chatStatus === 'busy' ? 'busy' : other.chatStatus === 'offline' ? 'offline' : 'online'
-                                      }`}
-                                    />
-                                  </div>
-
-                                  <div className="header-msg-meta">
-                                    <div className="header-msg-title-row">
-                                      <strong className="header-msg-name">{other.name}</strong>
-                                      <span className="header-msg-time">
-                                        {formatDate(c.lastMessage?.createdAt || c.updatedAt)}
-                                      </span>
-                                    </div>
-                                    <div className="header-msg-sub-row">
-                                      <span className="header-msg-snippet">
-                                        {isPendingStranger
-                                          ? '⚠️ Tin nhắn chờ từ người lạ...'
-                                          : c.lastMessage?.content || 'Bắt đầu cuộc trò chuyện...'}
-                                      </span>
-                                      {c.unreadCount > 0 && (
-                                        <span className="header-msg-unread-pill">{c.unreadCount}</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-
-                        <div className="header-msg-dropdown-footer">
-                          <button
-                            type="button"
-                            className="header-msg-view-all-btn"
-                            onClick={() => {
-                              setIsMsgDropdownOpen(false);
-                              openDrawer('messages');
-                              closeNav();
-                            }}
-                          >
-                            <span>Xem tất cả tin nhắn & Bạn bè</span>
-                            <span>&rarr;</span>
-                          </button>
-                        </div>
-                      </div>
+              {/* Popover Tùy Chọn Âm Thanh Môi Trường Duy Trì */}
+              {isAmbientMenuOpen && (
+                <div className="header-ambient-dropdown">
+                  <div className="ambient-dropdown-header">
+                    <div className="ambient-dropdown-title-wrap">
+                      <span className="ambient-title-icon">🎧</span>
+                      <strong className="ambient-title-text">
+                        Âm Thanh Môi Trường
+                      </strong>
+                    </div>
+                    {ambientState.isCombined && (
+                      <span className="ambient-combined-badge">
+                        Hòa Âm Kép
+                      </span>
                     )}
                   </div>
 
-                  {/* Nút Đăng xuất - Nổi bật, có icon, luôn luôn hiển thị rõ ràng */}
-                  <button
-                    type="button"
-                    className="header-logout-btn"
-                    onClick={() => {
-                      logout();
-                      closeNav();
-                    }}
-                    title="Đăng xuất khỏi tài khoản"
-                  >
-                    <span className="btn-icon">🚪</span>
-                    <span>Đăng xuất</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="header-guest-btns">
-                  <button
-                    type="button"
-                    className="nav-btn-login"
-                    onClick={() => {
-                      openLoginModal();
-                      closeNav();
-                    }}
-                  >
-                    Đăng Nhập
-                  </button>
-                  <button
-                    type="button"
-                    className="nav-btn-register"
-                    onClick={() => {
-                      openRegisterModal();
-                      closeNav();
-                    }}
-                  >
-                    Đăng Ký
-                  </button>
+                  {/* Mục 1: Âm thanh thời tiết 4 mùa */}
+                  <div className={`ambient-card ambient-card-weather ${ambientState.isWeatherSoundActive ? 'is-active' : ''}`}>
+                    <div className="ambient-card-info">
+                      <div className="ambient-card-title-row">
+                        <span>{activeSeason.icon}</span>
+                        <strong className="ambient-card-title">
+                          {activeSeason.name}
+                        </strong>
+                      </div>
+                      <p className="ambient-card-desc">
+                        {activeSeason.id === 'winter'
+                          ? 'Gió bấc rít êm & lò sưởi ấm'
+                          : activeSeason.id === 'summer'
+                          ? 'Sóng biển rì rào & ve sầu'
+                          : activeSeason.id === 'spring'
+                          ? 'Gió xuân & chim hót líu lo'
+                          : 'Lá xào xạc & mưa phùn'}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleToggleWeatherAmbient}
+                      className={`ambient-toggle-btn ${ambientState.isWeatherSoundActive ? 'weather-btn-active' : 'is-inactive'}`}
+                      title={ambientState.isWeatherSoundActive ? 'Bấm để tắt âm thanh thời tiết' : 'Bấm để bật âm thanh thời tiết'}
+                    >
+                      {ambientState.isWeatherSoundActive ? 'ĐANG BẬT' : 'BẬT'}
+                    </button>
+                  </div>
+
+                  {/* Mục 2: Âm hưởng ngân nga 4 Mùa & Lễ hội (Mỗi mùa 1 bài riêng biệt) */}
+                  <div className={`ambient-card ambient-card-event ambient-card-melody ${ambientState.isEventSoundActive ? 'is-active' : ''}`}>
+                    <div className="ambient-card-melody-top">
+                      <div className="ambient-card-info">
+                        <div className="ambient-card-title-row">
+                          <span>{currentMelodyMeta.icon}</span>
+                          <strong className="ambient-card-title" title={currentMelodyMeta.title}>
+                            {currentMelodyMeta.title}
+                          </strong>
+                        </div>
+                        <p className="ambient-card-desc" title={currentMelodyMeta.desc}>
+                          {currentMelodyMeta.desc}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleToggleEventAmbient}
+                        className={`ambient-toggle-btn ${ambientState.isEventSoundActive ? 'event-btn-active' : 'is-inactive'}`}
+                        title={ambientState.isEventSoundActive ? 'Bấm để tắt âm hưởng' : 'Bấm để bật âm hưởng'}
+                      >
+                        {ambientState.isEventSoundActive ? 'ĐANG BẬT' : 'BẬT'}
+                      </button>
+                    </div>
+
+                    {/* Hàng nút chuyển bài theo Mùa (4 Mùa + Sự kiện nếu có) */}
+                    <div className={`ambient-melody-row ${activeFestiveEvent ? 'has-festive' : ''}`}>
+                      {Object.values(MELODIC_SEASONS).map((mSeason) => {
+                        const isSelected = !isSpecialEventMelodyPlaying && activeMelodyKey === mSeason.id;
+                        return (
+                          <button
+                            key={mSeason.id}
+                            type="button"
+                            className={`ambient-melody-pill ${isSelected ? 'is-active' : ''}`}
+                            onClick={() => handleSelectMelodicSeason(mSeason.id)}
+                            title={`Nghe bài: ${mSeason.title} (${mSeason.name})`}
+                          >
+                            <span>{mSeason.icon}</span>
+                            <span>{mSeason.name.replace('Mùa ', '')}</span>
+                          </button>
+                        );
+                      })}
+
+                      {activeFestiveEvent && (
+                        <button
+                          type="button"
+                          className={`ambient-melody-pill ${isSpecialEventMelodyPlaying ? 'is-active' : ''}`}
+                          onClick={handleSelectFestiveEventMelody}
+                          title={`Giai điệu sự kiện: ${activeFestiveEvent.name}`}
+                        >
+                          <span>{activeFestiveEvent.icon || '🎊'}</span>
+                          <span>Sự kiện</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Ghi chú Audio Ducking */}
+                  <div className="ambient-ducking-tip">
+                    💡 <em>Khi bạn mở nhạc cá nhân, âm thanh môi trường sẽ tự động chìm nhẹ để nhường chỗ cho bài hát!</em>
+                  </div>
                 </div>
               )}
-            </li>
-          </ul>
+            </div>
+          </div>
+
+          {/* Cụm Giữa Hàng 1: Thanh Tìm Kiếm Thông Minh & Khẩu Hiệu (Lấp đầy khoảng trống trung tâm) */}
+          <div className="header-top-center">
+            <form className="header-search-form" onSubmit={handleSearchSubmit}>
+              <span className="header-search-icon">🔍</span>
+              <input
+                type="text"
+                placeholder="Tìm kiếm tâm sự, lời khuyên, bài viết..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="header-search-input"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  className="header-search-clear"
+                  onClick={() => {
+                    setSearchTerm('');
+                    navigate('/');
+                  }}
+                  title="Xóa tìm kiếm"
+                >
+                  ✕
+                </button>
+              )}
+            </form>
+
+            <div className="header-daily-quote-pill" title="Slogan truyền động lực cộng đồng Freedom">
+              <span className="quote-sparkle">✨</span>
+              <span className="quote-text">Chậm lại để nghỉ ngơi, đừng dừng lại!</span>
+            </div>
+          </div>
+
+          {/* User Profile / Admin / Auth actions (Cực kỳ thoáng đãng ở góc phải hàng 1) */}
+          <div className="header-user-wrap">
+            {(isAuthenticated || !!user) ? (
+              <div className="header-user-badge">
+                <Link
+                  to={`/profile/${user?._id}`}
+                  className="header-profile-click"
+                  title={`Xem hồ sơ cá nhân: ${user?.name}`}
+                >
+                  <img
+                    src={
+                      user?.avatar && !user?.avatar.includes('google_avatar')
+                        ? user?.avatar
+                        : ((user?.role === 'admin' || user?.email === 'anthonyq012025@gmail.com')
+                            ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg'
+                            : '/images/man.jpg')
+                    }
+                    alt={user?.name}
+                    onError={(e) => {
+                      e.target.src = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
+                    }}
+                    className="header-avatar"
+                  />
+                  <span className="header-username-text">
+                    {user?.name?.split('(')[0]?.trim() || user?.name}
+                  </span>
+                  {user?.role === 'admin' && (
+                    <span className="admin-badge-tag">ADMIN</span>
+                  )}
+                </Link>
+
+                {/* Nút Tài khoản */}
+                <button
+                  type="button"
+                  className="header-account-btn"
+                  onClick={openProfileModal}
+                  title="Cài đặt thông tin tài khoản, giao diện & nhạc nền"
+                >
+                  <span className="btn-icon">⚙️</span>
+                  <span>Tài khoản</span>
+                </button>
+
+                {/* Nút Quản lý Lễ Hội (Chỉ Admin) */}
+                {user?.role === 'admin' && !activeFestiveEvent && (
+                  <button
+                    type="button"
+                    className="header-festive-btn"
+                    onClick={() => setIsEventManagerOpen(true)}
+                    title="Quản lý sự kiện lễ hội trong năm (30/4, 2/9, 8/3, 1/6, Tết...)"
+                    style={{ padding: '5px 8px', minWidth: '32px' }}
+                  >
+                    <span className="btn-icon">🎊</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="header-guest-btns">
+                <button
+                  type="button"
+                  className="nav-btn-login"
+                  onClick={openLoginModal}
+                >
+                  Đăng Nhập
+                </button>
+                <button
+                  type="button"
+                  className="nav-btn-register"
+                  onClick={openRegisterModal}
+                >
+                  Đăng Ký
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* ========================================================
+            HÀNG 2: DEDICATED DASHBOARD NAVIGATION BAR (THANH DASHBOARD 3D RIÊNG)
+            4 Dashboard chính + Trạm xả stress với hiệu ứng bóng mờ & 3D nổi khối
+           ======================================================== */}
+        <nav className="header-dashboard-bar" aria-label="Dashboard Navigation">
+          <div className="dashboard-bar-container">
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) => `dashboard-3d-item tab-home ${isActive ? 'active' : ''}`}
+              title="Dashboard: Trang Chủ Tổng Hợp"
+            >
+              <span className="item-icon">🏠</span>
+              <span className="item-label">Trang Chủ</span>
+            </NavLink>
+
+            <NavLink
+              to="/category/ap-luc-kiet-suc-burnout"
+              className={({ isActive }) => `dashboard-3d-item tab-burnout ${isActive ? 'active' : ''}`}
+              title="Dashboard: Áp Lực & Kiệt Sức (Burnout)"
+            >
+              <span className="item-icon">🔥</span>
+              <span className="item-label">Burnout</span>
+            </NavLink>
+
+            <NavLink
+              to="/category/chuyen-nganh-bat-dau-lai-restart"
+              className={({ isActive }) => `dashboard-3d-item tab-restart ${isActive ? 'active' : ''}`}
+              title="Dashboard: Chuyển Ngành & Bắt Đầu Lại (Restart)"
+            >
+              <span className="item-icon">🌱</span>
+              <span className="item-label">Bắt Đầu Lại</span>
+            </NavLink>
+
+            <NavLink
+              to="/category/nhung-tia-sang-dong-luc-small-wins"
+              className={({ isActive }) => `dashboard-3d-item tab-wins ${isActive ? 'active' : ''}`}
+              title="Dashboard: Những Tia Sáng & Động Lực (Small Wins)"
+            >
+              <span className="item-icon">✨</span>
+              <span className="item-label">Small Wins</span>
+            </NavLink>
+
+            <button
+              type="button"
+              className="dashboard-3d-item tab-wellness"
+              onClick={() => setIsWellnessOpen(true)}
+              title="Trạm xả stress, máy xé giấy deadline & bài tập thở 4-7-8"
+            >
+              <span className="item-icon">🌿</span>
+              <span className="item-label">Xả Stress</span>
+            </button>
+          </div>
+        </nav>
       </header>
 
       {/* Auth Modal (Login / Register Popup) */}

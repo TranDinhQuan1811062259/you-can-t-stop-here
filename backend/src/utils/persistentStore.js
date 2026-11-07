@@ -172,10 +172,14 @@ export const defaultStoreUsers = [
 ];
 
 export const defaultStoreCategories = [
-  { _id: 'cat_1', name: 'Áp lực & Kiệt sức (Burnout)', slug: 'ap-luc-kiet-suc-burnout', description: 'OT, deadline và cạn kiệt năng lượng' },
-  { _id: 'cat_2', name: 'Khủng hoảng nghề nghiệp (Career Crisis)', slug: 'khung-hoang-nghe-nghiep-career-crisis', description: 'Chênh vênh giữa tiếp tục hay từ bỏ' },
-  { _id: 'cat_3', name: 'Chuyển ngành & Bắt đầu lại (Restart)', slug: 'chuyen-nganh-bat-dau-lai-restart', description: 'Can đảm làm lại từ con số 0' },
-  { _id: 'cat_4', name: 'Những tia sáng & Động lực (Small Wins)', slug: 'nhung-tia-sang-dong-luc-small-wins', description: 'Thành tựu nhỏ bé nuôi dưỡng hi vọng' },
+  { _id: 'cat_1', name: 'Áp lực & Kiệt sức (Burnout)', slug: 'ap-luc-kiet-suc-burnout', description: 'OT, deadline và cạn kiệt năng lượng', icon: '😫' },
+  { _id: 'cat_2', name: 'Khủng hoảng nghề nghiệp (Career Crisis)', slug: 'khung-hoang-nghe-nghiep-career-crisis', description: 'Chênh vênh giữa tiếp tục hay từ bỏ', icon: '🧭' },
+  { _id: 'cat_3', name: 'Chuyển ngành & Bắt đầu lại (Restart)', slug: 'chuyen-nganh-bat-dau-lai-restart', description: 'Can đảm làm lại từ con số 0', icon: '🌱' },
+  { _id: 'cat_4', name: 'Những tia sáng & Động lực (Small Wins)', slug: 'nhung-tia-sang-dong-luc-small-wins', description: 'Thành tựu nhỏ bé nuôi dưỡng hi vọng', icon: '✨' },
+  { _id: 'cat_5', name: 'Thời Sự & Tình Hình Thế Giới (Global Affairs)', slug: 'thoi-su-tinh-hinh-the-gioi', description: 'Điểm tin thời cuộc, diễn biến quốc tế & góc nhìn toàn cầu', icon: '🌍' },
+  { _id: 'cat_6', name: 'Chiến Sự, Xung Đột & Hòa Bình (Conflict & Peace)', slug: 'chien-su-xung-dot-hoa-binh', description: 'Bình luận chiến sự, góc nhìn nhân đạo & khát vọng hòa bình', icon: '🕊️' },
+  { _id: 'cat_7', name: 'Góc Nhìn & Xã Hội (Perspective & Society)', slug: 'goc-nhin-xa-hoi', description: 'Quan điểm đa chiều về thời cuộc và đời sống xã hội', icon: '🌐' },
+  { _id: 'cat_8', name: 'Tâm Sự & Đời Sống Thường Nhật (Life Stories)', slug: 'tam-su-doi-song-thuong-nhat', description: 'Những dòng tâm sự thật, trải lòng không phán xét', icon: '☕' },
 ];
 
 export const defaultStoreConversations = [

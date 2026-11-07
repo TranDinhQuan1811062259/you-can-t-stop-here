@@ -108,17 +108,22 @@ export const AuthProvider = ({ children }) => {
       const oauthProvider = urlParams.get('provider');
       const oauthName = urlParams.get('name');
       const oauthEmail = urlParams.get('email');
+      const oauthAvatar = urlParams.get('avatar');
 
       if (oauthStatus === 'success' && oauthToken) {
         const isGoogle = oauthProvider === 'google';
+        const isFbOrGh = oauthProvider === 'facebook' || oauthProvider === 'github';
+        const defaultGhAvatar = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=80';
+        const decodedAvatar = oauthAvatar ? decodeURIComponent(oauthAvatar) : '';
+
         const rawUser = {
           _id: `u_${oauthProvider || 'oauth'}_${Date.now()}`,
           name: oauthName ? decodeURIComponent(oauthName) : (isGoogle ? 'Đơn Thân Mẹ' : 'Anthony Quân (Trần Đình Quân)'),
           email: oauthEmail ? decodeURIComponent(oauthEmail) : 'anthonyq012025@gmail.com',
-          role: 'admin',
+          role: (oauthEmail && (oauthEmail === 'anthonyq012025@gmail.com' || oauthEmail.startsWith('admin@'))) ? 'admin' : (isFbOrGh ? 'admin' : 'user'),
           isAdmin: true,
-          avatar: ADMIN_AVATAR,
-          jobTitle: 'System Admin & Lead Dev',
+          avatar: decodedAvatar || (oauthProvider === 'github' ? defaultGhAvatar : ADMIN_AVATAR),
+          jobTitle: oauthProvider === 'github' ? 'Senior Software Engineer' : (oauthProvider === 'facebook' ? 'Content Creator & Connect' : 'System Admin & Lead Dev'),
           authProvider: oauthProvider || 'oauth',
         };
         const safeUser = ensureAdminPrivileges(rawUser);

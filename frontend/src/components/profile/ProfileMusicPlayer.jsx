@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { extractYouTubeId, extractSpotifyId, extractTikTokId, MUSIC_PRESETS } from '../../utils/musicPresets';
+import { duckAmbientForMusic, restoreAmbientFromMusic } from '../../utils/ambientSoundEngine';
 
 const QUALITY_MAP = {
   standard: { label: '🌱 128k', title: 'Chất lượng tiêu chuẩn (128 kbps)' },
@@ -110,6 +111,21 @@ export const ProfileMusicPlayer = ({ musicConfig, authorName, isSelf, onOpenSett
     syncYouTubeVolume(volume, isMuted);
     localStorage.setItem('freedom_music_volume', String(volume));
   }, [volume, isMuted]);
+
+  // Audio Ducking: Tự động làm chìm âm thanh môi trường khi nhạc cá nhân phát
+  useEffect(() => {
+    if (isPlaying) {
+      duckAmbientForMusic();
+    } else {
+      restoreAmbientFromMusic();
+    }
+  }, [isPlaying]);
+
+  useEffect(() => {
+    return () => {
+      restoreAmbientFromMusic();
+    };
+  }, []);
 
   // Khi iframe YouTube tải xong, set ngay mức âm lượng an toàn
   const handleYouTubeIframeLoad = () => {

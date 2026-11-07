@@ -38,7 +38,7 @@
         "total": 1
       },
       "sharesCount": 0,
-      "views": 13,
+      "views": 17,
       "createdAt": "2026-11-05T11:49:56.154Z",
       "authorSocialLinks": {
         "facebook": "https://www.facebook.com/anthony.qill/",
@@ -302,7 +302,7 @@
         "linkedin": "",
         "website": ""
       },
-      "views": 13,
+      "views": 15,
       "cheersCount": 95,
       "reactions": [
         {
@@ -339,7 +339,21 @@
       },
       "flagReason": "",
       "isFlagged": false,
-      "moderationStatus": "approved"
+      "moderationStatus": "approved",
+      "atmosphere": {
+        "bgPreset": "default",
+        "customBgGradient": "",
+        "customColor": "",
+        "particleEffect": "none",
+        "soundEffect": "auto",
+        "soundEnabled": true,
+        "theme": "default"
+      },
+      "repostCount": 0,
+      "repostedBy": [],
+      "visibility": "public",
+      "voiceGender": "female",
+      "voiceRegion": "north"
     },
     {
       "_id": "post_4",
@@ -359,7 +373,7 @@
         "Small Win"
       ],
       "user": {
-        "_id": "6aec5b47ee112662b33c0e3a",
+        "_id": "u_ly",
         "name": "Hương Ly",
         "jobTitle": "UI/UX Designer",
         "avatar": "/images/img2.jpg",
@@ -376,7 +390,7 @@
         "linkedin": "",
         "website": ""
       },
-      "views": 3,
+      "views": 4,
       "cheersCount": 120,
       "reactions": [
         {
@@ -384,8 +398,8 @@
           "userName": "Trần Đình Quân",
           "userAvatar": "/images/man.jpg",
           "types": [
-            "love",
-            "encourage"
+            "encourage",
+            "love"
           ],
           "_id": "6aec5b48ee112662b33c0e50"
         },
@@ -401,13 +415,13 @@
         }
       ],
       "reactionCounts": {
-        "sympathy": 30,
-        "stop": 5,
-        "love": 45,
-        "encourage": 40,
-        "total": 120
+        "sympathy": 1,
+        "stop": 0,
+        "love": 2,
+        "encourage": 1,
+        "total": 4
       },
-      "showReactionCount": false,
+      "showReactionCount": true,
       "sharesCount": 22,
       "isPublished": true,
       "createdAt": "2026-11-05T07:39:52.750Z",
@@ -684,25 +698,57 @@
       "_id": "cat_1",
       "name": "Áp lực & Kiệt sức (Burnout)",
       "slug": "ap-luc-kiet-suc-burnout",
-      "description": "OT, deadline và cạn kiệt năng lượng"
+      "description": "OT, deadline và cạn kiệt năng lượng",
+      "icon": "😫"
     },
     {
       "_id": "cat_2",
       "name": "Khủng hoảng nghề nghiệp (Career Crisis)",
       "slug": "khung-hoang-nghe-nghiep-career-crisis",
-      "description": "Chênh vênh giữa tiếp tục hay từ bỏ"
+      "description": "Chênh vênh giữa tiếp tục hay từ bỏ",
+      "icon": "🧭"
     },
     {
       "_id": "cat_3",
       "name": "Chuyển ngành & Bắt đầu lại (Restart)",
       "slug": "chuyen-nganh-bat-dau-lai-restart",
-      "description": "Can đảm làm lại từ con số 0"
+      "description": "Can đảm làm lại từ con số 0",
+      "icon": "🌱"
     },
     {
       "_id": "cat_4",
       "name": "Những tia sáng & Động lực (Small Wins)",
       "slug": "nhung-tia-sang-dong-luc-small-wins",
-      "description": "Thành tựu nhỏ bé nuôi dưỡng hi vọng"
+      "description": "Thành tựu nhỏ bé nuôi dưỡng hi vọng",
+      "icon": "✨"
+    },
+    {
+      "_id": "cat_5",
+      "name": "Thời Sự & Tình Hình Thế Giới (Global Affairs)",
+      "slug": "thoi-su-tinh-hinh-the-gioi",
+      "description": "Điểm tin thời cuộc, diễn biến quốc tế & góc nhìn toàn cầu",
+      "icon": "🌍"
+    },
+    {
+      "_id": "cat_6",
+      "name": "Chiến Sự, Xung Đột & Hòa Bình (Conflict & Peace)",
+      "slug": "chien-su-xung-dot-hoa-binh",
+      "description": "Bình luận chiến sự, góc nhìn nhân đạo & khát vọng hòa bình",
+      "icon": "🕊️"
+    },
+    {
+      "_id": "cat_7",
+      "name": "Góc Nhìn & Xã Hội (Perspective & Society)",
+      "slug": "goc-nhin-xa-hoi",
+      "description": "Quan điểm đa chiều về thời cuộc và đời sống xã hội",
+      "icon": "🌐"
+    },
+    {
+      "_id": "cat_8",
+      "name": "Tâm Sự & Đời Sống Thường Nhật (Life Stories)",
+      "slug": "tam-su-doi-song-thuong-nhat",
+      "description": "Những dòng tâm sự thật, trải lòng không phán xét",
+      "icon": "☕"
     }
   ],
   "subscribers": [
@@ -1090,5 +1136,63 @@
       "isBuiltin": true
     }
   ],
-  "adminPreviewEventId": "phu_nu_viet_nam_20_10"
+  "adminPreviewEventId": null,
+  "stories": [
+    {
+      "_id": "story_1794083881804_xfi0",
+      "userId": "6aec5b46ee112662b33c0e32",
+      "userName": "Đơn Thân Mẹ",
+      "userAvatar": "/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg",
+      "content": "Hôm nay Hong vui ?",
+      "drawingData": "data:image/png;base64,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",
+      "musicTitle": "Rain & Coffee - Tiếng mưa bên ô cửa sổ",
+      "musicUrl": "https://cdn.pixabay.com/download/audio/2021/09/06/audio_731a104051.mp3?filename=rain-and-nostalgia-chill-lofi-song-8493.mp3",
+      "bgGradient": "emerald",
+      "createdAt": "2026-11-07T20:38:01.804Z",
+      "expiresAt": "2026-11-08T20:38:01.804Z",
+      "viewsCount": 1
+    },
+    {
+      "_id": "story_demo_1",
+      "userId": "6aec5b46ee112662b33c0e32",
+      "userName": "Anthony Quân",
+      "userAvatar": "/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg",
+      "content": "Vừa hoàn thành xong sprint release lúc 22:00! Thở phào nhẹ nhõm, chúc cả nhà ngủ ngon 🌙✨",
+      "drawingData": null,
+      "musicTitle": "Lofi Chill - Đêm muộn ở văn phòng",
+      "musicUrl": "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3",
+      "bgGradient": "midnight",
+      "createdAt": "2026-11-07T16:35:31.085Z",
+      "expiresAt": "2026-11-08T16:35:31.085Z",
+      "viewsCount": 28
+    },
+    {
+      "_id": "story_demo_2",
+      "userId": "u_huong_ly",
+      "userName": "Hương Ly",
+      "userAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+      "content": "Tự thưởng cho bản thân một ly trà đào sau 8 tiếng đối mặt deadline căng thẳng ☕🌸 You can do it!",
+      "drawingData": null,
+      "musicTitle": "Acoustic Sunset - Bình yên sau tan ca",
+      "musicUrl": "https://cdn.pixabay.com/download/audio/2022/11/06/audio_c93e43d61f.mp3?filename=warm-acoustic-guitar-124928.mp3",
+      "bgGradient": "sunset",
+      "createdAt": "2026-11-07T14:35:31.085Z",
+      "expiresAt": "2026-11-08T14:35:31.085Z",
+      "viewsCount": 45
+    },
+    {
+      "_id": "story_demo_3",
+      "userId": "67c9c0000000000000000003",
+      "userName": "Đức Huy",
+      "userAvatar": "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=200&q=80",
+      "content": "Hôm nay dù dự án có trễ chút, nhưng sức khỏe và sự bình an của mình vẫn là số 1 🌿💚",
+      "drawingData": null,
+      "musicTitle": "Healing Piano - Khoảng lặng tâm hồn",
+      "musicUrl": "https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=ambient-piano-amp-strings-10711.mp3",
+      "bgGradient": "emerald",
+      "createdAt": "2026-11-07T12:35:31.085Z",
+      "expiresAt": "2026-11-08T12:35:31.085Z",
+      "viewsCount": 39
+    }
+  ]
 }

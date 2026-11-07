@@ -174,6 +174,38 @@ const postSchema = new mongoose.Schema(
       enum: ['approved', 'flagged', 'removed'],
       default: 'approved',
     },
+    atmosphere: {
+      theme: {
+        type: String,
+        enum: ['default', 'horror', 'joy', 'sadness', 'drama', 'healing'],
+        default: 'default',
+      },
+      soundEnabled: {
+        type: Boolean,
+        default: true,
+      },
+      soundEffect: {
+        type: String,
+        default: 'auto',
+      },
+      bgPreset: {
+        type: String,
+        default: 'default',
+      },
+      customColor: {
+        type: String,
+        default: '',
+      },
+      customBgGradient: {
+        type: String,
+        default: '',
+      },
+      particleEffect: {
+        type: String,
+        enum: ['none', 'fog', 'rain', 'sparkles', 'heartbeat_pulse', 'fireflies'],
+        default: 'none',
+      },
+    },
   },
   {
     timestamps: true,

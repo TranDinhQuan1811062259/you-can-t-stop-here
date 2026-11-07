@@ -79,10 +79,18 @@ const AUDIO_PROFILE_OPTIONS = [
 ];
 
 export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
-  const { user, updateUserProfile, profileModalTab } = useAuth();
+  const { user, updateUserProfile, profileModalTab, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('info'); // 'info' | 'layout' | 'music'
   const [previewPlayingId, setPreviewPlayingId] = useState(null);
   const previewAudioRef = useRef(null);
+
+  const handleLogout = () => {
+    const isConfirmed = window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi tài khoản không?');
+    if (isConfirmed) {
+      if (onClose) onClose();
+      if (logout) logout();
+    }
+  };
 
   const [themeMode, setThemeMode] = useState(() => getActiveTheme());
   const [soundEnabled, setSoundEnabled] = useState(() => isSoundEnabled());
@@ -929,6 +937,57 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
                   </div>
                 </div>
               )}
+
+              {/* ========================================================
+                  MỤC PHIÊN ĐĂNG NHẬP & BẢO MẬT (ĐĂNG XUẤT TÀI KHOẢN)
+                 ======================================================== */}
+              <div style={{
+                marginTop: '20px',
+                padding: '14px 16px',
+                borderRadius: '10px',
+                background: 'rgba(239, 68, 68, 0.05)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: '#b91c1c', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🛡️</span> Phiên đăng nhập & Bảo mật
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '3px' }}>
+                    Đang đăng nhập: <strong style={{ color: '#1e293b' }}>{user?.email || user?.name}</strong> • Thiết bị này
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    background: '#ef4444',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontWeight: 600,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(239, 68, 68, 0.25)',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#dc2626'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = '#ef4444'; }}
+                  title="Đăng xuất khỏi thiết bị này"
+                >
+                  <span>🚪</span>
+                  <span>Đăng xuất tài khoản</span>
+                </button>
+              </div>
             </>
           )}
 
@@ -1795,23 +1854,65 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            marginTop: '22px',
+            paddingTop: '16px',
+            borderTop: '1px solid #e2e8f0',
+          }}>
+            {/* Nút Đăng xuất tiện lợi ở góc dưới modal Cài đặt tài khoản */}
             <button
               type="button"
-              className="page-btn"
-              style={{ flex: 1 }}
-              onClick={onClose}
+              onClick={handleLogout}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '9px 16px',
+                borderRadius: '8px',
+                border: '1px solid #fecaca',
+                background: '#fff1f2',
+                color: '#e11d48',
+                fontWeight: 600,
+                fontSize: '0.84rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#ffe4e6';
+                e.currentTarget.style.borderColor = '#fda4af';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#fff1f2';
+                e.currentTarget.style.borderColor = '#fecaca';
+              }}
+              title="Đăng xuất khỏi tài khoản trên thiết bị này"
             >
-              Hủy
+              <span style={{ fontSize: '1rem' }}>🚪</span>
+              <span>Đăng xuất</span>
             </button>
-            <button
-              type="submit"
-              className="modal-submit-btn"
-              style={{ flex: 2, margin: 0 }}
-              disabled={loading || uploadingAvatar}
-            >
-              {loading ? 'Đang lưu...' : 'Lưu Thay Đổi & Áp Dụng'}
-            </button>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                className="page-btn"
+                style={{ padding: '9px 18px', margin: 0 }}
+                onClick={onClose}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                className="modal-submit-btn"
+                style={{ margin: 0, padding: '9px 20px' }}
+                disabled={loading || uploadingAvatar}
+              >
+                {loading ? 'Đang lưu...' : 'Lưu Thay Đổi & Áp Dụng'}
+              </button>
+            </div>
           </div>
         </form>
 

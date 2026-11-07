@@ -26,18 +26,32 @@ export const CategoryPage = () => {
   };
 
   const categoryDisplayName = posts[0]?.category?.name || categorySlug.replace(/-/g, ' ');
+  const categoryIcon = posts[0]?.category?.icon || (() => {
+    const lower = (categoryDisplayName || '').toLowerCase();
+    if (lower.includes('thế giới') || lower.includes('quốc tế') || lower.includes('global')) return '🌍';
+    if (lower.includes('chiến sự') || lower.includes('chiến tranh') || lower.includes('hòa bình') || lower.includes('xung đột')) return '🕊️';
+    if (lower.includes('xã hội') || lower.includes('thời cuộc') || lower.includes('society')) return '🌐';
+    if (lower.includes('kiệt sức') || lower.includes('burnout') || lower.includes('áp lực')) return '😫';
+    if (lower.includes('khủng hoảng') || lower.includes('career')) return '🧭';
+    if (lower.includes('chuyển ngành') || lower.includes('restart')) return '🌱';
+    if (lower.includes('động lực') || lower.includes('small wins') || lower.includes('tia sáng')) return '✨';
+    if (lower.includes('tâm sự') || lower.includes('life')) return '☕';
+    return '🏷️';
+  })();
 
   return (
     <div>
-      {/* Category Header Banner */}
+      {/* Category Header Banner chuẩn 3 tầng xuống dòng */}
       <section className="hero-banner" style={{ padding: '48px 0' }}>
-        <div className="container">
-          <span className="hero-tag-pill">Chủ đề tâm sự</span>
+        <div className="container hero-banner-container">
+          <div className="hero-tag-pill-wrap">
+            <span className="hero-tag-pill">{categoryIcon} Chủ đề tâm sự</span>
+          </div>
           <h1 className="hero-title" style={{ textTransform: 'capitalize' }}>
             {categoryDisplayName}
           </h1>
           <div style={{ marginTop: '16px' }}>
-            <Link to="/" style={{ color: '#cbd5e1', fontSize: '0.9rem' }}>
+            <Link to="/" className="hero-back-link">
               &larr; Xem tất cả các câu chuyện khác
             </Link>
           </div>

@@ -1,6 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { playPaperShredSound, playSingingBowlSound, playClickSound } from '../../utils/soundEffects';
 
+const MOOD_LIST = [
+  { id: 'burnout', icon: '😫', label: 'Kiệt sức', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa', transformed: { icon: '🥰', label: 'Bình yên & Thư thái' } },
+  { id: 'angry', icon: '😡', label: 'Bực bội', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', transformed: { icon: '🧘', label: 'Tĩnh tâm & An nhiên' } },
+  { id: 'anxious', icon: '😰', label: 'Lo âu', color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd', transformed: { icon: '💪', label: 'Tự tin & Vững lòng' } },
+  { id: 'overwhelmed', icon: '🤯', label: 'Quá tải', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', transformed: { icon: '✨', label: 'Thông suốt & Nhẹ nhõm' } },
+  { id: 'sad', icon: '🥺', label: 'Tủi thân', color: '#db2777', bg: '#fdf2f8', border: '#fbcfe8', transformed: { icon: '🫂', label: 'Được che chở & Yêu thương' } },
+  { id: 'hopeless', icon: '🫠', label: 'Bất lực', color: '#d97706', bg: '#fffbeb', border: '#fde68a', transformed: { icon: '🌱', label: 'Tái sinh & Tràn năng lượng' } },
+  { id: 'empty', icon: '😐', label: 'Trống rỗng', color: '#475569', bg: '#f8fafc', border: '#e2e8f0', transformed: { icon: '☀️', label: 'Lạc quan & Tươi vui' } },
+];
+
+const QUICK_EMOJIS = [
+  '🔥', '💣', '💢', '⚡', '😤', '😭', '💔', '🤦', '🥀', '🌪️', '🥊', '🆘', '💤', '🤮', '🥱', '🩹', '☕', '🌿', '✨'
+];
+
 const PRESET_STRESS_TAGS = [
   '🔥 Deadline dí ngộp thở',
   '😤 Khách hàng đòi sửa lần thứ 15',
@@ -15,12 +29,14 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
 
   // State cho Máy Xé Giấy (Stress Shredder)
   const [stressText, setStressText] = useState('');
+  const [selectedMood, setSelectedMood] = useState(null);
   const [shredStyle, setShredStyle] = useState('shred'); // 'shred' | 'burn' | 'flowers'
   const [isShredding, setIsShredding] = useState(false);
   const [shreddedCount, setShreddedCount] = useState(() => {
     return parseInt(localStorage.getItem('freedom_shredded_count') || '0', 10);
   });
   const [showShredResult, setShowShredResult] = useState(false);
+  const textareaRef = useRef(null);
 
   // State cho Bài Tập Thở 4-7-8 & Tan Ca
   const [isBreathingActive, setIsBreathingActive] = useState(false);
@@ -41,6 +57,24 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
       stopBreathing();
     }
   }, [isOpen]);
+
+  // Chèn Emoji vào ô nội dung áp lực tại vị trí con trỏ
+  const handleInsertEmoji = (emoji) => {
+    playClickSound();
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setStressText((prev) => (prev ? prev + emoji : emoji));
+      return;
+    }
+    const start = textarea.selectionStart ?? stressText.length;
+    const end = textarea.selectionEnd ?? stressText.length;
+    const nextText = stressText.substring(0, start) + emoji + stressText.substring(end);
+    setStressText(nextText);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + emoji.length, start + emoji.length);
+    }, 10);
+  };
 
   // =========================================================================
   // XỬ LÝ MÁY XÉ GIẤY DEADLINE (STRESS SHREDDER)
@@ -63,6 +97,7 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
   const handleResetShredder = () => {
     playClickSound();
     setStressText('');
+    setSelectedMood(null);
     setShowShredResult(false);
     setIsShredding(false);
   };
@@ -123,18 +158,23 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-backdrop" onClick={onClose} style={{ zIndex: 9999 }}>
+    <div className="modal-backdrop" onClick={onClose} style={{ zIndex: 9999, padding: '16px 0', alignItems: 'center', justifyContent: 'center' }}>
       <div
         className="modal-box stress-relief-modal-box"
         style={{
           maxWidth: '560px',
           width: '94%',
+          maxHeight: 'min(86vh, 650px)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
           background: '#ffffff',
           borderRadius: '24px',
-          padding: '24px',
+          padding: '16px 20px 14px',
           boxShadow: '0 25px 60px rgba(0,0,0,0.3)',
           border: '1.5px solid #e2e8f0',
           position: 'relative',
+          boxSizing: 'border-box',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -144,8 +184,8 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
           onClick={onClose}
           style={{
             position: 'absolute',
-            top: '18px',
-            right: '18px',
+            top: '16px',
+            right: '16px',
             background: '#f1f5f9',
             border: 'none',
             borderRadius: '50%',
@@ -160,29 +200,29 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
         </button>
 
         {/* Tiêu đề Modal */}
-        <div style={{ textAlign: 'center', marginBottom: '18px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '14px' }}>
           <span
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '4px 12px',
+              padding: '3px 12px',
               background: '#ecfdf5',
               border: '1px solid #a7f3d0',
               borderRadius: '999px',
               fontSize: '0.78rem',
               fontWeight: 700,
               color: '#059669',
-              marginBottom: '8px',
+              marginBottom: '6px',
             }}
           >
             <span>🌿</span>
             <span>Trạm Sạc Năng Lượng & Xả Áp Lực Công Sở</span>
           </span>
-          <h3 style={{ margin: '0 0 6px', fontSize: '1.45rem', color: '#0f172a', fontWeight: 800 }}>
+          <h3 style={{ margin: '0 0 4px', fontSize: '1.35rem', color: '#0f172a', fontWeight: 800 }}>
             YOU CAN'T STOP HERE &bull; WELLNESS
           </h3>
-          <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+          <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748b' }}>
             Nơi bạn có thể trút bỏ hoàn toàn gánh nặng deadline, thở một hơi thật sâu và lấy lại bình yên.
           </p>
         </div>
@@ -192,9 +232,9 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
           style={{
             display: 'flex',
             background: '#f1f5f9',
-            padding: '4px',
+            padding: '3px',
             borderRadius: '12px',
-            marginBottom: '20px',
+            marginBottom: '14px',
             gap: '6px',
           }}
         >
@@ -206,10 +246,10 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
             }}
             style={{
               flex: 1,
-              padding: '10px 14px',
+              padding: '8px 12px',
               border: 'none',
               borderRadius: '9px',
-              fontSize: '0.86rem',
+              fontSize: '0.84rem',
               fontWeight: 700,
               cursor: 'pointer',
               background: activeTab === 'shredder' ? '#ffffff' : 'transparent',
@@ -233,10 +273,10 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
             }}
             style={{
               flex: 1,
-              padding: '10px 14px',
+              padding: '8px 12px',
               border: 'none',
               borderRadius: '9px',
-              fontSize: '0.86rem',
+              fontSize: '0.84rem',
               fontWeight: 700,
               cursor: 'pointer',
               background: activeTab === 'breathing' ? '#ffffff' : 'transparent',
@@ -258,163 +298,382 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
             TAB 1: MÁY XÉ GIẤY DEADLINE (STRESS SHREDDER)
            ========================================================================= */}
         {activeTab === 'shredder' && (
-          <div className="stress-shredder-view">
+          <div className="stress-shredder-view" style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 }}>
             {!showShredResult ? (
               <>
-                <p style={{ fontSize: '0.84rem', color: '#475569', margin: '0 0 10px', lineHeight: 1.5 }}>
-                  Gõ vào đây bất kỳ điều gì đang làm bạn căng thẳng, bức xúc hoặc quá tải. Máy xé giấy sẽ hủy diệt hoàn toàn nó:
-                </p>
+                {/* Phần thân có thể cuộn độc lập (Scrollable body) - Giới hạn chiều cao an toàn để footer không bao giờ bị đẩy tràn màn hình */}
+                <div style={{ flex: '1 1 auto', overflowY: 'auto', minHeight: 0, maxHeight: 'calc(86vh - 270px)', paddingRight: '4px', marginBottom: '8px' }}>
+                  {/* 1. KHAY CHỌN ICON CẢM XÚC (MOOD SELECTOR) */}
+                  <div style={{ marginBottom: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
+                      <span style={{ fontSize: '0.78rem', color: '#334155', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <span>🎭</span>
+                        <span>Chọn cảm xúc của bạn lúc này:</span>
+                      </span>
+                      {selectedMood && (
+                        <button
+                          type="button"
+                          onClick={() => { playClickSound(); setSelectedMood(null); }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#64748b',
+                            fontSize: '0.72rem',
+                            cursor: 'pointer',
+                            padding: '0 4px',
+                            textDecoration: 'underline',
+                          }}
+                        >
+                          Bỏ chọn
+                        </button>
+                      )}
+                    </div>
 
-                {/* Các tag mẫu gợi ý điền nhanh */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
-                  {PRESET_STRESS_TAGS.map((tag, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        playClickSound();
-                        setStressText((prev) => (prev ? `${prev}, ${tag}` : tag));
-                      }}
-                      style={{
-                        background: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '999px',
-                        padding: '4px 10px',
-                        fontSize: '0.74rem',
-                        color: '#475569',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#0d9488';
-                        e.currentTarget.style.color = '#0d9488';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = '#e2e8f0';
-                        e.currentTarget.style.color = '#475569';
-                      }}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Khung tờ giấy kẻ ngang mô phỏng sổ tay */}
-                <div
-                  className={`stress-paper-sheet ${isShredding ? 'is-shredding-anim' : ''}`}
-                  style={{
-                    position: 'relative',
-                    background: '#fffdf0',
-                    border: '1.5px solid #fef08a',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    boxShadow: '0 6px 16px rgba(234, 179, 8, 0.12)',
-                    marginBottom: '14px',
-                    backgroundImage: 'repeating-linear-gradient(transparent, transparent 27px, #fef08a 28px)',
-                    overflow: 'hidden',
-                  }}
-                >
-                  <textarea
-                    rows={4}
-                    placeholder="Viết ra áp lực của bạn... (Ví dụ: Deadline dí nghẹt thở, sếp dí KPI, khách hàng bắt sửa lại từ đầu...)"
-                    value={stressText}
-                    onChange={(e) => setStressText(e.target.value)}
-                    disabled={isShredding}
-                    style={{
-                      width: '100%',
-                      background: 'transparent',
-                      border: 'none',
-                      outline: 'none',
-                      resize: 'none',
-                      fontFamily: 'inherit',
-                      fontSize: '0.94rem',
-                      lineHeight: '28px',
-                      color: '#713f12',
-                      fontWeight: 600,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-
-                  {/* Hiệu ứng tia laser / lưỡi dao cắt khi đang xé */}
-                  {isShredding && (
                     <div
                       style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: '4px',
-                        background: 'linear-gradient(90deg, #ef4444, #f59e0b, #ef4444)',
-                        boxShadow: '0 0 15px #ef4444',
-                        animation: 'shredderBlade 1.8s linear forwards',
+                        display: 'flex',
+                        gap: '6px',
+                        overflowX: 'auto',
+                        paddingBottom: '3px',
+                        scrollbarWidth: 'none',
+                      }}
+                    >
+                      {MOOD_LIST.map((mood) => {
+                        const isSelected = selectedMood?.id === mood.id;
+                        return (
+                          <button
+                            key={mood.id}
+                            type="button"
+                            onClick={() => {
+                              playClickSound();
+                              setSelectedMood(isSelected ? null : mood);
+                            }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              padding: '4px 10px',
+                              borderRadius: '999px',
+                              fontSize: '0.74rem',
+                              fontWeight: isSelected ? 800 : 600,
+                              cursor: 'pointer',
+                              border: isSelected ? `2px solid ${mood.color}` : '1.5px solid #e2e8f0',
+                              background: isSelected ? mood.bg : '#ffffff',
+                              color: isSelected ? mood.color : '#64748b',
+                              boxShadow: isSelected ? `0 2px 10px ${mood.color}33` : '0 1px 3px rgba(0,0,0,0.04)',
+                              transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+                              whiteSpace: 'nowrap',
+                              flexShrink: 0,
+                              transform: isSelected ? 'scale(1.04)' : 'none',
+                            }}
+                            title={`Tâm trạng: ${mood.label}`}
+                          >
+                            <span style={{ fontSize: '0.95rem', lineHeight: 1 }}>{mood.icon}</span>
+                            <span>{mood.label}</span>
+                            {isSelected && <span style={{ fontSize: '0.65rem' }}>✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 2. CÁC TAG MẪU GỢI Ý ĐIỀN NHANH */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '8px' }}>
+                    {PRESET_STRESS_TAGS.map((tag, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          playClickSound();
+                          setStressText((prev) => (prev ? `${prev}, ${tag}` : tag));
+                        }}
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '999px',
+                          padding: '3px 9px',
+                          fontSize: '0.72rem',
+                          color: '#475569',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = '#0d9488';
+                          e.currentTarget.style.color = '#0d9488';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#e2e8f0';
+                          e.currentTarget.style.color = '#475569';
+                        }}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 3. KHUNG TỜ GIẤY SỔ TAY KẺ NGANG + THANH CHÈN EMOJI */}
+                  <div
+                    className={`stress-paper-sheet ${isShredding ? 'is-shredding-anim' : ''}`}
+                    style={{
+                      position: 'relative',
+                      background: '#fffdf0',
+                      border: '1.5px solid #fef08a',
+                      borderRadius: '12px',
+                      padding: '10px 12px',
+                      boxShadow: '0 4px 12px rgba(234, 179, 8, 0.12)',
+                      marginBottom: '6px',
+                      backgroundImage: 'repeating-linear-gradient(transparent, transparent 25px, #fef08a 26px)',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {/* Badge Icon cảm xúc đính trên tờ giấy nếu có chọn */}
+                    {selectedMood && (
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          background: selectedMood.bg,
+                          border: `1px solid ${selectedMood.border}`,
+                          color: selectedMood.color,
+                          borderRadius: '6px',
+                          padding: '2px 8px',
+                          fontSize: '0.72rem',
+                          fontWeight: 800,
+                          marginBottom: '6px',
+                          letterSpacing: '0.2px',
+                        }}
+                      >
+                        <span>{selectedMood.icon}</span>
+                        <span>Tâm trạng: {selectedMood.label}</span>
+                        <span
+                          onClick={(e) => { e.stopPropagation(); playClickSound(); setSelectedMood(null); }}
+                          style={{ cursor: 'pointer', marginLeft: '4px', opacity: 0.6 }}
+                          title="Bỏ nhãn này"
+                        >
+                          ✕
+                        </span>
+                      </div>
+                    )}
+
+                    <textarea
+                      ref={textareaRef}
+                      rows={3}
+                      placeholder="Viết ra áp lực của bạn... (Ví dụ: Deadline dí nghẹt thở, sếp dí KPI, khách hàng bắt sửa lại từ đầu...)"
+                      value={stressText}
+                      onChange={(e) => setStressText(e.target.value)}
+                      disabled={isShredding}
+                      style={{
+                        width: '100%',
+                        background: 'transparent',
+                        border: 'none',
+                        outline: 'none',
+                        resize: 'none',
+                        fontFamily: 'inherit',
+                        fontSize: '0.9rem',
+                        lineHeight: '26px',
+                        color: '#713f12',
+                        fontWeight: 600,
+                        boxSizing: 'border-box',
                       }}
                     />
-                  )}
-                </div>
 
-                {/* Chọn hiệu ứng tiêu hủy */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                  <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Hiệu ứng tiêu hủy:</span>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <label style={{ fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <input
-                        type="radio"
-                        name="shredStyle"
-                        checked={shredStyle === 'shred'}
-                        onChange={() => setShredStyle('shred')}
+                    {/* THANH CHÈN EMOJI NHANH NGAY DƯỚI KHUNG GIẤY */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        marginTop: '4px',
+                        paddingTop: '6px',
+                        borderTop: '1px dashed rgba(234, 179, 8, 0.4)',
+                      }}
+                    >
+                      <span style={{ fontSize: '0.72rem', color: '#a16207', fontWeight: 700, flexShrink: 0, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <span>😊</span>
+                        <span>Emoji:</span>
+                      </span>
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '4px',
+                          overflowX: 'auto',
+                          scrollbarWidth: 'none',
+                          padding: '1px 0',
+                          flex: 1,
+                        }}
+                      >
+                        {QUICK_EMOJIS.map((emoji, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleInsertEmoji(emoji)}
+                            disabled={isShredding}
+                            title={`Chèn ${emoji}`}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.85)',
+                              border: '1px solid rgba(234, 179, 8, 0.35)',
+                              borderRadius: '6px',
+                              width: '26px',
+                              height: '26px',
+                              fontSize: '0.9rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: isShredding ? 'not-allowed' : 'pointer',
+                              transition: 'all 0.15s ease',
+                              flexShrink: 0,
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isShredding) {
+                                e.currentTarget.style.background = '#fef08a';
+                                e.currentTarget.style.transform = 'scale(1.15)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.85)';
+                              e.currentTarget.style.transform = 'scale(1)';
+                            }}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+
+                      {stressText && !isShredding && (
+                        <button
+                          type="button"
+                          onClick={() => { playClickSound(); setStressText(''); }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#dc2626',
+                            fontSize: '0.68rem',
+                            cursor: 'pointer',
+                            padding: '2px 5px',
+                            fontWeight: 700,
+                            flexShrink: 0,
+                          }}
+                          title="Xóa trắng nội dung"
+                        >
+                          Xóa hết
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Hiệu ứng tia laser / lưỡi dao cắt khi đang xé */}
+                    {isShredding && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: '4px',
+                          background: 'linear-gradient(90deg, #ef4444, #f59e0b, #ef4444)',
+                          boxShadow: '0 0 15px #ef4444',
+                          animation: 'shredderBlade 1.8s linear forwards',
+                        }}
                       />
-                      <span>⚡ Cắt vụn máy</span>
-                    </label>
-                    <label style={{ fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <input
-                        type="radio"
-                        name="shredStyle"
-                        checked={shredStyle === 'flowers'}
-                        onChange={() => setShredStyle('flowers')}
-                      />
-                      <span>🌸 Hóa cánh hoa</span>
-                    </label>
+                    )}
                   </div>
                 </div>
 
-                {/* Nút bấm Xé Nát */}
-                <button
-                  type="button"
-                  className="modal-submit-btn"
-                  onClick={handleStartShred}
-                  disabled={!stressText.trim() || isShredding}
-                  style={{
-                    width: '100%',
-                    padding: '13px',
-                    background: isShredding
-                      ? '#94a3b8'
-                      : 'linear-gradient(135deg, #dc2626, #ea580c)',
-                    color: '#ffffff',
-                    fontWeight: 800,
-                    fontSize: '0.95rem',
-                    borderRadius: '12px',
-                    border: 'none',
-                    cursor: !stressText.trim() || isShredding ? 'not-allowed' : 'pointer',
-                    boxShadow: '0 6px 18px rgba(220, 38, 38, 0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  <span>{isShredding ? '⚙️' : '💥'}</span>
-                  <span>{isShredding ? 'Đang nghiền nát và xé nhỏ áp lực...' : 'XÉ NÁT & TIÊU HỦY ÁP LỰC NGAY ➔'}</span>
-                </button>
+                {/* Phần footer cố định luôn luôn nổi ở đáy - Không bao giờ bị khuất (Sticky Action Footer) */}
+                <div style={{ flexShrink: 0, paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                  {/* 4. CHỌN HIỆU ỨNG TIÊU HỦY */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>Hiệu ứng tiêu hủy:</span>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <label style={{ fontSize: '0.76rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <input
+                          type="radio"
+                          name="shredStyle"
+                          checked={shredStyle === 'shred'}
+                          onChange={() => setShredStyle('shred')}
+                        />
+                        <span>⚡ Cắt vụn máy</span>
+                      </label>
+                      <label style={{ fontSize: '0.76rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <input
+                          type="radio"
+                          name="shredStyle"
+                          checked={shredStyle === 'flowers'}
+                          onChange={() => setShredStyle('flowers')}
+                        />
+                        <span>🌸 Hóa cánh hoa</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* 5. NÚT BẤM XÉ NÁT TIÊU HỦY */}
+                  <button
+                    type="button"
+                    className="modal-submit-btn"
+                    onClick={handleStartShred}
+                    disabled={!stressText.trim() || isShredding}
+                    style={{
+                      width: '100%',
+                      padding: '11px',
+                      margin: '0',
+                      background: isShredding
+                        ? '#94a3b8'
+                        : 'linear-gradient(135deg, #dc2626, #ea580c)',
+                      color: '#ffffff',
+                      fontWeight: 800,
+                      fontSize: '0.92rem',
+                      borderRadius: '12px',
+                      border: 'none',
+                      cursor: !stressText.trim() || isShredding ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 6px 18px rgba(220, 38, 38, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                    }}
+                  >
+                    <span>{isShredding ? '⚙️' : '💥'}</span>
+                    <span>{isShredding ? 'Đang nghiền nát và xé nhỏ áp lực...' : 'XÉ NÁT & TIÊU HỦY ÁP LỰC NGAY ➔'}</span>
+                  </button>
+                </div>
               </>
             ) : (
               /* MÀN HÌNH SAU KHI TIÊU HỦY THÀNH CÔNG */
               <div style={{ textAlign: 'center', padding: '16px 10px' }}>
-                <div style={{ fontSize: '3.2rem', marginBottom: '10px' }}>
+                <div style={{ fontSize: '3.2rem', marginBottom: '8px' }}>
                   {shredStyle === 'flowers' ? '🌸✨' : '🎉🎊'}
                 </div>
                 <h4 style={{ margin: '0 0 8px', fontSize: '1.25rem', color: '#0f766e', fontWeight: 800 }}>
                   ĐÃ TIÊU HỦY HOÀN TOÀN ÁP LỰC ĐÓ!
                 </h4>
+
+                {/* Khối chuyển hóa cảm xúc nhiệm màu */}
+                {selectedMood && (
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
+                      border: '1.5px solid #86efac',
+                      borderRadius: '999px',
+                      padding: '5px 16px',
+                      margin: '0 auto 10px',
+                      boxShadow: '0 4px 14px rgba(16, 185, 129, 0.15)',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.84rem', opacity: 0.6, textDecoration: 'line-through', color: '#475569' }}>
+                      {selectedMood.icon} {selectedMood.label}
+                    </span>
+                    <span style={{ color: '#059669', fontWeight: 900, fontSize: '1rem' }}>➔</span>
+                    <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#166534', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                      <span style={{ fontSize: '1.1rem' }}>{selectedMood.transformed.icon}</span>
+                      <span>{selectedMood.transformed.label}</span>
+                    </span>
+                  </div>
+                )}
                 <blockquote
                   style={{
                     background: '#f0fdf4',

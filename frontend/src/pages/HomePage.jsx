@@ -10,41 +10,94 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { CreatePostModal } from '../components/blog/CreatePostModal';
 import { CommunityMoodWall } from '../components/blog/CommunityMoodWall';
+import { StoryBar } from '../components/story/StoryBar';
+import { CreateStoryModal } from '../components/story/CreateStoryModal';
+import { StoryViewerModal } from '../components/story/StoryViewerModal';
 
 export const HomePage = () => {
   const { isAuthenticated, openLoginModal } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedTag = searchParams.get('tag') || '';
+  const searchQuery = searchParams.get('q') || '';
+  const categoryParam = searchParams.get('category') || '';
   const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(categoryParam);
+
+  useEffect(() => {
+    setSelectedCategory(categoryParam);
+  }, [categoryParam]);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState('newest'); // 'newest' | 'oldest' | 'az' | 'za' | 'most_engaged' | 'least_engaged'
   const [visibilityFilter, setVisibilityFilter] = useState('all'); // 'all' | 'public' | 'friends'
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  // States cho Story 24h
+  const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
+  const [storyToEdit, setStoryToEdit] = useState(null);
+  const [isViewStoryOpen, setIsViewStoryOpen] = useState(false);
+  const [activeStoryIndex, setActiveStoryIndex] = useState(0);
+  const [storiesList, setStoriesList] = useState([]);
 
   useEffect(() => {
     categoryService
       .getCategories()
       .then((res) => setCategories(res.data || []))
       .catch((err) => console.warn('Lỗi tải danh mục:', err));
+
+    // Lắng nghe khi có thể loại mới được tạo ở bất cứ đâu
+    const handleCategoryCreated = (e) => {
+      const created = e.detail?.category;
+      if (created) {
+        setCategories((prev) => {
+          const exists = prev.some((c) => c._id === created._id || c.slug === created.slug);
+          return exists ? prev : [...prev, created];
+        });
+      }
+    };
+    window.addEventListener('freedom_category_created', handleCategoryCreated);
+    return () => window.removeEventListener('freedom_category_created', handleCategoryCreated);
   }, []);
 
-  // Khi tag hoặc tiêu chí lọc thay đổi, reset về trang 1
+  // Khi tag, tìm kiếm hoặc tiêu chí lọc thay đổi, reset về trang 1
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedTag, sortBy, visibilityFilter, selectedCategory]);
+  }, [selectedTag, searchQuery, sortBy, visibilityFilter, selectedCategory]);
 
   const { posts, pagination, loading, error } = usePosts({
     category: selectedCategory,
     tag: selectedTag,
+    q: searchQuery,
     sort: sortBy,
     visibility: visibilityFilter,
     page: currentPage,
     limit: 6,
   });
 
+  const currentCategory = categories.find(
+    (c) => c.slug === selectedCategory || c._id === selectedCategory
+  );
+  const currentCategoryName = currentCategory?.name || (selectedCategory ? selectedCategory.replace(/-/g, ' ') : '');
+  const currentCategoryIcon = currentCategory?.icon || (() => {
+    const lower = (currentCategoryName || '').toLowerCase();
+    if (lower.includes('thế giới') || lower.includes('quốc tế') || lower.includes('global')) return '🌍';
+    if (lower.includes('chiến sự') || lower.includes('chiến tranh') || lower.includes('hòa bình') || lower.includes('xung đột')) return '🕊️';
+    if (lower.includes('xã hội') || lower.includes('thời cuộc') || lower.includes('society')) return '🌐';
+    if (lower.includes('kiệt sức') || lower.includes('burnout') || lower.includes('áp lực')) return '😫';
+    if (lower.includes('khủng hoảng') || lower.includes('career')) return '🧭';
+    if (lower.includes('chuyển ngành') || lower.includes('restart')) return '🌱';
+    if (lower.includes('động lực') || lower.includes('small wins') || lower.includes('tia sáng')) return '✨';
+    if (lower.includes('tâm sự') || lower.includes('life')) return '☕';
+    return '🏷️';
+  })();
+
   const handleCategorySelect = (categorySlug) => {
     setSelectedCategory(categorySlug);
+    if (categorySlug) {
+      searchParams.set('category', categorySlug);
+    } else {
+      searchParams.delete('category');
+    }
+    setSearchParams(searchParams);
     setCurrentPage(1);
   };
 
@@ -60,45 +113,125 @@ export const HomePage = () => {
 
   return (
     <div>
-      {/* Hero Banner mang tinh thần "You Can't Stop Here" */}
-      <section className="hero-banner">
-        <div className="container">
-          <span className="hero-tag-pill">Cộng đồng sẻ chia của người đi làm</span>
-          <h1 className="hero-title">
-            YOU CAN'T <span>STOP HERE</span>
-          </h1>
-          <p className="hero-subtitle">
-            Trút bỏ những áp lực deadline, kiệt sức và bất an nơi công sở.
-            Bạn có thể chậm lại để nghỉ ngơi, nhưng đừng dừng lại. Chúng mình luôn ở đây cùng bạn!
-          </p>
-
-          <div className="hero-cta-group">
-            {isAuthenticated ? (
+      {/* Hero Banner chuẩn 3 tầng xuống dòng */}
+      {selectedCategory ? (
+        <section className="hero-banner" style={{ padding: '48px 0' }}>
+          <div className="container hero-banner-container">
+            <div className="hero-tag-pill-wrap">
+              <span className="hero-tag-pill">{currentCategoryIcon} Chủ đề tâm sự</span>
+            </div>
+            <h1 className="hero-title" style={{ textTransform: 'capitalize' }}>
+              {currentCategoryName}
+            </h1>
+            <div style={{ marginTop: '16px' }}>
               <button
-                className="hero-btn-primary"
-                onClick={() => setIsCreateOpen(true)}
+                type="button"
+                onClick={() => handleCategorySelect('')}
+                className="hero-back-link"
               >
-                ✍️ Viết tâm sự của bạn hôm nay
+                &larr; Xem tất cả các câu chuyện khác
               </button>
-            ) : (
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            </div>
+          </div>
+        </section>
+      ) : selectedTag ? (
+        <section className="hero-banner" style={{ padding: '48px 0' }}>
+          <div className="container hero-banner-container">
+            <div className="hero-tag-pill-wrap">
+              <span className="hero-tag-pill">🔖 Chủ đề Hashtag</span>
+            </div>
+            <h1 className="hero-title">
+              #{selectedTag}
+            </h1>
+            <div style={{ marginTop: '16px' }}>
+              <button
+                type="button"
+                onClick={handleClearTag}
+                className="hero-back-link"
+              >
+                &larr; Xem tất cả các câu chuyện khác
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : searchQuery ? (
+        <section className="hero-banner" style={{ padding: '48px 0' }}>
+          <div className="container hero-banner-container">
+            <div className="hero-tag-pill-wrap">
+              <span className="hero-tag-pill">🔍 Kết quả tìm kiếm</span>
+            </div>
+            <h1 className="hero-title">
+              "{searchQuery}"
+            </h1>
+            <div style={{ marginTop: '16px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  searchParams.delete('q');
+                  setSearchParams(searchParams);
+                }}
+                className="hero-back-link"
+              >
+                &larr; Xem tất cả các câu chuyện khác
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="hero-banner">
+          <div className="container hero-banner-container">
+            <div className="hero-tag-pill-wrap">
+              <span className="hero-tag-pill">Cộng đồng sẻ chia của người đi làm</span>
+            </div>
+            <h1 className="hero-title">
+              YOU CAN'T <span>STOP HERE</span>
+            </h1>
+            <p className="hero-subtitle">
+              Trút bỏ những áp lực deadline, kiệt sức và bất an nơi công sở.
+              Bạn có thể chậm lại để nghỉ ngơi, nhưng đừng dừng lại. Chúng mình luôn ở đây cùng bạn!
+            </p>
+
+            <div className="hero-cta-group">
+              {isAuthenticated ? (
                 <button
                   className="hero-btn-primary"
-                  onClick={openLoginModal}
+                  onClick={() => setIsCreateOpen(true)}
                 >
-                  Đăng nhập để chia sẻ & Động viên
+                  ✍️ Viết tâm sự của bạn hôm nay
                 </button>
-                <a href="#posts-section" className="hero-btn-secondary">
-                  Đọc tâm sự của mọi người ↓
-                </a>
-              </div>
-            )}
+              ) : (
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                  <button
+                    className="hero-btn-primary"
+                    onClick={openLoginModal}
+                  >
+                    Đăng nhập để chia sẻ & Động viên
+                  </button>
+                  <a href="#posts-section" className="hero-btn-secondary">
+                    Đọc tâm sự của mọi người ↓
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Main Content Area */}
       <section className="container" id="posts-section" style={{ paddingTop: '30px' }}>
+        {/* 🌟 Thanh Story 24h (Phong cách Instagram/Facebook có nhạc & cọ vẽ) */}
+        <StoryBar
+          onOpenCreateStory={() => {
+            setStoryToEdit(null);
+            setIsCreateStoryOpen(true);
+          }}
+          onOpenViewStory={(story, index, allStories) => {
+            setActiveStoryIndex(index);
+            setStoriesList(allStories);
+            setIsViewStoryOpen(true);
+          }}
+        />
+
         {/* 📊 Bức Tường Tâm Trạng Cộng Đồng & Lối vào Trạm Xả Stress */}
         <CommunityMoodWall
           onOpenWellness={() => window.dispatchEvent(new Event('freedom_open_wellness'))}
@@ -109,6 +242,12 @@ export const HomePage = () => {
           categories={categories}
           activeCategory={selectedCategory}
           onSelectCategory={handleCategorySelect}
+          onCategoryCreated={(created) => {
+            setCategories((prev) => {
+              const exists = prev.some((c) => c._id === created._id || c.slug === created.slug);
+              return exists ? prev : [...prev, created];
+            });
+          }}
         />
 
         {/* Banner hiển thị khi lọc theo hashtag/chủ đề */}
@@ -125,6 +264,27 @@ export const HomePage = () => {
               title="Xem tất cả bài viết"
             >
               ✕ Bỏ lọc chủ đề
+            </button>
+          </div>
+        )}
+
+        {/* Banner hiển thị khi tìm kiếm bài viết bằng thanh Search trên Header */}
+        {searchQuery && (
+          <div className="active-tag-filter-banner" style={{ borderColor: 'rgba(13, 148, 136, 0.4)' }}>
+            <div className="tag-filter-info">
+              <span className="tag-filter-icon">🔍</span>
+              <span>Đang tìm kiếm tâm sự theo từ khóa: <strong>"{searchQuery}"</strong></span>
+            </div>
+            <button
+              type="button"
+              className="clear-tag-btn"
+              onClick={() => {
+                searchParams.delete('q');
+                setSearchParams(searchParams);
+              }}
+              title="Xóa tìm kiếm để xem tất cả"
+            >
+              ✕ Bỏ tìm kiếm
             </button>
           </div>
         )}
@@ -220,6 +380,28 @@ export const HomePage = () => {
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onPostCreated={() => window.location.reload()}
+      />
+
+      {/* Modal Tạo / Sửa Story 24h */}
+      <CreateStoryModal
+        isOpen={isCreateStoryOpen}
+        onClose={() => {
+          setIsCreateStoryOpen(false);
+          setStoryToEdit(null);
+        }}
+        storyToEdit={storyToEdit}
+      />
+
+      {/* Modal Xem Story 24h Toàn Màn Hình */}
+      <StoryViewerModal
+        isOpen={isViewStoryOpen}
+        onClose={() => setIsViewStoryOpen(false)}
+        initialIndex={activeStoryIndex}
+        stories={storiesList}
+        onEditStory={(story) => {
+          setStoryToEdit(story);
+          setIsCreateStoryOpen(true);
+        }}
       />
     </div>
   );

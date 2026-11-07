@@ -6,6 +6,7 @@ import { RichVisualEditor } from './RichVisualEditor';
 import { MediaCameraCaptureModal } from './MediaCameraCaptureModal';
 import { formatPostContent } from '../../utils/contentFormatter';
 import { maskSensitiveText, analyzeContentSafety } from '../../utils/sensitiveFilter';
+import { PostAtmosphereSelector } from './PostAtmosphereSelector';
 
 export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
   const [categories, setCategories] = useState([]);
@@ -24,6 +25,14 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
     audioMood: 'auto',
     voiceGender: 'female',
     voiceRegion: 'north',
+    atmosphere: {
+      theme: 'default',
+      soundEnabled: true,
+      bgPreset: 'default',
+      customColor: '',
+      customBgGradient: '',
+      particleEffect: 'none',
+    },
   });
 
   const [activeTab, setActiveTab] = useState('edit');
@@ -31,6 +40,13 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
   const [isCoverCameraOpen, setIsCoverCameraOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Quản lý tạo thể loại bài viết mới trực tiếp
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatIcon, setNewCatIcon] = useState('🌍');
+  const [newCatDesc, setNewCatDesc] = useState('');
+  const [creatingCatLoading, setCreatingCatLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -55,6 +71,14 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
           audioMood: post.audioMood || 'auto',
           voiceGender: post.voiceGender || 'female',
           voiceRegion: post.voiceRegion || 'north',
+          atmosphere: post.atmosphere || {
+            theme: 'default',
+            soundEnabled: true,
+            bgPreset: 'default',
+            customColor: '',
+            customBgGradient: '',
+            particleEffect: 'none',
+          },
         });
         setErrorMsg('');
       }
@@ -71,6 +95,42 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
   const handleContentChange = (newHtml) => {
     setFormData((prev) => ({ ...prev, content: newHtml }));
     setErrorMsg('');
+  };
+
+  // Tạo thể loại bài viết mới trực tiếp
+  const handleCreateNewCategory = async (e) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    if (!newCatName.trim()) return;
+
+    try {
+      setCreatingCatLoading(true);
+      const res = await categoryService.createCategory({
+        name: newCatName.trim(),
+        icon: newCatIcon || '🌍',
+        description: newCatDesc.trim(),
+      });
+
+      const created = res.data?.data;
+      if (created) {
+        setCategories((prev) => {
+          const exists = prev.some((c) => c._id === created._id || c.slug === created.slug);
+          return exists ? prev : [...prev, created];
+        });
+        setFormData((prev) => ({ ...prev, category: created._id }));
+        setIsCreatingCategory(false);
+        setNewCatName('');
+        setNewCatDesc('');
+        window.dispatchEvent(
+          new CustomEvent('freedom_category_created', { detail: { category: created } })
+        );
+      }
+    } catch (err) {
+      console.error('Lỗi khi tạo thể loại:', err);
+      alert('Không thể tạo thể loại: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setCreatingCatLoading(false);
+    }
   };
 
   const handleCoverImageChange = async (e) => {
@@ -142,6 +202,7 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
         audioMood: formData.audioMood || 'auto',
         voiceGender: formData.voiceGender || 'female',
         voiceRegion: formData.voiceRegion || 'north',
+        atmosphere: formData.atmosphere,
       };
 
       const res = await postService.updatePost(post._id, payload);
@@ -239,21 +300,140 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '14px' }}>
-            <div className="form-group">
-              <label>Chuyên mục *</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '14px', alignItems: 'flex-start' }}>
+            <div className="form-group category-select-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ margin: 0, fontWeight: 700 }}>Chuyên mục / Thể loại *</label>
+                <button
+                  type="button"
+                  className="page-btn"
+                  onClick={() => setIsCreatingCategory(!isCreatingCategory)}
+                  style={{
+                    fontSize: '0.78rem',
+                    padding: '2px 8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    background: isCreatingCategory ? '#fef2f2' : '#f0fdf4',
+                    borderColor: isCreatingCategory ? '#fca5a5' : '#86efac',
+                    color: isCreatingCategory ? '#dc2626' : '#15803d',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    borderRadius: '6px',
+                  }}
+                >
+                  {isCreatingCategory ? '✕ Đóng' : '✨ + Thể loại mới'}
+                </button>
+              </div>
               <select
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
                 required
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                }}
               >
                 {categories.map((c) => (
                   <option key={c._id} value={c._id}>
-                    {c.name}
+                    {(c.icon ? `${c.icon} ` : '🏷️ ') + c.name}
                   </option>
                 ))}
               </select>
+
+              {/* Khung tạo thể loại mới trượt ra tiện lợi */}
+              {isCreatingCategory && (
+                <div
+                  className="new-category-inline-creator"
+                  style={{
+                    marginTop: '10px',
+                    padding: '12px 14px',
+                    background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                    borderRadius: '12px',
+                    border: '1.5px dashed #0d9488',
+                    animation: 'fadeIn 0.25s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '1rem' }}>🌍</span>
+                    <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0f766e' }}>
+                      Thêm thể loại mới (Thế giới, Chiến sự, Xã hội...)
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="Tên thể loại mới..."
+                      value={newCatName}
+                      onChange={(e) => setNewCatName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleCreateNewCategory();
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '7px 10px',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '0.84rem',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCreateNewCategory}
+                      disabled={!newCatName.trim() || creatingCatLoading}
+                      style={{
+                        padding: '7px 12px',
+                        background: 'linear-gradient(135deg, #0d9488 0%, #047857 100%)',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        cursor: !newCatName.trim() || creatingCatLoading ? 'not-allowed' : 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {creatingCatLoading ? '...' : 'Lưu & Chọn'}
+                    </button>
+                  </div>
+
+                  {/* Khay chọn Icon nhanh */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Biểu tượng:</span>
+                    {['🌍', '🕊️', '💣', '📰', '🌐', '🛡️', '⚖️', '🏛️', '💬', '☕', '🌱', '✨', '🔥'].map((ic) => (
+                      <button
+                        key={ic}
+                        type="button"
+                        onClick={() => setNewCatIcon(ic)}
+                        style={{
+                          background: newCatIcon === ic ? '#ccfbf1' : '#ffffff',
+                          border: newCatIcon === ic ? '1.5px solid #0d9488' : '1px solid #e2e8f0',
+                          borderRadius: '5px',
+                          width: '26px',
+                          height: '26px',
+                          fontSize: '0.9rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transform: newCatIcon === ic ? 'scale(1.15)' : 'none',
+                        }}
+                      >
+                        {ic}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="form-group">
               <label>Lượt đọc thực tế</label>
@@ -551,6 +731,12 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
               Nếu bỏ chọn, người đọc chỉ thấy các biểu tượng cảm xúc (Đồng Cảm 🫂, Stop 🛑, Yêu thích ❤️, Cố Lên 💪) mà không thấy con số cụ thể.
             </p>
           </div>
+
+          {/* Cài đặt Không Gian Cảm Xúc & Background Đặc Trưng */}
+          <PostAtmosphereSelector
+            atmosphere={formData.atmosphere}
+            onChange={(newAtmosphere) => setFormData((prev) => ({ ...prev, atmosphere: newAtmosphere }))}
+          />
 
           <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
             <button

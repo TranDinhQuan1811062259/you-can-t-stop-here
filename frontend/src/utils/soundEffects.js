@@ -923,6 +923,563 @@ export const playWarmthSound = () => {
   } catch (err) {}
 };
 
+// =========================================================================
+// 8. HỆ THỐNG ÂM THANH ĐẶC TRƯNG MÙA MÀNG & SỰ KIỆN KHI CHUYỂN TRANG
+// =========================================================================
+
+/**
+ * Mùa Xuân: Tiếng chim hót líu lo ríu rít + làn gió xuân ấm áp
+ */
+export const playSpringTransitionSound = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+
+    // Tiếng chim hót 3 nhịp líu lo trong trẻo
+    const playChirp = (startTime, startFreq, endFreq, duration = 0.1) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(startFreq, startTime);
+      osc.frequency.exponentialRampToValueAtTime(endFreq, startTime + duration * 0.5);
+      osc.frequency.exponentialRampToValueAtTime(startFreq * 0.9, startTime + duration);
+
+      gain.gain.setValueAtTime(0.001, startTime);
+      gain.gain.linearRampToValueAtTime(0.055, startTime + duration * 0.3);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+      osc.connect(gain);
+      routeAudio(ctx, gain, 0.8, 0.45);
+      osc.start(startTime);
+      osc.stop(startTime + duration + 0.05);
+    };
+
+    playChirp(now, 2600, 3600, 0.09);
+    playChirp(now + 0.11, 2900, 4200, 0.12);
+    playChirp(now + 0.25, 2400, 3800, 0.14);
+
+    // Gió xuân nhẹ nhàng thoáng qua
+    const noise = ctx.createBufferSource();
+    noise.buffer = createNoiseBuffer(ctx, 0.6);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(650, now);
+    const windGain = ctx.createGain();
+    windGain.gain.setValueAtTime(0.001, now);
+    windGain.gain.linearRampToValueAtTime(0.045, now + 0.2);
+    windGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.58);
+
+    noise.connect(filter);
+    filter.connect(windGain);
+    routeAudio(ctx, windGain, 0.6, 0.3);
+    noise.start(now);
+    noise.stop(now + 0.6);
+  } catch (e) {}
+};
+
+/**
+ * Mùa Hạ: Tiếng giẫm cỏ thiên nhiên + ánh sáng chiếu nhẹ / tiếng Thiên Đàng ngân nga
+ */
+export const playSummerTransitionSound = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+
+    // 1. Tiếng Thiên Đàng ánh sáng chiếu rọi: Dàn chuông pha lê ngân nga (Celestial Chimes)
+    const heavenlyNotes = [1046.50, 1318.51, 1567.98, 1975.53, 2093.00]; // C6, E6, G6, B6, C7
+    heavenlyNotes.forEach((freq, idx) => {
+      const noteTime = now + idx * 0.07;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, noteTime);
+
+      gain.gain.setValueAtTime(0.001, noteTime);
+      gain.gain.linearRampToValueAtTime(0.045, noteTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, noteTime + 1.4);
+
+      osc.connect(gain);
+      routeAudio(ctx, gain, 0.7, 0.6); // Reverb sâu lắng như nhà thờ/thiên đàng
+      osc.start(noteTime);
+      osc.stop(noteTime + 1.45);
+    });
+
+    // 2. Tiếng giẫm cỏ xào xạc dưới chân (Grass rustle steps)
+    const grassNoise = ctx.createBufferSource();
+    grassNoise.buffer = createNoiseBuffer(ctx, 0.4);
+    const bandpass = ctx.createBiquadFilter();
+    bandpass.type = 'bandpass';
+    bandpass.frequency.setValueAtTime(1400, now);
+    bandpass.Q.setValueAtTime(2.0, now);
+
+    const stepGain = ctx.createGain();
+    stepGain.gain.setValueAtTime(0.001, now);
+    stepGain.gain.linearRampToValueAtTime(0.05, now + 0.08);
+    stepGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+
+    grassNoise.connect(bandpass);
+    bandpass.connect(stepGain);
+    routeAudio(ctx, stepGain, 0.7, 0.25);
+    grassNoise.start(now);
+    grassNoise.stop(now + 0.4);
+  } catch (e) {}
+};
+
+/**
+ * Mùa Thu: Tiếng lá rơi xào xạc theo làn gió cuốn
+ */
+export const playAutumnTransitionSound = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+
+    // Cơn gió cuốn một đợt lá khô xào xạc (Dual Bandpass Flutter)
+    const noise = ctx.createBufferSource();
+    noise.buffer = createNoiseBuffer(ctx, 0.75);
+
+    const bp1 = ctx.createBiquadFilter();
+    bp1.type = 'bandpass';
+    bp1.frequency.setValueAtTime(1600, now);
+    bp1.frequency.linearRampToValueAtTime(2200, now + 0.4);
+    bp1.frequency.linearRampToValueAtTime(1200, now + 0.7);
+    bp1.Q.setValueAtTime(2.2, now);
+
+    // LFO mô phỏng tiếng lá cọ xát xào xạc
+    const flutterLfo = ctx.createOscillator();
+    const flutterGain = ctx.createGain();
+    flutterLfo.frequency.setValueAtTime(14, now); // 14Hz xào xạc
+    flutterGain.gain.setValueAtTime(0.03, now);
+    flutterLfo.connect(flutterGain.gain);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.075, now + 0.2);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.72);
+
+    noise.connect(bp1);
+    bp1.connect(gain);
+    gain.connect(flutterGain);
+    routeAudio(ctx, flutterGain, 0.8, 0.35);
+
+    noise.start(now);
+    flutterLfo.start(now);
+    noise.stop(now + 0.75);
+    flutterLfo.stop(now + 0.75);
+  } catch (e) {}
+};
+
+/**
+ * Mùa Đông: Tiếng gió bấc rít từng cơn lạnh buốt + tiếng chuông băng giá
+ */
+export const playWinterTransitionSound = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+
+    // Gió rít qua khe cửa vù vù (Whistling cold wind sweep)
+    const noise = ctx.createBufferSource();
+    noise.buffer = createNoiseBuffer(ctx, 0.8);
+
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(320, now);
+    bp.frequency.exponentialRampToValueAtTime(680, now + 0.35);
+    bp.frequency.exponentialRampToValueAtTime(280, now + 0.75);
+    bp.Q.setValueAtTime(4.2, now);
+
+    const windGain = ctx.createGain();
+    windGain.gain.setValueAtTime(0.001, now);
+    windGain.gain.linearRampToValueAtTime(0.12, now + 0.3);
+    windGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.78);
+
+    noise.connect(bp);
+    bp.connect(windGain);
+    routeAudio(ctx, windGain, 0.75, 0.45);
+    noise.start(now);
+    noise.stop(now + 0.8);
+
+    // Chuông băng giá pha lê tuyết
+    const iceOsc = ctx.createOscillator();
+    const iceGain = ctx.createGain();
+    iceOsc.type = 'sine';
+    iceOsc.frequency.setValueAtTime(3135.96, now + 0.15); // G7
+    iceGain.gain.setValueAtTime(0.025, now + 0.15);
+    iceGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.75);
+    iceOsc.connect(iceGain);
+    routeAudio(ctx, iceGain, 0.5, 0.5);
+    iceOsc.start(now + 0.15);
+    iceOsc.stop(now + 0.8);
+  } catch (e) {}
+};
+
+/**
+ * Giáng Sinh: Tiếng "Hô Hô Hô" của Ông Già Noel + Tiếng chuông Jingle Bells
+ */
+export const playSantaHoHoSound = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+
+    // Giọng nói tổng hợp Formant trầm ấm "Hô! Hô! Hô!"
+    const playSingleHo = (startTime, pitch = 135) => {
+      // Nguồn âm thanh thanh quản
+      const vocalOsc = ctx.createOscillator();
+      vocalOsc.type = 'sawtooth';
+      vocalOsc.frequency.setValueAtTime(pitch, startTime);
+      vocalOsc.frequency.exponentialRampToValueAtTime(pitch * 0.85, startTime + 0.18);
+
+      // Formant bộ lọc tạo âm "Ô" (F1 = 480Hz, F2 = 850Hz)
+      const f1 = ctx.createBiquadFilter();
+      f1.type = 'bandpass';
+      f1.frequency.setValueAtTime(480, startTime);
+      f1.Q.setValueAtTime(4.0, startTime);
+
+      const f2 = ctx.createBiquadFilter();
+      f2.type = 'bandpass';
+      f2.frequency.setValueAtTime(850, startTime);
+      f2.Q.setValueAtTime(3.5, startTime);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, startTime);
+      gain.gain.linearRampToValueAtTime(0.12, startTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.2);
+
+      vocalOsc.connect(f1);
+      vocalOsc.connect(f2);
+      f1.connect(gain);
+      f2.connect(gain);
+      routeAudio(ctx, gain, 0.85, 0.4);
+
+      vocalOsc.start(startTime);
+      vocalOsc.stop(startTime + 0.22);
+    };
+
+    // 3 tiếng HÔ rền vang: HÔ!... HÔ!... HÔ!
+    playSingleHo(now, 145);
+    playSingleHo(now + 0.22, 138);
+    playSingleHo(now + 0.44, 128);
+
+    // Kèm theo tiếng chuông tuần lộc lắc vui nhộn
+    const bellNotes = [2637.02, 3135.96, 3951.07]; // E7, G7, B7
+    bellNotes.forEach((freq, idx) => {
+      const bTime = now + 0.05 + idx * 0.16;
+      const bOsc = ctx.createOscillator();
+      const bGain = ctx.createGain();
+      bOsc.type = 'sine';
+      bOsc.frequency.setValueAtTime(freq, bTime);
+      bGain.gain.setValueAtTime(0.045, bTime);
+      bGain.gain.exponentialRampToValueAtTime(0.0001, bTime + 0.35);
+      bOsc.connect(bGain);
+      routeAudio(ctx, bGain, 0.6, 0.5);
+      bOsc.start(bTime);
+      bOsc.stop(bTime + 0.4);
+    });
+  } catch (e) {}
+};
+
+/**
+ * 30/4: Tiếng xe tăng gầm rú & tiếng hút vào tường / logo trang
+ */
+export const playTank304TransitionSound = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+
+    // 1. Tiếng động cơ xe tăng rầm rập (Heavy diesel rumble)
+    const engineOsc = ctx.createOscillator();
+    engineOsc.type = 'triangle';
+    engineOsc.frequency.setValueAtTime(52, now);
+    engineOsc.frequency.linearRampToValueAtTime(78, now + 0.45); // Tăng tốc xông pha
+    engineOsc.frequency.exponentialRampToValueAtTime(180, now + 0.65); // Hút vào tường
+
+    const engineGain = ctx.createGain();
+    engineGain.gain.setValueAtTime(0.05, now);
+    engineGain.gain.linearRampToValueAtTime(0.14, now + 0.35);
+    engineGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.72);
+
+    engineOsc.connect(engineGain);
+    routeAudio(ctx, engineGain, 0.85, 0.35);
+    engineOsc.start(now);
+    engineOsc.stop(now + 0.75);
+
+    // 2. Tiếng xích xe tăng nghiến rầm rập (Caterpillar metal treads)
+    const trackNoise = ctx.createBufferSource();
+    trackNoise.buffer = createNoiseBuffer(ctx, 0.6);
+    const trackFilter = ctx.createBiquadFilter();
+    trackFilter.type = 'bandpass';
+    trackFilter.frequency.setValueAtTime(950, now);
+    trackFilter.Q.setValueAtTime(2.0, now);
+    const trackGain = ctx.createGain();
+    trackGain.gain.setValueAtTime(0.04, now);
+    trackGain.gain.linearRampToValueAtTime(0.09, now + 0.3);
+    trackGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+
+    trackNoise.connect(trackFilter);
+    trackFilter.connect(trackGain);
+    routeAudio(ctx, trackGain, 0.7, 0.25);
+    trackNoise.start(now);
+    trackNoise.stop(now + 0.62);
+
+    // 3. Tiếng hút vào tường / Title trang (Suction whoosh vortex + Golden impact chime)
+    const vortexOsc = ctx.createOscillator();
+    vortexOsc.type = 'sine';
+    vortexOsc.frequency.setValueAtTime(140, now + 0.3);
+    vortexOsc.frequency.exponentialRampToValueAtTime(880, now + 0.65); // Tần số hút vút lên
+
+    const vortexGain = ctx.createGain();
+    vortexGain.gain.setValueAtTime(0.001, now + 0.3);
+    vortexGain.gain.linearRampToValueAtTime(0.11, now + 0.58);
+    vortexGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.68);
+
+    vortexOsc.connect(vortexGain);
+    routeAudio(ctx, vortexGain, 0.8, 0.5);
+    vortexOsc.start(now + 0.3);
+    vortexOsc.stop(now + 0.7);
+
+    // Tiếng ngân vang khải hoàn khi hút trúng title (523Hz C5)
+    const victoryChime = ctx.createOscillator();
+    const chimeGain = ctx.createGain();
+    victoryChime.type = 'triangle';
+    victoryChime.frequency.setValueAtTime(523.25, now + 0.6);
+    chimeGain.gain.setValueAtTime(0.08, now + 0.6);
+    chimeGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+    victoryChime.connect(chimeGain);
+    routeAudio(ctx, chimeGain, 0.7, 0.6);
+    victoryChime.start(now + 0.6);
+    victoryChime.stop(now + 1.25);
+  } catch (e) {}
+};
+
+/**
+ * 2/9: Tiếng Hào Hùng Vinh Quang (Triumphant Victory Fanfare & Timpani Roll)
+ */
+export const playNationalDay29TransitionSound = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+
+    // Kèn đồng chiến thắng rộn rã (Brass Fanfare Chords)
+    const brassNotes = [466.16, 587.33, 698.46, 932.33]; // Bb4, D5, F5, Bb5
+    brassNotes.forEach((freq, idx) => {
+      const bTime = now + idx * 0.05;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, bTime);
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(1800, bTime);
+
+      gain.gain.setValueAtTime(0.001, bTime);
+      gain.gain.linearRampToValueAtTime(0.065, bTime + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, bTime + 0.85);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      routeAudio(ctx, gain, 0.75, 0.55);
+      osc.start(bTime);
+      osc.stop(bTime + 0.9);
+    });
+
+    // Trống định âm Timpani dồn dập
+    const timpani = ctx.createOscillator();
+    const timpaniGain = ctx.createGain();
+    timpani.type = 'sine';
+    timpani.frequency.setValueAtTime(116.54, now); // Bb2
+    timpani.frequency.exponentialRampToValueAtTime(58, now + 0.5);
+    timpaniGain.gain.setValueAtTime(0.12, now);
+    timpaniGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+
+    timpani.connect(timpaniGain);
+    routeAudio(ctx, timpaniGain, 0.9, 0.4);
+    timpani.start(now);
+    timpani.stop(now + 0.6);
+  } catch (e) {}
+};
+
+/**
+ * Ngày Nhà Giáo Việt Nam 20/11:
+ * Tiếng phấn cà lên bảng đen sột soạt chân thực + tiếng chuông trường ngân vang hoài niệm
+ */
+export const playTeachersDayChalkSound = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+
+    // Hàm tạo 1 nét phấn cà lên bảng đen (Chalk on blackboard stroke)
+    const playChalkStroke = (startTime, duration = 0.12, basePitch = 2200) => {
+      // 1. Tiếng cọ xát ma sát của phấn trên bảng đen (Friction noise)
+      const noise = ctx.createBufferSource();
+      noise.buffer = createNoiseBuffer(ctx, duration);
+
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.setValueAtTime(basePitch, startTime);
+      bp.frequency.linearRampToValueAtTime(basePitch * 1.25, startTime + duration * 0.6);
+      bp.frequency.linearRampToValueAtTime(basePitch * 0.9, startTime + duration);
+      bp.Q.setValueAtTime(5.5, startTime);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, startTime);
+      gain.gain.linearRampToValueAtTime(0.08, startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+      noise.connect(bp);
+      bp.connect(gain);
+      routeAudio(ctx, gain, 0.85, 0.35);
+      noise.start(startTime);
+      noise.stop(startTime + duration + 0.02);
+
+      // 2. Tiếng gõ phấn nhẹ khi bắt đầu chạm bảng
+      const tapOsc = ctx.createOscillator();
+      const tapGain = ctx.createGain();
+      tapOsc.type = 'triangle';
+      tapOsc.frequency.setValueAtTime(1180, startTime);
+      tapGain.gain.setValueAtTime(0.045, startTime);
+      tapGain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.025);
+      tapOsc.connect(tapGain);
+      routeAudio(ctx, tapGain, 0.7, 0.2);
+      tapOsc.start(startTime);
+      tapOsc.stop(startTime + 0.03);
+    };
+
+    // Chuỗi nét viết phấn: "Xoạt... Xoẹt... Tích... Xoạt"
+    playChalkStroke(now, 0.15, 2400);
+    playChalkStroke(now + 0.16, 0.12, 2800);
+    playChalkStroke(now + 0.3, 0.06, 1900); // Nét chấm phấn
+    playChalkStroke(now + 0.38, 0.18, 2200);
+
+    // Chuông trường ngân nga hoài niệm (School Chime Notes)
+    const schoolNotes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+    schoolNotes.forEach((freq, idx) => {
+      const cTime = now + 0.2 + idx * 0.11;
+      const cOsc = ctx.createOscillator();
+      const cGain = ctx.createGain();
+      cOsc.type = 'sine';
+      cOsc.frequency.setValueAtTime(freq, cTime);
+      cGain.gain.setValueAtTime(0.04, cTime);
+      cGain.gain.exponentialRampToValueAtTime(0.0001, cTime + 0.8);
+      cOsc.connect(cGain);
+      routeAudio(ctx, cGain, 0.6, 0.5);
+      cOsc.start(cTime);
+      cOsc.stop(cTime + 0.85);
+    });
+  } catch (e) {}
+};
+
+/**
+ * Tết Trung Thu:
+ * Tiếng trống múa lân rộn rã tùng cắc tùng + tiếng chuông đèn lồng ngân nga
+ */
+export const playMidAutumnTransitionSound = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  try {
+    playLionDanceDrumSound(ctx, ctx.currentTime);
+  } catch (e) {}
+};
+
+/**
+ * Điều phối âm thanh chuyển trang thông minh:
+ * Tự động chọn âm thanh Sự Kiện Lễ Hội nếu có sự kiện đang chạy,
+ * hoặc phát âm thanh Mùa Màng (Xuân, Hạ, Thu, Đông)
+ */
+export const playPageTransitionAtmosphereSound = ({ seasonId = 'winter', eventId = null } = {}) => {
+  if (!isSoundEnabled()) return;
+
+  const normalizedEvent = String(eventId || '').toLowerCase();
+
+  // 1. Ưu tiên sự kiện lễ hội nếu đang kích hoạt
+  if (normalizedEvent.includes('30_4') || normalizedEvent.includes('30/4') || normalizedEvent.includes('giai_phong')) {
+    playTank304TransitionSound();
+    return;
+  }
+  if (normalizedEvent.includes('2_9') || normalizedEvent.includes('2/9') || normalizedEvent.includes('quoc_khanh')) {
+    playNationalDay29TransitionSound();
+    return;
+  }
+  if (
+    normalizedEvent.includes('tet_duong') ||
+    normalizedEvent.includes('tet_nguyen') ||
+    normalizedEvent.includes('nam_moi') ||
+    normalizedEvent.includes('new_year')
+  ) {
+    playFestiveEventSound('fireworks'); // Tiếng pháo hoa đì đùng
+    return;
+  }
+  if (
+    normalizedEvent.includes('giang_sinh') ||
+    normalizedEvent.includes('noel') ||
+    normalizedEvent.includes('christmas')
+  ) {
+    playSantaHoHoSound(); // Tiếng Hô Hô Ông Già Noel
+    return;
+  }
+  if (
+    normalizedEvent.includes('phu_nu') ||
+    normalizedEvent.includes('8_3') ||
+    normalizedEvent.includes('20_10') ||
+    normalizedEvent.includes('women')
+  ) {
+    playRomanticHarpSound(getAudioContext(), getAudioContext()?.currentTime || 0);
+    return;
+  }
+  if (
+    normalizedEvent.includes('trung_thu') ||
+    normalizedEvent.includes('rằm') ||
+    normalizedEvent.includes('đèn lồng')
+  ) {
+    playMidAutumnTransitionSound(); // Tiếng trống múa lân rộn ràng
+    return;
+  }
+  if (
+    normalizedEvent.includes('20_11') ||
+    normalizedEvent.includes('nha_giao') ||
+    normalizedEvent.includes('thầy cô')
+  ) {
+    playTeachersDayChalkSound(); // Tiếng phấn cà lên bảng đen
+    return;
+  }
+
+  // 2. Nếu không có sự kiện đặc thù, phát âm thanh theo mùa màng
+  const normalizedSeason = String(seasonId || 'winter').toLowerCase();
+  if (normalizedSeason === 'spring') {
+    playSpringTransitionSound();
+  } else if (normalizedSeason === 'summer') {
+    playSummerTransitionSound();
+  } else if (normalizedSeason === 'autumn') {
+    playAutumnTransitionSound();
+  } else {
+    playWinterTransitionSound();
+  }
+};
+
 /**
  * Khởi tạo listener toàn cục bắt sự kiện click và rê chuột trên các phần tử tương tác
  */

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Header } from './Header';
 import { Footer } from './Footer';
@@ -17,6 +17,17 @@ import { SecurityBellNotification } from '../common/SecurityBellNotification';
 import { FloatingAiAudioPlayer } from '../blog/FloatingAiAudioPlayer';
 import { ThemeScheduleModal } from '../common/ThemeScheduleModal';
 import { FloatingFestiveMascot } from '../common/FloatingFestiveMascot';
+import { PageTransitionWrapper } from '../common/PageTransitionWrapper';
+import { PwaInstallPrompt } from '../common/PwaInstallPrompt';
+import {
+  getFabPos,
+  saveFabPos,
+  resolveAntiCollision,
+  snapToNearestEdge,
+  ensureInBounds,
+  MARGIN_LEFT,
+  MARGIN_RIGHT,
+} from '../../utils/floatingButtonManager';
 
 export const MainLayout = () => {
   const { user, isAuthenticated } = useAuth();
@@ -29,7 +40,159 @@ export const MainLayout = () => {
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
   const [activeSeason, setActiveSeasonState] = useState(() => getActiveSeason());
   const [isAiPlayerActive, setIsAiPlayerActive] = useState(false);
-  const [isPrefCollapsed, setIsPrefCollapsed] = useState(false);
+  const [isPrefCollapsed, setIsPrefCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('freedom_pref_collapsed') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+
+  // Toạ độ & kéo thả tự do như nút Chat & Viết tâm sự & Sự kiện
+  const [prefPos, setPrefPos] = useState(() => {
+    const raw = getFabPos('pref');
+    return resolveAntiCollision('pref', raw, true);
+  });
+  const [isDraggingPref, setIsDraggingPref] = useState(false);
+  const dragStartRef = useRef({ mouseX: 0, mouseY: 0, btnX: 0, btnY: 0 });
+  const hasMovedRef = useRef(false);
+  const activePointerIdRef = useRef(null);
+
+  const handleToggleCollapse = (collapsed) => {
+    setIsPrefCollapsed(collapsed);
+    try {
+      localStorage.setItem('freedom_pref_collapsed', String(collapsed));
+    } catch (e) {}
+  };
+
+  // Giữ vị trí Cụm tiện ích trong màn hình khi thay đổi kích thước cửa sổ
+  useEffect(() => {
+    const handleResize = () => {
+      setPrefPos((prev) => {
+        const bounded = ensureInBounds('pref', prev);
+        const resolved = resolveAntiCollision('pref', bounded, true);
+        saveFabPos('pref', resolved);
+        return resolved;
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Lắng nghe khi nút khác di dời để tự né tránh va chạm
+  useEffect(() => {
+    const handleRecheckCollision = (e) => {
+      if (e?.detail?.type === 'pref') return;
+      setPrefPos((curr) => {
+        const safe = resolveAntiCollision('pref', curr, true);
+        if (safe.x !== curr.x || safe.y !== curr.y) {
+          saveFabPos('pref', safe);
+          return safe;
+        }
+        return curr;
+      });
+    };
+    window.addEventListener('freedom_fab_pos_changed', handleRecheckCollision);
+    return () => window.removeEventListener('freedom_fab_pos_changed', handleRecheckCollision);
+  }, []);
+
+  // =========================================================================
+  // XỬ LÝ KÉO THẢ QUẢ CẦU TIỆN ÍCH KHI ĐÓNG (POINTER EVENTS CHUẨN XÁC)
+  // =========================================================================
+  const handlePointerDown = (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      activePointerIdRef.current = e.pointerId;
+    } catch (_) {}
+
+    dragStartRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      btnX: prefPos.x,
+      btnY: prefPos.y,
+    };
+    hasMovedRef.current = false;
+    setIsDraggingPref(true);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDraggingPref) return;
+    e.preventDefault();
+
+    const dx = e.clientX - dragStartRef.current.mouseX;
+    const dy = e.clientY - dragStartRef.current.mouseY;
+
+    if (Math.hypot(dx, dy) > 4) {
+      hasMovedRef.current = true;
+    }
+
+    const nextX = dragStartRef.current.btnX + dx;
+    const nextY = dragStartRef.current.btnY + dy;
+    setPrefPos(ensureInBounds('pref', { x: nextX, y: nextY }));
+  };
+
+  const handlePointerUp = (e) => {
+    if (!isDraggingPref) return;
+
+    try {
+      if (activePointerIdRef.current !== null && e.currentTarget) {
+        e.currentTarget.releasePointerCapture(activePointerIdRef.current);
+      }
+    } catch (_) {}
+    activePointerIdRef.current = null;
+    setIsDraggingPref(false);
+
+    if (hasMovedRef.current) {
+      setPrefPos((current) => {
+        const snapped = snapToNearestEdge('pref', current);
+        saveFabPos('pref', snapped);
+        return snapped;
+      });
+    } else {
+      // Bấm trực tiếp không kéo -> Mở rộng thanh tiện ích
+      playClickSound();
+      handleToggleCollapse(false);
+    }
+  };
+
+  const handlePointerCancel = (e) => {
+    if (isDraggingPref) {
+      handlePointerUp(e);
+    }
+  };
+
+  // Bảo hiểm toàn cục trên window
+  useEffect(() => {
+    if (!isDraggingPref) return;
+
+    const handleGlobalRelease = () => {
+      setIsDraggingPref(false);
+      activePointerIdRef.current = null;
+      if (hasMovedRef.current) {
+        setPrefPos((current) => {
+          const snapped = snapToNearestEdge('pref', current);
+          saveFabPos('pref', snapped);
+          return snapped;
+        });
+      }
+    };
+
+    window.addEventListener('pointerup', handleGlobalRelease);
+    window.addEventListener('mouseup', handleGlobalRelease);
+    window.addEventListener('touchend', handleGlobalRelease);
+    window.addEventListener('pointercancel', handleGlobalRelease);
+
+    return () => {
+      window.removeEventListener('pointerup', handleGlobalRelease);
+      window.removeEventListener('mouseup', handleGlobalRelease);
+      window.removeEventListener('touchend', handleGlobalRelease);
+      window.removeEventListener('pointercancel', handleGlobalRelease);
+    };
+  }, [isDraggingPref]);
   const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
   const [showBackOnline, setShowBackOnline] = useState(false);
 
@@ -133,10 +296,10 @@ export const MainLayout = () => {
 
       <Header />
 
-      <main style={{ flexGrow: 1, position: 'relative', zIndex: 1 }}>
-        <div key={location.pathname} className="page-transition-wrapper">
+      <main style={{ flexGrow: 1, position: 'relative', zIndex: 1, overflowX: 'clip' }}>
+        <PageTransitionWrapper>
           <Outlet />
-        </div>
+        </PageTransitionWrapper>
       </main>
 
       <Footer />
@@ -151,13 +314,49 @@ export const MainLayout = () => {
         className={`floating-quick-preferences ${isAiPlayerActive ? 'player-active' : ''} ${isPrefCollapsed ? 'is-collapsed' : ''}`}
         role="region"
         aria-label="Tùy chỉnh giao diện & Âm thanh"
+        style={
+          isPrefCollapsed
+            ? {
+                position: 'fixed',
+                left: `${prefPos.x}px`,
+                top: `${prefPos.y}px`,
+                bottom: 'auto',
+                right: 'auto',
+                zIndex: isDraggingPref ? 9999 : 9990,
+                touchAction: 'none',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                cursor: isDraggingPref ? 'grabbing' : 'grab',
+                transition: isDraggingPref
+                  ? 'none'
+                  : 'left 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.2s, box-shadow 0.2s',
+              }
+            : typeof window !== 'undefined' && prefPos.x > window.innerWidth / 2
+            ? {
+                position: 'fixed',
+                right: `${MARGIN_RIGHT}px`,
+                left: 'auto',
+                bottom: isAiPlayerActive ? '124px' : '24px',
+                top: 'auto',
+              }
+            : {
+                position: 'fixed',
+                left: `${MARGIN_LEFT}px`,
+                right: 'auto',
+                bottom: isAiPlayerActive ? '124px' : '24px',
+                top: 'auto',
+              }
+        }
       >
         {isPrefCollapsed ? (
           <button
             type="button"
-            className="quick-pref-collapsed-bubble"
-            onClick={() => setIsPrefCollapsed(false)}
-            title={`Bấm để mở rộng Cài đặt Ngày/Đêm & Âm thanh (Hiện tại: ${currentThemeMode === 'light' ? 'Chế độ Ngày' : 'Chế độ Đêm'})`}
+            className={`quick-pref-collapsed-bubble ${isDraggingPref ? 'is-dragging' : ''}`}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            title={`Kéo thả để di dời khắp màn hình • Bấm để mở rộng Cài đặt Ngày/Đêm & Âm thanh (${currentThemeMode === 'light' ? 'Chế độ Ngày' : 'Chế độ Đêm'})`}
           >
             <span className="bubble-icon">{currentThemeMode === 'light' ? '☀️' : '🌙'}</span>
           </button>
@@ -219,7 +418,7 @@ export const MainLayout = () => {
             <button
               type="button"
               className="quick-pref-collapse-btn"
-              onClick={() => setIsPrefCollapsed(true)}
+              onClick={() => handleToggleCollapse(true)}
               title="Thu nhỏ thanh tiện ích"
               aria-label="Thu nhỏ"
             >
@@ -279,6 +478,9 @@ export const MainLayout = () => {
 
       {/* AssistiveTouch Floating Chat Widget (Không lấn layout, hiển thị gọn gàng ở góc màn hình) */}
       {isAuthenticated && <AssistiveChatWidget />}
+
+      {/* PWA App Install Banner & Modal (Cho Smartphone, Tablet, PC, Mac) */}
+      <PwaInstallPrompt />
     </div>
   );
 };

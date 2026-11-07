@@ -405,8 +405,18 @@ export const FestiveEventManagerModal = ({ isOpen, onClose, onEventUpdated }) =>
               </div>
             </div>
 
-            {/* Vùng cuộn danh sách thẻ sự kiện */}
-            <div className="festive-mgmt-cards-scroll">
+            {/* Vùng cuộn danh sách thẻ sự kiện - Thoáng đãng, có thanh cuộn mượt và vùng đệm đáy 160px để không bao giờ bị che khuất thẻ cuối cùng */}
+            <div
+              className="festive-mgmt-cards-scroll"
+              style={{
+                flex: '1 1 auto',
+                minHeight: 0,
+                overflowY: 'auto',
+                overscrollBehavior: 'contain',
+                paddingRight: '8px',
+                paddingBottom: '40px',
+              }}
+            >
               {loading ? (
                 <div className="festive-mgmt-empty-state">
                   <div className="festive-mgmt-spinner" />
@@ -429,7 +439,7 @@ export const FestiveEventManagerModal = ({ isOpen, onClose, onEventUpdated }) =>
                   </button>
                 </div>
               ) : (
-                <div className="festive-mgmt-cards-list">
+                <div className="festive-mgmt-cards-list" style={{ paddingBottom: '160px' }}>
                   {filteredEvents.map((ev) => {
                     const isPreviewing = ev.id === previewEventId;
                     const isCurrentlyActive = ev.isCurrentlyActive;

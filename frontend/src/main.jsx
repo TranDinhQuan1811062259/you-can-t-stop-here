@@ -9,6 +9,30 @@ import { getActiveSeason } from './utils/seasonUtils';
 initTheme();
 getActiveSeason();
 
+// Đăng ký PWA Service Worker (Cho Smartphone, Tablet, PC, Mac)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((registration) => {
+        // Kiểm tra cập nhật ngầm định kỳ
+        registration.onupdatefound = () => {
+          const installingWorker = registration.installing;
+          if (installingWorker) {
+            installingWorker.onstatechange = () => {
+              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('⚡ Đã có phiên bản mới của Freedom App!');
+              }
+            };
+          }
+        };
+      })
+      .catch((err) => {
+        console.warn('Lỗi đăng ký PWA Service Worker:', err);
+      });
+  });
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />

@@ -1,0 +1,66 @@
+{
+  "id": "com.freedom.web.app",
+  "name": "Freedom - Không Gian Sẻ Chia & Chữa Lành",
+  "short_name": "Freedom",
+  "description": "Ứng dụng chia sẻ câu chuyện, trút bầu tâm sự, âm thanh cảm xúc và chữa lành tinh thần cho người đi làm.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "theme_color": "#0d9488",
+  "background_color": "#f8fafc",
+  "lang": "vi",
+  "dir": "ltr",
+  "categories": ["social", "lifestyle", "wellness"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "✍️ Viết Tâm Sự Mới",
+      "short_name": "Đăng bài",
+      "description": "Chia sẻ trăn trở và câu chuyện của bạn hôm nay",
+      "url": "/?action=create_post",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "📸 Đăng Story 24h",
+      "short_name": "Story",
+      "description": "Kể chuyện khoảnh khắc với cọ vẽ và âm nhạc",
+      "url": "/?action=story",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "🌿 Những Tia Sáng & Động Lực",
+      "short_name": "Chữa lành",
+      "description": "Đọc những câu chuyện Small Wins tích cực",
+      "url": "/category/nhung-tia-sang-dong-luc-small-wins",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false
+}

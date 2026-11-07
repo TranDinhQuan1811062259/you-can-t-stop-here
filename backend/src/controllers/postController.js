@@ -15,32 +15,62 @@ const fallbackCategories = [
 ];
 
 /**
- * Trợ giúp chuẩn hóa danh mục sang dạng object { _id, name, slug }
+ * Trợ giúp chuẩn hóa danh mục sang dạng object { _id, name, slug, icon }
+ * Hỗ trợ tự động tạo & lưu thể loại mới vĩnh viễn nếu người dùng tạo thể loại riêng
  */
 const resolveCategory = async (catInput) => {
   if (!catInput) return fallbackCategories[0];
   if (typeof catInput === 'object' && catInput.name && catInput.slug) return catInput;
 
+  const rawName = typeof catInput === 'object' ? (catInput.name || '') : String(catInput);
   const store = loadStore();
   const allCats = [...(store.categories || []), ...fallbackCategories];
   const found = allCats.find(
     (c) =>
       c._id === catInput ||
       c.slug === catInput ||
-      c.name.toLowerCase() === String(catInput).toLowerCase()
+      c.name.toLowerCase() === rawName.toLowerCase() ||
+      c.slug === slugify(rawName)
   );
-  if (found) return { _id: found._id, name: found.name, slug: found.slug };
+  if (found) return { _id: found._id, name: found.name, slug: found.slug, icon: found.icon || '🌍' };
 
   if (checkDbReady()) {
     try {
       const dbCat = await Category.findOne({
-        $or: [{ slug: catInput }, { _id: String(catInput).match(/^[0-9a-fA-F]{24}$/) ? catInput : null }].filter(Boolean),
+        $or: [
+          { slug: catInput },
+          { slug: slugify(rawName) },
+          { _id: String(catInput).match(/^[0-9a-fA-F]{24}$/) ? catInput : null },
+        ].filter(Boolean),
       });
-      if (dbCat) return { _id: dbCat._id.toString(), name: dbCat.name, slug: dbCat.slug };
+      if (dbCat) return { _id: dbCat._id.toString(), name: dbCat.name, slug: dbCat.slug, icon: dbCat.icon || '🌍' };
     } catch {}
   }
 
-  return { _id: String(catInput), name: 'Tâm sự', slug: 'tam-su' };
+  // Nếu người dùng nhập tên thể loại mới trực tiếp, tự động lưu vĩnh viễn
+  if (rawName && rawName.trim().length >= 2) {
+    const cleanName = rawName.trim();
+    const cleanSlug = slugify(cleanName);
+    const newCategory = {
+      _id: `cat_${Date.now()}`,
+      name: cleanName,
+      slug: cleanSlug,
+      description: 'Thể loại do thành viên cộng đồng khởi tạo',
+      icon: '🌍',
+      createdAt: new Date().toISOString(),
+    };
+    store.categories = store.categories || [];
+    store.categories.push(newCategory);
+    saveStore(store);
+    if (checkDbReady()) {
+      try {
+        await Category.create(newCategory);
+      } catch {}
+    }
+    return newCategory;
+  }
+
+  return { _id: String(catInput), name: 'Tâm sự & Đời Sống', slug: 'tam-su-doi-song-thuong-nhat', icon: '☕' };
 };
 
 /**
@@ -105,11 +135,13 @@ export const getPosts = async (req, res) => {
     let filtered = allPosts;
 
     if (category) {
+      const lowerCat = category.toLowerCase();
       filtered = filtered.filter(
         (p) =>
           p.category?.slug === category ||
           p.category?._id === category ||
-          (typeof p.category === 'string' && p.category === category)
+          p.category?.name?.toLowerCase() === lowerCat ||
+          (typeof p.category === 'string' && (p.category === category || p.category.toLowerCase() === lowerCat))
       );
     }
 
@@ -286,11 +318,14 @@ export const getPostById = async (req, res) => {
   try {
     const { id } = req.params;
     if (checkDbReady()) {
-      const post = await Post.findById(id).populate('category', 'name slug');
-      if (post) return sendSuccess(res, { data: post });
+      try {
+        const query = String(id).match(/^[0-9a-fA-F]{24}$/) ? { _id: id } : { slug: id };
+        const post = await Post.findOne(query).populate('category', 'name slug');
+        if (post) return sendSuccess(res, { data: post });
+      } catch (_) {}
     }
     const store = loadStore();
-    const post = (store.posts || []).find((p) => p._id === id);
+    const post = (store.posts || []).find((p) => String(p._id) === String(id) || p.slug === id);
     if (post) return sendSuccess(res, { data: post });
     return sendError(res, { message: 'Không tìm thấy bài viết', status: 404 });
   } catch (error) {
@@ -306,24 +341,27 @@ export const cheerPost = async (req, res) => {
     const { id } = req.params;
 
     if (checkDbReady()) {
-      const post = await Post.findByIdAndUpdate(
-        id,
-        { $inc: { cheersCount: 1 } },
-        { new: true }
-      );
-      if (post) {
-        const store = loadStore();
-        const storedPost = (store.posts || []).find((p) => p._id === id || p.slug === id);
-        if (storedPost) {
-          storedPost.cheersCount = post.cheersCount;
-          saveStore(store);
+      try {
+        const query = String(id).match(/^[0-9a-fA-F]{24}$/) ? { _id: id } : { slug: id };
+        const post = await Post.findOneAndUpdate(
+          query,
+          { $inc: { cheersCount: 1 } },
+          { new: true }
+        );
+        if (post) {
+          const store = loadStore();
+          const storedPost = (store.posts || []).find((p) => String(p._id) === String(id) || p.slug === id);
+          if (storedPost) {
+            storedPost.cheersCount = post.cheersCount;
+            saveStore(store);
+          }
+          return sendSuccess(res, { data: { cheersCount: post.cheersCount } });
         }
-        return sendSuccess(res, { data: { cheersCount: post.cheersCount } });
-      }
+      } catch (_) {}
     }
 
     const store = loadStore();
-    const post = (store.posts || []).find((p) => p._id === id || p.slug === id);
+    const post = (store.posts || []).find((p) => String(p._id) === String(id) || p.slug === id);
     if (post) {
       post.cheersCount = (post.cheersCount || 0) + 1;
       saveStore(store);
@@ -366,122 +404,124 @@ export const reactToPost = async (req, res) => {
     const userAvatar = req.user?.avatar || '/images/man.jpg';
 
     if (checkDbReady()) {
-      let post = await Post.findOne({
-        $or: [
-          { _id: id && String(id).match(/^[0-9a-fA-F]{24}$/) ? id : null },
-          { slug: id },
-        ].filter(Boolean),
-      });
-
-      if (!post) {
-        return sendError(res, { message: 'Không tìm thấy bài viết', status: 404 });
-      }
-
-      if (!Array.isArray(post.reactions)) {
-        post.reactions = [];
-      }
-      if (!post.reactionCounts) {
-        post.reactionCounts = { sympathy: 0, stop: 0, love: 0, encourage: 0, total: 0 };
-      }
-
-      // Tìm cảm xúc hiện tại của user
-      const existingIdx = post.reactions.findIndex(
-        (r) =>
-          (userId && r.user && r.user.toString() === userId.toString()) ||
-          (r.userName && r.userName === userName)
-      );
-
-      let currentTypes = existingIdx !== -1 ? [...(post.reactions[existingIdx].types || [])] : [];
-
-      if (currentTypes.includes(type)) {
-        // Toggle OFF (Bỏ chọn)
-        currentTypes = currentTypes.filter((t) => t !== type);
-      } else {
-        // Kiểm tra số lượng tối đa 2 cảm xúc
-        if (currentTypes.length >= 2) {
-          return sendError(res, {
-            message: 'Bạn chỉ có thể chọn tối đa 2 cảm xúc cho một bài viết. Vui lòng bỏ chọn bớt một cảm xúc trước.',
-            status: 400,
-          });
-        }
-
-        // Quy tắc loại trừ: Stop và Love không thể đi chung
-        if (type === 'stop' && currentTypes.includes('love')) {
-          return sendError(res, {
-            message: "Cảm xúc 'Stop' (Dừng lại 🛑) không thể kết hợp cùng 'Yêu thích' ❤️.",
-            status: 400,
-          });
-        }
-        if (type === 'love' && currentTypes.includes('stop')) {
-          return sendError(res, {
-            message: "Cảm xúc 'Yêu thích' ❤️ không thể kết hợp cùng 'Stop' (Dừng lại 🛑).",
-            status: 400,
-          });
-        }
-
-        currentTypes.push(type);
-      }
-
-      // Cập nhật reactions array
-      if (currentTypes.length === 0) {
-        if (existingIdx !== -1) {
-          post.reactions.splice(existingIdx, 1);
-        }
-      } else {
-        if (existingIdx !== -1) {
-          post.reactions[existingIdx].types = currentTypes;
-          post.reactions[existingIdx].userName = userName;
-          post.reactions[existingIdx].userAvatar = userAvatar;
-        } else {
-          post.reactions.push({
-            user: userId || null,
-            userName,
-            userAvatar,
-            types: currentTypes,
-          });
-        }
-      }
-
-      // Tính toán lại reactionCounts
-      const counts = { sympathy: 0, stop: 0, love: 0, encourage: 0, total: 0 };
-      post.reactions.forEach((r) => {
-        (r.types || []).forEach((t) => {
-          if (counts[t] !== undefined) {
-            counts[t]++;
-            counts.total++;
-          }
+      try {
+        let post = await Post.findOne({
+          $or: [
+            { _id: id && String(id).match(/^[0-9a-fA-F]{24}$/) ? id : null },
+            { slug: id },
+          ].filter(Boolean),
         });
-      });
 
-      post.reactionCounts = counts;
-      post.cheersCount = counts.total;
-      await post.save();
+        if (post) {
+          if (!Array.isArray(post.reactions)) {
+            post.reactions = [];
+          }
+          if (!post.reactionCounts) {
+            post.reactionCounts = { sympathy: 0, stop: 0, love: 0, encourage: 0, total: 0 };
+          }
 
-      // Đồng bộ persistentStore
-      const store = loadStore();
-      const storedPost = (store.posts || []).find((p) => p._id === post._id.toString() || p.slug === post.slug);
-      if (storedPost) {
-        storedPost.reactions = post.reactions;
-        storedPost.reactionCounts = post.reactionCounts;
-        storedPost.cheersCount = post.cheersCount;
-        saveStore(store);
+          // Tìm cảm xúc hiện tại của user
+          const existingIdx = post.reactions.findIndex(
+            (r) =>
+              (userId && r.user && r.user.toString() === userId.toString()) ||
+              (r.userName && r.userName === userName)
+          );
+
+          let currentTypes = existingIdx !== -1 ? [...(post.reactions[existingIdx].types || [])] : [];
+
+          if (currentTypes.includes(type)) {
+            // Toggle OFF (Bỏ chọn)
+            currentTypes = currentTypes.filter((t) => t !== type);
+          } else {
+            // Kiểm tra số lượng tối đa 2 cảm xúc
+            if (currentTypes.length >= 2) {
+              return sendError(res, {
+                message: 'Bạn chỉ có thể chọn tối đa 2 cảm xúc cho một bài viết. Vui lòng bỏ chọn bớt một cảm xúc trước.',
+                status: 400,
+              });
+            }
+
+            // Quy tắc loại trừ: Stop và Love không thể đi chung
+            if (type === 'stop' && currentTypes.includes('love')) {
+              return sendError(res, {
+                message: "Cảm xúc 'Stop' (Dừng lại 🛑) không thể kết hợp cùng 'Yêu thích' ❤️.",
+                status: 400,
+              });
+            }
+            if (type === 'love' && currentTypes.includes('stop')) {
+              return sendError(res, {
+                message: "Cảm xúc 'Yêu thích' ❤️ không thể kết hợp cùng 'Stop' (Dừng lại 🛑).",
+                status: 400,
+              });
+            }
+
+            currentTypes.push(type);
+          }
+
+          // Cập nhật reactions array
+          if (currentTypes.length === 0) {
+            if (existingIdx !== -1) {
+              post.reactions.splice(existingIdx, 1);
+            }
+          } else {
+            if (existingIdx !== -1) {
+              post.reactions[existingIdx].types = currentTypes;
+              post.reactions[existingIdx].userName = userName;
+              post.reactions[existingIdx].userAvatar = userAvatar;
+            } else {
+              post.reactions.push({
+                user: userId || null,
+                userName,
+                userAvatar,
+                types: currentTypes,
+              });
+            }
+          }
+
+          // Tính toán lại reactionCounts
+          const counts = { sympathy: 0, stop: 0, love: 0, encourage: 0, total: 0 };
+          post.reactions.forEach((r) => {
+            (r.types || []).forEach((t) => {
+              if (counts[t] !== undefined) {
+                counts[t]++;
+                counts.total++;
+              }
+            });
+          });
+
+          post.reactionCounts = counts;
+          post.cheersCount = counts.total;
+          await post.save();
+
+          // Đồng bộ persistentStore
+          const store = loadStore();
+          const storedPost = (store.posts || []).find((p) => p._id === post._id.toString() || p.slug === post.slug);
+          if (storedPost) {
+            storedPost.reactions = post.reactions;
+            storedPost.reactionCounts = post.reactionCounts;
+            storedPost.cheersCount = post.cheersCount;
+            saveStore(store);
+          }
+
+          return sendSuccess(res, {
+            message: currentTypes.includes(type) ? 'Đã bày tỏ cảm xúc thành công!' : 'Đã bỏ chọn cảm xúc',
+            data: {
+              reactionCounts: post.reactionCounts,
+              myReactions: currentTypes,
+              reactions: post.reactions,
+              cheersCount: post.cheersCount,
+              showReactionCount: post.showReactionCount !== false,
+            },
+          });
+        }
+      } catch (dbErr) {
+        console.warn('Lỗi MongoDB trong reactToPost, fallback sang persistentStore:', dbErr.message);
       }
-
-      return sendSuccess(res, {
-        message: currentTypes.includes(type) ? 'Đã bày tỏ cảm xúc thành công!' : 'Đã bỏ chọn cảm xúc',
-        data: {
-          reactionCounts: post.reactionCounts,
-          myReactions: currentTypes,
-          reactions: post.reactions,
-          cheersCount: post.cheersCount,
-          showReactionCount: post.showReactionCount !== false,
-        },
-      });
     }
 
     // Fallback persistentStore
     const store = loadStore();
-    const post = (store.posts || []).find((p) => p._id === id || p.slug === id);
+    const post = (store.posts || []).find((p) => String(p._id) === String(id) || p.slug === id);
     if (!post) {
       return sendError(res, { message: 'Không tìm thấy bài viết', status: 404 });
     }
@@ -614,45 +654,53 @@ export const toggleReactionVisibility = async (req, res) => {
     const { showReactionCount } = req.body;
 
     if (checkDbReady()) {
-      const post = await Post.findOne({
-        $or: [
-          { _id: id && String(id).match(/^[0-9a-fA-F]{24}$/) ? id : null },
-          { slug: id },
-        ].filter(Boolean),
-      });
+      try {
+        const post = await Post.findOne({
+          $or: [
+            { _id: id && String(id).match(/^[0-9a-fA-F]{24}$/) ? id : null },
+            { slug: id },
+          ].filter(Boolean),
+        });
 
-      if (!post) {
-        return sendError(res, { message: 'Không tìm thấy bài viết', status: 404 });
+        if (post) {
+          const isOwner = post.user && post.user.toString() === req.user?._id?.toString();
+          const isAdmin = req.user?.role === 'admin';
+          if (!isOwner && !isAdmin) {
+            return sendError(res, { message: 'Chỉ tác giả mới có quyền ẩn/hiện số lượng cảm xúc', status: 403 });
+          }
+
+          post.showReactionCount =
+            showReactionCount !== undefined ? Boolean(showReactionCount) : !post.showReactionCount;
+          await post.save();
+
+          const store = loadStore();
+          const stored = (store.posts || []).find((p) => p._id === post._id.toString() || p.slug === post.slug);
+          if (stored) {
+            stored.showReactionCount = post.showReactionCount;
+            saveStore(store);
+          }
+
+          return sendSuccess(res, {
+            message: post.showReactionCount
+              ? 'Đã bật hiển thị số lượng cảm xúc'
+              : 'Đã ẩn số lượng cảm xúc (chỉ hiển thị icon)',
+            data: { showReactionCount: post.showReactionCount },
+          });
+        }
+      } catch (dbErr) {
+        console.warn('Lỗi MongoDB trong toggleReactionVisibility, fallback sang persistentStore:', dbErr.message);
       }
+    }
 
-      const isOwner = post.user && post.user.toString() === req.user?._id?.toString();
+    const store = loadStore();
+    const post = (store.posts || []).find((p) => String(p._id) === String(id) || p.slug === id);
+    if (post) {
+      const isOwner = (post.user && String(post.user._id || post.user) === String(req.user?._id)) || post.author === req.user?.name;
       const isAdmin = req.user?.role === 'admin';
       if (!isOwner && !isAdmin) {
         return sendError(res, { message: 'Chỉ tác giả mới có quyền ẩn/hiện số lượng cảm xúc', status: 403 });
       }
 
-      post.showReactionCount =
-        showReactionCount !== undefined ? Boolean(showReactionCount) : !post.showReactionCount;
-      await post.save();
-
-      const store = loadStore();
-      const stored = (store.posts || []).find((p) => p._id === post._id.toString() || p.slug === post.slug);
-      if (stored) {
-        stored.showReactionCount = post.showReactionCount;
-        saveStore(store);
-      }
-
-      return sendSuccess(res, {
-        message: post.showReactionCount
-          ? 'Đã bật hiển thị số lượng cảm xúc'
-          : 'Đã ẩn số lượng cảm xúc (chỉ hiển thị icon)',
-        data: { showReactionCount: post.showReactionCount },
-      });
-    }
-
-    const store = loadStore();
-    const post = (store.posts || []).find((p) => p._id === id || p.slug === id);
-    if (post) {
       post.showReactionCount =
         showReactionCount !== undefined ? Boolean(showReactionCount) : !post.showReactionCount;
       saveStore(store);
@@ -689,6 +737,7 @@ export const createPost = async (req, res) => {
       voiceGender,
       voiceRegion,
       customVoiceProfile,
+      atmosphere,
     } = req.body;
 
     if (!title || !summary || !content || !category) {
@@ -766,6 +815,15 @@ export const createPost = async (req, res) => {
       voiceGender: voiceGender || 'female',
       voiceRegion: voiceRegion || 'north',
       customVoiceProfile: customVoiceProfile || req.user?.customVoiceProfile || {},
+      atmosphere: atmosphere || {
+        theme: 'default',
+        soundEnabled: true,
+        soundEffect: 'auto',
+        bgPreset: 'default',
+        customColor: '',
+        customBgGradient: '',
+        particleEffect: 'none',
+      },
       isFlagged: safetyCheck.isFlagged,
       flagReason: safetyCheck.reason || '',
       moderationStatus: safetyCheck.isFlagged ? 'flagged' : 'approved',
@@ -814,6 +872,7 @@ export const createPost = async (req, res) => {
           voiceGender: newPostData.voiceGender,
           voiceRegion: newPostData.voiceRegion,
           customVoiceProfile: newPostData.customVoiceProfile,
+          atmosphere: newPostData.atmosphere,
           isFlagged: newPostData.isFlagged,
           flagReason: newPostData.flagReason,
           moderationStatus: newPostData.moderationStatus,
@@ -861,6 +920,7 @@ export const updatePost = async (req, res) => {
       voiceGender,
       voiceRegion,
       customVoiceProfile,
+      atmosphere,
     } = req.body;
     const parsedTags = tags !== undefined
       ? (Array.isArray(tags) ? tags : tags.split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean))
@@ -914,6 +974,15 @@ export const updatePost = async (req, res) => {
         voiceGender: voiceGender !== undefined ? voiceGender : existing.voiceGender || 'female',
         voiceRegion: voiceRegion !== undefined ? voiceRegion : existing.voiceRegion || 'north',
         customVoiceProfile: customVoiceProfile !== undefined ? customVoiceProfile : existing.customVoiceProfile || {},
+        atmosphere: atmosphere !== undefined ? atmosphere : existing.atmosphere || {
+          theme: 'default',
+          soundEnabled: true,
+          soundEffect: 'auto',
+          bgPreset: 'default',
+          customColor: '',
+          customBgGradient: '',
+          particleEffect: 'none',
+        },
         visibility: req.body.visibility !== undefined ? (req.body.visibility === 'friends' ? 'friends' : 'public') : existing.visibility || 'public',
         isFlagged: safety.isFlagged,
         flagReason: safety.reason || '',
@@ -952,6 +1021,7 @@ export const updatePost = async (req, res) => {
           if (audioMood !== undefined) post.audioMood = audioMood;
           if (voiceGender !== undefined) post.voiceGender = voiceGender;
           if (voiceRegion !== undefined) post.voiceRegion = voiceRegion;
+          if (atmosphere !== undefined) post.atmosphere = atmosphere;
           await post.save();
         }
       } catch (dbErr) {

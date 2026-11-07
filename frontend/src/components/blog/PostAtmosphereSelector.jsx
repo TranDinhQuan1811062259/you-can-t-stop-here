@@ -1,0 +1,421 @@
+import React, { useState, useEffect } from 'react';
+import {
+  ATMOSPHERE_THEMES,
+  BACKGROUND_PRESETS,
+  PARTICLE_EFFECTS,
+  startPostAtmosphere,
+  stopPostAtmosphere,
+} from '../../utils/postAtmosphereEngine';
+
+export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
+  const currentAtmosphere = {
+    theme: 'default',
+    soundEnabled: true,
+    bgPreset: 'default',
+    customColor: '',
+    customBgGradient: '',
+    particleEffect: 'none',
+    ...atmosphere,
+  };
+
+  const [previewingSound, setPreviewingSound] = useState(false);
+
+  // Khi component unmount, tắt ngay âm thanh preview nếu đang phát
+  useEffect(() => {
+    return () => {
+      stopPostAtmosphere();
+    };
+  }, []);
+
+  const handleThemeSelect = (themeKey) => {
+    const themeDef = ATMOSPHERE_THEMES[themeKey] || ATMOSPHERE_THEMES.default;
+    const isDefault = themeKey === 'default';
+
+    // Cập nhật theme, tự động gợi ý preset nền và hạt nếu người dùng chưa chọn custom
+    const nextAtmosphere = {
+      ...currentAtmosphere,
+      theme: themeKey,
+      soundEnabled: !isDefault,
+      bgPreset: isDefault ? 'default' : themeDef.defaultBgPreset || currentAtmosphere.bgPreset,
+      particleEffect: isDefault ? 'none' : themeDef.defaultParticle || currentAtmosphere.particleEffect,
+    };
+
+    onChange(nextAtmosphere);
+
+    // Nếu đang nghe preview, chuyển sang âm thanh mới
+    if (previewingSound) {
+      if (themeKey === 'default') {
+        stopPostAtmosphere();
+        setPreviewingSound(false);
+      } else {
+        startPostAtmosphere(themeKey, 0.4);
+      }
+    }
+  };
+
+  const toggleSoundPreview = (e) => {
+    e.preventDefault();
+    if (currentAtmosphere.theme === 'default') return;
+
+    if (previewingSound) {
+      stopPostAtmosphere();
+      setPreviewingSound(false);
+    } else {
+      startPostAtmosphere(currentAtmosphere.theme, 0.45);
+      setPreviewingSound(true);
+    }
+  };
+
+  const handleBgPresetChange = (presetId) => {
+    onChange({
+      ...currentAtmosphere,
+      bgPreset: presetId,
+    });
+  };
+
+  const handleParticleChange = (particleId) => {
+    onChange({
+      ...currentAtmosphere,
+      particleEffect: particleId,
+    });
+  };
+
+  const handleCustomColorChange = (color) => {
+    onChange({
+      ...currentAtmosphere,
+      customColor: color,
+      bgPreset: 'custom',
+    });
+  };
+
+  const handleCustomGradientChange = (gradient) => {
+    onChange({
+      ...currentAtmosphere,
+      customBgGradient: gradient,
+      bgPreset: 'custom',
+    });
+  };
+
+  const activeThemeMeta = ATMOSPHERE_THEMES[currentAtmosphere.theme] || ATMOSPHERE_THEMES.default;
+  const activeBgPreset = BACKGROUND_PRESETS.find((p) => p.id === currentAtmosphere.bgPreset) || BACKGROUND_PRESETS[0];
+
+  // Tính background thực tế cho Live Preview
+  let previewBackground = activeBgPreset.previewBg;
+  if (currentAtmosphere.bgPreset === 'custom') {
+    previewBackground = currentAtmosphere.customBgGradient || currentAtmosphere.customColor || '#1e293b';
+  }
+
+  return (
+    <div
+      className="post-atmosphere-selector-card"
+      style={{
+        marginTop: '16px',
+        padding: '16px 18px',
+        borderRadius: '12px',
+        border: `1.5px solid ${activeThemeMeta.accentColor}40`,
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%)',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
+        <label
+          style={{
+            fontWeight: 700,
+            color: '#1e293b',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '0.98rem',
+            margin: 0,
+          }}
+        >
+          <span style={{ fontSize: '1.25rem' }}>🎭</span>
+          <span>Không Gian Cảm Xúc & Background Đặc Trưng</span>
+        </label>
+
+        {currentAtmosphere.theme !== 'default' && (
+          <button
+            type="button"
+            onClick={toggleSoundPreview}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: `1.5px solid ${activeThemeMeta.accentColor}`,
+              background: previewingSound ? activeThemeMeta.accentColor : '#ffffff',
+              color: previewingSound ? '#ffffff' : activeThemeMeta.accentColor,
+              boxShadow: previewingSound ? `0 2px 8px ${activeThemeMeta.accentColor}50` : 'none',
+              transition: 'all 0.2s ease',
+            }}
+            title="Nghe thử âm thanh không gian cảm xúc được tạo bằng Web Audio API"
+          >
+            <span>{previewingSound ? '⏸ Đang nghe thử...' : '🔊 Nghe thử âm thanh'}</span>
+            {previewingSound && (
+              <span className="live-sound-wave" style={{ display: 'inline-flex', gap: '2px', alignItems: 'flex-end', height: '12px' }}>
+                <span style={{ width: '2px', height: '100%', background: '#fff', borderRadius: '1px' }}></span>
+                <span style={{ width: '2px', height: '60%', background: '#fff', borderRadius: '1px' }}></span>
+                <span style={{ width: '2px', height: '80%', background: '#fff', borderRadius: '1px' }}></span>
+              </span>
+            )}
+          </button>
+        )}
+      </div>
+
+      <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: '#64748b', lineHeight: 1.5 }}>
+        Tạo nên một không gian riêng cho bài viết của bạn! Khi người khác đọc bài, họ sẽ được đắm chìm vào âm thanh đặc trưng (tiếng gió ma mị, mưa rả rích, nhịp tim drama, suối reo...) và màu nền độc đáo chứ không bị nhàm chán.
+      </p>
+
+      {/* 1. CHỌN KHÔNG GIAN CẢM XÚC (THEME) */}
+      <div style={{ marginBottom: '14px' }}>
+        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '8px' }}>
+          1. Chọn Vibe / Không Gian Cảm Xúc:
+        </span>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+            gap: '8px',
+          }}
+        >
+          {Object.values(ATMOSPHERE_THEMES).map((thm) => {
+            const isSelected = currentAtmosphere.theme === thm.id;
+            return (
+              <button
+                key={thm.id}
+                type="button"
+                onClick={() => handleThemeSelect(thm.id)}
+                style={{
+                  padding: '9px 10px',
+                  borderRadius: '10px',
+                  border: isSelected ? `2px solid ${thm.accentColor}` : '1.5px solid #e2e8f0',
+                  background: isSelected ? `${thm.accentColor}12` : '#ffffff',
+                  color: isSelected ? thm.accentColor : '#475569',
+                  fontWeight: isSelected ? 700 : 500,
+                  cursor: 'pointer',
+                  fontSize: '0.82rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px',
+                  textAlign: 'center',
+                  transition: 'all 0.18s ease',
+                  boxShadow: isSelected ? `0 2px 10px ${thm.accentColor}25` : 'none',
+                }}
+              >
+                <span style={{ fontSize: '1.4rem' }}>{thm.icon}</span>
+                <span style={{ fontSize: '0.78rem', lineHeight: 1.2 }}>{thm.badgeText}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 2. CHỌN NỀN & MÀU SẮC ĐẶC TRƯNG */}
+      <div style={{ marginBottom: '14px' }}>
+        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '8px' }}>
+          2. Chọn Màu Nền & Background Preset:
+        </span>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(115px, 1fr))',
+            gap: '7px',
+          }}
+        >
+          {BACKGROUND_PRESETS.map((preset) => {
+            const isSelected = currentAtmosphere.bgPreset === preset.id;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => handleBgPresetChange(preset.id)}
+                style={{
+                  padding: '7px 8px',
+                  borderRadius: '8px',
+                  border: isSelected ? '2px solid #0d9488' : '1px solid #e2e8f0',
+                  background: '#ffffff',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.76rem',
+                  fontWeight: isSelected ? 700 : 500,
+                  color: isSelected ? '#0d9488' : '#475569',
+                  transition: 'all 0.15s ease',
+                  boxShadow: isSelected ? '0 2px 8px rgba(13, 148, 136, 0.2)' : 'none',
+                }}
+              >
+                <span
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    background: preset.previewBg,
+                    border: '1px solid #cbd5e1',
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {preset.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Khối Custom Color / Gradient khi chọn Custom */}
+        {currentAtmosphere.bgPreset === 'custom' && (
+          <div
+            style={{
+              marginTop: '10px',
+              padding: '10px 12px',
+              borderRadius: '8px',
+              background: '#f1f5f9',
+              border: '1px solid #cbd5e1',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '12px',
+              alignItems: 'center',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#334155', margin: 0 }}>
+                Mã màu Hex:
+              </label>
+              <input
+                type="color"
+                value={currentAtmosphere.customColor || '#1e293b'}
+                onChange={(e) => handleCustomColorChange(e.target.value)}
+                style={{ width: '36px', height: '30px', padding: 0, border: 'none', cursor: 'pointer', borderRadius: '4px' }}
+              />
+              <span style={{ fontSize: '0.76rem', fontFamily: 'monospace', color: '#64748b' }}>
+                {currentAtmosphere.customColor || '#1e293b'}
+              </span>
+            </div>
+
+            <div style={{ flex: 1, minWidth: '200px' }}>
+              <input
+                type="text"
+                placeholder="Hoặc dán CSS linear-gradient(135deg, #111 0%, #333 100%)"
+                value={currentAtmosphere.customBgGradient || ''}
+                onChange={(e) => handleCustomGradientChange(e.target.value)}
+                style={{
+                  width: '100%',
+                  fontSize: '0.78rem',
+                  padding: '5px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  fontFamily: 'monospace',
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 3. CHỌN HIỆU ỨNG HẠT VISUAL (PARTICLES) */}
+      <div style={{ marginBottom: '14px' }}>
+        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '8px' }}>
+          3. Hiệu Ứng Hạt Trực Quan (Particle Overlay):
+        </span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          {PARTICLE_EFFECTS.map((part) => {
+            const isSelected = currentAtmosphere.particleEffect === part.id;
+            return (
+              <button
+                key={part.id}
+                type="button"
+                onClick={() => handleParticleChange(part.id)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '16px',
+                  border: isSelected ? '2px solid #0d9488' : '1px solid #cbd5e1',
+                  background: isSelected ? '#0d9488' : '#ffffff',
+                  color: isSelected ? '#ffffff' : '#475569',
+                  fontSize: '0.78rem',
+                  fontWeight: isSelected ? 700 : 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span>{part.icon}</span>
+                <span>{part.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 4. LIVE MINIATURE PREVIEW KHUNG BÀI VIẾT */}
+      <div>
+        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+          👁️ Xem Trước Giao Diện Bài Viết Của Bạn:
+        </span>
+        <div
+          className={`post-atmosphere-preview-box ${currentAtmosphere.particleEffect !== 'none' ? `has-particle-${currentAtmosphere.particleEffect}` : ''}`}
+          style={{
+            position: 'relative',
+            overflow: 'hidden',
+            borderRadius: '10px',
+            padding: '14px 18px',
+            background: previewBackground,
+            color: activeBgPreset.textColor,
+            border: `1.5px solid ${activeThemeMeta.accentColor}60`,
+            boxShadow: `0 4px 16px ${activeThemeMeta.accentColor}20`,
+            transition: 'all 0.3s ease',
+          }}
+        >
+          {/* Overlay hạt visual mô phỏng */}
+          {currentAtmosphere.particleEffect === 'fog' && <div className="preview-fog-overlay" />}
+          {currentAtmosphere.particleEffect === 'rain' && <div className="preview-rain-overlay" />}
+          {currentAtmosphere.particleEffect === 'sparkles' && <div className="preview-sparkles-overlay" />}
+          {currentAtmosphere.particleEffect === 'heartbeat_pulse' && <div className="preview-pulse-border" />}
+          {currentAtmosphere.particleEffect === 'fireflies' && <div className="preview-fireflies-overlay" />}
+
+          <div style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                padding: '3px 8px',
+                borderRadius: '12px',
+                background: `${activeThemeMeta.accentColor}25`,
+                color: activeThemeMeta.accentColor,
+                border: `1px solid ${activeThemeMeta.accentColor}50`,
+              }}
+            >
+              <span>{activeThemeMeta.icon}</span>
+              <span>Không gian: {activeThemeMeta.badgeText}</span>
+            </span>
+
+            {currentAtmosphere.theme !== 'default' && (
+              <span style={{ fontSize: '0.72rem', opacity: 0.85, fontStyle: 'italic' }}>
+                🎧 Âm thanh: {activeThemeMeta.soundLabel}
+              </span>
+            )}
+          </div>
+
+          <div style={{ position: 'relative', zIndex: 2 }}>
+            <h5 style={{ margin: '0 0 4px 0', fontSize: '0.92rem', fontWeight: 700, color: activeBgPreset.textColor }}>
+              Tiêu đề bài viết tâm sự của bạn
+            </h5>
+            <p style={{ margin: 0, fontSize: '0.78rem', opacity: 0.85, lineHeight: 1.4 }}>
+              Không gian bài viết này sẽ hiện với phong cách màu sắc đặc trưng và âm thanh duy trì khi người khác vào đọc...
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

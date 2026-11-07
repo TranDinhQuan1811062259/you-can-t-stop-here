@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { formatDate } from '../../utils/formatDate';
 import { postService } from '../../services/postService';
 import { playClickSound } from '../../utils/soundEffects';
+import { ATMOSPHERE_THEMES } from '../../utils/postAtmosphereEngine';
 import { SharePostModal } from './SharePostModal';
 
 export const PostCard = ({ post }) => {
@@ -11,6 +12,18 @@ export const PostCard = ({ post }) => {
   if (!post) return null;
 
   const categoryName = post.category?.name || 'Tâm sự';
+  const categoryIcon = post.category?.icon || (() => {
+    const lower = categoryName.toLowerCase();
+    if (lower.includes('thế giới') || lower.includes('quốc tế') || lower.includes('global')) return '🌍';
+    if (lower.includes('chiến sự') || lower.includes('chiến tranh') || lower.includes('hòa bình') || lower.includes('xung đột')) return '🕊️';
+    if (lower.includes('xã hội') || lower.includes('thời cuộc') || lower.includes('society')) return '🌐';
+    if (lower.includes('kiệt sức') || lower.includes('burnout') || lower.includes('áp lực')) return '😫';
+    if (lower.includes('khủng hoảng') || lower.includes('career')) return '🧭';
+    if (lower.includes('chuyển ngành') || lower.includes('restart')) return '🌱';
+    if (lower.includes('động lực') || lower.includes('small wins') || lower.includes('tia sáng')) return '✨';
+    if (lower.includes('tâm sự') || lower.includes('life')) return '☕';
+    return '🏷️';
+  })();
   const postId = post._id || post.slug;
 
   const [isPlayingAi, setIsPlayingAi] = useState(false);
@@ -101,8 +114,16 @@ export const PostCard = ({ post }) => {
     }
   };
 
+  const postAtmosphere = post.atmosphere || { theme: 'default', soundEnabled: true, bgPreset: 'default' };
+  const themeMeta = ATMOSPHERE_THEMES[postAtmosphere.theme] || ATMOSPHERE_THEMES.default;
+  const hasAtmosphere = postAtmosphere.theme && postAtmosphere.theme !== 'default';
+  const customAccentColor = postAtmosphere.customColor || themeMeta.accentColor;
+
   return (
-    <article className={`post-card ${post.isFlagged ? 'is-flagged-card' : ''}`}>
+    <article
+      className={`post-card ${post.isFlagged ? 'is-flagged-card' : ''} ${hasAtmosphere ? 'has-atmosphere-card' : ''}`}
+      style={hasAtmosphere ? { borderTop: `3px solid ${customAccentColor}` } : {}}
+    >
       <div className="card-img-wrap">
         <Link to={`/post/${post.slug}`} className="card-img-link" title={post.title}>
           <img
@@ -113,18 +134,48 @@ export const PostCard = ({ post }) => {
           />
         </Link>
 
-        {/* Thanh Huy Hiệu Trên Đầu Ảnh (Category + Chế độ xem) - Rộng rãi, không bị đè */}
+        {/* Thanh Huy Hiệu Trên Đầu Ảnh (Category + Chế độ xem + Không gian) - Rộng rãi, không bị đè */}
         <div className="card-top-badges-bar">
           <div className="card-badges-left">
-            <span className="card-category-badge" title={categoryName}>
-              {categoryName}
-            </span>
+            <Link
+              to={post.category?.slug ? `/?category=${post.category.slug}` : '/'}
+              className="card-category-badge"
+              title={`Thể loại: ${categoryName} (Bấm để xem tất cả bài viết cùng chủ đề)`}
+              onClick={(e) => e.stopPropagation()}
+              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+            >
+              <span>{categoryIcon}</span>
+              <span>{categoryName}</span>
+            </Link>
             <span
               className={`card-visibility-pill ${post.visibility === 'friends' ? 'is-friends' : 'is-public'}`}
               title={post.visibility === 'friends' ? 'Chế độ: Chỉ bạn bè mới xem được' : 'Chế độ: Công khai cho tất cả'}
             >
               {post.visibility === 'friends' ? '👥' : '🌐'}
             </span>
+            {hasAtmosphere && (
+              <span
+                className="card-atmosphere-badge"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '3px 8px',
+                  borderRadius: '12px',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  background: 'rgba(15, 23, 42, 0.85)',
+                  backdropFilter: 'blur(6px)',
+                  color: customAccentColor,
+                  border: `1px solid ${customAccentColor}60`,
+                  boxShadow: `0 2px 8px ${customAccentColor}25`,
+                }}
+                title={`Không gian bài viết: ${themeMeta.name}`}
+              >
+                <span>{themeMeta.icon}</span>
+                <span>{themeMeta.badgeText}</span>
+              </span>
+            )}
           </div>
 
           {/* Huy hiệu cảnh báo bài nhạy cảm Chính Trị (nếu có) */}
@@ -188,7 +239,7 @@ export const PostCard = ({ post }) => {
               <span className="stat-val">
                 {post.showReactionCount !== false
                   ? (post.reactionCounts?.total || post.cheersCount || 0)
-                  : 'Cảm xúc'}
+                  : 'Ẩn'}
               </span>
             </span>
             <span className="pill-divider">•</span>
@@ -207,8 +258,20 @@ export const PostCard = ({ post }) => {
             )}
           </Link>
 
-          {/* Nút hành động đọc bài - Rõ ràng, không bị chèn ép hay rớt dòng */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Cụm nút hành động - Khóa cứng flexShrink và whiteSpace, tuyệt đối không bị chèn ép hay rớt dòng */}
+          <div
+            className="card-actions-group"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              flexDirection: 'row',
+              flexWrap: 'nowrap',
+              gap: '6px',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+              minWidth: 'max-content',
+            }}
+          >
             <button
               type="button"
               className="card-share-btn"
@@ -218,12 +281,34 @@ export const PostCard = ({ post }) => {
                 setIsShareOpen(true);
               }}
               title="Chia sẻ bài viết lên trang cá nhân hoặc mạng xã hội"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                flexDirection: 'row',
+                flexWrap: 'nowrap',
+                gap: '4px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                minWidth: 'max-content',
+                wordBreak: 'keep-all',
+              }}
             >
               <span>💌</span>
-              <span>Chia sẻ</span>
+              <span style={{ whiteSpace: 'nowrap', display: 'inline', wordBreak: 'keep-all' }}>Chia{'\u00A0'}sẻ</span>
             </button>
 
-            <Link to={`/post/${post.slug}`} className="card-read-action-btn" title="Đọc bài viết và trò chuyện">
+            <Link
+              to={`/post/${post.slug}`}
+              className="card-read-action-btn"
+              title="Đọc bài viết và trò chuyện"
+              style={{
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+              }}
+            >
               <span>Đọc</span>
               <span className="read-arrow">&rarr;</span>
             </Link>

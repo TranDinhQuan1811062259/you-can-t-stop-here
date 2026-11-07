@@ -451,13 +451,16 @@ export const UserProfilePage = () => {
 
       {/* Danh Sách Bài Viết Đã Chia Sẻ */}
       <div className="profile-posts-section">
-        <div className="profile-posts-header">
-          <h2 className="profile-section-title">
-            <span>📖</span> Các Bài Tâm Sự Đã Đăng ({posts?.length || 0})
+        <div className="profile-posts-header" style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <span className="hero-tag-pill">📖 Hồ sơ tác giả</span>
+          <h2 className="hero-title" style={{ fontSize: '1.9rem', marginBottom: '10px' }}>
+            Các Bài Tâm Sự Của {user.name} ({posts?.length || 0})
           </h2>
-          <span className="profile-posts-subtitle">
-            Những câu chuyện và trải nghiệm được chia sẻ bởi {user.name}
-          </span>
+          <div style={{ marginTop: '8px' }}>
+            <Link to="/" className="hero-back-link">
+              &larr; Xem tất cả các câu chuyện khác
+            </Link>
+          </div>
         </div>
 
         {posts && posts.length > 0 ? (

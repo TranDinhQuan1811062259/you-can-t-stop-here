@@ -70,7 +70,7 @@ export const AssistiveChatWidget = () => {
   // Vị trí nút nổi AssistiveTouch có thể kéo thả di dời tự do & chống va chạm
   const [btnPos, setBtnPos] = useState(() => {
     const raw = getFabPos('chat');
-    return resolveAntiCollision('chat', raw);
+    return resolveAntiCollision('chat', raw, true);
   });
 
   const [isDragging, setIsDragging] = useState(false);
@@ -82,7 +82,7 @@ export const AssistiveChatWidget = () => {
     const handleResize = () => {
       setBtnPos((prev) => {
         const bounded = ensureInBounds('chat', prev);
-        const resolved = resolveAntiCollision('chat', bounded);
+        const resolved = resolveAntiCollision('chat', bounded, true);
         saveFabPos('chat', resolved);
         return resolved;
       });
@@ -91,12 +91,12 @@ export const AssistiveChatWidget = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Lắng nghe sự kiện khi nút Viết Tâm Sự di chuyển để tự động né tránh nếu bị đè
+  // Lắng nghe sự kiện khi các nút khác (Viết tâm sự, Mascot lễ hội, Thanh Cài đặt App) di chuyển để tự động né tránh nếu bị đè
   useEffect(() => {
     const handleOtherMoved = (e) => {
-      if (e.detail?.type === 'write') {
+      if (e.detail?.type !== 'chat') {
         setBtnPos((curr) => {
-          const safe = resolveAntiCollision('chat', curr);
+          const safe = resolveAntiCollision('chat', curr, true);
           if (safe.x !== curr.x || safe.y !== curr.y) {
             saveFabPos('chat', safe);
             return safe;

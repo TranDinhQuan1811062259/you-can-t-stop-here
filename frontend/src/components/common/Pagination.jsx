@@ -45,6 +45,20 @@ export const Pagination = ({ pagination, onPageChange }) => {
   const handleSelectPage = (p) => {
     if (p === '...' || p === page) return;
     playClickSound();
+
+    // Phát sự kiện chuyển trang theo hướng để kích hoạt hiệu ứng chữ bay sang trái/phải
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('freedom_pagination_change', {
+          detail: {
+            newPage: p,
+            prevPage: page,
+            direction: p > page ? 'next' : 'prev',
+          },
+        })
+      );
+    }
+
     onPageChange(p);
   };
 

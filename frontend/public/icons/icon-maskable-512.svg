@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e" />
+      <stop offset="50%" stop-color="#0d9488" />
+      <stop offset="100%" stop-color="#042f2e" />
+    </linearGradient>
+
+    <!-- Sun & Freedom Wings Gradient -->
+    <linearGradient id="sunGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#ea580c" />
+    </linearGradient>
+
+    <!-- Heart 3D Gradient -->
+    <linearGradient id="heartGrad" x1="15%" y1="10%" x2="85%" y2="90%">
+      <stop offset="0%" stop-color="#fb7185" />
+      <stop offset="45%" stop-color="#e11d48" />
+      <stop offset="100%" stop-color="#881337" />
+    </linearGradient>
+
+    <!-- Wing White Glow -->
+    <linearGradient id="wingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#fef3c7" />
+    </linearGradient>
+  </defs>
+
+  <!-- Full Bleed Square for Android Maskable Icon (No rounded corners, OS cuts it) -->
+  <rect width="512" height="512" fill="url(#bgGrad)" />
+
+  <!-- Inner Content scaled into 80% Safe Zone (padding 50px) -->
+  <g transform="translate(51.2, 51.2) scale(0.8)">
+    <!-- Sun Circle -->
+    <circle cx="256" cy="180" r="70" fill="url(#sunGrad)" opacity="0.9" />
+
+    <!-- Cánh Trái Vươn Xa -->
+    <path
+      d="M256 220 C210 140 140 120 70 140 C110 180 160 210 210 230 C170 240 120 250 85 280 C130 280 185 265 235 250 Z"
+      fill="url(#wingGrad)"
+      opacity="0.95"
+    />
+    <!-- Cánh Phải Vươn Xa -->
+    <path
+      d="M256 220 C302 140 372 120 442 140 C402 180 352 210 302 230 C342 240 392 250 427 280 C382 280 327 265 277 250 Z"
+      fill="url(#wingGrad)"
+      opacity="0.95"
+    />
+
+    <!-- Heart of Compassion ở giữa dưới -->
+    <g transform="translate(196, 260) scale(1.9)">
+      <path
+        d="M32 54 C30.5 52.5 12 37.5 9 24 C6 14.5 13 6 22.5 6 C27 6 30.5 8.5 32 11 C33.5 8.5 37 6 41.5 6 C51 6 58 14.5 55 24 C52 37.5 33.5 52.5 32 54 Z"
+        fill="url(#heartGrad)"
+      />
+      <path
+        d="M13 21 C15 13 20 9 24 9 C27 9 29 11 30 13 C26 13 19 16 15 24 C14 26 13 25 13 21 Z"
+        fill="#ffffff"
+        opacity="0.6"
+      />
+    </g>
+
+    <!-- Freedom Typography -->
+    <text x="256" y="445" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="34" font-weight="800" fill="#ffffff" letter-spacing="4" text-anchor="middle" opacity="0.95">
+      FREEDOM
+    </text>
+  </g>
+</svg>

@@ -10,6 +10,8 @@ import { AdminModerationModal } from '../components/admin/AdminModerationModal';
 import { PostReactionsBar } from '../components/blog/PostReactionsBar';
 import { AnonymousWarmthBox } from '../components/blog/AnonymousWarmthBox';
 import { PostAudioPlayer } from '../components/blog/PostAudioPlayer';
+import { PostAtmosphereSoundBar } from '../components/blog/PostAtmosphereSoundBar';
+import { ATMOSPHERE_THEMES, BACKGROUND_PRESETS } from '../utils/postAtmosphereEngine';
 import { SharePostModal } from '../components/blog/SharePostModal';
 import { formatPostContent } from '../utils/contentFormatter';
 import { useAuth } from '../context/AuthContext';
@@ -214,27 +216,68 @@ export const PostDetailPage = () => {
     isFriend ||
     user?.role === 'admin';
 
+  const postAtmosphere = post.atmosphere || {
+    theme: 'default',
+    soundEnabled: true,
+    bgPreset: 'default',
+    customColor: '',
+    customBgGradient: '',
+    particleEffect: 'none',
+  };
+  const themeMeta = ATMOSPHERE_THEMES[postAtmosphere.theme] || ATMOSPHERE_THEMES.default;
+  const bgPresetMeta = BACKGROUND_PRESETS.find((p) => p.id === postAtmosphere.bgPreset) || BACKGROUND_PRESETS[0];
+
+  let customArticleStyle = {};
+  const isCustomBg = postAtmosphere.bgPreset !== 'default' || postAtmosphere.customColor || postAtmosphere.customBgGradient;
+  if (postAtmosphere.bgPreset === 'custom') {
+    if (postAtmosphere.customBgGradient) {
+      customArticleStyle.background = postAtmosphere.customBgGradient;
+    } else if (postAtmosphere.customColor) {
+      customArticleStyle.backgroundColor = postAtmosphere.customColor;
+    }
+  } else if (postAtmosphere.bgPreset !== 'default') {
+    customArticleStyle.background = bgPresetMeta.previewBg;
+    if (bgPresetMeta.textColor) {
+      customArticleStyle.color = bgPresetMeta.textColor;
+    }
+  }
+  if (postAtmosphere.theme !== 'default') {
+    customArticleStyle.borderColor = `${themeMeta.accentColor}60`;
+  }
+
   return (
     <div className="post-detail-wrap">
       <div className="container">
-        {/* Breadcrumb */}
-        <div className="breadcrumb-nav">
-          <Link to="/" style={{ color: 'var(--primary-color)' }}>Trang chủ</Link>
-          <span style={{ margin: '0 8px' }}>/</span>
-          <Link
-            to={`/category/${post.category?.slug}`}
-            style={{ color: 'var(--primary-color)' }}
-          >
-            {post.category?.name || 'Tâm sự'}
+        {/* Breadcrumb chuẩn đồng bộ */}
+        <div className="breadcrumb-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <Link to="/" style={{ color: 'var(--primary-color)' }}>Trang chủ</Link>
+            <span style={{ margin: '0 8px' }}>/</span>
+            <Link
+              to={post.category?.slug ? `/?category=${post.category.slug}` : '/'}
+              style={{ color: 'var(--primary-color)', fontWeight: 600 }}
+            >
+              {post.category?.name || 'Tâm sự'}
+            </Link>
+          </div>
+          <Link to="/" className="hero-back-link">
+            &larr; Xem tất cả các câu chuyện khác
           </Link>
-          <span style={{ margin: '0 8px' }}>/</span>
-          <span>{post.title}</span>
         </div>
 
         <div className="post-detail-layout">
           {/* Main Content Area */}
           <div>
-            <article className="post-main-content">
+            <article
+              className={`post-main-content ${isCustomBg ? 'has-custom-atmosphere-bg' : ''} ${postAtmosphere.particleEffect !== 'none' ? `has-particle-${postAtmosphere.particleEffect}` : ''}`}
+              style={customArticleStyle}
+            >
+              {/* Particle Overlays Trực Quan */}
+              {postAtmosphere.particleEffect === 'fog' && <div className="post-particle-fog-overlay" />}
+              {postAtmosphere.particleEffect === 'rain' && <div className="post-particle-rain-overlay" />}
+              {postAtmosphere.particleEffect === 'sparkles' && <div className="post-particle-sparkles-overlay" />}
+              {postAtmosphere.particleEffect === 'heartbeat_pulse' && <div className="post-particle-pulse-border" />}
+              {postAtmosphere.particleEffect === 'fireflies' && <div className="post-particle-fireflies-overlay" />}
               {/* Cảnh báo kiểm duyệt dành riêng cho bài nhạy cảm Chính Trị */}
               {post.isFlagged && (
                 <div
@@ -302,16 +345,42 @@ export const PostDetailPage = () => {
                 </div>
               )}
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                <span className="post-header-badge">
-                  {post.category?.name || 'Tâm sự'}
-                </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                <Link
+                  to={post.category?.slug ? `/?category=${post.category.slug}` : '/'}
+                  className="post-header-badge"
+                  style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                  title={`Thể loại: ${post.category?.name || 'Tâm sự'} (Xem các bài viết liên quan)`}
+                >
+                  <span>{post.category?.icon || '🌍'}</span>
+                  <span>{post.category?.name || 'Tâm sự'}</span>
+                </Link>
                 <span
                   className={`card-visibility-pill ${post.visibility === 'friends' ? 'is-friends' : 'is-public'}`}
                   title={post.visibility === 'friends' ? 'Chế độ: Chỉ bạn bè mới xem được' : 'Chế độ: Công khai cho tất cả'}
                 >
                   {post.visibility === 'friends' ? '👥 Chỉ bạn bè' : '🌐 Công khai'}
                 </span>
+                {postAtmosphere.theme !== 'default' && (
+                  <span
+                    className="post-atmosphere-badge"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '3px 10px',
+                      borderRadius: '20px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      background: `${themeMeta.accentColor}25`,
+                      color: themeMeta.accentColor,
+                      border: `1px solid ${themeMeta.accentColor}60`,
+                    }}
+                  >
+                    <span>{themeMeta.icon}</span>
+                    <span>Không gian: {themeMeta.badgeText}</span>
+                  </span>
+                )}
               </div>
 
               <h1 className="post-full-title">{post.title}</h1>
@@ -395,6 +464,8 @@ export const PostDetailPage = () => {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '5px',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
                     }}
                   >
                     💌 Chia sẻ
@@ -473,6 +544,9 @@ export const PostDetailPage = () => {
                   className="post-featured-image"
                 />
               )}
+
+              {/* Thanh Điều Khiển Không Gian Cảm Xúc & Âm Thanh Đặc Trưng */}
+              <PostAtmosphereSoundBar atmosphere={postAtmosphere} postTitle={post.title} />
 
               {/* Trình Đọc Bài Viết A.I Thông Minh Bằng Giọng Cảm Xúc & Giọng Nhân Bản */}
               <PostAudioPlayer post={post} />

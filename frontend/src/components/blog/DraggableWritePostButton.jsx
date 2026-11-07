@@ -11,7 +11,7 @@ import {
 export const DraggableWritePostButton = ({ onClick }) => {
   const [btnPos, setBtnPos] = useState(() => {
     const raw = getFabPos('write');
-    return resolveAntiCollision('write', raw);
+    return resolveAntiCollision('write', raw, true);
   });
 
   const [isDragging, setIsDragging] = useState(false);
@@ -24,7 +24,7 @@ export const DraggableWritePostButton = ({ onClick }) => {
     const handleResize = () => {
       setBtnPos((prev) => {
         const bounded = ensureInBounds('write', prev);
-        const resolved = resolveAntiCollision('write', bounded);
+        const resolved = resolveAntiCollision('write', bounded, true);
         saveFabPos('write', resolved);
         return resolved;
       });
@@ -38,7 +38,7 @@ export const DraggableWritePostButton = ({ onClick }) => {
   useEffect(() => {
     const handleRecheckCollision = () => {
       setBtnPos((curr) => {
-        const safe = resolveAntiCollision('write', curr);
+        const safe = resolveAntiCollision('write', curr, true);
         if (safe.x !== curr.x || safe.y !== curr.y) {
           saveFabPos('write', safe);
           return safe;

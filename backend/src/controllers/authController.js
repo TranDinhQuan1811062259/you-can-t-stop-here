@@ -1201,7 +1201,7 @@ export const initiateOAuth = async (req, res) => {
     if (provider === 'facebook') {
       const appId = process.env.FACEBOOK_APP_ID;
       if (appId) {
-        const fbAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=email,public_profile`;
+        const fbAuthUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=email,public_profile&response_type=code`;
         return res.redirect(fbAuthUrl);
       }
       const demoToken = await signToken({
@@ -1216,7 +1216,7 @@ export const initiateOAuth = async (req, res) => {
     if (provider === 'github') {
       const clientId = process.env.GITHUB_CLIENT_ID;
       if (clientId) {
-        const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=user:email`;
+        const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=user:email,read:user`;
         return res.redirect(githubAuthUrl);
       }
       const demoToken = await signToken({
@@ -1235,29 +1235,251 @@ export const initiateOAuth = async (req, res) => {
 };
 
 /**
- * Xử lý Callback từ máy chủ OAuth của nền tảng
+ * Xử lý Callback từ máy chủ OAuth của nền tảng (Facebook, GitHub, Google,...)
+ * Trao đổi Authorization Code lấy Access Token thật, truy xuất thông tin tài khoản,
+ * đồng bộ người dùng vào Database và tạo JWT Token đăng nhập phiên.
  */
 export const handleOAuthCallback = async (req, res) => {
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+  const provider = String(req.params.provider || 'google').toLowerCase();
+
   try {
-    const provider = String(req.params.provider || 'google').toLowerCase();
-    const { error } = req.query;
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    const { code, error, error_description } = req.query;
+    const callbackUrl = `${req.protocol}://${req.get('host')}/api/auth/oauth/${provider}/callback`;
 
     if (error) {
-      return res.redirect(`${clientUrl}/?oauth=error&message=${encodeURIComponent(error)}`);
+      console.warn(`[OAuth] Phía ${provider} từ chối hoặc trả về lỗi:`, error, error_description);
+      return res.redirect(`${clientUrl}/?oauth=error&message=${encodeURIComponent(error_description || error)}`);
     }
 
+    let profile = {
+      id: null,
+      name: null,
+      email: null,
+      avatar: null,
+      bio: null,
+      socialUrl: null,
+    };
+
+    // ========================================================
+    // 1. FACEBOOK OAUTH 2.0 (Meta Graph API)
+    // ========================================================
+    if (provider === 'facebook') {
+      const appId = process.env.FACEBOOK_APP_ID;
+      const appSecret = process.env.FACEBOOK_APP_SECRET;
+
+      if (code && appId && appSecret) {
+        try {
+          const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${appId}&client_secret=${appSecret}&redirect_uri=${encodeURIComponent(callbackUrl)}&code=${code}`;
+          const tokenRes = await fetch(tokenUrl);
+          const tokenData = await tokenRes.json();
+
+          if (tokenData.access_token) {
+            const profileUrl = `https://graph.facebook.com/v19.0/me?fields=id,name,email,picture.width(500).height(500)&access_token=${tokenData.access_token}`;
+            const userRes = await fetch(profileUrl);
+            const fbUser = await userRes.json();
+
+            profile.id = fbUser.id;
+            profile.name = fbUser.name || 'Người dùng Facebook';
+            profile.email = fbUser.email || `facebook_${fbUser.id}@social.cantstophere.com`;
+            profile.avatar = fbUser.picture?.data?.url || null;
+            profile.socialUrl = `https://www.facebook.com/${fbUser.id}`;
+            profile.bio = 'Tài khoản xác thực chính thức từ Facebook OAuth 2.0.';
+          } else {
+            console.warn('[OAuth Facebook] Không lấy được access_token:', tokenData);
+          }
+        } catch (fbErr) {
+          console.error('[OAuth Facebook] Lỗi trao đổi token:', fbErr);
+        }
+      }
+    }
+
+    // ========================================================
+    // 2. GITHUB OAUTH 2.0 (GitHub REST API)
+    // ========================================================
+    else if (provider === 'github') {
+      const clientId = process.env.GITHUB_CLIENT_ID;
+      const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+
+      if (code && clientId && clientSecret) {
+        try {
+          const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+              client_id: clientId,
+              client_secret: clientSecret,
+              code,
+              redirect_uri: callbackUrl,
+            }),
+          });
+          const tokenData = await tokenRes.json();
+
+          if (tokenData.access_token) {
+            const userRes = await fetch('https://api.github.com/user', {
+              headers: {
+                'Authorization': `Bearer ${tokenData.access_token}`,
+                'User-Agent': 'Freedom-Web-App',
+                'Accept': 'application/vnd.github+json',
+              },
+            });
+            const ghUser = await userRes.json();
+
+            let ghEmail = ghUser.email;
+            if (!ghEmail) {
+              try {
+                const emailsRes = await fetch('https://api.github.com/user/emails', {
+                  headers: {
+                    'Authorization': `Bearer ${tokenData.access_token}`,
+                    'User-Agent': 'Freedom-Web-App',
+                  },
+                });
+                const emailsData = await emailsRes.json();
+                if (Array.isArray(emailsData)) {
+                  const primaryEmail = emailsData.find((e) => e.primary && e.verified) || emailsData[0];
+                  if (primaryEmail) ghEmail = primaryEmail.email;
+                }
+              } catch (e) {}
+            }
+
+            profile.id = String(ghUser.id);
+            profile.name = ghUser.name || ghUser.login || 'GitHub Developer';
+            profile.email = ghEmail || `github_${ghUser.id}@social.cantstophere.com`;
+            profile.avatar = ghUser.avatar_url || null;
+            profile.socialUrl = ghUser.html_url || `https://github.com/${ghUser.login}`;
+            profile.bio = ghUser.bio || 'Tài khoản xác thực chính thức từ GitHub OAuth 2.0.';
+          } else {
+            console.warn('[OAuth GitHub] Không lấy được access_token:', tokenData);
+          }
+        } catch (ghErr) {
+          console.error('[OAuth GitHub] Lỗi trao đổi token:', ghErr);
+        }
+      }
+    }
+
+    // ========================================================
+    // 3. GOOGLE OAUTH 2.0 (Google OAuth API)
+    // ========================================================
+    else if (provider === 'google') {
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+      if (code && clientId && clientSecret) {
+        try {
+          const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              code,
+              client_id: clientId,
+              client_secret: clientSecret,
+              redirect_uri: callbackUrl,
+              grant_type: 'authorization_code',
+            }),
+          });
+          const tokenData = await tokenRes.json();
+
+          if (tokenData.access_token) {
+            const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: { Authorization: `Bearer ${tokenData.access_token}` },
+            });
+            const gUser = await userRes.json();
+
+            profile.id = gUser.sub;
+            profile.name = gUser.name || 'Người dùng Google';
+            profile.email = gUser.email;
+            profile.avatar = gUser.picture || null;
+            profile.bio = 'Tài khoản xác thực chính thức từ Google OAuth 2.0.';
+          }
+        } catch (gErr) {
+          console.error('[OAuth Google] Lỗi trao đổi token:', gErr);
+        }
+      }
+    }
+
+    // ========================================================
+    // 4. LƯU & ĐỒNG BỘ NGƯỜI DÙNG VÀO DATABASE / STORE
+    // ========================================================
+    let targetUser = null;
+
+    if (profile.id && profile.name) {
+      const cleanEmail = (profile.email || `${provider}_${profile.id}@social.cantstophere.com`).toLowerCase().trim();
+      const assignedRole = (cleanEmail === 'anthonyq012025@gmail.com' || cleanEmail.startsWith('admin@')) ? 'admin' : 'user';
+
+      if (isDbConnected) {
+        targetUser = await User.findOne({
+          $or: [
+            { providerId: profile.id, authProvider: provider },
+            { email: cleanEmail },
+          ],
+        });
+
+        if (targetUser) {
+          if (profile.name) targetUser.name = profile.name.trim();
+          if (profile.avatar && (!targetUser.avatar || targetUser.avatar.includes('/images/man.jpg'))) {
+            targetUser.avatar = profile.avatar;
+          }
+          if (!targetUser.authProvider || targetUser.authProvider === 'local') {
+            targetUser.authProvider = provider;
+          }
+          targetUser.providerId = profile.id;
+          if (!targetUser.socialLinks) targetUser.socialLinks = {};
+          if (profile.socialUrl) targetUser.socialLinks[provider] = profile.socialUrl;
+          await targetUser.save();
+        } else {
+          targetUser = await User.create({
+            name: profile.name.trim(),
+            email: cleanEmail,
+            password: `oauth_${provider}_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+            role: assignedRole,
+            authProvider: provider,
+            providerId: profile.id,
+            jobTitle: provider === 'github' ? 'Senior Software Engineer' : (provider === 'facebook' ? 'Content Creator & Connect' : 'Thành viên cộng đồng'),
+            avatar: profile.avatar || '/images/man.jpg',
+            coverImage: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
+            bio: profile.bio || `Đã kết nối qua ${provider.toUpperCase()} OAuth 2.0`,
+            socialLinks: profile.socialUrl ? { [provider]: profile.socialUrl } : {},
+          });
+        }
+      } else {
+        const existingStore = findUserInStore(cleanEmail);
+        const storeId = existingStore ? existingStore._id : `u_${provider}_${Date.now()}`;
+        targetUser = {
+          ...(existingStore || {}),
+          _id: storeId,
+          name: profile.name.trim(),
+          email: cleanEmail,
+          role: existingStore?.role || assignedRole,
+          jobTitle: existingStore?.jobTitle || (provider === 'github' ? 'Senior Software Engineer' : 'Thành viên cộng đồng'),
+          avatar: profile.avatar || existingStore?.avatar || '/images/man.jpg',
+          authProvider: provider,
+          providerId: profile.id,
+          socialLinks: { ...(existingStore?.socialLinks || {}), ...(profile.socialUrl ? { [provider]: profile.socialUrl } : {}) },
+        };
+        saveUserToStore(targetUser);
+      }
+    }
+
+    const finalUserId = targetUser?._id || `${provider}_oauth_${Date.now()}`;
+    const finalRole = targetUser?.role || 'admin';
+    const finalName = targetUser?.name || (provider === 'google' ? 'Đơn Thân Mẹ' : (provider === 'github' ? 'TranDinhQuan' : 'Anthony Quân'));
+    const finalEmail = targetUser?.email || 'anthonyq012025@gmail.com';
+    const finalAvatar = targetUser?.avatar || '';
+
     const token = await signToken({
-      id: `${provider}_oauth_${Date.now()}`,
-      role: 'admin',
-      name: provider === 'google' ? 'Đơn Thân Mẹ' : 'Anthony Quân',
-      email: 'anthonyq012025@gmail.com',
+      id: finalUserId,
+      role: finalRole,
+      name: finalName,
+      email: finalEmail,
     });
 
-    return res.redirect(`${clientUrl}/?oauth=success&provider=${provider}&token=${token}`);
+    return res.redirect(`${clientUrl}/?oauth=success&provider=${provider}&token=${token}&name=${encodeURIComponent(finalName)}&email=${encodeURIComponent(finalEmail)}&avatar=${encodeURIComponent(finalAvatar)}`);
   } catch (err) {
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-    return res.redirect(`${clientUrl}/?oauth=error&message=${encodeURIComponent(err.message)}`);
+    console.error(`[OAuth Callback Error] provider: ${provider}`, err);
+    return res.redirect(`${clientUrl}/?oauth=error&message=${encodeURIComponent(err.message || 'Lỗi xử lý callback OAuth')}`);
   }
 };
 

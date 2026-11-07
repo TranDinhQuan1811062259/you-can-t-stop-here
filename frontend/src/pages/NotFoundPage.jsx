@@ -3,20 +3,22 @@ import { Link } from 'react-router-dom';
 
 export const NotFoundPage = () => {
   return (
-    <div className="container" style={{ textAlign: 'center', padding: '100px 20px' }}>
-      <h1 style={{ fontSize: '5rem', color: 'var(--primary-color)', fontFamily: 'var(--font-serif)' }}>
-        404
-      </h1>
-      <h2 style={{ marginBottom: '16px', color: 'var(--bg-dark)' }}>
-        Trang Không Tồn Tại
-      </h2>
-      <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>
-        Địa chỉ bạn đang tìm kiếm có thể đã bị xóa hoặc đường dẫn không chính xác.
-      </p>
-      <Link to="/" className="back-home-btn">
-        &larr; Trở về Trang Chủ
-      </Link>
-    </div>
+    <section className="hero-banner" style={{ padding: '64px 0', minHeight: '60vh', display: 'flex', alignItems: 'center' }}>
+      <div className="container" style={{ textAlign: 'center' }}>
+        <span className="hero-tag-pill">🧭 404 • Lạc Lối</span>
+        <h1 className="hero-title">
+          Trang Không Tồn Tại
+        </h1>
+        <p className="hero-subtitle" style={{ maxWidth: '580px', margin: '0 auto 20px' }}>
+          Địa chỉ bạn đang tìm kiếm có thể đã bị xóa, đổi tên hoặc đường dẫn không chính xác.
+        </p>
+        <div style={{ marginTop: '16px' }}>
+          <Link to="/" className="hero-back-link">
+            &larr; Xem tất cả các câu chuyện khác
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 };
 
