@@ -8,6 +8,7 @@ import { EditProfileModal } from '../auth/EditProfileModal';
 import { AdminModerationModal } from '../admin/AdminModerationModal';
 import { FestiveEventManagerModal } from '../admin/FestiveEventManagerModal';
 import { FestiveShowcaseModal } from '../common/FestiveShowcaseModal';
+import { StressReliefModal } from '../wellness/StressReliefModal';
 import { postService } from '../../services/postService';
 import { eventService } from '../../services/eventService';
 import { isSoundEnabled, toggleSound, playClickSound, playFestiveEventSound } from '../../utils/soundEffects';
@@ -94,6 +95,7 @@ export const Header = () => {
   const [isEventManagerOpen, setIsEventManagerOpen] = useState(false);
   const [isShowcaseModalOpen, setIsShowcaseModalOpen] = useState(false);
   const [activeFestiveEvent, setActiveFestiveEvent] = useState(null);
+  const [isWellnessOpen, setIsWellnessOpen] = useState(false);
 
   const fetchFestiveEvent = () => {
     eventService
@@ -120,7 +122,14 @@ export const Header = () => {
     checkFlaggedPosts();
     fetchFestiveEvent();
 
+    const handleAuthChange = () => {
+      checkFlaggedPosts();
+      fetchFestiveEvent();
+    };
+
     window.addEventListener('post_updated', checkFlaggedPosts);
+    window.addEventListener('profile_updated', handleAuthChange);
+    window.addEventListener('freedom_auth_changed', handleAuthChange);
     window.addEventListener('freedom_festive_event_changed', fetchFestiveEvent);
 
     const handleOpenMod = () => {
@@ -132,15 +141,22 @@ export const Header = () => {
       if (e?.detail) setActiveFestiveEvent(e.detail);
       setIsShowcaseModalOpen(true);
     };
+    const handleOpenWellness = () => {
+      setIsWellnessOpen(true);
+    };
 
     window.addEventListener('freedom_open_moderation', handleOpenMod);
     window.addEventListener('freedom_open_festive_showcase', handleOpenShowcase);
+    window.addEventListener('freedom_open_wellness', handleOpenWellness);
 
     return () => {
       window.removeEventListener('post_updated', checkFlaggedPosts);
+      window.removeEventListener('profile_updated', handleAuthChange);
+      window.removeEventListener('freedom_auth_changed', handleAuthChange);
       window.removeEventListener('freedom_festive_event_changed', fetchFestiveEvent);
       window.removeEventListener('freedom_open_moderation', handleOpenMod);
       window.removeEventListener('freedom_open_festive_showcase', handleOpenShowcase);
+      window.removeEventListener('freedom_open_wellness', handleOpenWellness);
     };
   }, [user]);
 
@@ -419,10 +435,35 @@ export const Header = () => {
                 Small Wins
               </NavLink>
             </li>
+            <li>
+              <button
+                type="button"
+                className="nav-link header-wellness-btn"
+                onClick={() => {
+                  setIsWellnessOpen(true);
+                  closeNav();
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  color: '#0d9488',
+                  fontWeight: 700,
+                  fontSize: '0.86rem',
+                }}
+                title="Trạm xả stress, máy xé giấy deadline & bài tập thở 4-7-8"
+              >
+                <span>🌿</span>
+                <span>Xả Stress</span>
+              </button>
+            </li>
 
             {/* Auth Actions inside Nav (Spacious & Clean Layout) */}
             <li className="header-auth-group">
-              {isAuthenticated ? (
+              {(isAuthenticated || !!user) ? (
                 <div className="header-user-badge">
                   {/* Bấm vào avatar hoặc tên để xem trang cá nhân */}
                   <Link
@@ -674,6 +715,12 @@ export const Header = () => {
           onEventUpdated={fetchFestiveEvent}
         />
       )}
+
+      {/* Trạm Xả Stress & Máy Xé Giấy Deadline & Bài Tập Thở 4-7-8 */}
+      <StressReliefModal
+        isOpen={isWellnessOpen}
+        onClose={() => setIsWellnessOpen(false)}
+      />
     </>
   );
 };

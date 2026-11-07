@@ -174,18 +174,22 @@ export const ChatBox = () => {
       {/* Banner Người Lạ (Nếu chưa được chấp nhận) */}
       {isPendingRequest && (
         <div className="stranger-request-banner">
-          <div style={{ flex: 1 }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#92400e' }}>
-              👋 Yêu cầu nhắn tin từ người lạ
-            </span>
-            <p style={{ fontSize: '0.75rem', color: '#78350f', margin: '2px 0 0' }}>
-              {otherUser.name} chưa có trong danh bạ bạn bè của bạn.
+          <div className="stranger-banner-text-block">
+            <div className="stranger-badge-row">
+              <span className="assistive-stranger-badge">
+                <span className="badge-shield">🛡️</span> Tin nhắn người lạ
+              </span>
+            </div>
+            <p className="stranger-banner-sub">
+              <span className="warning-animated-icon">⚠️</span>
+              <span><strong>{otherUser.name}</strong> chưa có trong danh bạ. Bạn có muốn bắt đầu trò chuyện?</span>
             </p>
           </div>
           <button
             type="button"
             className="accept-stranger-btn"
             onClick={handleAcceptStranger}
+            title="Đồng ý để bắt đầu trò chuyện"
           >
             ✓ Đồng ý trò chuyện
           </button>
@@ -202,6 +206,7 @@ export const ChatBox = () => {
         ) : (
           messages.map((m) => {
             const isMe = m.sender?._id === user?._id || m.sender === user?._id;
+            const isPendingStrangerMsg = !isMe && isPendingRequest;
             const timeStr = new Date(m.createdAt).toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
@@ -210,7 +215,9 @@ export const ChatBox = () => {
             return (
               <div
                 key={m._id}
-                className={`chat-bubble-row ${isMe ? 'my-message' : 'their-message'}`}
+                className={`chat-bubble-row ${isMe ? 'my-message' : 'their-message'} ${
+                  isPendingStrangerMsg ? 'stranger-pending-msg' : ''
+                }`}
               >
                 {!isMe && (
                   <img
@@ -220,6 +227,11 @@ export const ChatBox = () => {
                   />
                 )}
                 <div className="bubble-content-wrap">
+                  {isPendingStrangerMsg && (
+                    <span className="stranger-msg-intro-tag">
+                      ✨ Tin nhắn làm quen mới
+                    </span>
+                  )}
                   <div className="chat-bubble-text">{m.content}</div>
                   <span className="bubble-time">{timeStr}</span>
                 </div>

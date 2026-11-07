@@ -33,24 +33,31 @@ export const DraggableWritePostButton = ({ onClick }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Lắng nghe khi nút Tin Nhắn (Chat) di dời vị trí:
-  // Nếu nút Chat dời đến gần hoặc đè lên nút Viết tâm sự, nút Viết tâm sự tự động né tránh thông minh!
+  // Lắng nghe khi nút Tin Nhắn (Chat) di dời hoặc Linh vật sự kiện lễ hội xuất hiện:
+  // Tự động né tránh thông minh, KHÔNG BAO GIỜ đè lên sự kiện hoặc nút Chat!
   useEffect(() => {
-    const handleOtherMoved = (e) => {
-      if (e.detail?.type === 'chat') {
-        setBtnPos((curr) => {
-          const safe = resolveAntiCollision('write', curr);
-          if (safe.x !== curr.x || safe.y !== curr.y) {
-            saveFabPos('write', safe);
-            return safe;
-          }
-          return curr;
-        });
-      }
+    const handleRecheckCollision = () => {
+      setBtnPos((curr) => {
+        const safe = resolveAntiCollision('write', curr);
+        if (safe.x !== curr.x || safe.y !== curr.y) {
+          saveFabPos('write', safe);
+          return safe;
+        }
+        return curr;
+      });
     };
 
-    window.addEventListener('freedom_fab_pos_changed', handleOtherMoved);
-    return () => window.removeEventListener('freedom_fab_pos_changed', handleOtherMoved);
+    const timer = setTimeout(handleRecheckCollision, 120);
+
+    window.addEventListener('freedom_fab_pos_changed', handleRecheckCollision);
+    window.addEventListener('freedom_festive_event_changed', handleRecheckCollision);
+    window.addEventListener('freedom_festive_mascot_updated', handleRecheckCollision);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('freedom_fab_pos_changed', handleRecheckCollision);
+      window.removeEventListener('freedom_festive_event_changed', handleRecheckCollision);
+      window.removeEventListener('freedom_festive_mascot_updated', handleRecheckCollision);
+    };
   }, []);
 
   // Bắt đầu kéo thả (Chuột hoặc Cảm ứng trên điện thoại / máy tính bảng)

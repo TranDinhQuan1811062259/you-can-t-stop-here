@@ -9,6 +9,7 @@ import { Pagination } from '../components/common/Pagination';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { CreatePostModal } from '../components/blog/CreatePostModal';
+import { CommunityMoodWall } from '../components/blog/CommunityMoodWall';
 
 export const HomePage = () => {
   const { isAuthenticated, openLoginModal } = useAuth();
@@ -98,6 +99,11 @@ export const HomePage = () => {
 
       {/* Main Content Area */}
       <section className="container" id="posts-section" style={{ paddingTop: '30px' }}>
+        {/* 📊 Bức Tường Tâm Trạng Cộng Đồng & Lối vào Trạm Xả Stress */}
+        <CommunityMoodWall
+          onOpenWellness={() => window.dispatchEvent(new Event('freedom_open_wellness'))}
+        />
+
         {/* Bộ lọc danh mục */}
         <CategoryFilter
           categories={categories}

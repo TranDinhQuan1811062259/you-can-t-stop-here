@@ -8,6 +8,7 @@ import { CommentSection } from '../components/blog/CommentSection';
 import { EditPostModal } from '../components/blog/EditPostModal';
 import { AdminModerationModal } from '../components/admin/AdminModerationModal';
 import { PostReactionsBar } from '../components/blog/PostReactionsBar';
+import { AnonymousWarmthBox } from '../components/blog/AnonymousWarmthBox';
 import { PostAudioPlayer } from '../components/blog/PostAudioPlayer';
 import { SharePostModal } from '../components/blog/SharePostModal';
 import { formatPostContent } from '../utils/contentFormatter';
@@ -544,6 +545,12 @@ export const PostDetailPage = () => {
                 }}
               />
             </article>
+
+            {/* 💌 Hộp Thư Sưởi Ấm Tâm Hồn (Gửi Cái Ôm & Tách Trà Ẩn Danh) */}
+            <AnonymousWarmthBox
+              postId={post._id || post.slug}
+              authorName={authorName}
+            />
 
             {/* Social Comment & Encouragement Section */}
             <CommentSection postId={post._id} postAuthorName={authorName} />

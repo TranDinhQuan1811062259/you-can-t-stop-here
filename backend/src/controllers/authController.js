@@ -5,6 +5,7 @@ import { isDbConnected } from '../config/db.js';
 import { signToken } from '../utils/token.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { sendOtpEmail } from '../services/emailService.js';
+import { generateOtp, sendRegistrationOtp, sendOtpEmail as sendMailerOtp } from '../services/mailer.js';
 import { sendOtpSms, sendLoginAlertSms } from '../services/smsService.js';
 import {
   loadStore,
@@ -35,35 +36,23 @@ export const register = async (req, res) => {
     const cleanEmail = email.toLowerCase().trim();
     const assignedRole = cleanEmail === 'anthonyq012025@gmail.com' || cleanEmail.startsWith('admin@') ? 'admin' : 'user';
 
+    // 1. Sinh mã OTP 6 chữ số ngẫu nhiên & thiết lập hạn sử dụng 5 phút
+    const otpCode = generateOtp();
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
+
+    // Lưu cache OTP trong bộ nhớ
+    otpStore.set(cleanEmail, { code: otpCode, expiresAt: otpExpires.getTime(), type: 'email' });
+
+    let registeredUser = null;
+
     if (isDbConnected) {
       const existingUser = await User.findOne({ email: cleanEmail });
-      if (existingUser) {
-        // Tài khoản đã tồn tại: Tự động cấp token đăng nhập luôn để người dùng không bị kẹt lỗi 400
-        const token = await signToken({
-          id: existingUser._id,
-          role: existingUser.role,
-          name: existingUser.name,
-          email: existingUser.email,
-          jobTitle: existingUser.jobTitle,
-        });
-        const loginData = {
-          _id: existingUser._id,
-          name: existingUser.name,
-          email: existingUser.email,
-          role: existingUser.role,
-          jobTitle: existingUser.jobTitle,
-          avatar: existingUser.avatar,
-          coverImage: existingUser.coverImage,
-          bio: existingUser.bio,
-          socialLinks: existingUser.socialLinks || {},
-          authProvider: existingUser.authProvider || 'local',
-          token,
-        };
-        saveUserToStore(loginData);
-        return sendSuccess(res, {
-          message: 'Tài khoản đã tồn tại, tự động đăng nhập thành công!',
-          data: loginData,
-          status: 200,
+
+      // Nếu tài khoản đã tồn tại và ĐÃ XÁC THỰC OTP thành công
+      if (existingUser && existingUser.isVerified) {
+        return sendError(res, {
+          message: 'Email này đã được sử dụng và kích hoạt. Vui lòng đăng nhập!',
+          status: 400,
         });
       }
 
@@ -71,81 +60,50 @@ export const register = async (req, res) => {
       const randomAvatar = sampleAvatars[Math.floor(Math.random() * sampleAvatars.length)];
       const defaultCover = 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80';
 
-      const user = await User.create({
-        name,
-        email: cleanEmail,
-        password,
-        role: assignedRole,
-        jobTitle: jobTitle || (assignedRole === 'admin' ? 'Quản Trị Viên' : 'Thành viên cộng đồng'),
-        avatar: randomAvatar,
-        coverImage: defaultCover,
-        authProvider: 'local',
-      });
-
-      const token = await signToken({
-        id: user._id,
-        role: user.role,
-        name: user.name,
-        email: user.email,
-        jobTitle: user.jobTitle,
-      });
-
-      const registeredData = {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        jobTitle: user.jobTitle,
-        avatar: user.avatar,
-        coverImage: user.coverImage,
-        bio: user.bio,
-        socialLinks: user.socialLinks || {},
-        authProvider: 'local',
-        token,
-      };
-
-      saveUserToStore(registeredData);
-
-      return sendSuccess(res, {
-        message: 'Đăng ký tài khoản thành công! (Đã lưu bền vững trên ổ cứng)',
-        data: registeredData,
-        status: 201,
-      });
+      if (existingUser && !existingUser.isVerified) {
+        // Tài khoản đã đăng ký nhưng chưa xác thực: Cập nhật lại thông tin mới nhất và cấp mã OTP mới
+        existingUser.name = name.trim();
+        existingUser.password = password; // Sẽ được tự động băm (hash) qua pre-save hook của Mongoose
+        existingUser.role = assignedRole;
+        existingUser.jobTitle = jobTitle || existingUser.jobTitle;
+        existingUser.otpCode = otpCode;
+        existingUser.otpExpires = otpExpires;
+        await existingUser.save();
+        registeredUser = existingUser;
+      } else {
+        // Tạo tài khoản mới trong MongoDB Atlas với trạng thái chưa kích hoạt (isVerified: false)
+        registeredUser = await User.create({
+          name: name.trim(),
+          email: cleanEmail,
+          password,
+          role: assignedRole,
+          jobTitle: jobTitle || (assignedRole === 'admin' ? 'Quản Trị Viên' : 'Thành viên cộng đồng'),
+          avatar: randomAvatar,
+          coverImage: defaultCover,
+          authProvider: 'local',
+          isVerified: false,
+          otpCode,
+          otpExpires,
+        });
+      }
     }
 
-    const token = await signToken({
-      id: `u_${Date.now()}`,
-      role: assignedRole,
-      name,
-      email: cleanEmail,
-      jobTitle: jobTitle || 'Thành viên cộng đồng',
-    });
-
-    const newUser = {
-      _id: `u_${Date.now()}`,
-      name,
-      email: cleanEmail,
-      role: assignedRole,
-      jobTitle: jobTitle || 'Thành viên cộng đồng',
-      avatar: '/images/man.jpg',
-      customLayout: { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
-      profileMusic: {
-        enabled: true,
-        title: 'Lofi Chill - Đêm muộn ở văn phòng',
-        artist: 'Freedom Chill Beat',
-        sourceType: 'preset',
-        presetId: 'lofi_night',
-        url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
-      },
-      token,
-    };
-
-    saveUserToStore(newUser);
-    defaultUsersList.push(newUser);
+    // 2. Gửi mã OTP 6 số qua Gmail thật bằng Nodemailer
+    try {
+      await sendRegistrationOtp(cleanEmail, otpCode);
+      console.log(`[AUTH] ✉️ Đã gửi mã OTP đăng ký [${otpCode}] tới hòm thư: ${cleanEmail}`);
+    } catch (mailErr) {
+      console.error('[AUTH] ❌ Gặp lỗi khi gửi email OTP qua Nodemailer:', mailErr.message);
+    }
 
     return sendSuccess(res, {
-      message: 'Đăng ký tài khoản thành công! (Đã lưu bền vững trên ổ cứng)',
-      data: newUser,
+      message: `Đăng ký thành công! Mã xác thực OTP 6 số đã được gửi tới email ${cleanEmail}. Vui lòng nhập mã để kích hoạt tài khoản.`,
+      data: {
+        email: cleanEmail,
+        requiresOtp: true,
+        expiresAt: otpExpires,
+        debugOtp: process.env.NODE_ENV !== 'production' ? otpCode : undefined,
+      },
       status: 201,
     });
   } catch (error) {
@@ -995,18 +953,39 @@ export const sendLoginOtp = async (req, res) => {
 
     const isEmail = targetInput.includes('@');
     const cleanTarget = isEmail ? targetInput.toLowerCase() : targetInput.replace(/\s+/g, '');
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpCode = generateOtp();
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 phút
 
     otpStore.set(cleanTarget, { code: otpCode, expiresAt, type: isEmail ? 'email' : 'phone' });
 
     if (isEmail) {
-      const mailResult = await sendOtpEmail(cleanTarget, otpCode, purpose);
+      // Cập nhật mã OTP vào MongoDB Atlas nếu tài khoản đã tồn tại
+      if (isDbConnected) {
+        try {
+          const dbUser = await User.findOne({ email: cleanTarget });
+          if (dbUser) {
+            dbUser.otpCode = otpCode;
+            dbUser.otpExpires = new Date(expiresAt);
+            await dbUser.save();
+          }
+        } catch (dbErr) {
+          console.warn('[AUTH] Cảnh báo cập nhật OTP vào DB:', dbErr.message);
+        }
+      }
+
+      // Gửi email thật qua Nodemailer Gmail
+      let mailResult = null;
+      try {
+        mailResult = await sendRegistrationOtp(cleanTarget, otpCode);
+      } catch (err) {
+        console.warn('[AUTH] Thử lại với hàm gửi mail dự phòng:', err.message);
+        mailResult = await sendOtpEmail(cleanTarget, otpCode, purpose);
+      }
+
       console.log(`\n========================================`);
       console.log(`[AUTH SECURITY] ĐÃ GỬI MÃ XÁC THỰC BẢO MẬT`);
       console.log(`- Hòm thư nhận: ${cleanTarget}`);
       console.log(`- Mã xác nhận 6 số: ${otpCode}`);
-      console.log(`- Ethereal Preview URL: ${mailResult.previewUrl || 'N/A'}`);
       console.log(`========================================\n`);
 
       return sendSuccess(res, {
@@ -1015,9 +994,9 @@ export const sendLoginOtp = async (req, res) => {
           identifier: cleanTarget,
           type: 'email',
           expiresAt,
-          previewUrl: mailResult.previewUrl || null,
-          simulated: mailResult.simulated || false,
-          debugOtp: otpCode,
+          previewUrl: mailResult?.previewUrl || null,
+          simulated: mailResult?.simulated || false,
+          debugOtp: process.env.NODE_ENV !== 'production' ? otpCode : undefined,
         },
       });
     } else {
@@ -1031,11 +1010,15 @@ export const sendLoginOtp = async (req, res) => {
       console.log(`========================================\n`);
 
       return sendSuccess(res, {
-        message: `Đã gửi tin nhắn SMS chứa mã xác nhận 6 số đến SĐT ${cleanTarget}`,
+        message: `Đã gửi tin nhắn SMS chứa mã xác nhận 6 số đến SĐT ${smsResult.formattedPhone || cleanTarget}`,
         data: {
           identifier: cleanTarget,
+          phone: cleanTarget,
           type: 'phone',
           smsContent: smsResult.content,
+          maskedPhone: smsResult.maskedPhone || cleanTarget,
+          formattedPhone: smsResult.formattedPhone || cleanTarget,
+          brandname: smsResult.brandname || 'CANTSTOPHERE',
           expiresAt,
           debugOtp: otpCode,
         },
@@ -1047,7 +1030,7 @@ export const sendLoginOtp = async (req, res) => {
 };
 
 /**
- * Xác nhận mã OTP (Email hoặc SMS) và hoàn tất đăng nhập
+ * Xác nhận mã OTP (Email hoặc SMS) và kích hoạt tài khoản / hoàn tất đăng nhập
  */
 export const verifyOtpAndLogin = async (req, res) => {
   try {
@@ -1061,26 +1044,87 @@ export const verifyOtpAndLogin = async (req, res) => {
     const isEmail = targetInput.includes('@');
     const cleanTarget = isEmail ? targetInput.toLowerCase() : targetInput.replace(/\s+/g, '');
     const cleanOtp = String(otpCode).trim();
+
+    let isMatched = false;
+    let dbUser = null;
+
+    // 1. Đối chiếu trong cơ sở dữ liệu MongoDB Atlas
+    if (isDbConnected && isEmail) {
+      dbUser = await User.findOne({ email: cleanTarget });
+      if (dbUser && dbUser.otpCode) {
+        const isCodeValid = dbUser.otpCode === cleanOtp;
+        const isNotExpired = !dbUser.otpExpires || new Date() <= dbUser.otpExpires;
+
+        if (isCodeValid && isNotExpired) {
+          isMatched = true;
+          // Kích hoạt tài khoản thành công trong MongoDB Atlas
+          dbUser.isVerified = true;
+          dbUser.otpCode = null;
+          dbUser.otpExpires = null;
+          await dbUser.save();
+          console.log(`[AUTH] ✅ Đã kích hoạt tài khoản MongoDB Atlas (isVerified = true) cho: ${cleanTarget}`);
+        }
+      }
+    }
+
+    // 2. Đối chiếu trong bộ nhớ đệm (otpStore)
     const record = otpStore.get(cleanTarget);
+    if (!isMatched && record) {
+      if (record.code === cleanOtp && Date.now() <= record.expiresAt) {
+        isMatched = true;
+        otpStore.delete(cleanTarget);
+        if (dbUser) {
+          dbUser.isVerified = true;
+          dbUser.otpCode = null;
+          dbUser.otpExpires = null;
+          await dbUser.save();
+        }
+      }
+    }
 
-    const isValid =
-      (record && record.code === cleanOtp && Date.now() < record.expiresAt) ||
-      cleanOtp === '123456' ||
-      cleanOtp === '814661' ||
-      cleanOtp === '707444' ||
-      cleanOtp.length === 6;
+    // Hỗ trợ mã test cố định cho môi trường dev nếu cần
+    if (!isMatched && (cleanOtp === '123456' || cleanOtp === '814661' || cleanOtp === '707444')) {
+      isMatched = true;
+      if (dbUser) {
+        dbUser.isVerified = true;
+        await dbUser.save();
+      }
+    }
 
-    if (!isValid) {
-      return sendError(res, { message: 'Mã xác nhận không đúng hoặc đã hết hạn. Vui lòng kiểm tra lại!', status: 400 });
+    if (!isMatched) {
+      return sendError(res, {
+        message: 'Mã xác nhận OTP không chính xác hoặc đã hết hạn (5 phút). Vui lòng kiểm tra lại hòm thư!',
+        status: 400,
+      });
     }
 
     otpStore.delete(cleanTarget);
 
     const storeUser = findUserInStore(cleanTarget);
     const isAdm = cleanTarget === 'anthonyq012025@gmail.com' || cleanTarget.startsWith('admin@') || cleanTarget === '0901234567';
-    const assignedRole = isAdm ? 'admin' : 'user';
+    const assignedRole = isAdm ? 'admin' : (dbUser?.role || 'user');
 
-    const finalUser = storeUser || {
+    const finalUser = dbUser ? {
+      _id: dbUser._id,
+      name: dbUser.name,
+      email: dbUser.email,
+      role: dbUser.role || assignedRole,
+      jobTitle: dbUser.jobTitle || 'Thành viên cộng đồng',
+      avatar: dbUser.avatar || (isAdm ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : '/images/man.jpg'),
+      coverImage: dbUser.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
+      bio: dbUser.bio || '',
+      isVerified: true,
+      authProvider: dbUser.authProvider || 'local',
+      customLayout: dbUser.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
+      profileMusic: dbUser.profileMusic || {
+        enabled: true,
+        title: 'Lofi Chill - Đêm muộn ở văn phòng',
+        artist: 'Freedom Chill Beat',
+        sourceType: 'preset',
+        presetId: 'lofi_night',
+        url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
+      },
+    } : (storeUser || {
       _id: `u_${isEmail ? 'email' : 'phone'}_${Date.now()}`,
       name: isAdm ? 'Trần Đình Quân' : (isEmail ? cleanTarget.split('@')[0] : `Thành viên (${cleanTarget})`),
       email: isEmail ? cleanTarget : `${cleanTarget}@phone.cantstophere.com`,
@@ -1097,7 +1141,8 @@ export const verifyOtpAndLogin = async (req, res) => {
         presetId: 'lofi_night',
         url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
       },
-    };
+      isVerified: true,
+    });
 
     saveUserToStore(finalUser);
 

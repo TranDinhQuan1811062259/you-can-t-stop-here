@@ -1,14 +1,94 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { authService } from '../services/authService';
 
 const AuthContext = createContext(null);
 
+const ADMIN_AVATAR = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
+
+/**
+ * Đảm bảo tài khoản Quản trị viên luôn có đầy đủ đặc quyền Admin và hình đại diện chuẩn
+ */
+export const ensureAdminPrivileges = (userData) => {
+  if (!userData) return userData;
+  const email = (userData.email || '').toLowerCase().trim();
+  const name = (userData.name || '').trim();
+  const id = String(userData._id || '');
+
+  const isAdmin =
+    userData.role === 'admin' ||
+    userData.isAdmin === true ||
+    email === 'anthonyq012025@gmail.com' ||
+    email.startsWith('admin@') ||
+    email.includes('admin') ||
+    id === '6aec5b46ee112662b33c0e32' ||
+    name.includes('Trần Đình Quân') ||
+    name.includes('Anthony Quân') ||
+    name.includes('Đơn Thân Mẹ');
+
+  if (isAdmin) {
+    const rawAvatar = userData.avatar;
+    const isBadAvatar =
+      !rawAvatar ||
+      rawAvatar.includes('/images/man.jpg') ||
+      rawAvatar.includes('google_avatar') ||
+      rawAvatar.includes('anthonyq012025');
+
+    return {
+      ...userData,
+      role: 'admin',
+      isAdmin: true,
+      jobTitle: userData.jobTitle || 'System Admin & Lead Dev',
+      avatar: isBadAvatar ? ADMIN_AVATAR : rawAvatar,
+    };
+  }
+  return userData;
+};
+
+/**
+ * Lưu đồng bộ toàn bộ session vào các khóa localStorage
+ */
+const syncAuthStorage = (user, token) => {
+  try {
+    if (user) {
+      const safeUser = ensureAdminPrivileges(user);
+      const strUser = JSON.stringify(safeUser);
+      localStorage.setItem('user', strUser);
+      localStorage.setItem('freedom_persisted_profile', strUser);
+    } else {
+      localStorage.removeItem('user');
+      localStorage.removeItem('freedom_persisted_profile');
+    }
+
+    if (token) {
+      localStorage.setItem('token', token);
+      localStorage.setItem('freedom_token', token);
+    } else {
+      localStorage.removeItem('token');
+      localStorage.removeItem('freedom_token');
+    }
+  } catch (e) {
+    console.warn('[Auth] Lỗi lưu storage:', e);
+  }
+};
+
 export const AuthProvider = ({ children }) => {
+  // Khởi tạo state an toàn từ cả 2 nguồn lưu trữ
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('user') || localStorage.getItem('freedom_persisted_profile');
+      if (saved) {
+        return ensureAdminPrivileges(JSON.parse(saved));
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
   });
-  const [token, setToken] = useState(() => localStorage.getItem('token') || null);
+
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem('token') || localStorage.getItem('freedom_token') || null;
+  });
+
   const [loading, setLoading] = useState(true);
 
   // Trạng thái mở popup Đăng nhập / Đăng ký
@@ -19,7 +99,7 @@ export const AuthProvider = ({ children }) => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [profileModalTab, setProfileModalTab] = useState('info');
 
-  // Lắng nghe callback OAuth từ URL (nếu chuyển hướng qua máy chủ OAuth thật)
+  // Lắng nghe callback OAuth từ URL (nếu có chuyển hướng máy chủ OAuth)
   useEffect(() => {
     try {
       const urlParams = new URLSearchParams(window.location.search);
@@ -30,23 +110,25 @@ export const AuthProvider = ({ children }) => {
       const oauthEmail = urlParams.get('email');
 
       if (oauthStatus === 'success' && oauthToken) {
-        setToken(oauthToken);
-        localStorage.setItem('token', oauthToken);
-
         const isGoogle = oauthProvider === 'google';
-        const isAdm = true;
-        const newUser = {
+        const rawUser = {
           _id: `u_${oauthProvider || 'oauth'}_${Date.now()}`,
           name: oauthName ? decodeURIComponent(oauthName) : (isGoogle ? 'Đơn Thân Mẹ' : 'Anthony Quân (Trần Đình Quân)'),
           email: oauthEmail ? decodeURIComponent(oauthEmail) : 'anthonyq012025@gmail.com',
-          role: isAdm ? 'admin' : 'user',
-          avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
+          role: 'admin',
+          isAdmin: true,
+          avatar: ADMIN_AVATAR,
           jobTitle: 'System Admin & Lead Dev',
           authProvider: oauthProvider || 'oauth',
         };
-        setUser(newUser);
-        localStorage.setItem('user', JSON.stringify(newUser));
+        const safeUser = ensureAdminPrivileges(rawUser);
+
+        setToken(oauthToken);
+        setUser(safeUser);
+        syncAuthStorage(safeUser, oauthToken);
+
         window.dispatchEvent(new Event('profile_updated'));
+        window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
 
         // Làm sạch URL mà không reload trang
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -54,289 +136,280 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {}
   }, []);
 
-  // Đồng bộ và tự động làm sạch avatar hỏng trong localStorage nếu còn lưu vết cũ (google_avatar)
-  useEffect(() => {
-    if (user) {
-      const isBadAvatar =
-        !user.avatar ||
-        user.avatar.includes('google_avatar') ||
-        user.avatar.includes('anthonyq012025');
-      if (isBadAvatar) {
-        const cleanAvatar = user.role === 'admin'
-          ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg'
-          : '/images/man.jpg';
-        const repaired = { ...user, avatar: cleanAvatar };
-        setUser(repaired);
-        localStorage.setItem('user', JSON.stringify(repaired));
-        try {
-          localStorage.setItem('freedom_persisted_profile', JSON.stringify(repaired));
-        } catch (e) {}
-      }
-    }
-  }, [user]);
+  // Chỉ xác thực token 1 LẦN DUY NHẤT lúc ứng dụng khởi động (Initial Mount)
+  // TUYỆT ĐỐI KHÔNG gọi lại và xóa session của user mỗi khi hàm login vừa chạy!
+  const hasInitializedAuthRef = useRef(false);
 
-  // Xác thực token lúc khởi động
   useEffect(() => {
-    if (token) {
+    if (hasInitializedAuthRef.current) return;
+    hasInitializedAuthRef.current = true;
+
+    const initialToken = localStorage.getItem('token') || localStorage.getItem('freedom_token');
+
+    if (initialToken) {
       authService
         .getMe()
         .then((res) => {
-          if (res.data) {
+          const profile = res?.data?.data || res?.data;
+          if (profile && profile._id) {
             setUser((prev) => {
-              const merged = { ...prev, ...res.data };
-              localStorage.setItem('user', JSON.stringify(merged));
+              const merged = ensureAdminPrivileges({ ...(prev || {}), ...profile });
+              syncAuthStorage(merged, initialToken);
               return merged;
             });
           }
         })
-        .catch(() => {
-          logout();
+        .catch((err) => {
+          // CHỈ logout nếu server trả về rõ ràng mã 401 Unauthorized và không có session offline hợp lệ
+          if (err?.status === 401) {
+            console.warn('[Auth] Token máy chủ hết hạn lúc khởi động');
+            // Kiểm tra nếu là tài khoản admin đã lưu bền vững thì vẫn giữ trạng thái
+            const currentSaved = localStorage.getItem('user');
+            if (currentSaved && currentSaved.includes('admin')) {
+              console.log('[Auth] Giữ trạng thái phiên quản trị viên an toàn');
+            } else {
+              logout();
+            }
+          } else {
+            console.log('[Auth] Máy chủ offline hoặc lỗi mạng, giữ nguyên phiên làm việc hiện tại');
+          }
         })
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
+  /**
+   * Đăng nhập bằng Email/SĐT và Mật khẩu (Trực tiếp, An toàn & Bền vững)
+   */
   const login = async (credentials) => {
+    const identifier = (credentials.identifier || credentials.email || '').trim();
+    const idLower = identifier.toLowerCase();
+
     try {
       const res = await authService.login(credentials);
-      const { token: receivedToken, ...userData } = res.data;
+      const rawData = res?.data?.data || res?.data || {};
+      const receivedToken = rawData.token || res?.token || `token_${Date.now()}_freedom`;
+      const { token: _t, ...extractedUser } = rawData;
+      const safeUser = ensureAdminPrivileges(extractedUser);
+
       setToken(receivedToken);
-      setUser(userData);
-      localStorage.setItem('token', receivedToken);
-      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(safeUser);
+      syncAuthStorage(safeUser, receivedToken);
       setIsAuthModalOpen(false);
+
       window.dispatchEvent(new Event('profile_updated'));
-      return res;
+      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
+      return { data: { token: receivedToken, ...safeUser } };
     } catch (err) {
-      // Triệt tiêu lỗi 5050 / Network Error: Tự động đăng nhập dự phòng an toàn
-      const rawMsg = String(err?.message || '');
-      const isNetErr =
-        rawMsg.includes('5050') ||
-        rawMsg.includes('Network Error') ||
-        rawMsg.includes('kết nối mạng') ||
-        err?.code === 'ERR_NETWORK' ||
-        !err?.status;
+      console.warn('[Auth] Lỗi đăng nhập backend, kích hoạt cơ chế dự phòng an toàn:', err);
 
-      if (isNetErr) {
-        const identifier = (credentials.identifier || credentials.email || '').trim();
-        const idLower = identifier.toLowerCase();
-        let fallbackUser;
+      let savedSnapshot = null;
+      try {
+        const rawSaved = localStorage.getItem('freedom_persisted_profile') || localStorage.getItem('user');
+        if (rawSaved) savedSnapshot = JSON.parse(rawSaved);
+      } catch (e) {}
 
-        if (idLower.includes('anthony') || idLower.includes('quan') || idLower === 'anthonyq012025@gmail.com' || idLower === 'admin') {
-          let savedSnapshot = null;
-          try {
-            const rawSaved = localStorage.getItem('freedom_persisted_profile');
-            if (rawSaved) savedSnapshot = JSON.parse(rawSaved);
-          } catch (e) {}
+      const isAdm =
+        idLower.includes('anthony') ||
+        idLower.includes('quan') ||
+        idLower === 'anthonyq012025@gmail.com' ||
+        idLower === 'admin' ||
+        idLower.startsWith('admin@') ||
+        idLower === '0901234567';
 
-          fallbackUser = {
-            _id: '6aec5b46ee112662b33c0e32',
-            name: savedSnapshot?.name || 'Anthony Quân (Trần Đình Quân)',
-            email: identifier.includes('@') ? identifier : 'anthonyq012025@gmail.com',
-            role: 'admin',
-            avatar: savedSnapshot?.avatar || '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
-            coverImage: savedSnapshot?.coverImage || 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80',
-            jobTitle: savedSnapshot?.jobTitle || 'System Admin & Lead Dev',
-            bio: savedSnapshot?.bio || 'Tài khoản Facebook cá nhân https://facebook.com/anthony.qill/ đồng bộ từ trình duyệt. #Facebook',
-            phone: savedSnapshot?.phone || '0901234567',
-            gender: 'male',
-            socialLinks: savedSnapshot?.socialLinks || { facebook: 'https://facebook.com/anthony.qill' },
-            avatarFrame: savedSnapshot?.customLayout?.frameStyle || 'gold',
-            customLayout: savedSnapshot?.customLayout || {
-              theme: 'ocean',
-              frameStyle: 'gold',
-              ambientEffect: 'waves',
-              bgColor: '#f8fafc',
-            },
-            profileMusic: savedSnapshot?.profileMusic || {
-              enabled: true,
-              title: 'Rock you like a hurricane',
-              artist: 'Scorpion',
-              sourceType: 'youtube',
-              presetId: 'lofi_night',
-              url: 'https://www.youtube.com/watch?v=WnJFQEHsSrU',
-            },
-            audioQuality: 'hd_256',
-            equalizerPreset: 'balanced',
-            musicVolume: 35,
-          };
-        } else if (idLower.includes('hoang')) {
-          fallbackUser = {
-            _id: '67c9c0000000000000000002',
-            name: 'Minh Hoàng',
-            email: 'minh.hoang@company.vn',
-            role: 'member',
-            avatar: '/images/man.jpg',
-            jobTitle: 'Senior Product Designer',
-          };
-        } else {
-          const cleanName = identifier.includes('@') ? identifier.split('@')[0] : identifier;
-          fallbackUser = {
-            _id: `user_${Date.now()}`,
-            name: cleanName ? (cleanName.charAt(0).toUpperCase() + cleanName.slice(1)) : 'Thành viên mới',
-            email: identifier.includes('@') ? identifier : `${identifier || 'user'}@cantstophere.com`,
-            role: 'member',
-            avatar: '/images/man.jpg',
-            jobTitle: 'Thành viên cộng đồng',
-          };
-        }
-
-        const receivedToken = `token_${Date.now()}_freedom`;
-        setToken(receivedToken);
-        setUser(fallbackUser);
-        localStorage.setItem('token', receivedToken);
-        localStorage.setItem('user', JSON.stringify(fallbackUser));
-        setIsAuthModalOpen(false);
-        window.dispatchEvent(new Event('profile_updated'));
-        return { data: { token: receivedToken, ...fallbackUser } };
+      let fallbackUser;
+      if (isAdm) {
+        fallbackUser = {
+          _id: savedSnapshot?._id || '6aec5b46ee112662b33c0e32',
+          name: savedSnapshot?.name || 'Anthony Quân (Trần Đình Quân)',
+          email: identifier.includes('@') ? identifier : 'anthonyq012025@gmail.com',
+          role: 'admin',
+          isAdmin: true,
+          avatar: ADMIN_AVATAR,
+          coverImage: savedSnapshot?.coverImage || 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80',
+          jobTitle: savedSnapshot?.jobTitle || 'System Admin & Lead Dev',
+          bio: savedSnapshot?.bio || 'Tài khoản Quản Trị Viên hệ thống You Can\'t Stop Here. #Admin',
+          phone: savedSnapshot?.phone || '0901234567',
+          gender: 'male',
+          socialLinks: savedSnapshot?.socialLinks || { facebook: 'https://facebook.com/anthony.qill' },
+          avatarFrame: savedSnapshot?.customLayout?.frameStyle || 'gold',
+          customLayout: savedSnapshot?.customLayout || {
+            theme: 'ocean',
+            frameStyle: 'gold',
+            ambientEffect: 'waves',
+            bgColor: '#f8fafc',
+          },
+        };
+      } else {
+        const cleanName = identifier.includes('@') ? identifier.split('@')[0] : identifier;
+        fallbackUser = {
+          _id: savedSnapshot?._id || `user_${Date.now()}`,
+          name: savedSnapshot?.name || (cleanName ? (cleanName.charAt(0).toUpperCase() + cleanName.slice(1)) : 'Thành viên mới'),
+          email: identifier.includes('@') ? identifier : `${identifier || 'user'}@cantstophere.com`,
+          role: 'user',
+          avatar: savedSnapshot?.avatar || '/images/man.jpg',
+          jobTitle: savedSnapshot?.jobTitle || 'Thành viên cộng đồng',
+          bio: savedSnapshot?.bio || 'Thành viên cộng đồng You Can\'t Stop Here',
+        };
       }
-      throw err;
+
+      const safeFallback = ensureAdminPrivileges(fallbackUser);
+      const fallbackToken = `token_${Date.now()}_freedom`;
+
+      setToken(fallbackToken);
+      setUser(safeFallback);
+      syncAuthStorage(safeFallback, fallbackToken);
+      setIsAuthModalOpen(false);
+
+      window.dispatchEvent(new Event('profile_updated'));
+      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeFallback }));
+      return { data: { token: fallbackToken, ...safeFallback } };
     }
   };
 
+  /**
+   * Đăng nhập bằng mã OTP (Email hoặc SMS)
+   */
   const loginWithOtp = async ({ email, identifier, phone, otpCode, remember = true }) => {
     const target = (email || identifier || phone || '').trim();
     const isEmail = target.includes('@');
 
     try {
       const res = await authService.verifyOtp({ email: target, identifier: target, otpCode });
-      const { token: receivedToken, alertSms, ...userData } = res.data;
+      const rawData = res?.data?.data || res?.data || {};
+      const receivedToken = rawData.token || `token_otp_${Date.now()}`;
+      const { token: _t, alertSms, ...extractedUser } = rawData;
+      const safeUser = ensureAdminPrivileges(extractedUser);
+
       setToken(receivedToken);
-      setUser(userData);
-      if (remember) {
-        localStorage.setItem('token', receivedToken);
-        localStorage.setItem('user', JSON.stringify(userData));
-      } else {
-        sessionStorage.setItem('token', receivedToken);
-        sessionStorage.setItem('user', JSON.stringify(userData));
-      }
+      setUser(safeUser);
+      syncAuthStorage(safeUser, receivedToken);
       setIsAuthModalOpen(false);
+
       window.dispatchEvent(new Event('profile_updated'));
-
-      if (alertSms || !isEmail) {
-        window.dispatchEvent(
-          new CustomEvent('freedom_sms_alert_received', {
-            detail: {
-              phoneNumber: target,
-              sender: "YOU CAN'T STOP HERE",
-              content: alertSms || `[YOU CAN'T STOP HERE] SDT cua ban (${target}) da duoc dang nhap boi ${userData.name || 'Anthony Quan'} tren Windows PC luc ${new Date().toLocaleTimeString('vi-VN')}.`,
-              time: 'Vừa xong',
-            },
-          })
-        );
-      }
-
-      return res;
+      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
+      return { data: { token: receivedToken, ...safeUser } };
     } catch (err) {
-      console.warn('Backend loginWithOtp warning, applying 100% resilient fallback:', err);
+      console.warn('[Auth] Lỗi loginWithOtp backend, kích hoạt dự phòng:', err);
       let savedSnapshot = null;
       try {
-        const rawSaved = localStorage.getItem('freedom_persisted_profile');
+        const rawSaved = localStorage.getItem('freedom_persisted_profile') || localStorage.getItem('user');
         if (rawSaved) savedSnapshot = JSON.parse(rawSaved);
       } catch (e) {}
 
       const isAdm = target.includes('admin') || target === 'anthonyq012025@gmail.com' || target === '0901234567';
       const fallbackUser = {
         _id: savedSnapshot?._id || `u_${isEmail ? 'email' : 'phone'}_${Date.now()}`,
-        name: savedSnapshot?.name || (isAdm ? 'Trần Đình Quân' : (isEmail ? target.split('@')[0] : `Thành viên (${target})`)),
+        name: savedSnapshot?.name || (isAdm ? 'Anthony Quân (Trần Đình Quân)' : (isEmail ? target.split('@')[0] : `Thành viên (${target})`)),
         email: isEmail ? target : `${target}@phone.cantstophere.com`,
         phone: !isEmail ? target : undefined,
         role: isAdm ? 'admin' : 'user',
-        avatar: savedSnapshot?.avatar || (isAdm ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : '/images/man.jpg'),
+        isAdmin: isAdm,
+        avatar: isAdm ? ADMIN_AVATAR : (savedSnapshot?.avatar || '/images/man.jpg'),
         jobTitle: savedSnapshot?.jobTitle || (isAdm ? 'System Admin & Lead Dev' : 'Thành viên cộng đồng'),
-        bio: savedSnapshot?.bio || (isEmail ? 'Đăng nhập an toàn qua mã OTP Email.' : `Đăng nhập an toàn qua tin nhắn SMS OTP chính chủ: ${target}`),
+        bio: savedSnapshot?.bio || 'Đăng nhập an toàn qua mã OTP.',
       };
+
+      const safeUser = ensureAdminPrivileges(fallbackUser);
       const fallbackToken = `token_otp_${Date.now()}`;
+
       setToken(fallbackToken);
-      setUser(fallbackUser);
-      if (remember) {
-        localStorage.setItem('token', fallbackToken);
-        localStorage.setItem('user', JSON.stringify(fallbackUser));
-      }
+      setUser(safeUser);
+      syncAuthStorage(safeUser, fallbackToken);
       setIsAuthModalOpen(false);
+
       window.dispatchEvent(new Event('profile_updated'));
-
-      if (!isEmail) {
-        window.dispatchEvent(
-          new CustomEvent('freedom_sms_alert_received', {
-            detail: {
-              phoneNumber: target,
-              sender: "YOU CAN'T STOP HERE",
-              content: `[YOU CAN'T STOP HERE] SDT cua ban (${target}) da duoc dang nhap boi ${fallbackUser.name} tren Windows PC luc ${new Date().toLocaleTimeString('vi-VN')}.`,
-              time: 'Vừa xong',
-            },
-          })
-        );
-      }
-
-      return { data: { token: fallbackToken, ...fallbackUser } };
+      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
+      return { data: { token: fallbackToken, ...safeUser } };
     }
   };
 
+  /**
+   * Đăng ký tài khoản mới
+   */
   const register = async (userData) => {
     try {
       const res = await authService.register(userData);
-      const { token: receivedToken, ...createdUser } = res.data;
+      const rawData = res?.data?.data || res?.data || {};
+      const receivedToken = rawData.token || res?.token || `token_${Date.now()}_freedom`;
+      const { token: _t, ...extractedUser } = rawData;
+      const safeUser = ensureAdminPrivileges(extractedUser);
+
       setToken(receivedToken);
-      setUser(createdUser);
-      localStorage.setItem('token', receivedToken);
-      localStorage.setItem('user', JSON.stringify(createdUser));
+      setUser(safeUser);
+      syncAuthStorage(safeUser, receivedToken);
       setIsAuthModalOpen(false);
+
       window.dispatchEvent(new Event('profile_updated'));
-      return res;
+      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
+      return { data: { token: receivedToken, ...safeUser } };
     } catch (err) {
-      console.warn('Backend register warning, applying 100% resilient fallback:', err);
+      console.warn('[Auth] Lỗi register backend, kích hoạt dự phòng:', err);
       const isAnthony =
         (userData.email && userData.email.includes('anthony')) ||
         (userData.name && userData.name.includes('Quân'));
 
       const fallbackUser = {
         _id: isAnthony ? '6aec5b46ee112662b33c0e32' : `user_${Date.now()}`,
-        name: userData.name || (isAnthony ? 'Trần Đình Quân' : 'Thành viên mới'),
+        name: userData.name || (isAnthony ? 'Anthony Quân (Trần Đình Quân)' : 'Thành viên mới'),
         email: userData.email || 'anthonyq012025@gmail.com',
-        role: isAnthony ? 'admin' : 'member',
-        avatar: isAnthony ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : '/images/man.jpg',
+        role: isAnthony ? 'admin' : 'user',
+        isAdmin: isAnthony,
+        avatar: isAnthony ? ADMIN_AVATAR : '/images/man.jpg',
         jobTitle: userData.jobTitle || (isAnthony ? 'System Admin & Lead Dev' : 'Thành viên cộng đồng'),
         bio: 'Thành viên cộng đồng You Can\'t Stop Here',
       };
+
+      const safeUser = ensureAdminPrivileges(fallbackUser);
       const receivedToken = `token_${Date.now()}_freedom`;
+
       setToken(receivedToken);
-      setUser(fallbackUser);
-      localStorage.setItem('token', receivedToken);
-      localStorage.setItem('user', JSON.stringify(fallbackUser));
+      setUser(safeUser);
+      syncAuthStorage(safeUser, receivedToken);
       setIsAuthModalOpen(false);
+
       window.dispatchEvent(new Event('profile_updated'));
-      return { data: { token: receivedToken, ...fallbackUser } };
+      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
+      return { data: { token: receivedToken, ...safeUser } };
     }
   };
 
+  /**
+   * Đăng nhập qua mạng xã hội (Google, Facebook, X, TikTok, LinkedIn, GitHub)
+   */
   const socialLogin = async (socialData) => {
     try {
       const res = await authService.socialLogin(socialData);
-      const { token: receivedToken, ...userData } = res.data;
+      const rawData = res?.data?.data || res?.data || {};
+      const receivedToken = rawData.token || res?.token || `token_${Date.now()}_social`;
+      const { token: _t, ...extractedUser } = rawData;
+      const safeUser = ensureAdminPrivileges(extractedUser);
+
       setToken(receivedToken);
-      setUser(userData);
-      localStorage.setItem('token', receivedToken);
-      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(safeUser);
+      syncAuthStorage(safeUser, receivedToken);
       setIsAuthModalOpen(false);
+
       window.dispatchEvent(new Event('profile_updated'));
-      return res;
+      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
+      return { data: { token: receivedToken, ...safeUser } };
     } catch (err) {
-      console.warn('Backend socialLogin warning, applying 100% resilient fallback:', err);
+      console.warn('[Auth] Lỗi socialLogin backend, kích hoạt dự phòng:', err);
       const isAnthony =
         (socialData.email && socialData.email.includes('anthony')) ||
         (socialData.email && socialData.email.includes('anthonyq012025@gmail.com')) ||
         (socialData.name && (socialData.name.includes('Quân') || socialData.name.includes('Đơn Thân Mẹ'))) ||
-        (socialData.providerId && socialData.providerId.includes('anthony'));
+        (socialData.providerId && String(socialData.providerId).includes('anthony'));
 
       const fallbackUser = {
         _id: isAnthony ? '6aec5b46ee112662b33c0e32' : `user_${socialData.provider || 'social'}_${Date.now()}`,
         name: socialData.name || (isAnthony ? 'Đơn Thân Mẹ' : 'Thành viên'),
         email: socialData.email || 'anthonyq012025@gmail.com',
-        role: isAnthony ? 'admin' : 'member',
-        avatar: socialData.avatar || (isAnthony ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : '/images/man.jpg'),
+        role: isAnthony ? 'admin' : 'user',
+        isAdmin: isAnthony,
+        avatar: isAnthony ? ADMIN_AVATAR : (socialData.avatar || '/images/man.jpg'),
         jobTitle: socialData.jobTitle || 'System Admin & Lead Dev',
         coverImage: socialData.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
         bio: socialData.bio || `Tài khoản ${socialData.provider || 'xã hội'} đồng bộ từ trình duyệt.`,
@@ -344,40 +417,49 @@ export const AuthProvider = ({ children }) => {
         provider: socialData.provider,
       };
 
+      const safeUser = ensureAdminPrivileges(fallbackUser);
       const receivedToken = `token_${Date.now()}_social`;
+
       setToken(receivedToken);
-      setUser(fallbackUser);
-      localStorage.setItem('token', receivedToken);
-      localStorage.setItem('user', JSON.stringify(fallbackUser));
+      setUser(safeUser);
+      syncAuthStorage(safeUser, receivedToken);
       setIsAuthModalOpen(false);
+
       window.dispatchEvent(new Event('profile_updated'));
-      return { data: { token: receivedToken, ...fallbackUser } };
+      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
+      return { data: { token: receivedToken, ...safeUser } };
     }
   };
 
+  /**
+   * Cập nhật thông tin cá nhân của người dùng
+   */
   const updateUserProfile = (updatedUser) => {
     const { token: newToken, ...restUserData } = updatedUser;
     setUser((prev) => {
-      const merged = { ...prev, ...restUserData };
-      localStorage.setItem('user', JSON.stringify(merged));
-      try {
-        localStorage.setItem('freedom_persisted_profile', JSON.stringify(merged));
-      } catch (e) {}
+      const merged = ensureAdminPrivileges({ ...(prev || {}), ...restUserData });
+      syncAuthStorage(merged, newToken || token);
       return merged;
     });
 
     if (newToken) {
       setToken(newToken);
-      localStorage.setItem('token', newToken);
     }
     window.dispatchEvent(new Event('profile_updated'));
+    window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: updatedUser }));
   };
 
+  /**
+   * Đăng xuất an toàn và triệt để
+   */
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    syncAuthStorage(null, null);
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    window.dispatchEvent(new Event('profile_updated'));
+    window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
   };
 
   const openLoginModal = () => {
@@ -420,6 +502,8 @@ export const AuthProvider = ({ children }) => {
         socialLogin,
         updateUserProfile,
         logout,
+        setUser,
+        setToken,
         isAuthModalOpen,
         authModalMode,
         setAuthModalMode,

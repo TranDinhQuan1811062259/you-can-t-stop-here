@@ -13,6 +13,7 @@ export const FloatingFestiveMascot = ({ onOpenShowcase }) => {
       .then((res) => {
         if (res?.data) {
           setActiveEvent(res.data);
+          window.dispatchEvent(new CustomEvent('freedom_festive_mascot_updated', { detail: { event: res.data } }));
         } else {
           setActiveEvent(null);
         }

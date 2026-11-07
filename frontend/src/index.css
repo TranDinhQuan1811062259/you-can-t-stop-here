@@ -33,12 +33,20 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+  transition: background-color 0.65s cubic-bezier(0.22, 1, 0.36, 1), color 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--bg-light);
   color: var(--text-main);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+              background 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+              color 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 a {
@@ -68,13 +76,14 @@ img {
   top: 0;
   z-index: 1000;
   box-shadow: var(--shadow-md);
+  overflow-x: clip;
 }
 
 .header-container {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 14px;
+  padding: 6px 22px 6px 16px !important;
   max-width: 100% !important;
   width: 100%;
   gap: 8px;
@@ -2583,6 +2592,56 @@ body.theme-dark .modal-box .alert-message.success *,
   font-weight: 700;
   cursor: pointer;
   text-decoration: underline;
+}
+
+/* =========================================================================
+   SMS OTP & SMART PHONE NOTIFICATION BANNER STYLES
+   ========================================================================= */
+@keyframes slideDownSms {
+  0% {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.sms-sim-notification-banner {
+  animation: slideDownSms 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  position: relative;
+  overflow: hidden;
+}
+
+.sms-sim-notification-banner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #38bdf8, #818cf8, #38bdf8);
+  background-size: 200% 100%;
+  animation: pulseBar 2s linear infinite;
+}
+
+@keyframes pulseBar {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+
+.login-method-nav .login-method-btn {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.login-method-nav .login-method-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.5) !important;
+  color: #0f766e !important;
+}
+
+.login-method-nav .login-method-btn.active {
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.16) !important;
 }
 
 /* Social quote section */
@@ -5668,34 +5727,332 @@ body.theme-light .post-body h4 {
   background: #dcfce7;
 }
 
-/* Stranger approval banner */
-.assistive-stranger-banner {
-  background: #fffbeb;
-  border-bottom: 1px solid #fde68a;
-  padding: 8px 12px;
-  font-size: 0.76rem;
-  color: #92400e;
+/* ==========================================================================
+   STRANGER MESSAGE BANNER & BUBBLE (TIN NHẮN TỪ NGƯỜI LẠ HIỆU ỨNG CAO CẤP)
+   ========================================================================== */
+
+/* 1. Banner cảnh báo tin nhắn từ người lạ */
+.assistive-stranger-banner,
+.stranger-request-banner {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 45%, #fed7aa 100%) !important;
+  border-bottom: 2px solid #f59e0b !important;
+  padding: 11px 14px !important;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.16) !important;
+  position: relative !important;
+  z-index: 10 !important;
+  animation: strangerBannerFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.assistive-accept-btn {
-  background: #10b981;
-  color: #fff;
-  border: none;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  cursor: pointer;
+@keyframes strangerBannerFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
+.assistive-stranger-banner-top,
+.stranger-badge-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 4px !important;
+}
+
+.assistive-stranger-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font-size: 0.7rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.6px !important;
+  background: rgba(217, 119, 6, 0.15) !important;
+  color: #92400e !important;
+  padding: 2px 9px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(217, 119, 6, 0.32) !important;
+  box-shadow: 0 1px 3px rgba(217, 119, 6, 0.1) !important;
+}
+
+.assistive-stranger-badge .badge-shield {
+  font-size: 0.82rem !important;
+  display: inline-block !important;
+}
+
+.assistive-stranger-hint {
+  font-size: 0.68rem !important;
+  color: #b45309 !important;
+  font-weight: 600 !important;
+  opacity: 0.9 !important;
+}
+
+.assistive-stranger-desc,
+.stranger-banner-sub {
+  font-size: 0.82rem !important;
+  line-height: 1.5 !important;
+  color: #78350f !important;
+  margin: 5px 0 8px 0 !important;
+  font-weight: 500 !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 6px !important;
+}
+
+.assistive-stranger-desc strong,
+.stranger-banner-sub strong {
+  color: #92400e !important;
+  font-weight: 700 !important;
+}
+
+.warning-animated-icon {
+  font-size: 1.05rem !important;
+  line-height: 1.2 !important;
+  flex-shrink: 0 !important;
+  display: inline-block !important;
+  animation: warningWiggle 2.8s infinite ease-in-out !important;
+}
+
+@keyframes warningWiggle {
+  0%, 80%, 100% {
+    transform: rotate(0deg) scale(1);
+  }
+  85% {
+    transform: rotate(-10deg) scale(1.15);
+  }
+  90% {
+    transform: rotate(10deg) scale(1.15);
+  }
+  95% {
+    transform: rotate(-5deg) scale(1.1);
+  }
+}
+
+.assistive-stranger-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-top: 5px !important;
+}
+
+/* Nút Chấp nhận / Đồng ý trò chuyện */
+.assistive-accept-btn,
+.accept-stranger-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  padding: 5px 15px !important;
+  border-radius: 999px !important;
+  font-size: 0.76rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  white-space: nowrap !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.assistive-accept-btn:hover,
+.accept-stranger-btn:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  transform: translateY(-1px) scale(1.02) !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.45) !important;
+}
+
+/* Nút Bỏ qua */
 .assistive-decline-btn {
-  background: #e2e8f0;
-  color: #475569;
-  border: none;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 0.72rem;
-  cursor: pointer;
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: #475569 !important;
+  border: 1px solid #cbd5e1 !important;
+  padding: 5px 12px !important;
+  border-radius: 999px !important;
+  font-size: 0.76rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+  transition: all 0.2s ease !important;
+}
+
+.assistive-decline-btn:hover {
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+  color: #b91c1c !important;
+  transform: translateY(-1px) !important;
+}
+
+/* 2. Tag huy hiệu trên tin nhắn chờ làm quen */
+.stranger-msg-intro-tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  color: #b45309 !important;
+  background: rgba(254, 243, 199, 0.95) !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+  padding: 2px 8px !important;
+  border-radius: 999px !important;
+  margin-bottom: 5px !important;
+  letter-spacing: 0.2px !important;
+  box-shadow: 0 1px 4px rgba(245, 158, 11, 0.15) !important;
+  animation: strangerTagGlow 2.8s infinite ease-in-out !important;
+}
+
+@keyframes strangerTagGlow {
+  0%, 100% {
+    box-shadow: 0 1px 4px rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+    border-color: #f59e0b;
+  }
+}
+
+/* 3. FORM & HIỆU ỨNG CHỮ BONG BÓNG TIN NHẮN TỪ NGƯỜI LẠ */
+.stranger-pending-msg {
+  animation: strangerBubblePop 0.45s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+}
+
+@keyframes strangerBubblePop {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.stranger-pending-msg .assistive-msg-bubble,
+.stranger-pending-msg .chat-bubble-text {
+  background: linear-gradient(145deg, #ffffff 0%, #fffdf8 55%, #fef7ec 100%) !important;
+  color: #0f172a !important;
+  font-size: 0.92rem !important;
+  font-weight: 500 !important;
+  line-height: 1.62 !important;
+  letter-spacing: 0.15px !important;
+  padding: 12px 16px !important;
+  border-radius: 18px 18px 18px 4px !important;
+  border: 1.5px solid rgba(245, 158, 11, 0.38) !important;
+  border-left: 4.5px solid #f59e0b !important;
+  box-shadow: 0 4px 18px rgba(245, 158, 11, 0.14), 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  word-break: break-word !important;
+}
+
+.stranger-pending-msg .assistive-msg-bubble:hover,
+.stranger-pending-msg .chat-bubble-text:hover {
+  transform: translateY(-2px) !important;
+  border-color: rgba(245, 158, 11, 0.65) !important;
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.22), 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+}
+
+.assistive-msg-bubble-text {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+/* 4. HỖ TRỢ DARK MODE CHO GIAO DIỆN TIN NHẮN NGƯỜI LẠ */
+.mode-dark .assistive-stranger-banner,
+.mode-dark .stranger-request-banner,
+body.theme-dark .assistive-stranger-banner,
+body.theme-dark .stranger-request-banner,
+[data-theme="dark"] .assistive-stranger-banner,
+[data-theme="dark"] .stranger-request-banner {
+  background: linear-gradient(135deg, rgba(120, 53, 15, 0.5) 0%, rgba(30, 41, 59, 0.98) 100%) !important;
+  border-bottom: 2px solid rgba(245, 158, 11, 0.55) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+}
+
+.mode-dark .assistive-stranger-badge,
+body.theme-dark .assistive-stranger-badge,
+[data-theme="dark"] .assistive-stranger-badge {
+  background: rgba(245, 158, 11, 0.22) !important;
+  color: #fde68a !important;
+  border-color: rgba(245, 158, 11, 0.45) !important;
+}
+
+.mode-dark .assistive-stranger-hint,
+body.theme-dark .assistive-stranger-hint,
+[data-theme="dark"] .assistive-stranger-hint {
+  color: #fef3c7 !important;
+}
+
+.mode-dark .assistive-stranger-desc,
+.mode-dark .stranger-banner-sub,
+body.theme-dark .assistive-stranger-desc,
+body.theme-dark .stranger-banner-sub,
+[data-theme="dark"] .assistive-stranger-desc,
+[data-theme="dark"] .stranger-banner-sub {
+  color: #fef08a !important;
+}
+
+.mode-dark .assistive-stranger-desc strong,
+.mode-dark .stranger-banner-sub strong,
+body.theme-dark .assistive-stranger-desc strong,
+body.theme-dark .stranger-banner-sub strong,
+[data-theme="dark"] .assistive-stranger-desc strong,
+[data-theme="dark"] .stranger-banner-sub strong {
+  color: #ffffff !important;
+}
+
+.mode-dark .assistive-decline-btn,
+body.theme-dark .assistive-decline-btn,
+[data-theme="dark"] .assistive-decline-btn {
+  background: rgba(30, 41, 59, 0.9) !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.mode-dark .assistive-decline-btn:hover,
+body.theme-dark .assistive-decline-btn:hover,
+[data-theme="dark"] .assistive-decline-btn:hover {
+  background: rgba(239, 68, 68, 0.25) !important;
+  border-color: #f87171 !important;
+  color: #fca5a5 !important;
+}
+
+.mode-dark .stranger-pending-msg .assistive-msg-bubble,
+.mode-dark .stranger-pending-msg .chat-bubble-text,
+body.theme-dark .stranger-pending-msg .assistive-msg-bubble,
+body.theme-dark .stranger-pending-msg .chat-bubble-text,
+[data-theme="dark"] .stranger-pending-msg .assistive-msg-bubble,
+[data-theme="dark"] .stranger-pending-msg .chat-bubble-text {
+  background: linear-gradient(145deg, #1e293b 0%, #151d2c 100%) !important;
+  color: #f8fafc !important;
+  border: 1.5px solid rgba(245, 158, 11, 0.45) !important;
+  border-left: 4.5px solid #fbbf24 !important;
+  box-shadow: 0 4px 22px rgba(0, 0, 0, 0.5), 0 0 16px rgba(245, 158, 11, 0.18) !important;
+}
+
+.mode-dark .stranger-pending-msg .assistive-msg-bubble:hover,
+.mode-dark .stranger-pending-msg .chat-bubble-text:hover,
+body.theme-dark .stranger-pending-msg .assistive-msg-bubble:hover,
+body.theme-dark .stranger-pending-msg .chat-bubble-text:hover,
+[data-theme="dark"] .stranger-pending-msg .assistive-msg-bubble:hover,
+[data-theme="dark"] .stranger-pending-msg .chat-bubble-text:hover {
+  border-color: rgba(251, 191, 36, 0.75) !important;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65), 0 0 22px rgba(245, 158, 11, 0.28) !important;
+}
+
+.mode-dark .stranger-msg-intro-tag,
+body.theme-dark .stranger-msg-intro-tag,
+[data-theme="dark"] .stranger-msg-intro-tag {
+  background: rgba(245, 158, 11, 0.22) !important;
+  color: #fde68a !important;
+  border-color: rgba(245, 158, 11, 0.45) !important;
 }
 
 /* Messages stream */
@@ -5754,24 +6111,37 @@ body.theme-light .post-body h4 {
 }
 
 .assistive-msg-bubble {
-  padding: 8px 12px;
-  border-radius: 14px;
-  font-size: 0.84rem;
-  line-height: 1.45;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  line-height: 1.55;
   word-break: break-word;
+  transition: all 0.2s ease;
 }
 
 .assistive-message-row.my-msg .assistive-msg-bubble {
-  background: var(--primary-color);
+  background: linear-gradient(135deg, var(--primary-color, #1abc9c) 0%, #0d9488 100%);
   color: #ffffff;
-  border-bottom-right-radius: 2px;
+  border-bottom-right-radius: 3px;
+  box-shadow: 0 3px 10px rgba(13, 148, 136, 0.28);
 }
 
 .assistive-message-row.other-msg .assistive-msg-bubble {
   background: #ffffff;
-  color: #1e293b;
+  color: #0f172a;
   border: 1px solid #e2e8f0;
-  border-bottom-left-radius: 2px;
+  border-bottom-left-radius: 3px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.mode-dark .assistive-message-row.other-msg .assistive-msg-bubble,
+body.theme-dark .assistive-message-row.other-msg .assistive-msg-bubble,
+[data-theme="dark"] .assistive-message-row.other-msg .assistive-msg-bubble {
+  background: #1e293b;
+  color: #f1f5f9;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
 .assistive-msg-time {
@@ -6044,10 +6414,11 @@ body.theme-light .post-body h4 {
 }
 
 /* ========================================================
-   1. PAGE TRANSITIONS (Hiệu ứng chuyển trang mượt mà)
+   1. PAGE TRANSITIONS (Hiệu ứng chuyển trang êm ái, chậm rãi)
    ======================================================== */
 .page-transition-wrapper {
-  animation: pageFadeSlide 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: pageGracefulTransition 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: opacity, transform, filter;
 }
 
 @keyframes pageFadeSlide {
@@ -7289,6 +7660,106 @@ body.theme-light .nav-btn-login,
 .mode-light .nav-btn-login {
   color: #0f172a !important;
   border-color: #cbd5e1 !important;
+}
+
+/* Các thành phần người dùng đã đăng nhập trên Site Header trong Chế độ Ngày */
+body.theme-light .header-user-link,
+[data-theme="light"] .header-user-link,
+.mode-light .header-user-link {
+  color: #0f172a !important;
+}
+
+body.theme-light .header-username-text,
+[data-theme="light"] .header-username-text,
+.mode-light .header-username-text {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  text-shadow: none !important;
+}
+
+body.theme-light .header-user-link:hover .header-username-text,
+[data-theme="light"] .header-user-link:hover .header-username-text,
+.mode-light .header-user-link:hover .header-username-text {
+  color: #d97706 !important;
+}
+
+body.theme-light .header-account-btn,
+[data-theme="light"] .header-account-btn,
+.mode-light .header-account-btn {
+  background: rgba(15, 23, 42, 0.06) !important;
+  color: #1e293b !important;
+  border: 1px solid rgba(15, 23, 42, 0.22) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  font-weight: 700 !important;
+}
+
+body.theme-light .header-account-btn span,
+[data-theme="light"] .header-account-btn span,
+.mode-light .header-account-btn span {
+  color: #1e293b !important;
+  font-weight: 700 !important;
+}
+
+body.theme-light .header-account-btn:hover,
+[data-theme="light"] .header-account-btn:hover,
+.mode-light .header-account-btn:hover {
+  background: rgba(15, 23, 42, 0.12) !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.35) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+body.theme-light .header-festive-btn,
+[data-theme="light"] .header-festive-btn,
+.mode-light .header-festive-btn {
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.1), rgba(244, 63, 94, 0.16)) !important;
+  border: 1px solid rgba(225, 29, 72, 0.35) !important;
+  color: #be123c !important;
+  box-shadow: 0 1px 4px rgba(225, 29, 72, 0.12) !important;
+}
+
+body.theme-light .header-festive-btn:hover,
+[data-theme="light"] .header-festive-btn:hover,
+.mode-light .header-festive-btn:hover {
+  background: linear-gradient(135deg, #e11d48, #be123c) !important;
+  color: #ffffff !important;
+  border-color: #be123c !important;
+}
+
+body.theme-light .header-chat-btn,
+[data-theme="light"] .header-chat-btn,
+.mode-light .header-chat-btn {
+  background: rgba(15, 23, 42, 0.06) !important;
+  color: #1e293b !important;
+  border: 1px solid rgba(15, 23, 42, 0.2) !important;
+  font-weight: 700 !important;
+}
+
+body.theme-light .header-chat-btn:hover,
+body.theme-light .header-chat-btn.active,
+[data-theme="light"] .header-chat-btn:hover,
+[data-theme="light"] .header-chat-btn.active,
+.mode-light .header-chat-btn:hover,
+.mode-light .header-chat-btn.active {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+  border-color: #0284c7 !important;
+}
+
+body.theme-light .header-festive-event-pill,
+[data-theme="light"] .header-festive-event-pill,
+.mode-light .header-festive-event-pill {
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.12), rgba(244, 63, 94, 0.18)) !important;
+  border: 1px solid rgba(225, 29, 72, 0.38) !important;
+  color: #be123c !important;
+}
+
+body.theme-light .header-festive-event-pill .festive-pill-name,
+[data-theme="light"] .header-festive-event-pill .festive-pill-name,
+.mode-light .header-festive-event-pill .festive-pill-name {
+  color: #9f1239 !important;
+  font-weight: 700 !important;
 }
 
 /* KHUNG TITLE (HERO BANNER) TRONG CHẾ ĐỘ NGÀY:
@@ -12250,13 +12721,20 @@ body.has-floating-audio-player.floating-audio-minimized .floating-quick-preferen
   font-size: 0.8rem !important;
 }
 
+.header-auth-group {
+  flex-shrink: 0 !important;
+  margin-left: auto !important;
+  padding-right: 6px !important;
+}
+
 .header-logout-btn {
   flex-shrink: 0 !important;
-  margin-right: 0 !important;
-  padding: 5px 12px !important;
+  margin-right: 14px !important;
+  margin-left: 4px !important;
+  padding: 4px 11px !important;
   border-radius: 999px !important;
   font-weight: 700 !important;
-  font-size: 0.78rem !important;
+  font-size: 0.76rem !important;
   display: inline-flex !important;
   align-items: center !important;
   gap: 4px !important;
@@ -12287,21 +12765,96 @@ body.theme-dark .header-logout-btn,
    TÍNH NĂNG MỚI: PAGE FADE TRANSITION, POST SORT & FILTER, SHARE, QR & OFFLINE
    ========================================================================== */
 
-/* 1. Hiệu ứng chuyển trang style fade nhẹ nhàng */
+/* 1. Hiệu ứng chuyển trang style fade & glide êm dịu, chậm rãi hơn, không đột ngột */
 .page-transition-wrapper {
-  animation: pageFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: opacity, transform;
+  animation: pageGracefulTransition 0.65s cubic-bezier(0.22, 1, 0.36, 1) both !important;
+  will-change: opacity, transform, filter;
 }
 
-@keyframes pageFadeIn {
-  from {
+@keyframes pageGracefulTransition {
+  0% {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(12px) scale(0.995);
+    filter: blur(2.5px);
   }
-  to {
+  50% {
+    filter: blur(0.5px);
+  }
+  100% {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
   }
+}
+
+/* ==========================================================================
+   SMOOTH & CINEMATIC TRANSITIONS (CHUYỂN MODE NGÀY/ĐÊM, THỜI TIẾT & SỰ KIỆN)
+   Chuyển đổi chậm rãi, êm dịu, không giật cục, không chói lóa mắt
+   ========================================================================== */
+
+/* Lớp chuyển màu mượt mà cho tất cả bề mặt chính khi đổi theme */
+.app-root-layout,
+.site-header,
+.hero-banner,
+.post-card,
+.site-footer,
+.nav-menu,
+.nav-link,
+.container,
+.posts-filter-toolbar,
+.category-pill,
+.floating-quick-preferences,
+.comment-section-box,
+.post-main-content,
+.post-sidebar,
+.widget,
+.modal-content,
+.card-content,
+.festive-mgmt-modal {
+  transition: background-color 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+              background 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+              color 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.65s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+/* Kích hoạt chuyển sắc mềm mại toàn trang trong 750ms khi người dùng bấm đổi Ngày / Đêm */
+.theme-is-transitioning,
+.theme-is-transitioning *,
+.theme-is-transitioning *:before,
+.theme-is-transitioning *:after {
+  transition: background-color 0.75s cubic-bezier(0.22, 1, 0.36, 1) !important,
+              background 0.75s cubic-bezier(0.22, 1, 0.36, 1) !important,
+              color 0.6s cubic-bezier(0.22, 1, 0.36, 1) !important,
+              border-color 0.7s cubic-bezier(0.22, 1, 0.36, 1) !important,
+              box-shadow 0.75s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+/* Chuyển đổi thời tiết 4 mùa (Xuân, Hạ, Thu, Đông) & Sự kiện lễ hội chậm rãi */
+.ambient-container {
+  transition: background 1.0s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.8s ease !important;
+}
+
+.seasonal-particles-wrap {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  opacity: 1;
+}
+
+.seasonal-particles-wrap.is-cross-fading {
+  opacity: 0 !important;
+  transition: opacity 0.45s ease-out !important;
+}
+
+.seasonal-logo-wrap,
+.seasonal-logo-icon,
+.seasonal-logo-text,
+.header-season-pill,
+.header-festive-event-pill {
+  transition: all 0.65s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 /* 2. Thanh lọc & sắp xếp bài viết (Posts Filter & Sort Toolbar) */
@@ -13436,70 +13989,184 @@ body.theme-light .card-summary {
   color: #334155 !important;
 }
 
-/* 3. FIX HEADER TRÀN - Ẩn icon btn-icon khi màn hình hẹp để không bị tràn */
-@media (max-width: 1200px) {
-  .header-account-btn .btn-icon,
-  .header-festive-btn .btn-icon {
+/* 3. FIX HEADER TRÀN & CHỐNG ĐÈ CHỮ TRÊN MỌI ĐỘ PHÂN GIẢI */
+@media (max-width: 1380px) {
+  /* Ẩn label "Tài khoản", chỉ giữ icon ⚙️ tròn gọn gàng để chừa chỗ thoáng */
+  .header-account-btn span:not(.btn-icon) {
     display: none !important;
   }
+  .header-account-btn .btn-icon {
+    display: inline !important;
+    font-size: 0.95rem !important;
+  }
+  .header-account-btn {
+    padding: 4px 8px !important;
+    border-radius: 50% !important;
+    min-width: 32px !important;
+    aspect-ratio: 1 / 1 !important;
+    justify-content: center !important;
+  }
+  .header-season-pill .season-name {
+    display: none !important;
+  }
+  .header-festive-event-pill {
+    max-width: 120px !important;
+  }
+  .header-festive-event-pill .festive-pill-name {
+    max-width: 75px !important;
+  }
+}
 
-  .header-account-btn span:last-child,
-  .header-festive-btn span:last-child {
-    font-size: 0.74rem !important;
+@media (max-width: 1260px) {
+  /* Ẩn label "Tin nhắn", chỉ giữ icon 💬 + badge + ▾ */
+  .header-chat-btn span:not(.btn-icon):not(.header-chat-badge):not(.header-chat-arrow) {
+    display: none !important;
+  }
+  .header-chat-btn {
+    padding: 4px 8px !important;
+  }
+  .nav-menu {
+    gap: 3px !important;
+  }
+  .nav-link {
+    font-size: 0.8rem !important;
+    padding: 4px 5px !important;
+  }
+  .header-username-text {
+    max-width: 65px !important;
+  }
+  .header-logout-btn {
+    margin-right: 12px !important;
+    padding: 4px 9px !important;
   }
 }
 
 @media (max-width: 1100px) {
-  /* Ẩn label "Tài khoản" và "Sự kiện", chỉ giữ icon */
-  .header-account-btn span:not(.btn-icon) {
-    display: none !important;
-  }
-
-  .header-festive-btn span:not(.btn-icon) {
-    display: none !important;
-  }
-
-  /* Hiện lại icon */
-  .header-account-btn .btn-icon,
-  .header-festive-btn .btn-icon {
-    display: inline !important;
-    font-size: 1rem !important;
-  }
-
-  .header-account-btn,
-  .header-festive-btn {
-    padding: 4px 8px !important;
-    border-radius: 50% !important;
-    aspect-ratio: 1 / 1 !important;
-    min-width: 32px !important;
-    justify-content: center !important;
-  }
-}
-
-@media (max-width: 1024px) {
-  /* Ẩn label "Tin nhắn", chỉ giữ icon + badge */
-  .header-chat-btn span:not(.btn-icon):not(.header-chat-badge):not(.header-chat-arrow) {
-    display: none !important;
-  }
-
-  .header-chat-btn {
-    padding: 4px 10px !important;
-  }
-
-  /* Ẩn label "Đăng xuất", chỉ giữ icon */
+  /* Ẩn label "Đăng xuất" nếu màn hình cực hẹp trước khi sang mobile, chỉ giữ icon 🚪 */
   .header-logout-btn span:not(.btn-icon) {
     display: none !important;
   }
-
   .header-logout-btn .btn-icon {
     display: inline !important;
-    font-size: 1rem !important;
+    font-size: 0.95rem !important;
   }
-
   .header-logout-btn {
     padding: 4px 8px !important;
     border-radius: 50% !important;
     aspect-ratio: 1 / 1 !important;
     min-width: 32px !important;
+    margin-right: 10px !important;
   }
+}
+
+/* =========================================================================
+   STRESS RELIEF & WELLNESS ANIMATIONS
+   ========================================================================= */
+@keyframes shredderBlade {
+  0% {
+    top: 0%;
+    opacity: 0.8;
+  }
+  50% {
+    top: 50%;
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+.is-shredding-anim {
+  animation: paperJitter 0.08s infinite alternate ease-in-out, paperSink 1.8s ease-in forwards !important;
+}
+
+@keyframes paperJitter {
+  0% { transform: translateY(0px) rotate(0deg); }
+  100% { transform: translateY(1px) rotate(0.4deg); }
+}
+
+@keyframes paperSink {
+  0% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+  80% {
+    clip-path: inset(0 0 80% 0);
+    opacity: 0.8;
+  }
+  100% {
+    clip-path: inset(0 0 100% 0);
+    opacity: 0;
+  }
+}
+
+@keyframes floatWarmthUp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -30px) scale(1.2);
+  }
+  80% {
+    opacity: 0.9;
+    transform: translate(-50%, -100px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -150px) scale(0.8);
+  }
+}
+
+@keyframes fadeInMood {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dark mode adjustments for new wellness components */
+body.theme-dark .community-mood-wall,
+[data-theme="dark"] .community-mood-wall,
+.mode-dark .community-mood-wall {
+  background: linear-gradient(135deg, #1e293b, #0f172a) !important;
+  border-color: #334155 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+}
+
+body.theme-dark .community-mood-wall strong,
+[data-theme="dark"] .community-mood-wall strong,
+.mode-dark .community-mood-wall strong {
+  color: #f8fafc !important;
+}
+
+body.theme-dark .community-mood-wall p,
+[data-theme="dark"] .community-mood-wall p,
+.mode-dark .community-mood-wall p {
+  color: #94a3b8 !important;
+}
+
+body.theme-dark .anonymous-warmth-card,
+[data-theme="dark"] .anonymous-warmth-card,
+.mode-dark .anonymous-warmth-card {
+  background: linear-gradient(135deg, #2a1f10 0%, #1e1b15 100%) !important;
+  border-color: #78350f !important;
+}
+
+body.theme-dark .anonymous-warmth-card strong,
+[data-theme="dark"] .anonymous-warmth-card strong,
+.mode-dark .anonymous-warmth-card strong {
+  color: #fef3c7 !important;
+}
+
+body.theme-dark .anonymous-warmth-card p,
+[data-theme="dark"] .anonymous-warmth-card p,
+.mode-dark .anonymous-warmth-card p {
+  color: #fde68a !important;
 }

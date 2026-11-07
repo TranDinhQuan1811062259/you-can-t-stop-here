@@ -10,6 +10,34 @@
 export const FAB_SIZES = {
   chat: { width: 58, height: 58 },
   write: { width: 170, height: 48 },
+  mascot: { width: 76, height: 86 },
+};
+
+/**
+ * Lấy toạ độ và kích thước của Widget Linh Vật Sự Kiện Lễ Hội (FloatingFestiveMascot)
+ * Để ngăn chặn nút Viết tâm sự đè lên sự kiện
+ */
+export const getMascotBox = () => {
+  if (typeof window === 'undefined') return null;
+  const mascotEl = typeof document !== 'undefined' ? document.querySelector('.floating-festive-mascot-widget') : null;
+  if (mascotEl) {
+    const rect = mascotEl.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      return {
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height,
+      };
+    }
+  }
+  // Vùng chiếm dụng chuẩn của linh vật sự kiện (bottom: 84px, right: 24px)
+  return {
+    x: window.innerWidth - 104,
+    y: window.innerHeight - 170,
+    width: 76,
+    height: 86,
+  };
 };
 
 /**
@@ -68,6 +96,17 @@ export const getFabPos = (type) => {
       const parsed = JSON.parse(saved);
       if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
         currentPos = ensureInBounds(type, parsed);
+        // Tự động đẩy nút Viết tâm sự lên nếu toạ độ đã lưu từ phiên cũ bị đè lên Linh vật sự kiện (bottom: 84px..170px)
+        if (
+          type === 'write' &&
+          currentPos.x > window.innerWidth - 220 &&
+          currentPos.y > window.innerHeight - 215
+        ) {
+          currentPos.y = Math.max(20, window.innerHeight - 235);
+          try {
+            localStorage.setItem(key, JSON.stringify(currentPos));
+          } catch (e) {}
+        }
       }
     }
   } catch (e) {}
@@ -80,10 +119,11 @@ export const getFabPos = (type) => {
         y: Math.max(16, window.innerHeight - 82),
       };
     } else {
-      // Nút Viết tâm sự mặc định: Nằm ở phía trên nút Chat với khoảng cách an toàn 68px
+      // Nút Viết tâm sự mặc định: Nằm phía trên cả Linh vật sự kiện (bottom: 84px) và nút Chat (bottom: 24px)
+      // Khoảng cách an toàn y = window.innerHeight - 235px để hoàn toàn KHÔNG BAO GIỜ bị đè lên sự kiện
       currentPos = {
-        x: Math.max(16, window.innerWidth - 165),
-        y: Math.max(16, window.innerHeight - 150),
+        x: Math.max(16, window.innerWidth - 180),
+        y: Math.max(20, window.innerHeight - 235),
       };
     }
   }
@@ -112,54 +152,94 @@ export const saveFabPos = (type, pos) => {
 
 /**
  * TỰ ĐỘNG GIẢI QUYẾT VA CHẠM (ANTI-COLLISION REPULSION)
- * Khi nút A được kéo đến gần hoặc đè lên nút B:
- * Tự động tìm vị trí kề cạnh an toàn gần nhất (ở trên, ở dưới, bên trái hoặc góc đối diện)
- * để 2 nút KHÔNG BAO GIỜ bị đè lên nhau!
+ * Đảm bảo cả 3 thành phần nổi:
+ * 1. Nút Chat (AssistiveChatWidget)
+ * 2. Nút Viết tâm sự (DraggableWritePostButton)
+ * 3. Linh vật sự kiện lễ hội (FloatingFestiveMascot)
+ * KHÔNG BAO GIỜ bị đè lên nhau trên bất kỳ độ phân giải nào!
  */
 export const resolveAntiCollision = (movingType, candidatePos) => {
   const otherType = movingType === 'chat' ? 'write' : 'chat';
   const otherPos = getFabPos(otherType);
   const movingSize = FAB_SIZES[movingType];
   const otherSize = FAB_SIZES[otherType];
+  const mascotBox = getMascotBox();
 
   let resolved = ensureInBounds(movingType, candidatePos);
 
-  // Nếu không va chạm, giữ nguyên vị trí người dùng muốn
-  if (!checkBoxesOverlap(resolved, movingSize, otherPos, otherSize, 14)) {
+  const overlapsOther = checkBoxesOverlap(resolved, movingSize, otherPos, otherSize, 14);
+  const overlapsMascot =
+    movingType === 'write' && mascotBox
+      ? checkBoxesOverlap(
+          resolved,
+          movingSize,
+          mascotBox,
+          { width: mascotBox.width, height: mascotBox.height },
+          16
+        )
+      : false;
+
+  // Nếu không va chạm với nút kia và không va chạm với mascot sự kiện, giữ nguyên vị trí người dùng kéo đến
+  if (!overlapsOther && !overlapsMascot) {
     return resolved;
   }
 
-  // Nếu bị đè, tính toán 4 phương án dịch chuyển né tránh:
-  const offsetGap = 16;
+  // Nếu là nút Viết tâm sự và đang đè lên mascot sự kiện ở góc dưới phải:
+  if (overlapsMascot) {
+    const posAboveMascot = ensureInBounds(movingType, {
+      x: resolved.x,
+      y: mascotBox.y - movingSize.height - 18,
+    });
+    // Nếu vị trí phía trên mascot an toàn và không đè nút Chat:
+    if (!checkBoxesOverlap(posAboveMascot, movingSize, otherPos, otherSize, 10)) {
+      return posAboveMascot;
+    }
+  }
 
-  // Phương án 1: Đẩy lên phía trên nút kia
+  // Tính toán các phương án dịch chuyển né tránh thông minh:
+  const offsetGap = 16;
+  const minY = mascotBox && movingType === 'write' ? Math.min(otherPos.y, mascotBox.y) : otherPos.y;
+  const minX = mascotBox && movingType === 'write' ? Math.min(otherPos.x, mascotBox.x) : otherPos.x;
+
+  // Phương án 1: Đẩy lên phía trên
   const posAbove = ensureInBounds(movingType, {
     x: resolved.x,
-    y: otherPos.y - movingSize.height - offsetGap,
+    y: minY - movingSize.height - offsetGap,
   });
 
-  // Phương án 2: Đẩy xuống phía dưới nút kia
+  // Phương án 2: Đẩy xuống phía dưới (nếu còn chỗ phía đáy)
   const posBelow = ensureInBounds(movingType, {
     x: resolved.x,
-    y: otherPos.y + otherSize.height + offsetGap,
+    y: Math.max(otherPos.y + otherSize.height, mascotBox ? mascotBox.y + mascotBox.height : otherPos.y) + offsetGap,
   });
 
-  // Phương án 3: Lệch sang mép trái của nút kia
+  // Phương án 3: Lệch sang mép trái
   const posLeft = ensureInBounds(movingType, {
-    x: otherPos.x - movingSize.width - offsetGap,
+    x: minX - movingSize.width - offsetGap,
     y: resolved.y,
   });
 
-  // Phương án 4: Lệch sang mép phải của nút kia
+  // Phương án 4: Lệch sang mép phải
   const posRight = ensureInBounds(movingType, {
     x: otherPos.x + otherSize.width + offsetGap,
     y: resolved.y,
   });
 
-  // Lọc các vị trí không còn bị giao nhau
-  const validCandidates = [posAbove, posBelow, posLeft, posRight].filter(
-    (cand) => !checkBoxesOverlap(cand, movingSize, otherPos, otherSize, 6)
-  );
+  // Lọc các vị trí không còn bị giao nhau với cả nút khác và linh vật sự kiện
+  const validCandidates = [posAbove, posLeft, posBelow, posRight].filter((cand) => {
+    const hitOther = checkBoxesOverlap(cand, movingSize, otherPos, otherSize, 6);
+    const hitMascot =
+      movingType === 'write' && mascotBox
+        ? checkBoxesOverlap(
+            cand,
+            movingSize,
+            mascotBox,
+            { width: mascotBox.width, height: mascotBox.height },
+            8
+          )
+        : false;
+    return !hitOther && !hitMascot;
+  });
 
   if (validCandidates.length > 0) {
     // Ưu tiên vị trí có khoảng cách di chuyển ngắn nhất

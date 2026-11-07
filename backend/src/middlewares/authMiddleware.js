@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import { isDbConnected } from '../config/db.js';
 import { verifyToken } from '../utils/token.js';
 import { sendError } from '../utils/apiResponse.js';
+import { findUserInStore } from '../utils/persistentStore.js';
 
 export const protect = async (req, res, next) => {
   let token;
@@ -27,13 +28,20 @@ export const protect = async (req, res, next) => {
         }
       }
 
-      if (!req.user) {
-        req.user = {
+      if (!req.user && decoded) {
+        const storedUser = decoded.email ? findUserInStore(decoded.email) : null;
+        const isAdm =
+          decoded.role === 'admin' ||
+          decoded.email === 'anthonyq012025@gmail.com' ||
+          String(decoded.id) === '6aec5b46ee112662b33c0e32';
+
+        req.user = storedUser || {
           _id: decoded.id,
-          name: decoded.name || 'Thành viên cộng đồng',
-          email: decoded.email || '',
-          role: decoded.role || 'user',
-          jobTitle: decoded.jobTitle || 'Người đi làm',
+          name: decoded.name || (isAdm ? 'Anthony Quân (Trần Đình Quân)' : 'Thành viên cộng đồng'),
+          email: decoded.email || (isAdm ? 'anthonyq012025@gmail.com' : ''),
+          role: isAdm ? 'admin' : (decoded.role || 'user'),
+          jobTitle: decoded.jobTitle || (isAdm ? 'System Admin & Lead Dev' : 'Người đi làm'),
+          avatar: isAdm ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : '/images/man.jpg',
         };
       }
 

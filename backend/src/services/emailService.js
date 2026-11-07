@@ -21,15 +21,17 @@ let cachedTransporter = null;
 const getTransporter = async () => {
   if (cachedTransporter) return cachedTransporter;
 
-  const emailUser = (DIRECT_GMAIL_USER || process.env.EMAIL_USER || '').trim();
-  const emailPass = (DIRECT_GMAIL_APP_PASS || process.env.EMAIL_PASS || '').replace(/\s+/g, '');
+  const emailUser = (DIRECT_GMAIL_USER || process.env.EMAIL_USER || process.env.MAIL_USER || '').trim();
+  const emailPass = (DIRECT_GMAIL_APP_PASS || process.env.EMAIL_PASS || process.env.MAIL_APP_PASS || '').replace(/\s+/g, '');
 
-  // Nếu người dùng đã cài đặt Gmail trong file này hoặc trong .env
+  // Sử dụng cấu hình Gmail SMTP trực tiếp qua cổng 465 (SSL)
   if (emailUser && emailPass && emailPass !== 'xxxx' && !emailPass.includes('xxxx')) {
     try {
-      console.log(`[EMAIL SERVICE] 🚀 Đang kết nối máy chủ gửi thư Gmail SMTP thật: ${emailUser}`);
+      console.log(`[EMAIL SERVICE] 🚀 Đang kết nối máy chủ Gmail SMTP: ${emailUser} (Cổng 465 SSL)...`);
       cachedTransporter = nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true, // SSL
         auth: {
           user: emailUser,
           pass: emailPass,
@@ -37,10 +39,13 @@ const getTransporter = async () => {
         tls: {
           rejectUnauthorized: false,
         },
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 15000,
       });
       return cachedTransporter;
     } catch (err) {
-      console.warn('[EMAIL SERVICE] ❌ Không thể kết nối Gmail SMTP, chuyển sang Test Ethereal:', err.message);
+      console.warn('[EMAIL SERVICE] ❌ Không thể tạo Gmail Transporter:', err.message);
     }
   }
 
@@ -238,30 +243,31 @@ export const sendOtpEmail = async (toEmail, otpCode, type = 'login') => {
 
     console.log(`[EMAIL SERVICE] 📤 Đang gửi thư chứa mã OTP [${otpCode}] tới: ${toEmail}...`);
     const info = await transporter.sendMail(mailOptions);
-    const previewUrl = nodemailer.getTestMessageUrl(info) || null;
-
-    if (previewUrl) {
-      console.log(`[EMAIL SERVICE] ℹ️ Đã tạo thư Webmail Ethereal ảo (xem mã tại): ${previewUrl}`);
-    } else {
-      console.log(`[EMAIL SERVICE] ✅ ĐÃ GỬI THÀNH CÔNG VÀO HÒM THƯ GMAIL THẬT: ${toEmail} (ID: ${info.messageId})`);
-    }
+    console.log(`[EMAIL SERVICE] ✅ ĐÃ GỬI THÀNH CÔNG VÀO HÒM THƯ GMAIL THẬT: ${toEmail} (ID: ${info.messageId})`);
 
     return {
       success: true,
       messageId: info.messageId,
-      previewUrl,
       to: toEmail,
       otpCode,
     };
   } catch (error) {
-    console.error('❌ Lỗi khi gửi OTP qua Email:', error.message);
-    return {
-      success: true,
-      simulated: true,
-      to: toEmail,
-      otpCode,
-      note: 'Mã OTP đã được tạo và lưu xác thực!',
-    };
+    console.error('\n========================================');
+    console.error('❌ [EMAIL SERVICE] LỖI GỬI EMAIL NODEMAILER:');
+    console.error('- Message:', error.message);
+    console.error('- Code:', error.code);
+    console.error('- Response:', error.response);
+
+    if (error.responseCode === 535 || error.message.includes('Username and Password not accepted') || error.message.includes('BadCredentials')) {
+      console.error('\n👉 NGUYÊN NHÂN: Google từ chối mật khẩu ứng dụng (App Password)!');
+      console.error('   Vui lòng kiểm tra:');
+      console.error('   1. Đã bật Xác minh 2 bước (2-Step Verification) cho tài khoản Google chưa?');
+      console.error('   2. Mật khẩu 16 ký tự trong .env đã chính xác chưa? (Tạo mới tại https://myaccount.google.com/apppasswords)');
+    }
+    console.error('========================================\n');
+
+    // Ném lỗi ra ngoài để Controller biết và không trả về thông báo ảo
+    throw error;
   }
 };
 

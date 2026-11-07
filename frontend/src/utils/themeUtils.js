@@ -96,6 +96,9 @@ export const getActiveTheme = () => {
 export const applyTheme = (theme) => {
   const targetTheme = theme === THEMES.LIGHT ? THEMES.LIGHT : THEMES.DARK;
   if (typeof document !== 'undefined') {
+    // Kích hoạt class hiệu ứng chuyển mode chậm rãi, êm dịu, không giật cục
+    document.documentElement.classList.add('theme-is-transitioning');
+
     // Gán trực tiếp lên cả <html> và <body> để CSS ăn chắc 100%
     document.documentElement.setAttribute('data-theme', targetTheme);
     document.documentElement.classList.remove('theme-dark', 'theme-light', 'mode-dark', 'mode-light');
@@ -104,6 +107,11 @@ export const applyTheme = (theme) => {
     document.body.setAttribute('data-theme', targetTheme);
     document.body.classList.remove('theme-dark', 'theme-light', 'mode-dark', 'mode-light');
     document.body.classList.add(`theme-${targetTheme}`, `mode-${targetTheme}`);
+
+    // Gỡ class sau khi hiệu ứng hoàn thành (750ms)
+    setTimeout(() => {
+      document.documentElement.classList.remove('theme-is-transitioning');
+    }, 750);
   }
   try {
     localStorage.setItem(THEME_STORAGE_KEY, targetTheme);

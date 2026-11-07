@@ -32,6 +32,19 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'admin'],
       default: 'user',
     },
+    // Trạng thái kích hoạt và mã OTP cho luồng đăng ký bằng email
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    otpCode: {
+      type: String,
+      default: null,
+    },
+    otpExpires: {
+      type: Date,
+      default: null,
+    },
     authProvider: {
       type: String,
       enum: ['local', 'google', 'facebook', 'x', 'linkedin', 'github'],

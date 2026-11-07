@@ -213,7 +213,7 @@
         "linkedin": "https://linkedin.com/in/nam-pm",
         "website": ""
       },
-      "views": 22,
+      "views": 24,
       "cheersCount": 68,
       "reactions": [
         {
@@ -505,7 +505,8 @@
       "chatStatus": "online",
       "allowStrangerNotifications": true,
       "authProvider": "facebook",
-      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhZWM1YjQ2ZWUxMTI2NjJiMzNjMGUzMiIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiLEkMahbiBUaMOibiBN4bq5IiwiZW1haWwiOiJhbnRob255cTAxMjAyNUBnbWFpbC5jb20iLCJqb2JUaXRsZSI6IlN5c3RlbSBBZG1pbiAmIExlYWQgRGV2IiwiaWF0IjoxNzkzOTg0ODkwLCJleHAiOjE3OTY1NzY4OTB9.voyhYgx7WSJjFzNwrGDNwVXMYpTGuweZ9xlJJn29i6Q"
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhZWM1YjQ2ZWUxMTI2NjJiMzNjMGUzMiIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiLEkMahbiBUaMOibiBN4bq5IiwiZW1haWwiOiJhbnRob255cTAxMjAyNUBnbWFpbC5jb20iLCJqb2JUaXRsZSI6IlN5c3RlbSBBZG1pbiAmIExlYWQgRGV2IiwiaWF0IjoxNzk0MDQyODg4LCJleHAiOjE3OTY2MzQ4ODh9.mFCSvEym_UsFO-M46ikk-4hnkN3-Hlv7c3-LM3HKFao",
+      "isVerified": true
     },
     {
       "_id": "u_admin_2",
@@ -1089,5 +1090,5 @@
       "isBuiltin": true
     }
   ],
-  "adminPreviewEventId": "tet_duong_lich"
+  "adminPreviewEventId": "phu_nu_viet_nam_20_10"
 }

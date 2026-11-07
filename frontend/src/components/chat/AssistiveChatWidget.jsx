@@ -798,13 +798,34 @@ export const AssistiveChatWidget = () => {
               {/* Banner chấp nhận nếu là tin nhắn chờ từ người lạ */}
               {isStranger && convStatus === 'pending' && (
                 <div className="assistive-stranger-banner">
-                  <p>⚠️ Đây là tin nhắn từ người lạ. Bạn có muốn trò chuyện không?</p>
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-                    <button type="button" className="assistive-accept-btn" onClick={handleAccept}>
-                      ✓ Chấp nhận
+                  <div className="assistive-stranger-banner-top">
+                    <span className="assistive-stranger-badge">
+                      <span className="badge-shield">🛡️</span> Tin nhắn người lạ
+                    </span>
+                    <span className="assistive-stranger-hint">Bảo vệ quyền riêng tư</span>
+                  </div>
+                  <p className="assistive-stranger-desc">
+                    <span className="warning-animated-icon">⚠️</span>
+                    <span>
+                      <strong>{activeConversation.otherUser?.name || 'Người dùng'}</strong> chưa có trong danh bạ bạn bè. Bạn có muốn trò chuyện không?
+                    </span>
+                  </p>
+                  <div className="assistive-stranger-actions">
+                    <button
+                      type="button"
+                      className="assistive-accept-btn"
+                      onClick={handleAccept}
+                      title="Chấp nhận lời mời trò chuyện"
+                    >
+                      <span className="btn-icon">✓</span> Chấp nhận
                     </button>
-                    <button type="button" className="assistive-decline-btn" onClick={closeChat}>
-                      ✕ Bỏ qua
+                    <button
+                      type="button"
+                      className="assistive-decline-btn"
+                      onClick={closeChat}
+                      title="Bỏ qua và đóng cuộc trò chuyện"
+                    >
+                      <span className="btn-icon">✕</span> Bỏ qua
                     </button>
                   </div>
                 </div>
@@ -820,11 +841,14 @@ export const AssistiveChatWidget = () => {
                 ) : (
                   messages.map((m) => {
                     const isMe = m.sender?._id === user?._id || m.sender === user?._id;
+                    const isPendingStrangerMsg = !isMe && isStranger && convStatus === 'pending';
 
                     return (
                       <div
                         key={m._id}
-                        className={`assistive-message-row ${isMe ? 'my-msg' : 'other-msg'}`}
+                        className={`assistive-message-row ${isMe ? 'my-msg' : 'other-msg'} ${
+                          isPendingStrangerMsg ? 'stranger-pending-msg' : ''
+                        }`}
                       >
                         {!isMe && (
                           <img
@@ -834,7 +858,14 @@ export const AssistiveChatWidget = () => {
                           />
                         )}
                         <div className="assistive-bubble-wrap">
-                          <div className="assistive-msg-bubble">{m.content}</div>
+                          {isPendingStrangerMsg && (
+                            <span className="stranger-msg-intro-tag">
+                              ✨ Tin nhắn làm quen mới
+                            </span>
+                          )}
+                          <div className="assistive-msg-bubble">
+                            <span className="assistive-msg-bubble-text">{m.content}</span>
+                          </div>
                           <span className="assistive-msg-time">{formatDate(m.createdAt)}</span>
                         </div>
                       </div>

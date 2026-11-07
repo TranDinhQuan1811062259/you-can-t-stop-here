@@ -25,16 +25,29 @@ export const AmbientBackground = ({ profileLayout }) => {
   };
 
   const [isBursting, setIsBursting] = useState(false);
+  const [isCrossFading, setIsCrossFading] = useState(false);
 
   useEffect(() => {
     fetchActiveEvent();
 
     const handleSeasonChange = (e) => {
-      setLocalSeason(e.detail || getActiveSeason());
+      // Làm mờ dần các hạt cũ trong 350ms trước khi đổi mùa
+      setIsCrossFading(true);
+      setTimeout(() => {
+        setLocalSeason(e.detail || getActiveSeason());
+        setTimeout(() => setIsCrossFading(false), 200);
+      }, 350);
     };
+
     const handleEventChange = () => {
-      fetchActiveEvent();
+      // Làm mờ dần các hạt cũ trong 350ms trước khi đổi sự kiện
+      setIsCrossFading(true);
+      setTimeout(() => {
+        fetchActiveEvent();
+        setTimeout(() => setIsCrossFading(false), 200);
+      }, 350);
     };
+
     const handleBurst = () => {
       setIsBursting(true);
       setTimeout(() => setIsBursting(false), 6000);
@@ -127,8 +140,8 @@ export const AmbientBackground = ({ profileLayout }) => {
       <div className="ambient-orb orb-4"></div>
       <div className="ambient-mesh-glow"></div>
 
-      {/* Hiệu ứng hạt rơi sự kiện lễ hội hoặc 4 mùa thời tiết tự nhiên */}
-      <div className="seasonal-particles-wrap">
+      {/* Hiệu ứng hạt rơi sự kiện lễ hội hoặc 4 mùa thời tiết tự nhiên (Chuyển đổi chậm rãi êm dịu) */}
+      <div className={`seasonal-particles-wrap ${isCrossFading ? 'is-cross-fading' : ''}`}>
         {seasonalFlakes.map((flake) => (
           <span
             key={flake.id}
