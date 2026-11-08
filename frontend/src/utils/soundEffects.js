@@ -1390,6 +1390,24 @@ export const playNationalDay29TransitionSound = () => {
     routeAudio(ctx, timpaniGain, 0.9, 0.4);
     timpani.start(now);
     timpani.stop(now + 0.6);
+
+    // Bước chân duyệt binh dõng dạc của khối tiêu binh (Goose-step parade cadence)
+    for (let step = 0; step < 4; step++) {
+      const stepTime = now + step * 0.22;
+      const stepOsc = ctx.createOscillator();
+      const stepGain = ctx.createGain();
+      stepOsc.type = 'triangle';
+      stepOsc.frequency.setValueAtTime(85, stepTime);
+      stepOsc.frequency.exponentialRampToValueAtTime(35, stepTime + 0.1);
+
+      stepGain.gain.setValueAtTime(0.08, stepTime);
+      stepGain.gain.exponentialRampToValueAtTime(0.0001, stepTime + 0.12);
+
+      stepOsc.connect(stepGain);
+      routeAudio(ctx, stepGain, 0.7, 0.3);
+      stepOsc.start(stepTime);
+      stepOsc.stop(stepTime + 0.13);
+    }
   } catch (e) {}
 };
 

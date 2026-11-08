@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Tank3DCanvas } from '../common/Tank3DCanvas';
+import { SoldiersParade29 } from '../common/SoldiersParade29';
 import { playClickSound, playTank304TransitionSound, playFestiveEventSound, getAudioContext } from '../../utils/soundEffects';
 
 /**
@@ -282,7 +283,7 @@ export const PostSubmitAtmosphereOverlay = ({
       )}
 
       {/* =====================================================================
-          4. 2/9: QUỐC KHÁNH - HÀO QUANG MẶT TRỜI & CỜ ĐỎ SAO VÀNG VANG VỌNG!
+          4. 2/9: QUỐC KHÁNH - HÀO QUANG MẶT TRỜI, ĐOÀN QUÂN TIÊU BINH & CỜ ĐỎ SAO VÀNG!
          ===================================================================== */}
       {atmosphereType === 'national_day_29' && (
         <div className="submit-fx-national-day-wrap">
@@ -291,6 +292,10 @@ export const PostSubmitAtmosphereOverlay = ({
             <span className="national-day-star">★</span>
             <div className="peace-doves">🕊️ 🕊️ 🕊️</div>
           </div>
+
+          {/* Đoàn quân tiêu binh giương cao cờ Tổ quốc & cờ Quyết Thắng duyệt binh qua màn hình */}
+          <SoldiersParade29 style={{ bottom: '8%' }} />
+
           <div className="submit-fx-center-banner banner-29">
             <span className="banner-icon-star">🇻🇳</span>
             <div className="banner-title-text">2/9 QUỐC KHÁNH • TỰ HÀO VIỆT NAM!</div>

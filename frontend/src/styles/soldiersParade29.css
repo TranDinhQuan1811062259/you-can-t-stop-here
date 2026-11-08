@@ -1,0 +1,179 @@
+/* =========================================================================
+   2/9 SOLDIERS PARADE MARCHING ANIMATIONS - KHỐI TIÊU BINH DUYỆT BINH
+   ========================================================================= */
+
+.soldiers-parade-29-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.parade-ground-runway {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 90px;
+  background: linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.7) 40%, rgba(2, 6, 23, 0.95) 100%);
+  border-top: 1.5px solid rgba(250, 204, 21, 0.35);
+  box-shadow: 0 -10px 30px rgba(239, 68, 68, 0.25);
+  pointer-events: none;
+}
+
+.parade-soldiers-marching-unit {
+  position: absolute;
+  bottom: 12px;
+  left: -900px;
+  width: 780px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: paradeMarchAcrossScreen 2.8s cubic-bezier(0.2, 0.75, 0.3, 1) forwards;
+  filter: drop-shadow(0 15px 35px rgba(0, 0, 0, 0.75));
+}
+
+@keyframes paradeMarchAcrossScreen {
+  0% {
+    transform: translateX(-120px) translateY(8px);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  40% {
+    transform: translateX(45vw) translateY(-6px);
+  }
+  60% {
+    transform: translateX(55vw) translateY(4px);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(115vw) translateY(-4px);
+    opacity: 0;
+  }
+}
+
+.parade-soldiers-composite {
+  position: relative;
+  width: 100%;
+  border-radius: 20px;
+  overflow: visible;
+}
+
+.parade-soldiers-img {
+  width: 100%;
+  height: auto;
+  max-height: 250px;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 2px solid #facc15;
+  box-shadow: 0 10px 40px rgba(239, 68, 68, 0.5), 0 0 25px rgba(250, 204, 21, 0.4);
+  /* Mờ viền hai đầu để hòa vào không gian chuyển trang */
+  mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%),
+              linear-gradient(to bottom, black 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%),
+                      linear-gradient(to bottom, black 85%, transparent 100%);
+}
+
+.parade-ground-shadow {
+  position: absolute;
+  bottom: -15px;
+  left: 5%;
+  right: 5%;
+  height: 24px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.8) 0%, transparent 75%);
+  pointer-events: none;
+}
+
+/* Dàn cờ Quyết Thắng tung bay trên đầu */
+.parade-waving-flags-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  pointer-events: none;
+}
+
+.parade-mini-flag {
+  position: absolute;
+  animation: flagQuyetThangWave 1.4s infinite alternate ease-in-out;
+  transform-origin: bottom left;
+}
+
+@keyframes flagQuyetThangWave {
+  0% {
+    transform: rotate(-4deg) skewX(-3deg);
+  }
+  100% {
+    transform: rotate(5deg) skewX(4deg);
+  }
+}
+
+.mini-flag-cloth {
+  background: linear-gradient(135deg, #da251d 0%, #b91c1c 100%);
+  color: #facc15;
+  padding: 4px 10px;
+  border-radius: 2px 8px 8px 2px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(218, 37, 29, 0.6);
+  border: 1px solid rgba(250, 204, 21, 0.4);
+}
+
+.mini-flag-star {
+  font-size: 0.85rem;
+  color: #ffff00;
+}
+
+.mini-flag-tassels {
+  position: absolute;
+  right: -4px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: repeating-linear-gradient(180deg, #facc15, #facc15 3px, transparent 3px, transparent 6px);
+}
+
+/* Tia sáng lấp lánh */
+.parade-glint-sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.glint-spark {
+  position: absolute;
+  font-size: 1.4rem;
+  animation: glintFlicker 1.2s infinite alternate ease-in-out;
+}
+.glint-1 { top: 20%; left: 35%; animation-delay: 0.2s; }
+.glint-2 { top: 35%; left: 60%; animation-delay: 0.6s; }
+.glint-3 { top: 25%; left: 80%; animation-delay: 0.4s; }
+
+@keyframes glintFlicker {
+  0% { transform: scale(0.6) rotate(0deg); opacity: 0.4; }
+  100% { transform: scale(1.3) rotate(90deg); opacity: 1; }
+}
+
+/* Khẩu hiệu dưới chân đoàn quân */
+.parade-banner-pill {
+  margin-top: 10px;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1.5px solid #facc15;
+  color: #facc15;
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  padding: 5px 18px;
+  border-radius: 999px;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+  backdrop-filter: blur(8px);
+}

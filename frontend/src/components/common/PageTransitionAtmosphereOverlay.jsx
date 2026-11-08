@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { playPageTransitionAtmosphereSound } from '../../utils/soundEffects';
 import { Tank3DCanvas } from './Tank3DCanvas';
+import { SoldiersParade29 } from './SoldiersParade29';
 
 export const PageTransitionAtmosphereOverlay = ({
   isTransitioning,
@@ -443,6 +444,9 @@ export const PageTransitionAtmosphereOverlay = ({
               2/9 QUỐC KHÁNH VIỆT NAM ★ ĐỘC LẬP - TỰ DO
             </div>
           </div>
+
+          {/* Đoàn quân tiêu binh giương cao cờ Tổ quốc & cờ Quyết Thắng bước duyệt binh qua màn hình */}
+          <SoldiersParade29 />
         </div>
       )}
 

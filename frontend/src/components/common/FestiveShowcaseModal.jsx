@@ -249,25 +249,9 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
                 'Bản Tuyên ngôn Độc lập vang vọng ngàn đời: "Nước Việt Nam có quyền hưởng tự do và độc lập, và sự thật đã thành một nước tự do, độc lập!" Tự hào Việt Nam vươn mình mạnh mẽ.'}
               {is83 &&
                 'Chúc một nửa thế giới luôn rạng ngời, tự tin, được yêu thương và trân trọng mỗi ngày. Cảm ơn bạn vì đã mang đến sự ấm áp và kỳ diệu cho cuộc sống này!'}
-              {isHalloween && (
-            <div className="festive-halloween-stage" style={{ textAlign: 'center', padding: '16px 0' }}>
-              <div style={{ fontSize: '4.5rem', filter: 'drop-shadow(0 0 20px #f97316) drop-shadow(0 0 40px #7c3aed)' }}>
-                🎃
-              </div>
-              <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', marginTop: '8px', fontSize: '1.8rem' }}>
-                <span title="Dơi đêm">🦇</span>
-                <span title="Bóng ma huyền bí">👻</span>
-                <span title="Mạng nhện">🕸️</span>
-                <span title="Kẹo ngọt Trick or Treat">🍬</span>
-                <span title="Nhện đêm">🕷️</span>
-              </div>
-              <div className="festive-stage-caption" style={{ color: '#c084fc', marginTop: '10px', fontWeight: 800 }}>
-                🎃 Đêm Hội Ma Quái Halloween • Spooky &amp; Magical Night 👻
-              </div>
-            </div>
-          )}
-
-          {!is304 && !is29 && !is83 && !isHalloween && (event.bannerTitle || event.name)}
+              {isHalloween &&
+                'Chúc bạn một mùa lễ hội Halloween ngập tràn sắc màu bí ẩn, xua tan mọi áp lực thường nhật và thỏa sức sáng tạo trong không gian huyền ảo lung linh!'}
+              {!is304 && !is29 && !is83 && !isHalloween && (event.bannerTitle || event.name)}
             </p>
             <span className="quote-mark end">”</span>
           </div>
