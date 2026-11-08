@@ -60,7 +60,7 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
       {/* Khối duyệt binh toàn màn hình khi người dùng bấm nút kích hoạt */}
       {showLiveParade && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100010, pointerEvents: 'none' }}>
-          <SoldiersParade29 style={{ position: 'fixed', bottom: '6%', zIndex: 100010 }} />
+          <Soldier3DCanvas mode="parade" width="100%" height="100%" style={{ position: 'fixed', inset: 0, zIndex: 100010 }} />
         </div>
       )}
 
@@ -285,7 +285,7 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
 
               {/* Hai khối hình ảnh chiến sĩ & tiêu binh hào hùng */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
-                {/* 1. Khối Tiêu Binh Rước Cờ Quyết Thắng */}
+                {/* 1. Quốc Kỳ Cờ Đỏ Sao Vàng Vinh Quang */}
                 <div
                   style={{
                     position: 'relative',
@@ -293,12 +293,17 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
                     overflow: 'hidden',
                     border: '1.5px solid #facc15',
                     boxShadow: '0 6px 20px rgba(220, 38, 38, 0.4)',
+                    background: 'radial-gradient(circle, #7f1d1d 0%, #1e1b4b 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '155px',
                   }}
                 >
                   <img
-                    src="/festive/soldiers-marching-29.jpg"
-                    alt="Khối tiêu binh duyệt binh rước cờ Quyết Thắng 2/9"
-                    style={{ width: '100%', height: '155px', objectFit: 'cover', display: 'block' }}
+                    src="/festive/flag-vn-waving.png"
+                    alt="Cờ Đỏ Sao Vàng Việt Nam"
+                    style={{ width: '130px', height: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))' }}
                   />
                   <div
                     style={{
@@ -316,8 +321,8 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
                       justifyContent: 'space-between',
                     }}
                   >
-                    <span>🚩 Khối Tiêu Binh Giương Cờ</span>
-                    <span style={{ color: '#fff', fontSize: '0.68rem' }}>QĐNDVN</span>
+                    <span>🇻🇳 Quốc Kỳ Việt Nam</span>
+                    <span style={{ color: '#fff', fontSize: '0.68rem' }}>Độc Lập</span>
                   </div>
                 </div>
 
@@ -380,7 +385,7 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
                   transition: 'all 0.2s ease',
                 }}
               >
-                <span>🎖️ BẤM ĐỂ KHỐI DUYỆT BINH CHẠY QUA MÀN HÌNH</span>
+                <span>🎖️ BẤM ĐỂ CHIẾN SĨ 3D CẦM CỜ CHẠY QUA MÀN HÌNH</span>
                 <span>🇻🇳</span>
               </button>
 

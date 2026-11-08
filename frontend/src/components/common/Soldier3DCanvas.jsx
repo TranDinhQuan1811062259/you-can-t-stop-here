@@ -530,9 +530,13 @@ export const Soldier3DCanvas = ({
         soldierRoot.rotation.x += (targetRotX - soldierRoot.rotation.x) * 0.08;
         soldierRoot.position.y = 0.05 + Math.sin(elapsed * 2.4) * 0.015;
       } else if (mode === 'parade') {
-        const paradeX = -4 + (elapsed * 2.8) % 8;
-        soldierRoot.position.set(paradeX, 0.05 + Math.sin(elapsed * 6) * 0.04, 0);
-        soldierRoot.rotation.set(0, Math.PI / 2, 0);
+        const span = 14;
+        const speed = 3.6;
+        const paradeX = -7 + (elapsed * speed) % span;
+        const stepBob = Math.abs(Math.sin(elapsed * 5.8)) * 0.08;
+        soldierRoot.position.set(paradeX, 0.05 + stepBob, 0);
+        soldierRoot.rotation.set(0.04, Math.PI / 2 - 0.22, 0);
+        soldierRoot.scale.set(0.85, 0.85, 0.85);
       }
 
       renderer.render(scene, camera);

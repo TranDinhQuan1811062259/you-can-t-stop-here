@@ -8,108 +8,158 @@ import {
   ensureInBounds,
 } from '../../utils/floatingButtonManager';
 
-export const RADIO_STATIONS = [
+// =============================================================================
+// DANH SÁCH 8 BÀI NHẠC CHỮA LÀNH ĐA DẠNG CỦA TRẠM RADIO ĐÊM MUỘN
+// =============================================================================
+export const RADIO_TRACKS = [
   {
-    id: 'lofi_rain',
-    name: 'Lo-Fi Jazz & Mưa Đêm',
-    shortName: 'Lo-Fi Jazz Mưa',
-    tagline: 'Mưa rơi êm dịu • Đĩa than vinyl lách tách • Hợp âm Rhodes chữa lành',
+    id: 'track_1',
+    title: 'Giai Điệu Đêm Mưa Hà Nội',
+    artist: 'Freedom Lo-Fi Studio',
+    genre: 'LO-FI JAZZ',
     icon: '🌧️',
-    badge: 'LO-FI JAZZ',
     themeColor: '#818cf8',
     glowColor: 'rgba(129, 140, 248, 0.45)',
-    bgGradient: 'linear-gradient(135deg, rgba(30, 27, 75, 0.95), rgba(15, 23, 42, 0.95))',
-    subDesc: 'Phù hợp khi học bài, đọc sách, viết nhật ký trong đêm tĩnh lặng.',
+    tagline: 'Mưa rơi mái hiên • Hợp âm Rhodes êm dịu • Đĩa than vinyl lách tách',
+    duration: '3:45',
+    engine: 'lofi_rain',
   },
   {
-    id: 'ocean_sunset',
-    name: 'Sóng Biển Hoàng Hôn & Guitar',
-    shortName: 'Sóng Biển & Guitar',
-    tagline: 'Sóng biển đại dương dạt dào • Giai điệu guitar acoustic mộc mạc êm dịu',
+    id: 'track_2',
+    title: 'Hoàng Hôn Trên Biển Vắng',
+    artist: 'Acoustic Waves',
+    genre: 'ACOUSTIC',
     icon: '🌊',
-    badge: 'ACOUSTIC OCEAN',
     themeColor: '#38bdf8',
     glowColor: 'rgba(56, 189, 248, 0.45)',
-    bgGradient: 'linear-gradient(135deg, rgba(12, 74, 110, 0.95), rgba(15, 23, 42, 0.95))',
-    subDesc: 'Giải tỏa căng thẳng, đưa tâm trí dạo chơi bên bờ cát hoàng hôn.',
+    tagline: 'Sóng biển đại dương vỗ bờ dạt dào • Tiếng guitar acoustic mộc mạc',
+    duration: '4:12',
+    engine: 'ocean_sunset',
   },
   {
-    id: 'pine_campfire',
-    name: 'Lửa Trại Rừng Thông & Côn Trùng',
-    shortName: 'Lửa Trại Rừng Đêm',
-    tagline: 'Củi tí tách lốp bốp • Gió thông rì rào • Dế mèn đêm du dương ru ngủ',
+    id: 'track_3',
+    title: 'Đà Lạt Đêm Sương & Lửa Trại',
+    artist: 'Pine Woods Ensemble',
+    genre: 'NATURE CAMP',
     icon: '🌲',
-    badge: 'NATURE CAMP',
     themeColor: '#34d399',
     glowColor: 'rgba(52, 211, 153, 0.45)',
-    bgGradient: 'linear-gradient(135deg, rgba(6, 78, 59, 0.95), rgba(15, 23, 42, 0.95))',
-    subDesc: 'Cảm giác cắm trại giữa đại ngàn thông reo, an yên tuyệt đối.',
+    tagline: 'Củi tí tách lốp bốp • Gió thông rì rào • Dế mèn đêm du dương ru ngủ',
+    duration: '4:30',
+    engine: 'pine_campfire',
   },
   {
-    id: 'rainy_cafe',
-    name: 'Quán Cà Phê Mưa Chiều & Lofi Beat',
-    shortName: 'Quán Cà Phê Chill',
-    tagline: 'Mưa gõ mái kính • Ly cà phê ấm • Nhịp beat chill thư thái sâu lắng',
+    id: 'track_4',
+    title: 'Góc Quán Quen Chiều Mưa',
+    artist: 'Coffee & Chill Beats',
+    genre: 'CHILL BEAT',
     icon: '☕',
-    badge: 'CHILL BEAT',
     themeColor: '#fbbf24',
     glowColor: 'rgba(251, 191, 36, 0.45)',
-    bgGradient: 'linear-gradient(135deg, rgba(120, 53, 15, 0.95), rgba(15, 23, 42, 0.95))',
-    subDesc: 'Không gian góc quán quen, tập trung làm việc và suy ngẫm sâu.',
+    tagline: 'Mưa gõ mái kính • Ly cà phê ấm • Nhịp beat downtempo thư thái',
+    duration: '3:50',
+    engine: 'rainy_cafe',
   },
   {
-    id: 'deep_space_432',
-    name: 'Không Gian Vũ Trụ & Sóng Não 432Hz',
-    shortName: 'Vũ Trụ Alpha 432Hz',
-    tagline: 'Tần số vàng 432Hz • Sóng não Alpha tĩnh tâm • Chuông vũ trụ sâu lắng',
+    id: 'track_5',
+    title: 'Khúc Ru Vũ Trụ Alpha 432Hz',
+    artist: 'Deep Sleep Frequency',
+    genre: 'HEALING 432Hz',
     icon: '🌌',
-    badge: 'ALPHA 432Hz',
     themeColor: '#c084fc',
     glowColor: 'rgba(192, 132, 252, 0.45)',
-    bgGradient: 'linear-gradient(135deg, rgba(88, 28, 135, 0.95), rgba(15, 23, 42, 0.95))',
-    subDesc: 'Giúp cân bằng hệ thần kinh, buông bỏ suy nghĩ vẩn vơ, ngủ sâu giấc.',
+    tagline: 'Tần số vàng 432Hz • Sóng não Alpha tĩnh tâm • Chuông vũ trụ sâu lắng',
+    duration: '5:00',
+    engine: 'deep_space_432',
+  },
+  {
+    id: 'track_6',
+    title: 'Khu Vườn Ban Mai & Tiếng Chim',
+    artist: 'Morning Dew Garden',
+    genre: 'MORNING ZEN',
+    icon: '🌸',
+    themeColor: '#f472b6',
+    glowColor: 'rgba(244, 114, 182, 0.45)',
+    tagline: 'Tiếng chim lảnh lót ban mai • Gió sớm trong lành • Giai điệu hạc cầm Harp',
+    duration: '3:35',
+    engine: 'morning_zen',
+  },
+  {
+    id: 'track_7',
+    title: 'Chiếc Lá Thu Rơi Muộn',
+    artist: 'Autumn Nostalgia',
+    genre: 'CELLO NOSTALGIA',
+    icon: '🍂',
+    themeColor: '#f97316',
+    glowColor: 'rgba(249, 115, 22, 0.45)',
+    tagline: 'Tiếng cello trầm ấm da diết • Tiếng lá xào xạc • Trầm tư hoài niệm',
+    duration: '4:20',
+    engine: 'autumn_cello',
+  },
+  {
+    id: 'track_8',
+    title: 'Ngọn Nến Đêm Thanh Thản',
+    artist: 'Tibetan Peace Project',
+    genre: 'MEDITATION',
+    icon: '🕯️',
+    themeColor: '#a78bfa',
+    glowColor: 'rgba(167, 139, 250, 0.45)',
+    tagline: 'Chuông xoay Tây Tạng ngân vang • Hơi thở đều đặn • Buông bỏ mọi âu lo',
+    duration: '5:30',
+    engine: 'zen_candle',
   },
 ];
 
 // =============================================================================
-// WEB AUDIO API PROCEDURAL SOUND GENERATOR (100% IN-BROWSER & OFFLINE)
+// WEB AUDIO API SOUND ENGINES
 // =============================================================================
 let radioAudioCtx = null;
 let isRadioPlayingInternal = false;
 let masterGainNode = null;
-let currentStationId = 'lofi_rain';
-let cleanupCurrentStationFn = null;
+let cleanupCurrentEngineFn = null;
 
-// --- TRẠM 1: LO-FI JAZZ & MƯA ĐÊM ---
-const startLofiRainStation = (ctx, masterNode) => {
-  const stationGain = ctx.createGain();
-  stationGain.gain.setValueAtTime(1, ctx.currentTime);
-  stationGain.connect(masterNode);
+const ensureAudioContext = () => {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+  if (!radioAudioCtx || radioAudioCtx.state === 'closed') {
+    radioAudioCtx = new AudioContextClass();
+  }
+  if (radioAudioCtx.state === 'suspended') {
+    radioAudioCtx.resume().catch(() => {});
+  }
+  return radioAudioCtx;
+};
+
+// --- ENGINE 1: LO-FI RAIN ---
+const startLofiRainEngine = (ctx, masterNode) => {
+  const node = ctx.createGain();
+  node.gain.setValueAtTime(1, ctx.currentTime);
+  node.connect(masterNode);
 
   let rainSource = null;
   try {
     const bufferSize = ctx.sampleRate * 2;
     const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const output = noiseBuffer.getChannelData(0);
+    const data = noiseBuffer.getChannelData(0);
     let b0 = 0, b1 = 0, b2 = 0;
     for (let i = 0; i < bufferSize; i++) {
       const white = Math.random() * 2 - 1;
       b0 = 0.99886 * b0 + white * 0.0555179;
       b1 = 0.99332 * b1 + white * 0.0750759;
       b2 = 0.96900 * b2 + white * 0.1538520;
-      output[i] = (b0 + b1 + b2 + white * 0.5362) * 0.08;
+      data[i] = (b0 + b1 + b2 + white * 0.5362) * 0.08;
     }
     rainSource = ctx.createBufferSource();
     rainSource.buffer = noiseBuffer;
     rainSource.loop = true;
-    const rainFilter = ctx.createBiquadFilter();
-    rainFilter.type = 'lowpass';
-    rainFilter.frequency.setValueAtTime(950, ctx.currentTime);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(950, ctx.currentTime);
     const rainGain = ctx.createGain();
     rainGain.gain.setValueAtTime(0.22, ctx.currentTime);
-    rainSource.connect(rainFilter);
-    rainFilter.connect(rainGain);
-    rainGain.connect(stationGain);
+    rainSource.connect(filter);
+    filter.connect(rainGain);
+    rainGain.connect(node);
     rainSource.start();
   } catch (e) {}
 
@@ -124,14 +174,14 @@ const startLofiRainStation = (ctx, masterNode) => {
     vinylSource = ctx.createBufferSource();
     vinylSource.buffer = crackleBuffer;
     vinylSource.loop = true;
-    const vinylFilter = ctx.createBiquadFilter();
-    vinylFilter.type = 'bandpass';
-    vinylFilter.frequency.setValueAtTime(2500, ctx.currentTime);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(2500, ctx.currentTime);
     const vinylGain = ctx.createGain();
     vinylGain.gain.setValueAtTime(0.18, ctx.currentTime);
-    vinylSource.connect(vinylFilter);
-    vinylFilter.connect(vinylGain);
-    vinylGain.connect(stationGain);
+    vinylSource.connect(filter);
+    filter.connect(vinylGain);
+    vinylGain.connect(node);
     vinylSource.start();
   } catch (e) {}
 
@@ -140,7 +190,7 @@ const startLofiRainStation = (ctx, masterNode) => {
     [185.0, 220.0, 277.18, 369.99],  // F#m7
     [196.0, 246.94, 293.66, 392.0],  // Gmaj7
     [220.0, 277.18, 329.63, 440.0],  // A7
-    [246.94, 293.66, 369.99, 440.0, 554.37], // Bm9
+    [246.94, 293.66, 369.99, 440.0], // Bm9
     [164.81, 246.94, 293.66, 392.0], // Em7
   ];
   let chordIdx = 0;
@@ -158,7 +208,7 @@ const startLofiRainStation = (ctx, masterNode) => {
       gain.gain.linearRampToValueAtTime(0.07, now + 0.15);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.2);
       osc.connect(gain);
-      gain.connect(stationGain);
+      gain.connect(node);
       osc.start(now);
       osc.stop(now + 3.4);
     });
@@ -171,16 +221,16 @@ const startLofiRainStation = (ctx, masterNode) => {
     try {
       if (rainSource) { rainSource.stop(); rainSource.disconnect(); }
       if (vinylSource) { vinylSource.stop(); vinylSource.disconnect(); }
-      stationGain.disconnect();
+      node.disconnect();
     } catch (e) {}
   };
 };
 
-// --- TRẠM 2: SÓNG BIỂN HOÀNG HÔN & GUITAR MỘC ---
-const startOceanGuitarStation = (ctx, masterNode) => {
-  const stationGain = ctx.createGain();
-  stationGain.gain.setValueAtTime(1, ctx.currentTime);
-  stationGain.connect(masterNode);
+// --- ENGINE 2: OCEAN GUITAR ---
+const startOceanGuitarEngine = (ctx, masterNode) => {
+  const node = ctx.createGain();
+  node.gain.setValueAtTime(1, ctx.currentTime);
+  node.connect(masterNode);
 
   let waveSource = null;
   let waveLfo = null;
@@ -199,9 +249,9 @@ const startOceanGuitarStation = (ctx, masterNode) => {
     waveSource.buffer = noiseBuffer;
     waveSource.loop = true;
 
-    const waveFilter = ctx.createBiquadFilter();
-    waveFilter.type = 'lowpass';
-    waveFilter.frequency.setValueAtTime(320, ctx.currentTime);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(320, ctx.currentTime);
 
     const waveGain = ctx.createGain();
     waveGain.gain.setValueAtTime(0.18, ctx.currentTime);
@@ -213,27 +263,27 @@ const startOceanGuitarStation = (ctx, masterNode) => {
     const lfoFilterGain = ctx.createGain();
     lfoFilterGain.gain.setValueAtTime(240, ctx.currentTime);
     waveLfo.connect(lfoFilterGain);
-    lfoFilterGain.connect(waveFilter.frequency);
+    lfoFilterGain.connect(filter.frequency);
 
     const lfoGainGain = ctx.createGain();
     lfoGainGain.gain.setValueAtTime(0.1, ctx.currentTime);
     waveLfo.connect(lfoGainGain);
     lfoGainGain.connect(waveGain.gain);
 
-    waveSource.connect(waveFilter);
-    waveFilter.connect(waveGain);
-    waveGain.connect(stationGain);
+    waveSource.connect(filter);
+    filter.connect(waveGain);
+    waveGain.connect(node);
 
     waveSource.start();
     waveLfo.start();
   } catch (e) {}
 
   const guitarChords = [
-    [196.0, 246.94, 293.66, 369.99, 440.0],  // Gmaj9
-    [130.81, 196.0, 246.94, 293.66, 329.63], // Cadd9
-    [164.81, 196.0, 246.94, 293.66, 392.0],  // Em7
-    [146.83, 220.0, 293.66, 392.0, 440.0],   // Dsus4
-    [110.0, 164.81, 220.0, 261.63, 329.63],  // Am7
+    [196.0, 246.94, 293.66, 369.99, 440.0],
+    [130.81, 196.0, 246.94, 293.66, 329.63],
+    [164.81, 196.0, 246.94, 293.66, 392.0],
+    [146.83, 220.0, 293.66, 392.0, 440.0],
+    [110.0, 164.81, 220.0, 261.63, 329.63],
   ];
   let chordIdx = 0;
   const playGuitarPattern = () => {
@@ -259,7 +309,7 @@ const startOceanGuitarStation = (ctx, masterNode) => {
 
       osc.connect(gain);
       osc2.connect(gain);
-      gain.connect(stationGain);
+      gain.connect(node);
 
       osc.start(now);
       osc2.start(now);
@@ -275,36 +325,34 @@ const startOceanGuitarStation = (ctx, masterNode) => {
     try {
       if (waveSource) { waveSource.stop(); waveSource.disconnect(); }
       if (waveLfo) { waveLfo.stop(); waveLfo.disconnect(); }
-      stationGain.disconnect();
+      node.disconnect();
     } catch (e) {}
   };
 };
 
-// --- TRẠM 3: LỬA TRẠI RỪNG THÔNG & DẾ MÈN ---
-const startCampfireStation = (ctx, masterNode) => {
-  const stationGain = ctx.createGain();
-  stationGain.gain.setValueAtTime(1, ctx.currentTime);
-  stationGain.connect(masterNode);
+// --- ENGINE 3: PINE CAMPFIRE ---
+const startCampfireEngine = (ctx, masterNode) => {
+  const node = ctx.createGain();
+  node.gain.setValueAtTime(1, ctx.currentTime);
+  node.connect(masterNode);
 
   let windSource = null;
   try {
     const bufferSize = ctx.sampleRate * 2;
     const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * 0.12;
-    }
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.12;
     windSource = ctx.createBufferSource();
     windSource.buffer = noiseBuffer;
     windSource.loop = true;
-    const windFilter = ctx.createBiquadFilter();
-    windFilter.type = 'lowpass';
-    windFilter.frequency.setValueAtTime(320, ctx.currentTime);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(320, ctx.currentTime);
     const windGain = ctx.createGain();
     windGain.gain.setValueAtTime(0.18, ctx.currentTime);
-    windSource.connect(windFilter);
-    windFilter.connect(windGain);
-    windGain.connect(stationGain);
+    windSource.connect(filter);
+    filter.connect(windGain);
+    windGain.connect(node);
     windSource.start();
   } catch (e) {}
 
@@ -314,67 +362,27 @@ const startCampfireStation = (ctx, masterNode) => {
     const fireBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = fireBuffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
-      const isPop = Math.random() > 0.993;
-      data[i] = isPop ? (Math.random() * 2 - 1) * 0.35 : (Math.random() * 2 - 1) * 0.02;
+      data[i] = Math.random() > 0.993 ? (Math.random() * 2 - 1) * 0.35 : (Math.random() * 2 - 1) * 0.02;
     }
     crackleSource = ctx.createBufferSource();
     crackleSource.buffer = fireBuffer;
     crackleSource.loop = true;
-    const fireFilter = ctx.createBiquadFilter();
-    fireFilter.type = 'bandpass';
-    fireFilter.frequency.setValueAtTime(1800, ctx.currentTime);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1800, ctx.currentTime);
     const fireGain = ctx.createGain();
     fireGain.gain.setValueAtTime(0.24, ctx.currentTime);
-    crackleSource.connect(fireFilter);
-    fireFilter.connect(fireGain);
-    fireGain.connect(stationGain);
+    crackleSource.connect(filter);
+    filter.connect(fireGain);
+    fireGain.connect(node);
     crackleSource.start();
   } catch (e) {}
-
-  const snapTimer = setInterval(() => {
-    if (!ctx || ctx.state === 'closed') return;
-    if (Math.random() > 0.45) {
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(160 + Math.random() * 120, now);
-      osc.frequency.exponentialRampToValueAtTime(35, now + 0.08);
-      gain.gain.setValueAtTime(0.08, now);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
-      osc.connect(gain);
-      gain.connect(stationGain);
-      osc.start(now);
-      osc.stop(now + 0.1);
-    }
-  }, 1200);
-
-  const cricketTimer = setInterval(() => {
-    if (!ctx || ctx.state === 'closed') return;
-    const now = ctx.currentTime;
-    [0, 0.08, 0.16].forEach((offset) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(4500 + Math.random() * 300, now + offset);
-      gain.gain.setValueAtTime(0.001, now + offset);
-      gain.gain.linearRampToValueAtTime(0.015, now + offset + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.05);
-      osc.connect(gain);
-      gain.connect(stationGain);
-      osc.start(now + offset);
-      osc.stop(now + offset + 0.06);
-    });
-  }, 2600);
 
   const kalimbaNotes = [293.66, 329.63, 392.0, 440.0, 493.88, 587.33];
   let noteIdx = 0;
   const playKalimba = () => {
     if (!ctx || ctx.state === 'closed') return;
-    const chosen = [
-      kalimbaNotes[noteIdx % kalimbaNotes.length],
-      kalimbaNotes[(noteIdx + 2) % kalimbaNotes.length],
-    ];
+    const chosen = [kalimbaNotes[noteIdx % kalimbaNotes.length], kalimbaNotes[(noteIdx + 2) % kalimbaNotes.length]];
     noteIdx += 1;
     chosen.forEach((f, i) => {
       const now = ctx.currentTime + i * 0.35;
@@ -386,40 +394,36 @@ const startCampfireStation = (ctx, masterNode) => {
       gain.gain.linearRampToValueAtTime(0.045, now + 0.03);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
       osc.connect(gain);
-      gain.connect(stationGain);
+      gain.connect(node);
       osc.start(now);
       osc.stop(now + 2.6);
     });
   };
   playKalimba();
-  const kalimbaTimer = setInterval(playKalimba, 4800);
+  const timer = setInterval(playKalimba, 4800);
 
   return () => {
-    clearInterval(snapTimer);
-    clearInterval(cricketTimer);
-    clearInterval(kalimbaTimer);
+    clearInterval(timer);
     try {
       if (windSource) { windSource.stop(); windSource.disconnect(); }
       if (crackleSource) { crackleSource.stop(); crackleSource.disconnect(); }
-      stationGain.disconnect();
+      node.disconnect();
     } catch (e) {}
   };
 };
 
-// --- TRẠM 4: QUÁN CÀ PHÊ MƯA CHIỀU & LOFI BEAT ---
-const startRainyCafeStation = (ctx, masterNode) => {
-  const stationGain = ctx.createGain();
-  stationGain.gain.setValueAtTime(1, ctx.currentTime);
-  stationGain.connect(masterNode);
+// --- ENGINE 4: RAINY CAFE ---
+const startRainyCafeEngine = (ctx, masterNode) => {
+  const node = ctx.createGain();
+  node.gain.setValueAtTime(1, ctx.currentTime);
+  node.connect(masterNode);
 
   let rainSource = null;
   try {
     const bufferSize = ctx.sampleRate * 2;
     const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * 0.14;
-    }
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.14;
     rainSource = ctx.createBufferSource();
     rainSource.buffer = noiseBuffer;
     rainSource.loop = true;
@@ -430,24 +434,23 @@ const startRainyCafeStation = (ctx, masterNode) => {
     rainGain.gain.setValueAtTime(0.18, ctx.currentTime);
     rainSource.connect(filter);
     filter.connect(rainGain);
-    rainGain.connect(stationGain);
+    rainGain.connect(node);
     rainSource.start();
   } catch (e) {}
 
   const cafeChords = [
-    [207.65, 261.63, 311.13, 392.0],  // Abmaj7
-    [174.61, 207.65, 261.63, 311.13], // Fm7
-    [116.54, 174.61, 233.08, 277.18], // Bbm7
-    [155.56, 196.0, 233.08, 349.23],  // Eb9
+    [207.65, 261.63, 311.13, 392.0],
+    [174.61, 207.65, 261.63, 311.13],
+    [116.54, 174.61, 233.08, 277.18],
+    [155.56, 196.0, 233.08, 349.23],
   ];
   let chordIdx = 0;
   let beatStep = 0;
 
-  const beatInterval = setInterval(() => {
+  const timer = setInterval(() => {
     if (!ctx || ctx.state === 'closed') return;
     const now = ctx.currentTime;
     const isKick = beatStep % 4 === 0 || beatStep % 4 === 2;
-    const isSnare = beatStep % 4 === 1 || beatStep % 4 === 3;
 
     if (isKick) {
       const osc = ctx.createOscillator();
@@ -458,29 +461,9 @@ const startRainyCafeStation = (ctx, masterNode) => {
       gain.gain.setValueAtTime(0.09, now);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
       osc.connect(gain);
-      gain.connect(stationGain);
+      gain.connect(node);
       osc.start(now);
       osc.stop(now + 0.22);
-    }
-
-    if (isSnare) {
-      try {
-        const snareBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
-        const data = snareBuffer.getChannelData(0);
-        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.08;
-        const snareSource = ctx.createBufferSource();
-        snareSource.buffer = snareBuffer;
-        const snareFilter = ctx.createBiquadFilter();
-        snareFilter.type = 'highpass';
-        snareFilter.frequency.setValueAtTime(1200, now);
-        const snareGain = ctx.createGain();
-        snareGain.gain.setValueAtTime(0.06, now);
-        snareGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
-        snareSource.connect(snareFilter);
-        snareFilter.connect(snareGain);
-        snareGain.connect(stationGain);
-        snareSource.start(now);
-      } catch (e) {}
     }
 
     if (beatStep % 4 === 0) {
@@ -496,47 +479,28 @@ const startRainyCafeStation = (ctx, masterNode) => {
         gain.gain.linearRampToValueAtTime(0.055, chordNow + 0.14);
         gain.gain.exponentialRampToValueAtTime(0.0001, chordNow + 2.8);
         osc.connect(gain);
-        gain.connect(stationGain);
+        gain.connect(node);
         osc.start(chordNow);
         osc.stop(chordNow + 3.0);
       });
     }
-
     beatStep++;
   }, 833);
 
-  const clinkInterval = setInterval(() => {
-    if (!ctx || ctx.state === 'closed') return;
-    if (Math.random() > 0.5) {
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(2900 + Math.random() * 400, now);
-      gain.gain.setValueAtTime(0.025, now);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
-      osc.connect(gain);
-      gain.connect(stationGain);
-      osc.start(now);
-      osc.stop(now + 0.28);
-    }
-  }, 6000);
-
   return () => {
-    clearInterval(beatInterval);
-    clearInterval(clinkInterval);
+    clearInterval(timer);
     try {
       if (rainSource) { rainSource.stop(); rainSource.disconnect(); }
-      stationGain.disconnect();
+      node.disconnect();
     } catch (e) {}
   };
 };
 
-// --- TRẠM 5: KHÔNG GIAN VŨ TRỤ & SÓNG NÃO 432Hz ---
-const startDeepSpace432Station = (ctx, masterNode) => {
-  const stationGain = ctx.createGain();
-  stationGain.gain.setValueAtTime(1, ctx.currentTime);
-  stationGain.connect(masterNode);
+// --- ENGINE 5: DEEP SPACE 432Hz ---
+const startDeepSpaceEngine = (ctx, masterNode) => {
+  const node = ctx.createGain();
+  node.gain.setValueAtTime(1, ctx.currentTime);
+  node.connect(masterNode);
 
   let leftOsc = null;
   let rightOsc = null;
@@ -559,51 +523,25 @@ const startDeepSpace432Station = (ctx, masterNode) => {
     rightOsc.connect(rightGain);
     rightGain.connect(merger, 0, 1);
 
-    merger.connect(stationGain);
+    merger.connect(node);
     leftOsc.start();
     rightOsc.start();
-  } catch (e) {}
-
-  let subOsc = null;
-  try {
-    subOsc = ctx.createOscillator();
-    subOsc.type = 'sine';
-    subOsc.frequency.setValueAtTime(108, ctx.currentTime);
-    const subFilter = ctx.createBiquadFilter();
-    subFilter.type = 'lowpass';
-    subFilter.frequency.setValueAtTime(160, ctx.currentTime);
-    const subGain = ctx.createGain();
-    subGain.gain.setValueAtTime(0.065, ctx.currentTime);
-    subOsc.connect(subFilter);
-    subFilter.connect(subGain);
-    subGain.connect(stationGain);
-    subOsc.start();
   } catch (e) {}
 
   const bowlTimer = setInterval(() => {
     if (!ctx || ctx.state === 'closed') return;
     const now = ctx.currentTime;
     const osc = ctx.createOscillator();
-    const osc2 = ctx.createOscillator();
     const gain = ctx.createGain();
-
     osc.type = 'sine';
     osc.frequency.setValueAtTime(864, now);
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(868, now);
-
     gain.gain.setValueAtTime(0.001, now);
     gain.gain.linearRampToValueAtTime(0.04, now + 0.15);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 4.8);
-
     osc.connect(gain);
-    osc2.connect(gain);
-    gain.connect(stationGain);
-
+    gain.connect(node);
     osc.start(now);
-    osc2.start(now);
     osc.stop(now + 5.0);
-    osc2.stop(now + 5.0);
   }, 5200);
 
   return () => {
@@ -611,56 +549,167 @@ const startDeepSpace432Station = (ctx, masterNode) => {
     try {
       if (leftOsc) { leftOsc.stop(); leftOsc.disconnect(); }
       if (rightOsc) { rightOsc.stop(); rightOsc.disconnect(); }
-      if (subOsc) { subOsc.stop(); subOsc.disconnect(); }
-      stationGain.disconnect();
+      node.disconnect();
     } catch (e) {}
   };
 };
 
-const switchStation = (stationId) => {
-  if (cleanupCurrentStationFn) {
-    cleanupCurrentStationFn();
-    cleanupCurrentStationFn = null;
-  }
-  currentStationId = stationId;
-  if (!isRadioPlayingInternal || !radioAudioCtx) return;
+// --- ENGINE 6: MORNING ZEN HARP ---
+const startMorningZenEngine = (ctx, masterNode) => {
+  const node = ctx.createGain();
+  node.gain.setValueAtTime(1, ctx.currentTime);
+  node.connect(masterNode);
 
-  if (stationId === 'ocean_sunset') {
-    cleanupCurrentStationFn = startOceanGuitarStation(radioAudioCtx, masterGainNode);
-  } else if (stationId === 'pine_campfire') {
-    cleanupCurrentStationFn = startCampfireStation(radioAudioCtx, masterGainNode);
-  } else if (stationId === 'rainy_cafe') {
-    cleanupCurrentStationFn = startRainyCafeStation(radioAudioCtx, masterGainNode);
-  } else if (stationId === 'deep_space_432') {
-    cleanupCurrentStationFn = startDeepSpace432Station(radioAudioCtx, masterGainNode);
+  const harpNotes = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25];
+  let step = 0;
+  const timer = setInterval(() => {
+    if (!ctx || ctx.state === 'closed') return;
+    const now = ctx.currentTime;
+    const f = harpNotes[step % harpNotes.length];
+    step++;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(f, now);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.045, now + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+    osc.connect(gain);
+    gain.connect(node);
+    osc.start(now);
+    osc.stop(now + 2.3);
+  }, 1100);
+
+  return () => {
+    clearInterval(timer);
+    node.disconnect();
+  };
+};
+
+// --- ENGINE 7: AUTUMN CELLO ---
+const startAutumnCelloEngine = (ctx, masterNode) => {
+  const node = ctx.createGain();
+  node.gain.setValueAtTime(1, ctx.currentTime);
+  node.connect(masterNode);
+
+  const celloNotes = [130.81, 146.83, 164.81, 196.0, 220.0];
+  let step = 0;
+  const timer = setInterval(() => {
+    if (!ctx || ctx.state === 'closed') return;
+    const now = ctx.currentTime;
+    const f = celloNotes[step % celloNotes.length];
+    step++;
+
+    const osc = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(f, now);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(450, now);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.05, now + 0.4);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.4);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(node);
+    osc.start(now);
+    osc.stop(now + 3.6);
+  }, 3600);
+
+  return () => {
+    clearInterval(timer);
+    node.disconnect();
+  };
+};
+
+// --- ENGINE 8: ZEN TIBETAN BOWL ---
+const startZenCandleEngine = (ctx, masterNode) => {
+  const node = ctx.createGain();
+  node.gain.setValueAtTime(1, ctx.currentTime);
+  node.connect(masterNode);
+
+  const bowlNotes = [216, 432, 648];
+  let idx = 0;
+  const timer = setInterval(() => {
+    if (!ctx || ctx.state === 'closed') return;
+    const now = ctx.currentTime;
+    const baseF = bowlNotes[idx % bowlNotes.length];
+    idx++;
+
+    [1, 2.01].forEach((mult) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(baseF * mult, now);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.04, now + 0.2);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 5.0);
+      osc.connect(gain);
+      gain.connect(node);
+      osc.start(now);
+      osc.stop(now + 5.2);
+    });
+  }, 4400);
+
+  return () => {
+    clearInterval(timer);
+    node.disconnect();
+  };
+};
+
+const switchTrackEngine = (engineType) => {
+  if (cleanupCurrentEngineFn) {
+    cleanupCurrentEngineFn();
+    cleanupCurrentEngineFn = null;
+  }
+  const ctx = ensureAudioContext();
+  if (!isRadioPlayingInternal || !ctx || !masterGainNode) return;
+
+  if (engineType === 'ocean_sunset') {
+    cleanupCurrentEngineFn = startOceanGuitarEngine(ctx, masterGainNode);
+  } else if (engineType === 'pine_campfire') {
+    cleanupCurrentEngineFn = startCampfireEngine(ctx, masterGainNode);
+  } else if (engineType === 'rainy_cafe') {
+    cleanupCurrentEngineFn = startRainyCafeEngine(ctx, masterGainNode);
+  } else if (engineType === 'deep_space_432') {
+    cleanupCurrentEngineFn = startDeepSpaceEngine(ctx, masterGainNode);
+  } else if (engineType === 'morning_zen') {
+    cleanupCurrentEngineFn = startMorningZenEngine(ctx, masterGainNode);
+  } else if (engineType === 'autumn_cello') {
+    cleanupCurrentEngineFn = startAutumnCelloEngine(ctx, masterGainNode);
+  } else if (engineType === 'zen_candle') {
+    cleanupCurrentEngineFn = startZenCandleEngine(ctx, masterGainNode);
   } else {
-    cleanupCurrentStationFn = startLofiRainStation(radioAudioCtx, masterGainNode);
+    cleanupCurrentEngineFn = startLofiRainEngine(ctx, masterGainNode);
   }
 };
 
-const startRadioEngine = (stationId = 'lofi_rain', volume = 0.5) => {
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) return;
+const startRadioEngine = (engineType = 'lofi_rain', volume = 0.5) => {
+  const ctx = ensureAudioContext();
+  if (!ctx) return;
 
-  if (!radioAudioCtx || radioAudioCtx.state === 'closed') {
-    radioAudioCtx = new AudioContextClass();
+  if (!masterGainNode) {
+    masterGainNode = ctx.createGain();
+    masterGainNode.gain.setValueAtTime(volume, ctx.currentTime);
+    masterGainNode.connect(ctx.destination);
+  } else {
+    masterGainNode.gain.setValueAtTime(volume, ctx.currentTime);
   }
-  if (radioAudioCtx.state === 'suspended') {
-    radioAudioCtx.resume().catch(() => {});
-  }
-
-  masterGainNode = radioAudioCtx.createGain();
-  masterGainNode.gain.setValueAtTime(volume, radioAudioCtx.currentTime);
-  masterGainNode.connect(radioAudioCtx.destination);
 
   isRadioPlayingInternal = true;
-  switchStation(stationId);
+  switchTrackEngine(engineType);
 };
 
 const stopRadioEngine = () => {
-  if (cleanupCurrentStationFn) {
-    cleanupCurrentStationFn();
-    cleanupCurrentStationFn = null;
+  if (cleanupCurrentEngineFn) {
+    cleanupCurrentEngineFn();
+    cleanupCurrentEngineFn = null;
   }
   if (radioAudioCtx) {
     try {
@@ -668,6 +717,7 @@ const stopRadioEngine = () => {
     } catch (e) {}
     radioAudioCtx = null;
   }
+  masterGainNode = null;
   isRadioPlayingInternal = false;
 };
 
@@ -678,25 +728,43 @@ const setRadioEngineVolume = (vol) => {
 };
 
 const DEFAULT_THOUGHTS = [
-  '🌙 Dù hôm nay có mệt mỏi thế nào, bạn cũng đã làm rất tốt rồi! Nghỉ ngơi nhé.',
-  '☕ Bật nhạc lên, hít một hơi thật sâu, ngày mai sẽ dịu dàng hơn.',
-  '✨ Gửi một cái ôm ấm áp đến những bạn đang chạy deadline đêm muộn lúc này!',
-  '🌿 Đừng so sánh hành trình của mình với người khác. Mỗi bông hoa nở vào một mùa riêng.',
-  '🌧️ Ngồi nghe tiếng mưa lách tách, mọi muộn phiền ngoài kia tạm thời gác lại...',
-  '💡 Nhớ uống một ngụm nước ấm và vươn vai thư giãn mắt nhé!',
+  'Dù hôm nay có mệt mỏi thế nào, bạn cũng đã làm rất tốt rồi! Nghỉ ngơi nhé.',
+  'Bật nhạc lên, hít một hơi thật sâu, ngày mai sẽ dịu dàng hơn với bạn.',
+  'Gửi một cái ôm ấm áp đến những bạn đang chạy deadline đêm muộn lúc này!',
+  'Đừng so sánh hành trình của mình với người khác. Mỗi bông hoa nở vào một mùa riêng.',
+  'Ngồi nghe tiếng mưa lách tách, mọi muộn phiền ngoài kia tạm thời gác lại...',
+  'Nhớ uống một ngụm nước ấm và vươn vai thư giãn mắt nhé!',
 ];
 
 export const LateNightRadioModal = ({ isOpen, onClose }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const [isMiniMode, setIsMiniMode] = useState(false);
-  const [activeStationId, setActiveStationId] = useState(() => {
+  const [showPlaylistDrawer, setShowPlaylistDrawer] = useState(false);
+
+  // Chỉ số bài hát đang phát (0 -> 7)
+  const [trackIndex, setTrackIndex] = useState(() => {
     try {
-      return localStorage.getItem('freedom_radio_station') || 'lofi_rain';
+      const saved = localStorage.getItem('freedom_radio_track_idx');
+      if (saved !== null) {
+        const val = parseInt(saved, 10);
+        if (!isNaN(val) && val >= 0 && val < RADIO_TRACKS.length) return val;
+      }
+    } catch (e) {}
+    return 0;
+  });
+
+  const activeTrack = RADIO_TRACKS[trackIndex] || RADIO_TRACKS[0];
+
+  // Tính năng Voice đọc lời nhắn (Web Speech API)
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(() => {
+    try {
+      return localStorage.getItem('freedom_radio_voice_enabled') === 'true';
     } catch (e) {
-      return 'lofi_rain';
+      return true;
     }
   });
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const [thoughts, setThoughts] = useState(() => {
     try {
@@ -708,7 +776,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
   const [myThoughtInput, setMyThoughtInput] = useState('');
   const [activeThoughtIndex, setActiveThoughtIndex] = useState(0);
 
-  // Kéo thả di chuyển tự do cho Mini Pill
+  // Toạ độ & Kéo thả di chuyển tự do cho Mini Pill
   const [btnPos, setBtnPos] = useState(() => {
     const raw = getFabPos('radio');
     return resolveAntiCollision('radio', raw, true);
@@ -717,12 +785,8 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
   const dragStartRef = useRef({ mouseX: 0, mouseY: 0, btnX: 0, btnY: 0 });
   const hasMovedRef = useRef(false);
   const btnRef = useRef(null);
-  const activePointerIdRef = useRef(null);
 
-  const activeStation =
-    RADIO_STATIONS.find((s) => s.id === activeStationId) || RADIO_STATIONS[0];
-
-  // Tính số lượng bạn bè đang nghe dựa trên thời gian thực
+  // Tính số lượng người cùng nghe
   const getListenersCount = () => {
     const hour = new Date().getHours();
     if (hour >= 0 && hour <= 4) return 18 + hour * 3 + Math.floor(Math.sin(Date.now() / 10000) * 4);
@@ -732,13 +796,80 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
   };
   const [listenerCount, setListenerCount] = useState(getListenersCount());
 
+  // =========================================================================
+  // VOICE ĐỌC LỜI NHẮN ĐỘNG VIÊN (TTS WITH AUDIO DUCKING)
+  // =========================================================================
+  const speakCurrentThought = (textToRead) => {
+    if (!('speechSynthesis' in window)) return;
+
+    try {
+      window.speechSynthesis.cancel();
+    } catch (_) {}
+
+    const text = textToRead || thoughts[activeThoughtIndex] || DEFAULT_THOUGHTS[0];
+    const cleanText = text.replace(/^[✨🌙☕🌿🌧️💡\s]+/, '').trim();
+    if (!cleanText) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+
+    // Tìm giọng đọc tiếng Việt
+    const voices = window.speechSynthesis.getVoices();
+    const viVoice = voices.find((v) => v.lang === 'vi-VN' || v.lang.startsWith('vi') || v.name.toLowerCase().includes('vietnam'));
+    if (viVoice) {
+      utterance.voice = viVoice;
+    }
+    utterance.lang = 'vi-VN';
+    utterance.rate = 0.88; // Đọc chậm rãi, ấm áp, truyền cảm
+    utterance.pitch = 0.95;
+
+    // Audio Ducking: Khi phát thanh viên đọc, hạ nhẹ âm lượng nhạc xuống 30%
+    if (masterGainNode && radioAudioCtx) {
+      try {
+        masterGainNode.gain.setValueAtTime(volume * 0.28, radioAudioCtx.currentTime);
+      } catch (_) {}
+    }
+    setIsSpeaking(true);
+
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      // Đọc xong, trả lại âm lượng nhạc ban đầu
+      if (masterGainNode && radioAudioCtx) {
+        try {
+          masterGainNode.gain.setValueAtTime(volume, radioAudioCtx.currentTime);
+        } catch (_) {}
+      }
+    };
+
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      if (masterGainNode && radioAudioCtx) {
+        try {
+          masterGainNode.gain.setValueAtTime(volume, radioAudioCtx.currentTime);
+        } catch (_) {}
+      }
+    };
+
+    try {
+      window.speechSynthesis.speak(utterance);
+    } catch (_) {
+      setIsSpeaking(false);
+    }
+  };
+
+  // Tự động xoay tua lời nhắn mỗi 8s, nếu bật voice thì tự động đọc
   useEffect(() => {
     const timer = setInterval(() => {
       setListenerCount(getListenersCount());
-      setActiveThoughtIndex((prev) => (prev + 1) % thoughts.length);
-    }, 6000);
+      setActiveThoughtIndex((prev) => {
+        const nextIdx = (prev + 1) % thoughts.length;
+        if (isVoiceEnabled && isPlaying) {
+          setTimeout(() => speakCurrentThought(thoughts[nextIdx]), 600);
+        }
+        return nextIdx;
+      });
+    }, 8500);
     return () => clearInterval(timer);
-  }, [thoughts.length]);
+  }, [thoughts.length, isVoiceEnabled, isPlaying]);
 
   // Giữ mini pill trong màn hình khi thay đổi kích thước cửa sổ
   useEffect(() => {
@@ -754,7 +885,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Lắng nghe khi các nút khác (Chat, Write, Mascot, Pref, PWA) di chuyển để chống va chạm
+  // Chống va chạm với các nút khác
   useEffect(() => {
     const handleRecheckCollision = (e) => {
       if (e?.detail?.type === 'radio') return;
@@ -781,44 +912,44 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     if (isPlaying) {
       stopRadioEngine();
       setIsPlaying(false);
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
     } else {
-      startRadioEngine(activeStationId, volume);
+      startRadioEngine(activeTrack.engine, volume);
       setIsPlaying(true);
     }
   };
 
-  // Chọn kênh / trạm phát
-  const handleSelectStation = (stationId) => {
+  // Chọn bài hát bất kỳ từ danh sách
+  const handleSelectTrack = (index) => {
     playClickSound();
-    setActiveStationId(stationId);
+    setTrackIndex(index);
     try {
-      localStorage.setItem('freedom_radio_station', stationId);
-    } catch (e) {}
+      localStorage.setItem('freedom_radio_track_idx', String(index));
+    } catch (_) {}
 
+    const track = RADIO_TRACKS[index] || RADIO_TRACKS[0];
     if (isPlaying) {
-      switchStation(stationId);
+      switchTrackEngine(track.engine);
     } else {
-      startRadioEngine(stationId, volume);
+      startRadioEngine(track.engine, volume);
       setIsPlaying(true);
     }
   };
 
-  // Chuyển kênh tiếp theo
-  const handleNextStation = () => {
+  // Chuyển sang bài nhạc tiếp theo
+  const handleNextTrack = () => {
     playClickSound();
-    const currIndex = RADIO_STATIONS.findIndex((s) => s.id === activeStationId);
-    const nextIndex = (currIndex + 1) % RADIO_STATIONS.length;
-    const nextStation = RADIO_STATIONS[nextIndex];
-    handleSelectStation(nextStation.id);
+    const nextIdx = (trackIndex + 1) % RADIO_TRACKS.length;
+    handleSelectTrack(nextIdx);
   };
 
-  // Quay lại kênh trước
-  const handlePrevStation = () => {
+  // Quay lại bài nhạc trước đó
+  const handlePrevTrack = () => {
     playClickSound();
-    const currIndex = RADIO_STATIONS.findIndex((s) => s.id === activeStationId);
-    const prevIndex = (currIndex - 1 + RADIO_STATIONS.length) % RADIO_STATIONS.length;
-    const prevStation = RADIO_STATIONS[prevIndex];
-    handleSelectStation(prevStation.id);
+    const prevIdx = (trackIndex - 1 + RADIO_TRACKS.length) % RADIO_TRACKS.length;
+    handleSelectTrack(prevIdx);
   };
 
   const handleVolumeChange = (newVol) => {
@@ -831,34 +962,43 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     if (!myThoughtInput.trim()) return;
     playClickSound();
 
-    const newThought = `✨ ${myThoughtInput.trim()}`;
+    const newThought = myThoughtInput.trim();
     const updated = [newThought, ...thoughts.slice(0, 15)];
     setThoughts(updated);
     setActiveThoughtIndex(0);
     setMyThoughtInput('');
     try {
       localStorage.setItem('freedom_radio_thoughts', JSON.stringify(updated));
-    } catch (e) {}
+    } catch (_) {}
+
+    if (isVoiceEnabled && isPlaying) {
+      speakCurrentThought(newThought);
+    }
+  };
+
+  const handleToggleVoice = () => {
+    playClickSound();
+    setIsVoiceEnabled((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('freedom_radio_voice_enabled', String(next));
+      } catch (_) {}
+      if (!next && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      } else if (next && isPlaying) {
+        speakCurrentThought();
+      }
+      return next;
+    });
   };
 
   // =========================================================================
-  // XỬ LÝ KÉO THẢ POINTER EVENTS CHO MINI FLOATING PILL (KHÔNG DÍNH CHUỘT)
+  // XỬ LÝ KÉO THẢ CHUẨN XÁC TOÀN CẦU (WINDOW LISTENERS - DI CHUYỂN MƯỢT MÀ 100%)
   // =========================================================================
-  const handlePointerDown = (e) => {
-    if (e.target.closest('button')) return;
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-      activePointerIdRef.current = e.pointerId;
-    } catch (_) {}
-
+  const handleStartDrag = (clientX, clientY) => {
     dragStartRef.current = {
-      mouseX: e.clientX,
-      mouseY: e.clientY,
+      mouseX: clientX,
+      mouseY: clientY,
       btnX: btnPos.x,
       btnY: btnPos.y,
     };
@@ -866,67 +1006,100 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     setIsDragging(true);
   };
 
-  const handlePointerMove = (e) => {
-    if (!isDragging) return;
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('button')) return;
     e.preventDefault();
-
-    const dx = e.clientX - dragStartRef.current.mouseX;
-    const dy = e.clientY - dragStartRef.current.mouseY;
-
-    if (Math.hypot(dx, dy) > 4) {
-      hasMovedRef.current = true;
-    }
-
-    const nextX = dragStartRef.current.btnX + dx;
-    const nextY = dragStartRef.current.btnY + dy;
-    setBtnPos(ensureInBounds('radio', { x: nextX, y: nextY }));
+    handleStartDrag(e.clientX, e.clientY);
   };
 
-  const handlePointerUp = (e) => {
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      if (e.target.closest('button')) return;
+      handleStartDrag(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  useEffect(() => {
     if (!isDragging) return;
 
-    try {
-      if (activePointerIdRef.current !== null && e.currentTarget) {
-        e.currentTarget.releasePointerCapture(activePointerIdRef.current);
+    const handleMouseMove = (e) => {
+      const dx = e.clientX - dragStartRef.current.mouseX;
+      const dy = e.clientY - dragStartRef.current.mouseY;
+
+      if (Math.hypot(dx, dy) > 4) {
+        hasMovedRef.current = true;
       }
-    } catch (_) {}
-    activePointerIdRef.current = null;
-    setIsDragging(false);
 
-    if (hasMovedRef.current) {
-      setBtnPos((current) => {
-        const snapped = snapToNearestEdge('radio', current);
-        saveFabPos('radio', snapped);
-        return snapped;
-      });
-    }
-  };
+      const nextX = dragStartRef.current.btnX + dx;
+      const nextY = dragStartRef.current.btnY + dy;
+      setBtnPos(ensureInBounds('radio', { x: nextX, y: nextY }));
+    };
 
-  const handlePointerCancel = (e) => {
-    if (isDragging) {
-      handlePointerUp(e);
-    }
-  };
+    const handleTouchMove = (e) => {
+      if (e.touches.length === 1) {
+        const dx = e.touches[0].clientX - dragStartRef.current.mouseX;
+        const dy = e.touches[0].clientY - dragStartRef.current.mouseY;
 
-  const handlePillClick = () => {
+        if (Math.hypot(dx, dy) > 4) {
+          hasMovedRef.current = true;
+        }
+
+        const nextX = dragStartRef.current.btnX + dx;
+        const nextY = dragStartRef.current.btnY + dy;
+        setBtnPos(ensureInBounds('radio', { x: nextX, y: nextY }));
+      }
+    };
+
+    const handleEndDrag = () => {
+      setIsDragging(false);
+
+      if (hasMovedRef.current) {
+        setBtnPos((current) => {
+          const snapped = snapToNearestEdge('radio', current);
+          saveFabPos('radio', snapped);
+          return snapped;
+        });
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleEndDrag);
+    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('touchend', handleEndDrag);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleEndDrag);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleEndDrag);
+    };
+  }, [isDragging]);
+
+  const handlePillClick = (e) => {
     if (hasMovedRef.current) {
       hasMovedRef.current = false;
       return;
     }
+    if (e.target.closest('button')) return;
     playClickSound();
     setIsMiniMode(false);
     window.dispatchEvent(new CustomEvent('freedom_open_radio'));
   };
 
-  const handleCloseMini = () => {
+  const handleCloseMini = (e) => {
+    e.stopPropagation();
     playClickSound();
     stopRadioEngine();
     setIsPlaying(false);
     setIsMiniMode(false);
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
   };
 
   // =========================================================================
-  // GIAO DIỆN MINI FLOATING PILL (KHI THU NHỎ & ĐANG PHÁT NHẠC)
+  // GIAO DIỆN MINI FLOATING PILL (KHI THU NHỎ & ĐANG PHÁT)
   // =========================================================================
   if (isMiniMode && isPlaying) {
     return (
@@ -939,7 +1112,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
           top: `${btnPos.y}px`,
           right: 'auto',
           bottom: 'auto',
-          zIndex: isDragging ? 99994 : 99980,
+          zIndex: isDragging ? 99995 : 99980,
           cursor: isDragging ? 'grabbing' : 'grab',
           transition: isDragging
             ? 'none'
@@ -947,61 +1120,59 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
           touchAction: 'none',
           userSelect: 'none',
           WebkitUserSelect: 'none',
-          '--station-accent': activeStation.themeColor,
-          '--station-glow': activeStation.glowColor,
+          '--station-accent': activeTrack.themeColor,
+          '--station-glow': activeTrack.glowColor,
         }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerCancel}
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
         onClick={handlePillClick}
-        title={`${activeStation.name} • Giữ và kéo để di chuyển tự do khắp màn hình, hoặc bấm để mở rộng trạm Radio!`}
+        title={`[${trackIndex + 1}/${RADIO_TRACKS.length}] ${activeTrack.title} • Giữ và kéo để di chuyển tự do khắp màn hình!`}
         role="button"
         tabIndex={0}
       >
         {/* Nút cầm kéo tay cầm Drag Handle */}
         <span className="mini-radio-drag-handle" title="Giữ và kéo để di chuyển vị trí">
-          <i className="fa-solid fa-grip-vertical" style={{ fontSize: '0.78rem', opacity: 0.65 }}></i>
+          <i className="fa-solid fa-grip-vertical" style={{ fontSize: '0.78rem', opacity: 0.7 }}></i>
         </span>
 
-        {/* Icon đài phát */}
+        {/* Icon & Số thứ tự bài */}
         <span
           className="mini-radio-station-icon"
           style={{
-            fontSize: '1.15rem',
+            fontSize: '1.1rem',
             animation: isPlaying ? 'pulseDot 1.4s infinite alternate' : 'none',
             display: 'inline-flex',
             alignItems: 'center',
           }}
         >
-          {activeStation.icon}
+          {activeTrack.icon}
         </span>
 
-        {/* Tên trạm */}
+        {/* Tên bài hát & số thứ tự */}
         <span
           className="mini-radio-title-text"
-          style={{ whiteSpace: 'nowrap', fontWeight: 800, fontSize: '0.82rem', color: '#f8fafc' }}
+          style={{ whiteSpace: 'nowrap', fontWeight: 800, fontSize: '0.8rem', color: '#f8fafc', maxWidth: '145px', overflow: 'hidden', textOverflow: 'ellipsis' }}
         >
-          {activeStation.shortName || activeStation.name}
+          {trackIndex + 1}. {activeTrack.title}
         </span>
 
         {/* Dải sóng nhạc mini */}
-        <div style={{ display: 'flex', gap: '2px', alignItems: 'flex-end', height: '14px', margin: '0 3px' }}>
-          <span style={{ width: '3px', height: '12px', background: activeStation.themeColor, borderRadius: '2px', animation: 'pulseDot 0.8s infinite alternate' }} />
+        <div style={{ display: 'flex', gap: '2px', alignItems: 'flex-end', height: '14px', margin: '0 2px' }}>
+          <span style={{ width: '3px', height: '12px', background: activeTrack.themeColor, borderRadius: '2px', animation: 'pulseDot 0.8s infinite alternate' }} />
           <span style={{ width: '3px', height: '7px', background: '#e0e7ff', borderRadius: '2px', animation: 'pulseDot 1.1s infinite alternate' }} />
-          <span style={{ width: '3px', height: '14px', background: activeStation.themeColor, borderRadius: '2px', animation: 'pulseDot 0.6s infinite alternate' }} />
+          <span style={{ width: '3px', height: '14px', background: activeTrack.themeColor, borderRadius: '2px', animation: 'pulseDot 0.6s infinite alternate' }} />
         </div>
 
-        {/* Nút đổi kênh nhanh tiếp theo (Next Station) */}
+        {/* Nút đổi bài tiếp theo (Next Track) */}
         <button
           type="button"
           className="mini-radio-action-btn"
           onClick={(e) => {
             e.stopPropagation();
-            handleNextStation();
+            handleNextTrack();
           }}
-          title="Chuyển sang kênh Radio tiếp theo"
-          aria-label="Đổi kênh tiếp theo"
+          title="Chuyển sang bài nhạc tiếp theo"
+          aria-label="Bài tiếp theo"
         >
           ⏭️
         </button>
@@ -1020,14 +1191,11 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
           {isPlaying ? '⏸' : '▶️'}
         </button>
 
-        {/* Nút Đóng / Ẩn Mini Player */}
+        {/* Nút Đóng / Tắt Mini Player */}
         <button
           type="button"
           className="mini-radio-action-btn mini-radio-close-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleCloseMini();
-          }}
+          onClick={handleCloseMini}
           title="Tắt trạm Radio"
           aria-label="Đóng"
         >
@@ -1068,11 +1236,11 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
         className="late-night-radio-card"
         style={{
           width: '100%',
-          maxWidth: '580px',
+          maxWidth: '600px',
           background: 'linear-gradient(160deg, #0b0f19 0%, #1a1742 60%, #090d16 100%)',
-          border: `1.5px solid ${activeStation.themeColor}55`,
+          border: `1.5px solid ${activeTrack.themeColor}55`,
           borderRadius: '28px',
-          boxShadow: `0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px ${activeStation.glowColor}`,
+          boxShadow: `0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px ${activeTrack.glowColor}`,
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -1084,12 +1252,12 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
         {/* Top Header */}
         <div
           style={{
-            padding: '18px 24px',
+            padding: '16px 22px',
             borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'rgba(15, 23, 42, 0.6)',
+            background: 'rgba(15, 23, 42, 0.65)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1099,9 +1267,9 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                 width: '40px',
                 height: '40px',
                 fontSize: '1.15rem',
-                background: `${activeStation.themeColor}22`,
-                border: `1.5px solid ${activeStation.themeColor}`,
-                color: activeStation.themeColor,
+                background: `${activeTrack.themeColor}22`,
+                border: `1.5px solid ${activeTrack.themeColor}`,
+                color: activeTrack.themeColor,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1111,10 +1279,10 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
               <i className="fa-solid fa-radio"></i>
             </span>
             <div>
-              <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#e0e7ff' }}>
+              <h2 style={{ margin: 0, fontSize: '1.18rem', fontWeight: 800, color: '#e0e7ff' }}>
                 Trạm Radio Đêm Muộn 24/7
               </h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#34d399' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: '#34d399' }}>
                 <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34d399', boxShadow: '0 0 6px #34d399' }} />
                 <span>
                   Đang cùng thức: <strong>{listenerCount} người bạn</strong>
@@ -1124,6 +1292,30 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Nút Bật/Tắt Voice Đọc Tâm Sự */}
+            <button
+              type="button"
+              onClick={handleToggleVoice}
+              title={isVoiceEnabled ? 'Đang BẬT giọng đọc phát thanh viên (Bấm để tắt)' : 'Đang TẮT giọng đọc (Bấm để bật)'}
+              style={{
+                background: isVoiceEnabled ? `${activeTrack.themeColor}25` : 'rgba(255, 255, 255, 0.08)',
+                border: `1px solid ${isVoiceEnabled ? activeTrack.themeColor : 'rgba(255, 255, 255, 0.15)'}`,
+                borderRadius: '10px',
+                color: isVoiceEnabled ? activeTrack.themeColor : '#cbd5e1',
+                padding: '6px 10px',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                transition: 'all 0.2s',
+              }}
+            >
+              <span>{isVoiceEnabled ? '🎙️ Giọng đọc: BẬT' : '🔇 Giọng đọc: TẮT'}</span>
+            </button>
+
+            {/* Nút Thu Nhỏ */}
             {isPlaying && (
               <button
                 type="button"
@@ -1138,19 +1330,21 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                   border: '1px solid rgba(255, 255, 255, 0.15)',
                   borderRadius: '10px',
                   color: '#cbd5e1',
-                  padding: '6px 12px',
-                  fontSize: '0.78rem',
+                  padding: '6px 11px',
+                  fontSize: '0.76rem',
                   fontWeight: 700,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
+                  gap: '5px',
                   transition: 'all 0.2s',
                 }}
               >
                 <i className="fa-regular fa-window-minimize"></i> Thu Nhỏ
               </button>
             )}
+
+            {/* Nút Đóng Modal */}
             <button
               type="button"
               onClick={() => {
@@ -1177,35 +1371,37 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Thanh Chọn Kênh Radio Đa Dạng (5 Kênh Chữa Lành) */}
+        {/* Thanh Lướt Nhanh 8 Bài Nhạc Chữa Lành */}
         <div className="radio-stations-nav">
-          {RADIO_STATIONS.map((station) => {
-            const isActive = station.id === activeStationId;
+          {RADIO_TRACKS.map((track, idx) => {
+            const isActive = idx === trackIndex;
             return (
               <button
-                key={station.id}
+                key={track.id}
                 type="button"
                 className={`radio-station-chip ${isActive ? 'is-active' : ''}`}
                 style={{
-                  '--station-color': station.themeColor,
-                  '--station-glow': station.glowColor,
-                  '--station-bg': `${station.themeColor}25`,
+                  '--station-color': track.themeColor,
+                  '--station-glow': track.glowColor,
+                  '--station-bg': `${track.themeColor}25`,
                 }}
-                onClick={() => handleSelectStation(station.id)}
+                onClick={() => handleSelectTrack(idx)}
               >
-                <span>{station.icon}</span>
-                <span>{station.shortName}</span>
+                <span>{track.icon}</span>
+                <span>
+                  {idx + 1}. {track.title}
+                </span>
                 <span
                   style={{
                     fontSize: '0.62rem',
                     padding: '1px 5px',
                     borderRadius: '4px',
-                    background: isActive ? `${station.themeColor}` : 'rgba(255, 255, 255, 0.1)',
+                    background: isActive ? track.themeColor : 'rgba(255, 255, 255, 0.1)',
                     color: isActive ? '#000' : '#cbd5e1',
                     fontWeight: 900,
                   }}
                 >
-                  {station.badge}
+                  {track.genre}
                 </span>
               </button>
             );
@@ -1213,30 +1409,30 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
         </div>
 
         {/* Khung Trình Phát Trung Tâm & DJ Controls */}
-        <div style={{ padding: '24px 24px 20px', textAlign: 'center', position: 'relative' }}>
-          {/* Cụm điều khiển: Kênh trước - Loa chính - Kênh sau */}
+        <div style={{ padding: '22px 24px 18px', textAlign: 'center', position: 'relative' }}>
+          {/* Cụm điều khiển: Bài trước - Loa chính - Bài sau */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '24px',
-              margin: '0 auto 16px',
+              margin: '0 auto 14px',
             }}
           >
-            {/* Nút Kênh Trước */}
+            {/* Nút Bài Trước (Previous Track) */}
             <button
               type="button"
-              onClick={handlePrevStation}
-              title="Kênh trước (Previous Station)"
+              onClick={handlePrevTrack}
+              title="Bài trước đó (Previous Track)"
               style={{
-                width: '42px',
-                height: '42px',
+                width: '44px',
+                height: '44px',
                 borderRadius: '50%',
                 background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
+                border: '1.5px solid rgba(255, 255, 255, 0.18)',
                 color: '#e2e8f0',
-                fontSize: '1.1rem',
+                fontSize: '1.15rem',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -1250,14 +1446,14 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
             {/* Cụm Loa Chính Phát Nhạc */}
             <div
               style={{
-                width: '128px',
-                height: '128px',
+                width: '124px',
+                height: '124px',
                 borderRadius: '50%',
                 background: isPlaying
-                  ? `radial-gradient(circle, ${activeStation.themeColor}dd 0%, #1e1b4b 60%, #0f172a 100%)`
+                  ? `radial-gradient(circle, ${activeTrack.themeColor}dd 0%, #1e1b4b 60%, #0f172a 100%)`
                   : 'radial-gradient(circle, #334155 0%, #1e293b 100%)',
-                border: isPlaying ? `3.5px solid ${activeStation.themeColor}` : '3.5px solid #475569',
-                boxShadow: isPlaying ? `0 0 35px ${activeStation.glowColor}` : 'none',
+                border: isPlaying ? `3.5px solid ${activeTrack.themeColor}` : '3.5px solid #475569',
+                boxShadow: isPlaying ? `0 0 35px ${activeTrack.glowColor}` : 'none',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1265,24 +1461,24 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                 transition: 'all 0.3s ease',
               }}
               onClick={handleTogglePlay}
-              title={isPlaying ? 'Bấm để tạm dừng' : 'Bấm để phát nhạc'}
+              title={isPlaying ? 'Bấm để tạm dừng nhạc' : 'Bấm để phát nhạc'}
             >
               <span style={{ fontSize: '2.5rem' }}>{isPlaying ? '⏸' : '▶️'}</span>
             </div>
 
-            {/* Nút Kênh Sau */}
+            {/* Nút Bài Kế Tiếp (Next Track) */}
             <button
               type="button"
-              onClick={handleNextStation}
-              title="Kênh tiếp theo (Next Station)"
+              onClick={handleNextTrack}
+              title="Bài kế tiếp (Next Track)"
               style={{
-                width: '42px',
-                height: '42px',
+                width: '44px',
+                height: '44px',
                 borderRadius: '50%',
                 background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
+                border: '1.5px solid rgba(255, 255, 255, 0.18)',
                 color: '#e2e8f0',
-                fontSize: '1.1rem',
+                fontSize: '1.15rem',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -1294,26 +1490,41 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
             </button>
           </div>
 
-          <h3 style={{ margin: '0 0 6px', fontSize: '1.25rem', color: '#f1f5f9', fontWeight: 800 }}>
-            {activeStation.icon} {activeStation.name}
+          {/* Thông tin bài hát hiện tại */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '4px' }}>
+            <span
+              style={{
+                fontSize: '0.72rem',
+                background: `${activeTrack.themeColor}33`,
+                color: activeTrack.themeColor,
+                border: `1px solid ${activeTrack.themeColor}`,
+                padding: '2px 8px',
+                borderRadius: '999px',
+                fontWeight: 900,
+              }}
+            >
+              BÀI {trackIndex + 1}/{RADIO_TRACKS.length} • {activeTrack.genre}
+            </span>
+            <span style={{ fontSize: '0.76rem', color: '#94a3b8' }}>• {activeTrack.artist}</span>
+          </div>
+
+          <h3 style={{ margin: '0 0 4px', fontSize: '1.25rem', color: '#f1f5f9', fontWeight: 800 }}>
+            {activeTrack.icon} {activeTrack.title}
           </h3>
-          <p style={{ margin: '0 0 6px', fontSize: '0.84rem', color: activeStation.themeColor, fontWeight: 600 }}>
-            {activeStation.tagline}
-          </p>
-          <p style={{ margin: '0 0 16px', fontSize: '0.78rem', color: '#94a3b8' }}>
-            {activeStation.subDesc}
+          <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: activeTrack.themeColor, fontWeight: 600 }}>
+            {activeTrack.tagline}
           </p>
 
-          {/* Dải sóng âm thanh 16 cột đổi màu theo trạm */}
+          {/* Dải sóng âm thanh 16 cột đổi màu theo bài hát */}
           {isPlaying && (
             <div
               style={{
                 display: 'flex',
                 justifyContent: 'center',
                 gap: '4px',
-                height: '28px',
+                height: '26px',
                 alignItems: 'flex-end',
-                marginBottom: '16px',
+                marginBottom: '14px',
               }}
             >
               {[14, 24, 18, 28, 20, 10, 26, 16, 28, 22, 12, 26, 18, 24, 14, 20].map((h, i) => (
@@ -1322,7 +1533,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                   style={{
                     width: '4px',
                     height: `${h}px`,
-                    background: `linear-gradient(to top, ${activeStation.themeColor}, #ffffff)`,
+                    background: `linear-gradient(to top, ${activeTrack.themeColor}, #ffffff)`,
                     borderRadius: '3px',
                     animation: `pulseDot ${0.5 + (i % 6) * 0.18}s infinite alternate`,
                   }}
@@ -1331,18 +1542,18 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {/* Thanh Âm Lượng */}
+          {/* Thanh Âm Lượng & Nút Bật Drawer Danh Sách Bài */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '12px',
-              maxWidth: '300px',
+              maxWidth: '360px',
               margin: '0 auto',
             }}
           >
-            <span style={{ fontSize: '0.9rem' }}>🔈</span>
+            <span style={{ fontSize: '0.88rem' }}>🔈</span>
             <input
               type="range"
               min="0"
@@ -1350,48 +1561,144 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
               step="0.05"
               value={volume}
               onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-              style={{ flex: 1, accentColor: activeStation.themeColor, cursor: 'pointer' }}
+              style={{ flex: 1, accentColor: activeTrack.themeColor, cursor: 'pointer' }}
             />
-            <span style={{ fontSize: '0.9rem' }}>🔊</span>
+            <span style={{ fontSize: '0.88rem' }}>🔊</span>
+
+            <button
+              type="button"
+              onClick={() => setShowPlaylistDrawer((prev) => !prev)}
+              title="Xem danh sách bài hát"
+              style={{
+                background: showPlaylistDrawer ? activeTrack.themeColor : 'rgba(255, 255, 255, 0.08)',
+                color: showPlaylistDrawer ? '#000' : '#cbd5e1',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '8px',
+                padding: '4px 8px',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              📋 Danh sách ({RADIO_TRACKS.length})
+            </button>
           </div>
+
+          {/* Hộp danh sách 8 bài hát dạng thả xuống (Playlist Drawer) */}
+          {showPlaylistDrawer && (
+            <div
+              style={{
+                marginTop: '12px',
+                background: 'rgba(15, 23, 42, 0.9)',
+                borderRadius: '14px',
+                border: `1px solid ${activeTrack.themeColor}44`,
+                padding: '10px',
+                maxHeight: '170px',
+                overflowY: 'auto',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gap: '6px',
+                animation: 'fadeIn 0.2s ease',
+              }}
+            >
+              {RADIO_TRACKS.map((t, i) => {
+                const isCur = i === trackIndex;
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => handleSelectTrack(i)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '7px 10px',
+                      borderRadius: '8px',
+                      background: isCur ? `${t.themeColor}25` : 'rgba(255, 255, 255, 0.04)',
+                      border: `1px solid ${isCur ? t.themeColor : 'transparent'}`,
+                      cursor: 'pointer',
+                      fontSize: '0.78rem',
+                      color: isCur ? '#fff' : '#cbd5e1',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>{t.icon}</span>
+                      <strong style={{ color: isCur ? t.themeColor : 'inherit' }}>
+                        {i + 1}. {t.title}
+                      </strong>
+                    </div>
+                    {isCur && <span style={{ color: t.themeColor, fontSize: '0.72rem' }}>Đang phát ılı</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Dải Lời Nhắn Vô Danh (Live Anonymous Thoughts) */}
+        {/* Dải Lời Nhắn Vô Danh & Voice Đọc Tâm Sự */}
         <div
           style={{
             background: 'rgba(0, 0, 0, 0.35)',
             borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-            padding: '16px 24px',
+            padding: '16px 22px',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: activeStation.themeColor }}>
-              💬 LỜI NHẮN ĐỘNG VIÊN VÔ DANH
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: activeTrack.themeColor, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>💬 LỜI NHẮN ĐỘNG VIÊN VÔ DANH</span>
+              {isSpeaking && (
+                <span style={{ fontSize: '0.7rem', color: '#facc15', animation: 'pulseDot 0.8s infinite alternate' }}>
+                  (🎙️ Đang đọc tâm sự...)
+                </span>
+              )}
             </span>
-            <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Tự động đổi mỗi 6s</span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => speakCurrentThought()}
+                title="Nghe phát thanh viên đọc lời nhắn này"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '6px',
+                  color: '#e2e8f0',
+                  padding: '2px 8px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                🔊 Nghe đọc
+              </button>
+              <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Đổi mỗi 8s</span>
+            </div>
           </div>
 
           <div
             style={{
-              padding: '12px 16px',
+              padding: '11px 16px',
               borderRadius: '12px',
               background: 'rgba(255, 255, 255, 0.04)',
-              border: `1px solid ${activeStation.themeColor}33`,
+              border: `1px solid ${activeTrack.themeColor}33`,
               color: '#e0e7ff',
-              fontSize: '0.88rem',
+              fontSize: '0.86rem',
               lineHeight: '1.5',
               fontStyle: 'italic',
               minHeight: '44px',
               display: 'flex',
               alignItems: 'center',
-              animation: 'fadeIn 0.4s ease',
+              animation: 'fadeIn 0.35s ease',
             }}
           >
             {thoughts[activeThoughtIndex] || DEFAULT_THOUGHTS[0]}
           </div>
 
           {/* Ô Gửi Lời Nhắn Vô Danh */}
-          <form onSubmit={handleSendThought} style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+          <form onSubmit={handleSendThought} style={{ marginTop: '10px', display: 'flex', gap: '8px' }}>
             <input
               type="text"
               placeholder="Gửi một lời chúc ấm áp cho những người cùng nghe..."
@@ -1400,12 +1707,12 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
               maxLength={120}
               style={{
                 flex: 1,
-                padding: '10px 14px',
+                padding: '9px 14px',
                 borderRadius: '10px',
                 background: 'rgba(255, 255, 255, 0.06)',
                 border: '1px solid rgba(255, 255, 255, 0.15)',
                 color: '#fff',
-                fontSize: '0.85rem',
+                fontSize: '0.84rem',
                 outline: 'none',
               }}
             />
@@ -1413,13 +1720,13 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
               type="submit"
               disabled={!myThoughtInput.trim()}
               style={{
-                padding: '10px 18px',
+                padding: '9px 16px',
                 borderRadius: '10px',
-                background: myThoughtInput.trim() ? activeStation.themeColor : 'rgba(255, 255, 255, 0.1)',
+                background: myThoughtInput.trim() ? activeTrack.themeColor : 'rgba(255, 255, 255, 0.1)',
                 border: 'none',
                 color: myThoughtInput.trim() ? '#000' : '#fff',
                 fontWeight: 800,
-                fontSize: '0.84rem',
+                fontSize: '0.82rem',
                 cursor: myThoughtInput.trim() ? 'pointer' : 'default',
                 transition: 'all 0.2s ease',
               }}

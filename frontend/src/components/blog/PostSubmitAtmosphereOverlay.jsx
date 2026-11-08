@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Tank3DCanvas } from '../common/Tank3DCanvas';
+import { Soldier3DCanvas } from '../common/Soldier3DCanvas';
 import { SoldiersParade29 } from '../common/SoldiersParade29';
 import { playClickSound, playTank304TransitionSound, playFestiveEventSound, getAudioContext } from '../../utils/soundEffects';
 
@@ -293,8 +294,13 @@ export const PostSubmitAtmosphereOverlay = ({
             <div className="peace-doves">🕊️ 🕊️ 🕊️</div>
           </div>
 
-          {/* Đoàn quân tiêu binh giương cao cờ Tổ quốc & cờ Quyết Thắng duyệt binh qua màn hình */}
-          <SoldiersParade29 style={{ bottom: '8%' }} />
+          {/* Mô hình Chiến Sĩ QĐNDVN 3D giương cờ Quyết Thắng duyệt binh lướt qua màn hình */}
+          <Soldier3DCanvas
+            mode="parade"
+            width="100%"
+            height="100%"
+            style={{ position: 'absolute', inset: 0, zIndex: 8 }}
+          />
 
           <div className="submit-fx-center-banner banner-29">
             <span className="banner-icon-star">🇻🇳</span>
