@@ -761,9 +761,29 @@ export const stopWeatherAmbient = () => {
 };
 
 /**
+ * Tắt âm hưởng giai điệu sự kiện/mùa
+ */
+export function stopEventAmbient() {
+  if (activeEventSources && activeEventSources.length > 0) {
+    activeEventSources.forEach((src) => {
+      try {
+        if (typeof src.stop === 'function') src.stop();
+        if (typeof src.disconnect === 'function') src.disconnect();
+      } catch (e) {}
+    });
+    activeEventSources = [];
+  }
+  if (eventMasterGain && audioCtx) {
+    eventMasterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+  }
+  isEventSoundActive = false;
+  notifyStateChange();
+}
+
+/**
  * Bật/chuyển đổi Âm Hưởng Ngân Nga (theo Mùa hoặc theo Sự Kiện Lễ Hội)
  */
-export const startEventAmbient = (targetId = 'default') => {
+export function startEventAmbient(targetId = 'default') {
   initAudioGraph();
   const ctx = getAudioContext();
   if (!ctx) return;
@@ -817,12 +837,12 @@ export const startEventAmbient = (targetId = 'default') => {
   }
 
   notifyStateChange();
-};
+}
 
 /**
  * Chuyển đổi mùa giai điệu âm hưởng (Spring, Summer, Autumn, Winter)
  */
-export const setMelodicSeason = (seasonId = 'winter') => {
+export function setMelodicSeason(seasonId = 'winter') {
   if (['spring', 'summer', 'autumn', 'winter'].includes(seasonId)) {
     currentMelodicSeasonId = seasonId;
     if (isEventSoundActive) {
@@ -831,24 +851,7 @@ export const setMelodicSeason = (seasonId = 'winter') => {
       notifyStateChange();
     }
   }
-};
-
-export const stopEventAmbient = () => {
-  if (activeEventSources && activeEventSources.length > 0) {
-    activeEventSources.forEach((src) => {
-      try {
-        if (typeof src.stop === 'function') src.stop();
-        if (typeof src.disconnect === 'function') src.disconnect();
-      } catch (e) {}
-    });
-    activeEventSources = [];
-  }
-  if (eventMasterGain && audioCtx) {
-    eventMasterGain.gain.setValueAtTime(0, audioCtx.currentTime);
-  }
-  isEventSoundActive = false;
-  notifyStateChange();
-};
+}
 
 export const startMelodicAmbient = (...args) => startEventAmbient(...args);
 export const stopMelodicAmbient = (...args) => stopEventAmbient(...args);

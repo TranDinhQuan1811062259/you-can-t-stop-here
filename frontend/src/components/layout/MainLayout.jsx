@@ -20,6 +20,11 @@ import { FloatingFestiveMascot } from '../common/FloatingFestiveMascot';
 import { PageTransitionWrapper } from '../common/PageTransitionWrapper';
 import { PwaInstallPrompt } from '../common/PwaInstallPrompt';
 import {
+  isAsmrKeyboardEnabled,
+  setAsmrKeyboardEnabled,
+  triggerAsmrKeySound,
+} from '../../utils/keyboardSoundEngine';
+import {
   getFabPos,
   saveFabPos,
   resolveAntiCollision,
@@ -38,6 +43,7 @@ export const MainLayout = () => {
   const [currentThemeMode, setCurrentThemeMode] = useState(() => getActiveTheme());
   const [themeSchedule, setThemeSchedule] = useState(() => getThemeSchedule());
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
+  const [asmrOn, setAsmrOn] = useState(() => isAsmrKeyboardEnabled());
   const [activeSeason, setActiveSeasonState] = useState(() => getActiveSeason());
   const [isAiPlayerActive, setIsAiPlayerActive] = useState(false);
   const [isPrefCollapsed, setIsPrefCollapsed] = useState(() => {
@@ -214,6 +220,9 @@ export const MainLayout = () => {
     const handleScheduleChange = (e) => {
       setThemeSchedule(e.detail || getThemeSchedule());
     };
+    const handleAsmrChange = (e) => {
+      setAsmrOn(e.detail?.enabled ?? isAsmrKeyboardEnabled());
+    };
     const handleAudioState = (e) => {
       const state = e.detail?.state;
       setIsAiPlayerActive(state === 'playing' || state === 'paused');
@@ -225,6 +234,7 @@ export const MainLayout = () => {
     window.addEventListener('freedom_theme_changed', handleThemeChange);
     window.addEventListener('freedom_season_changed', handleSeasonChange);
     window.addEventListener('freedom_theme_schedule_changed', handleScheduleChange);
+    window.addEventListener('freedom_asmr_state_changed', handleAsmrChange);
     window.addEventListener('freedom_ai_audio_state_change', handleAudioState);
     window.addEventListener('freedom_ai_player_visibility', handleAudioVisibility);
 
@@ -245,6 +255,7 @@ export const MainLayout = () => {
       window.removeEventListener('freedom_theme_changed', handleThemeChange);
       window.removeEventListener('freedom_season_changed', handleSeasonChange);
       window.removeEventListener('freedom_theme_schedule_changed', handleScheduleChange);
+      window.removeEventListener('freedom_asmr_state_changed', handleAsmrChange);
       window.removeEventListener('freedom_ai_audio_state_change', handleAudioState);
       window.removeEventListener('freedom_ai_player_visibility', handleAudioVisibility);
       window.removeEventListener('online', handleOnline);
@@ -358,7 +369,9 @@ export const MainLayout = () => {
             onPointerCancel={handlePointerCancel}
             title={`Kéo thả để di dời khắp màn hình • Bấm để mở rộng Cài đặt Ngày/Đêm & Âm thanh (${currentThemeMode === 'light' ? 'Chế độ Ngày' : 'Chế độ Đêm'})`}
           >
-            <span className="bubble-icon">{currentThemeMode === 'light' ? '☀️' : '🌙'}</span>
+            <span className="bubble-icon">
+              <i className={`fa-solid ${currentThemeMode === 'light' ? 'fa-sun' : 'fa-moon'}`}></i>
+            </span>
           </button>
         ) : (
           <>
@@ -374,7 +387,12 @@ export const MainLayout = () => {
                   : 'Đang ở Chế độ Đêm (Màu tối dịu mắt). Bấm để chuyển sang Chế độ Ngày ☀️'
               }
             >
-              <span className="pref-icon">{currentThemeMode === 'light' ? '☀️' : '🌙'}</span>
+              <span className="pref-icon">
+                <i
+                  className={`fa-solid ${currentThemeMode === 'light' ? 'fa-sun' : 'fa-moon'}`}
+                  style={{ color: currentThemeMode === 'light' ? 'var(--pastel-amber)' : 'var(--pastel-rose)' }}
+                ></i>
+              </span>
               <span className="pref-label">
                 {currentThemeMode === 'light' ? 'Chế Độ Ngày' : 'Chế Độ Đêm'}
               </span>
@@ -394,7 +412,9 @@ export const MainLayout = () => {
                   : 'Đang chỉnh thủ công'
               })`}
             >
-              <span className="pref-icon">⏰</span>
+              <span className="pref-icon">
+                <i className="fa-solid fa-clock" style={{ color: 'var(--pastel-amber)' }}></i>
+              </span>
               <span className="pref-label">Hẹn Giờ</span>
               {themeSchedule.mode === 'auto' && (
                 <span className="pref-badge auto-active">
@@ -410,8 +430,34 @@ export const MainLayout = () => {
               onClick={handleToggleSound}
               title={soundOn ? 'Âm thanh gõ & tương tác: ĐANG BẬT. Bấm để tắt.' : 'Âm thanh: ĐANG TẮT. Bấm để bật.'}
             >
-              <span className="pref-icon">{soundOn ? '🔊' : '🔇'}</span>
+              <span className="pref-icon">
+                <i
+                  className={`fa-solid ${soundOn ? 'fa-volume-high' : 'fa-volume-xmark'}`}
+                  style={{ color: soundOn ? 'var(--pastel-sage)' : 'var(--text-faint)' }}
+                ></i>
+              </span>
               <span className="pref-label">{soundOn ? 'Âm Thanh' : 'Tắt Tiếng'}</span>
+            </button>
+
+            {/* Nút ASMR Phím Cơ */}
+            <button
+              type="button"
+              className={`quick-pref-btn asmr-mode-toggle ${asmrOn ? 'sound-on' : 'sound-off'}`}
+              onClick={() => {
+                const next = !asmrOn;
+                setAsmrOn(next);
+                setAsmrKeyboardEnabled(next);
+                if (next) triggerAsmrKeySound({ key: 'Enter' });
+              }}
+              title={asmrOn ? 'ASMR Phím cơ: ĐANG BẬT. Bấm để tắt.' : 'ASMR Phím cơ: ĐANG TẮT. Bấm để bật.'}
+            >
+              <span className="pref-icon">
+                <i
+                  className="fa-solid fa-keyboard"
+                  style={{ color: asmrOn ? 'var(--pastel-sage)' : 'var(--text-faint)' }}
+                ></i>
+              </span>
+              <span className="pref-label">{asmrOn ? 'ASMR Bật' : 'ASMR'}</span>
             </button>
 
             {/* Nút Thu Gọn Tiện Ích */}
@@ -422,7 +468,7 @@ export const MainLayout = () => {
               title="Thu nhỏ thanh tiện ích"
               aria-label="Thu nhỏ"
             >
-              ⚊
+              <i className="fa-solid fa-minus" style={{ fontSize: '0.75rem' }}></i>
             </button>
           </>
         )}

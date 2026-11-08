@@ -448,7 +448,9 @@ export const AssistiveChatWidget = () => {
         title={isWidgetOpen ? "Đóng cửa sổ chat" : "Freedom Chat - Nhắn tin & Bạn bè (Giữ và kéo thả để di chuyển góc tùy thích)"}
       >
         <div className="assistive-touch-inner">
-          <span className="assistive-touch-icon">{isWidgetOpen ? '✕' : '💬'}</span>
+          <span className="assistive-touch-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            {isWidgetOpen ? <i className="fa-solid fa-xmark"></i> : <i className="fa-solid fa-comment-dots"></i>}
+          </span>
 
           {/* Dấu chấm trạng thái của bản thân */}
           {!isWidgetOpen && (
@@ -741,7 +743,7 @@ export const AssistiveChatWidget = () => {
                   onClick={closeChat}
                   title="Quay lại danh sách tin nhắn"
                 >
-                  &larr;
+                  <i className="fa-solid fa-arrow-left"></i>
                 </button>
 
                 <div className="assistive-room-user-meta">
@@ -892,7 +894,11 @@ export const AssistiveChatWidget = () => {
                   disabled={!inputContent.trim() || sending}
                   title="Gửi tin nhắn"
                 >
-                  {sending ? '...' : '✈️'}
+                  {sending ? (
+                    <i className="fa-solid fa-spinner fa-spin"></i>
+                  ) : (
+                    <i className="fa-solid fa-paper-plane"></i>
+                  )}
                 </button>
               </form>
             </div>

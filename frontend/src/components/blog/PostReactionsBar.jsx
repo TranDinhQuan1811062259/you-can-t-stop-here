@@ -37,6 +37,22 @@ export const REACTION_CONFIG = [
     bg: '#fef3c7',
     description: 'Tiếp thêm sức mạnh và động lực vươn lên',
   },
+  {
+    id: 'hug',
+    label: 'Cái Ôm',
+    icon: '🤗',
+    color: '#f43f5e', // Warm Rose Pink
+    bg: '#ffe4e6',
+    description: 'Gửi một cái ôm ấm áp vỗ về bạn',
+  },
+  {
+    id: 'tea',
+    label: 'Tách Trà',
+    icon: '🍵',
+    color: '#059669', // Emerald Matcha
+    bg: '#d1fae5',
+    description: 'Mời bạn một tách trà nóng, an yên thở sâu',
+  },
 ];
 
 export const PostReactionsBar = ({ post, onPostUpdated }) => {
@@ -44,7 +60,7 @@ export const PostReactionsBar = ({ post, onPostUpdated }) => {
 
   // State cục bộ cho reactions
   const [reactionCounts, setReactionCounts] = useState(
-    post?.reactionCounts || { sympathy: 0, stop: 0, love: 0, encourage: 0, total: post?.cheersCount || 0 }
+    post?.reactionCounts || { sympathy: 0, stop: 0, love: 0, encourage: 0, hug: 0, tea: 0, total: post?.cheersCount || 0 }
   );
   const [showCount, setShowCount] = useState(post?.showReactionCount !== false);
   const [sharesCount, setSharesCount] = useState(post?.sharesCount || 0);
@@ -71,7 +87,7 @@ export const PostReactionsBar = ({ post, onPostUpdated }) => {
   useEffect(() => {
     if (post) {
       setReactionCounts(
-        post.reactionCounts || { sympathy: 0, stop: 0, love: 0, encourage: 0, total: post.cheersCount || 0 }
+        post.reactionCounts || { sympathy: 0, stop: 0, love: 0, encourage: 0, hug: 0, tea: 0, total: post.cheersCount || 0 }
       );
       setShowCount(post.showReactionCount !== false);
       setSharesCount(post.sharesCount || 0);
@@ -241,7 +257,8 @@ export const PostReactionsBar = ({ post, onPostUpdated }) => {
               onClick={() => setIsShareModalOpen(true)}
               style={{ cursor: 'pointer' }}
             >
-              ↗️ {sharesCount} lượt chia sẻ
+              <i className="fa-solid fa-share-nodes" style={{ marginRight: '5px' }}></i>
+              {sharesCount} lượt chia sẻ
             </span>
           )}
 
@@ -257,7 +274,15 @@ export const PostReactionsBar = ({ post, onPostUpdated }) => {
                   : 'Bấm để hiện lại số lượng cảm xúc'
               }
             >
-              {showCount ? '👁️ Ẩn số lượng' : '👁️ Hiện số lượng'}
+              {showCount ? (
+                <>
+                  <i className="fa-regular fa-eye-slash" style={{ marginRight: '5px' }}></i> Ẩn số lượng
+                </>
+              ) : (
+                <>
+                  <i className="fa-regular fa-eye" style={{ marginRight: '5px' }}></i> Hiện số lượng
+                </>
+              )}
             </button>
           )}
         </div>

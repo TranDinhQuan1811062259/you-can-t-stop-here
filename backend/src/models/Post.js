@@ -86,7 +86,7 @@ const postSchema = new mongoose.Schema(
         types: [
           {
             type: String,
-            enum: ['sympathy', 'stop', 'love', 'encourage'],
+            enum: ['sympathy', 'stop', 'love', 'encourage', 'hug', 'tea'],
           },
         ],
       },
@@ -96,9 +96,15 @@ const postSchema = new mongoose.Schema(
       stop: { type: Number, default: 0 },
       love: { type: Number, default: 0 },
       encourage: { type: Number, default: 0 },
+      hug: { type: Number, default: 0 },
+      tea: { type: Number, default: 0 },
       total: { type: Number, default: 0 },
     },
     showReactionCount: {
+      type: Boolean,
+      default: true,
+    },
+    allowComments: {
       type: Boolean,
       default: true,
     },

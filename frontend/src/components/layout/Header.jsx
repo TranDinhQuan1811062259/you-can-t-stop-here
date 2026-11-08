@@ -8,6 +8,8 @@ import { AdminModerationModal } from '../admin/AdminModerationModal';
 import { FestiveEventManagerModal } from '../admin/FestiveEventManagerModal';
 import { FestiveShowcaseModal } from '../common/FestiveShowcaseModal';
 import { StressReliefModal } from '../wellness/StressReliefModal';
+import { TimeCapsuleModal } from '../wellness/TimeCapsuleModal';
+import { LateNightRadioModal } from '../wellness/LateNightRadioModal';
 import { postService } from '../../services/postService';
 import { eventService } from '../../services/eventService';
 import { isSoundEnabled, toggleSound, playClickSound, playFestiveEventSound } from '../../utils/soundEffects';
@@ -46,6 +48,8 @@ export const Header = () => {
   const [isShowcaseModalOpen, setIsShowcaseModalOpen] = useState(false);
   const [activeFestiveEvent, setActiveFestiveEvent] = useState(null);
   const [isWellnessOpen, setIsWellnessOpen] = useState(false);
+  const [isTimeCapsuleOpen, setIsTimeCapsuleOpen] = useState(false);
+  const [isRadioOpen, setIsRadioOpen] = useState(false);
 
   // States cho Âm Thanh Môi Trường Duy Trì (Ambient Soundscape Engine)
   const [ambientState, setAmbientState] = useState(() => getAmbientState());
@@ -116,10 +120,18 @@ export const Header = () => {
     const handleOpenWellness = () => {
       setIsWellnessOpen(true);
     };
+    const handleOpenTimeCapsule = () => {
+      setIsTimeCapsuleOpen(true);
+    };
+    const handleOpenRadio = () => {
+      setIsRadioOpen(true);
+    };
 
     window.addEventListener('freedom_open_moderation', handleOpenMod);
     window.addEventListener('freedom_open_festive_showcase', handleOpenShowcase);
     window.addEventListener('freedom_open_wellness', handleOpenWellness);
+    window.addEventListener('freedom_open_time_capsule', handleOpenTimeCapsule);
+    window.addEventListener('freedom_open_radio', handleOpenRadio);
 
     return () => {
       window.removeEventListener('post_updated', checkFlaggedPosts);
@@ -129,6 +141,8 @@ export const Header = () => {
       window.removeEventListener('freedom_open_moderation', handleOpenMod);
       window.removeEventListener('freedom_open_festive_showcase', handleOpenShowcase);
       window.removeEventListener('freedom_open_wellness', handleOpenWellness);
+      window.removeEventListener('freedom_open_time_capsule', handleOpenTimeCapsule);
+      window.removeEventListener('freedom_open_radio', handleOpenRadio);
     };
   }, [user]);
 
@@ -255,8 +269,8 @@ export const Header = () => {
               onClick={closeNav}
               title={`YOU CAN'T STOP HERE - ${activeSeason.name}: ${activeSeason.quote}`}
             >
-              <span className={`logo-icon seasonal-logo-icon season-${activeSeason.id}`}>
-                {activeSeason.logoIcon || activeSeason.icon || '❤️'}
+              <span className="healing-icon-pill healing-icon-sage" style={{ width: '34px', height: '34px' }}>
+                <i className="fa-solid fa-seedling"></i>
               </span>
               <span className={`logo-text seasonal-logo-text season-${activeSeason.id}`}>
                 YOU CAN'T STOP HERE
@@ -276,7 +290,9 @@ export const Header = () => {
               >
                 <span className="season-icon">{activeSeason.icon}</span>
                 <span className="season-name">{activeSeason.shortName}</span>
-                <span className="season-chevron">{isSeasonOpen ? '▴' : '▾'}</span>
+                <span className="season-chevron">
+                  <i className={`fa-solid fa-chevron-${isSeasonOpen ? 'up' : 'down'}`} style={{ fontSize: '0.68rem', marginLeft: '2px' }}></i>
+                </span>
               </button>
 
               {isSeasonOpen && (
@@ -534,7 +550,9 @@ export const Header = () => {
           {/* Cụm Giữa Hàng 1: Thanh Tìm Kiếm Thông Minh & Khẩu Hiệu (Lấp đầy khoảng trống trung tâm) */}
           <div className="header-top-center">
             <form className="header-search-form" onSubmit={handleSearchSubmit}>
-              <span className="header-search-icon">🔍</span>
+              <span className="header-search-icon" style={{ display: 'flex', alignItems: 'center' }}>
+                <i className="fa-solid fa-magnifying-glass"></i>
+              </span>
               <input
                 type="text"
                 placeholder="Tìm kiếm tâm sự, lời khuyên, bài viết..."
@@ -552,13 +570,15 @@ export const Header = () => {
                   }}
                   title="Xóa tìm kiếm"
                 >
-                  ✕
+                  <i className="fa-solid fa-xmark"></i>
                 </button>
               )}
             </form>
 
             <div className="header-daily-quote-pill" title="Slogan truyền động lực cộng đồng Freedom">
-              <span className="quote-sparkle">✨</span>
+              <span className="quote-sparkle" style={{ color: 'var(--pastel-amber)' }}>
+                <i className="fa-solid fa-feather-pointed"></i>
+              </span>
               <span className="quote-text">Chậm lại để nghỉ ngơi, đừng dừng lại!</span>
             </div>
           </div>
@@ -601,7 +621,9 @@ export const Header = () => {
                   onClick={openProfileModal}
                   title="Cài đặt thông tin tài khoản, giao diện & nhạc nền"
                 >
-                  <span className="btn-icon">⚙️</span>
+                  <span className="btn-icon">
+                    <i className="fa-solid fa-sliders"></i>
+                  </span>
                   <span>Tài khoản</span>
                 </button>
 
@@ -651,7 +673,9 @@ export const Header = () => {
               className={({ isActive }) => `dashboard-3d-item tab-home ${isActive ? 'active' : ''}`}
               title="Dashboard: Trang Chủ Tổng Hợp"
             >
-              <span className="item-icon">🏠</span>
+              <span className="healing-icon-pill healing-icon-sage" style={{ width: '28px', height: '28px', fontSize: '0.82rem' }}>
+                <i className="fa-solid fa-house"></i>
+              </span>
               <span className="item-label">Trang Chủ</span>
             </NavLink>
 
@@ -660,7 +684,9 @@ export const Header = () => {
               className={({ isActive }) => `dashboard-3d-item tab-burnout ${isActive ? 'active' : ''}`}
               title="Dashboard: Áp Lực & Kiệt Sức (Burnout)"
             >
-              <span className="item-icon">🔥</span>
+              <span className="healing-icon-pill healing-icon-rose" style={{ width: '28px', height: '28px', fontSize: '0.82rem' }}>
+                <i className="fa-solid fa-heart-pulse"></i>
+              </span>
               <span className="item-label">Burnout</span>
             </NavLink>
 
@@ -669,7 +695,9 @@ export const Header = () => {
               className={({ isActive }) => `dashboard-3d-item tab-restart ${isActive ? 'active' : ''}`}
               title="Dashboard: Chuyển Ngành & Bắt Đầu Lại (Restart)"
             >
-              <span className="item-icon">🌱</span>
+              <span className="healing-icon-pill healing-icon-sage" style={{ width: '28px', height: '28px', fontSize: '0.82rem' }}>
+                <i className="fa-solid fa-seedling"></i>
+              </span>
               <span className="item-label">Bắt Đầu Lại</span>
             </NavLink>
 
@@ -678,18 +706,55 @@ export const Header = () => {
               className={({ isActive }) => `dashboard-3d-item tab-wins ${isActive ? 'active' : ''}`}
               title="Dashboard: Những Tia Sáng & Động Lực (Small Wins)"
             >
-              <span className="item-icon">✨</span>
+              <span className="healing-icon-pill healing-icon-amber" style={{ width: '28px', height: '28px', fontSize: '0.82rem' }}>
+                <i className="fa-solid fa-sun"></i>
+              </span>
               <span className="item-label">Small Wins</span>
             </NavLink>
 
             <button
               type="button"
               className="dashboard-3d-item tab-wellness"
-              onClick={() => setIsWellnessOpen(true)}
+              onClick={() => {
+                playClickSound();
+                setIsWellnessOpen(true);
+              }}
               title="Trạm xả stress, máy xé giấy deadline & bài tập thở 4-7-8"
             >
-              <span className="item-icon">🌿</span>
+              <span className="healing-icon-pill healing-icon-sage" style={{ width: '28px', height: '28px', fontSize: '0.82rem' }}>
+                <i className="fa-solid fa-spa"></i>
+              </span>
               <span className="item-label">Xả Stress</span>
+            </button>
+
+            <button
+              type="button"
+              className="dashboard-3d-item tab-capsule"
+              onClick={() => {
+                playClickSound();
+                setIsTimeCapsuleOpen(true);
+              }}
+              title="Chiếc Hộp Thời Gian: Viết thư gửi tương lai và đếm ngược mở khóa"
+            >
+              <span className="healing-icon-pill healing-icon-amber" style={{ width: '28px', height: '28px', fontSize: '0.82rem' }}>
+                <i className="fa-solid fa-hourglass-half"></i>
+              </span>
+              <span className="item-label">Hộp Thời Gian</span>
+            </button>
+
+            <button
+              type="button"
+              className="dashboard-3d-item tab-radio"
+              onClick={() => {
+                playClickSound();
+                setIsRadioOpen(true);
+              }}
+              title="Trạm Radio Đêm Muộn: Lo-Fi 24/7 & Lời nhắn vô danh"
+            >
+              <span className="healing-icon-pill healing-icon-rose" style={{ width: '28px', height: '28px', fontSize: '0.82rem' }}>
+                <i className="fa-solid fa-radio"></i>
+              </span>
+              <span className="item-label">Radio 24/7</span>
             </button>
           </div>
         </nav>
@@ -741,6 +806,18 @@ export const Header = () => {
       <StressReliefModal
         isOpen={isWellnessOpen}
         onClose={() => setIsWellnessOpen(false)}
+      />
+
+      {/* Chiếc Hộp Thời Gian (Capsule of Tomorrow) */}
+      <TimeCapsuleModal
+        isOpen={isTimeCapsuleOpen}
+        onClose={() => setIsTimeCapsuleOpen(false)}
+      />
+
+      {/* Trạm Radio Đêm Muộn Lo-Fi 24/7 (Late Night Lo-Fi Room) */}
+      <LateNightRadioModal
+        isOpen={isRadioOpen}
+        onClose={() => setIsRadioOpen(false)}
       />
     </>
   );

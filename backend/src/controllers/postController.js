@@ -479,7 +479,7 @@ export const reactToPost = async (req, res) => {
           }
 
           // Tính toán lại reactionCounts
-          const counts = { sympathy: 0, stop: 0, love: 0, encourage: 0, total: 0 };
+          const counts = { sympathy: 0, stop: 0, love: 0, encourage: 0, hug: 0, tea: 0, total: 0 };
           post.reactions.forEach((r) => {
             (r.types || []).forEach((t) => {
               if (counts[t] !== undefined) {
@@ -527,7 +527,7 @@ export const reactToPost = async (req, res) => {
     }
 
     if (!Array.isArray(post.reactions)) post.reactions = [];
-    if (!post.reactionCounts) post.reactionCounts = { sympathy: 0, stop: 0, love: 0, encourage: 0, total: 0 };
+    if (!post.reactionCounts) post.reactionCounts = { sympathy: 0, stop: 0, love: 0, encourage: 0, hug: 0, tea: 0, total: 0 };
 
     const existingIdx = post.reactions.findIndex((r) => r.userName === userName);
     let currentTypes = existingIdx !== -1 ? [...(post.reactions[existingIdx].types || [])] : [];
@@ -566,7 +566,7 @@ export const reactToPost = async (req, res) => {
       }
     }
 
-    const counts = { sympathy: 0, stop: 0, love: 0, encourage: 0, total: 0 };
+    const counts = { sympathy: 0, stop: 0, love: 0, encourage: 0, hug: 0, tea: 0, total: 0 };
     post.reactions.forEach((r) => {
       (r.types || []).forEach((t) => {
         if (counts[t] !== undefined) {
@@ -733,6 +733,7 @@ export const createPost = async (req, res) => {
       author,
       authorJob,
       showReactionCount,
+      allowComments,
       audioMood,
       voiceGender,
       voiceRegion,
@@ -804,6 +805,7 @@ export const createPost = async (req, res) => {
       views: 1,
       cheersCount: 0,
       showReactionCount: showReactionCount !== undefined ? Boolean(showReactionCount) : true,
+      allowComments: allowComments !== undefined ? Boolean(allowComments) : true,
       reactions: [],
       reactionCounts: { sympathy: 0, stop: 0, love: 0, encourage: 0, total: 0 },
       sharesCount: 0,
@@ -864,6 +866,7 @@ export const createPost = async (req, res) => {
           views: 1,
           cheersCount: 0,
           showReactionCount: newPostData.showReactionCount,
+          allowComments: newPostData.allowComments,
           reactions: [],
           reactionCounts: newPostData.reactionCounts,
           sharesCount: 0,
@@ -916,6 +919,7 @@ export const updatePost = async (req, res) => {
       views,
       isPublished,
       showReactionCount,
+      allowComments,
       audioMood,
       voiceGender,
       voiceRegion,
@@ -970,6 +974,7 @@ export const updatePost = async (req, res) => {
         views: views !== undefined && !isNaN(views) ? Math.max(0, parseInt(views, 10)) : existing.views,
         isPublished: isPublished !== undefined ? Boolean(isPublished) : existing.isPublished,
         showReactionCount: showReactionCount !== undefined ? Boolean(showReactionCount) : existing.showReactionCount,
+        allowComments: allowComments !== undefined ? Boolean(allowComments) : (existing.allowComments !== undefined ? existing.allowComments : true),
         audioMood: audioMood !== undefined ? audioMood : existing.audioMood || 'auto',
         voiceGender: voiceGender !== undefined ? voiceGender : existing.voiceGender || 'female',
         voiceRegion: voiceRegion !== undefined ? voiceRegion : existing.voiceRegion || 'north',
@@ -1018,6 +1023,7 @@ export const updatePost = async (req, res) => {
           if (views !== undefined && !isNaN(views)) post.views = Math.max(0, parseInt(views, 10));
           if (isPublished !== undefined) post.isPublished = Boolean(isPublished);
           if (showReactionCount !== undefined) post.showReactionCount = Boolean(showReactionCount);
+          if (allowComments !== undefined) post.allowComments = Boolean(allowComments);
           if (audioMood !== undefined) post.audioMood = audioMood;
           if (voiceGender !== undefined) post.voiceGender = voiceGender;
           if (voiceRegion !== undefined) post.voiceRegion = voiceRegion;
@@ -1297,6 +1303,78 @@ export const repostPost = async (req, res) => {
       return sendSuccess(res, {
         message: 'Đã chia sẻ bài viết về trang cá nhân của bạn!',
         data: { repostCount: post.repostCount, sharesCount: post.sharesCount },
+      });
+    }
+
+    return sendError(res, { message: 'Không tìm thấy bài viết', status: 404 });
+  } catch (error) {
+    return sendError(res, { message: error.message, status: 500 });
+  }
+};
+
+/**
+ * Bật / Tắt tính năng bình luận của bài viết (Chỉ tác giả hoặc Admin)
+ */
+export const toggleAllowComments = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { allowComments } = req.body;
+
+    if (checkDbReady()) {
+      try {
+        const post = await Post.findOne({
+          $or: [
+            { _id: id && String(id).match(/^[0-9a-fA-F]{24}$/) ? id : null },
+            { slug: id },
+          ],
+        });
+
+        if (post) {
+          const isOwner = (post.user && String(post.user._id || post.user) === String(req.user?._id)) || post.author === req.user?.name;
+          const isAdmin = req.user?.role === 'admin';
+          if (!isOwner && !isAdmin) {
+            return sendError(res, { message: 'Chỉ tác giả bài viết hoặc Admin mới có quyền bật/tắt bình luận', status: 403 });
+          }
+
+          post.allowComments = allowComments !== undefined ? Boolean(allowComments) : !post.allowComments;
+          await post.save();
+
+          // Đồng bộ sang persistentStore
+          const store = loadStore();
+          const storePost = (store.posts || []).find((p) => String(p._id) === String(id) || p.slug === id);
+          if (storePost) {
+            storePost.allowComments = post.allowComments;
+            saveStore(store);
+          }
+
+          return sendSuccess(res, {
+            message: post.allowComments
+              ? '✓ Đã mở lại tính năng bình luận cho bài viết'
+              : '✓ Đã tắt tính năng bình luận cho bài viết',
+            data: { allowComments: post.allowComments },
+          });
+        }
+      } catch (dbErr) {
+        console.warn('Lỗi MongoDB trong toggleAllowComments, fallback sang persistentStore:', dbErr.message);
+      }
+    }
+
+    const store = loadStore();
+    const post = (store.posts || []).find((p) => String(p._id) === String(id) || p.slug === id);
+    if (post) {
+      const isOwner = (post.user && String(post.user._id || post.user) === String(req.user?._id)) || post.author === req.user?.name;
+      const isAdmin = req.user?.role === 'admin';
+      if (!isOwner && !isAdmin) {
+        return sendError(res, { message: 'Chỉ tác giả bài viết hoặc Admin mới có quyền bật/tắt bình luận', status: 403 });
+      }
+
+      post.allowComments = allowComments !== undefined ? Boolean(allowComments) : !post.allowComments;
+      saveStore(store);
+      return sendSuccess(res, {
+        message: post.allowComments
+          ? '✓ Đã mở lại tính năng bình luận cho bài viết'
+          : '✓ Đã tắt tính năng bình luận cho bài viết',
+        data: { allowComments: post.allowComments },
       });
     }
 

@@ -248,7 +248,9 @@ export const FloatingAiAudioPlayer = () => {
         {isMinimized ? (
           /* Trạng thái Thu Gọn Tối Giản */
           <div className="mini-audio-pill-wrap" onClick={() => setIsMinimized(false)}>
-            <span className="mini-pulse-icon">{playbackState === 'playing' ? '🔊' : '⏸'}</span>
+            <span className="mini-pulse-icon">
+              {playbackState === 'playing' ? <i className="fa-solid fa-volume-high"></i> : <i className="fa-solid fa-pause"></i>}
+            </span>
             <span className="mini-post-title">{currentPost.title}</span>
             <span
               style={{
@@ -271,7 +273,7 @@ export const FloatingAiAudioPlayer = () => {
                 handleTogglePlay();
               }}
             >
-              {playbackState === 'playing' ? '⏸' : '▶'}
+              {playbackState === 'playing' ? <i className="fa-solid fa-pause"></i> : <i className="fa-solid fa-play"></i>}
             </button>
             <button
               type="button"
@@ -282,7 +284,7 @@ export const FloatingAiAudioPlayer = () => {
               }}
               title="Mở rộng bảng điều khiển"
             >
-              ⤢
+              <i className="fa-solid fa-up-right-and-down-left-from-center"></i>
             </button>
           </div>
         ) : (
@@ -320,7 +322,9 @@ export const FloatingAiAudioPlayer = () => {
                 fontVariantNumeric: 'tabular-nums',
               }}
             >
-              <span style={{ color: '#0d9488', fontWeight: 600 }}>⏱ {formatTime(currentSeconds)}</span>
+              <span style={{ color: '#0d9488', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <i className="fa-regular fa-clock"></i> {formatTime(currentSeconds)}
+              </span>
               <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
                 {playbackState === 'playing' ? 'Đang phát...' : playbackState === 'paused' ? 'Tạm dừng' : 'Chờ phát'}
               </span>
@@ -380,7 +384,7 @@ export const FloatingAiAudioPlayer = () => {
                   onClick={handleGenderToggle}
                   title={`Đổi giới tính giọng đọc (Hiện tại: ${selectedGender === 'male' ? 'Giọng Nam 👨' : 'Giọng Nữ 👩'})`}
                 >
-                  {selectedGender === 'male' ? '👨 Nam' : '👩 Nữ'}
+                  {selectedGender === 'male' ? 'Nam' : 'Nữ'}
                 </button>
 
                 {/* Chọn Vùng Miền Việt Nam */}
@@ -390,9 +394,9 @@ export const FloatingAiAudioPlayer = () => {
                   className="floating-region-select"
                   title="Chọn ngữ điệu vùng miền Việt Nam"
                 >
-                  <option value="north">🏛️ Bắc</option>
-                  <option value="central">🏖️ Trung</option>
-                  <option value="south">🌴 Nam</option>
+                  <option value="north">Bắc</option>
+                  <option value="central">Trung</option>
+                  <option value="south">Nam</option>
                 </select>
 
                 {/* Chọn Ngữ Điệu Cảm Xúc */}
@@ -428,7 +432,7 @@ export const FloatingAiAudioPlayer = () => {
                   onClick={handleTogglePlay}
                   title={playbackState === 'playing' ? 'Tạm dừng' : 'Tiếp tục nghe'}
                 >
-                  {playbackState === 'playing' ? '⏸' : '▶'}
+                  {playbackState === 'playing' ? <i className="fa-solid fa-pause"></i> : <i className="fa-solid fa-play"></i>}
                 </button>
 
                 {/* Nút Mở Studio Thu Âm Nhân Bản Giọng Nói */}
@@ -438,7 +442,7 @@ export const FloatingAiAudioPlayer = () => {
                   onClick={() => setIsCloningOpen(true)}
                   title="Thu âm giọng của bạn để A.I nhân bản đọc câu chuyện"
                 >
-                  🎙️
+                  <i className="fa-solid fa-microphone"></i>
                 </button>
 
                 {/* Nút Thu Gọn */}
@@ -448,7 +452,7 @@ export const FloatingAiAudioPlayer = () => {
                   onClick={() => setIsMinimized(true)}
                   title="Thu nhỏ thanh phát"
                 >
-                  ⚊
+                  <i className="fa-solid fa-minus"></i>
                 </button>
 
                 {/* Nút Đóng / Tắt */}
@@ -458,7 +462,7 @@ export const FloatingAiAudioPlayer = () => {
                   onClick={handleClose}
                   title="Dừng và đóng thanh nghe"
                 >
-                  ✕
+                  <i className="fa-solid fa-xmark"></i>
                 </button>
               </div>
             </div>

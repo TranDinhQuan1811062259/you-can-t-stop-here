@@ -95,6 +95,35 @@ export const createComment = async (req, res) => {
       });
     }
 
+    // Kiểm tra xem bài viết có mở tính năng bình luận không
+    let isCommentAllowed = true;
+    if (checkDbReady()) {
+      try {
+        const targetPost = await Post.findOne({
+          $or: [
+            { _id: postId && String(postId).match(/^[0-9a-fA-F]{24}$/) ? postId : null },
+            { slug: postId },
+          ],
+        }).select('allowComments');
+        if (targetPost && targetPost.allowComments === false) {
+          isCommentAllowed = false;
+        }
+      } catch (err) {}
+    } else {
+      const store = loadStore();
+      const targetPost = (store.posts || []).find((p) => String(p._id) === String(postId) || p.slug === postId);
+      if (targetPost && targetPost.allowComments === false) {
+        isCommentAllowed = false;
+      }
+    }
+
+    if (!isCommentAllowed) {
+      return sendError(res, {
+        message: 'Tác giả đã tắt tính năng bình luận cho bài viết này.',
+        status: 403,
+      });
+    }
+
     const cleanContent = maskSensitiveText(content.trim());
 
     if (checkDbReady()) {

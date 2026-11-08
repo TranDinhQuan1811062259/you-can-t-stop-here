@@ -155,6 +155,20 @@ export const PostDetailPage = () => {
     }
   };
 
+  const handleToggleAllowComments = async () => {
+    if (!post) return;
+    try {
+      const res = await postService.toggleComments(post._id);
+      const nextAllow = res.data?.allowComments;
+      setPost((prev) => ({
+        ...prev,
+        allowComments: nextAllow,
+      }));
+    } catch (err) {
+      alert(err.message || 'Lỗi khi cập nhật cài đặt bình luận!');
+    }
+  };
+
   if (loading) {
     return (
       <div className="container" style={{ padding: '80px 0' }}>
@@ -261,7 +275,8 @@ export const PostDetailPage = () => {
             </Link>
           </div>
           <Link to="/" className="hero-back-link">
-            &larr; Xem tất cả các câu chuyện khác
+            <i className="fa-solid fa-arrow-left" style={{ marginRight: '6px' }}></i>
+            Xem tất cả các câu chuyện khác
           </Link>
         </div>
 
@@ -359,7 +374,15 @@ export const PostDetailPage = () => {
                   className={`card-visibility-pill ${post.visibility === 'friends' ? 'is-friends' : 'is-public'}`}
                   title={post.visibility === 'friends' ? 'Chế độ: Chỉ bạn bè mới xem được' : 'Chế độ: Công khai cho tất cả'}
                 >
-                  {post.visibility === 'friends' ? '👥 Chỉ bạn bè' : '🌐 Công khai'}
+                  {post.visibility === 'friends' ? (
+                    <>
+                      <i className="fa-solid fa-user-group" style={{ marginRight: '5px' }}></i> Chỉ bạn bè
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-globe" style={{ marginRight: '5px' }}></i> Công khai
+                    </>
+                  )}
                 </span>
                 {postAtmosphere.theme !== 'default' && (
                   <span
@@ -410,25 +433,39 @@ export const PostDetailPage = () => {
                       {authorSocial && (authorSocial.facebook || authorSocial.instagram || authorSocial.tiktok || authorSocial.x || authorSocial.linkedin || authorSocial.github || authorSocial.website) && (
                         <div className="author-bar-social-mini">
                           {authorSocial.facebook && (
-                            <a href={authorSocial.facebook.startsWith('http') ? authorSocial.facebook : `https://${authorSocial.facebook}`} target="_blank" rel="noopener noreferrer" title="Facebook" className="mini-social-icon">📘</a>
+                            <a href={authorSocial.facebook.startsWith('http') ? authorSocial.facebook : `https://${authorSocial.facebook}`} target="_blank" rel="noopener noreferrer" title="Facebook" className="mini-social-icon">
+                              <i className="fa-brands fa-facebook-f"></i>
+                            </a>
                           )}
                           {authorSocial.instagram && (
-                            <a href={authorSocial.instagram.startsWith('http') ? authorSocial.instagram : `https://${authorSocial.instagram}`} target="_blank" rel="noopener noreferrer" title="Instagram" className="mini-social-icon">📸</a>
+                            <a href={authorSocial.instagram.startsWith('http') ? authorSocial.instagram : `https://${authorSocial.instagram}`} target="_blank" rel="noopener noreferrer" title="Instagram" className="mini-social-icon">
+                              <i className="fa-brands fa-instagram"></i>
+                            </a>
                           )}
                           {authorSocial.tiktok && (
-                            <a href={authorSocial.tiktok.startsWith('http') ? authorSocial.tiktok : `https://${authorSocial.tiktok}`} target="_blank" rel="noopener noreferrer" title="TikTok" className="mini-social-icon">🎵</a>
+                            <a href={authorSocial.tiktok.startsWith('http') ? authorSocial.tiktok : `https://${authorSocial.tiktok}`} target="_blank" rel="noopener noreferrer" title="TikTok" className="mini-social-icon">
+                              <i className="fa-brands fa-tiktok"></i>
+                            </a>
                           )}
                           {authorSocial.x && (
-                            <a href={authorSocial.x.startsWith('http') ? authorSocial.x : `https://${authorSocial.x}`} target="_blank" rel="noopener noreferrer" title="X (Twitter)" className="mini-social-icon">𝕏</a>
+                            <a href={authorSocial.x.startsWith('http') ? authorSocial.x : `https://${authorSocial.x}`} target="_blank" rel="noopener noreferrer" title="X (Twitter)" className="mini-social-icon">
+                              <i className="fa-brands fa-x-twitter"></i>
+                            </a>
                           )}
                           {authorSocial.linkedin && (
-                            <a href={authorSocial.linkedin.startsWith('http') ? authorSocial.linkedin : `https://${authorSocial.linkedin}`} target="_blank" rel="noopener noreferrer" title="LinkedIn" className="mini-social-icon">💼</a>
+                            <a href={authorSocial.linkedin.startsWith('http') ? authorSocial.linkedin : `https://${authorSocial.linkedin}`} target="_blank" rel="noopener noreferrer" title="LinkedIn" className="mini-social-icon">
+                              <i className="fa-brands fa-linkedin-in"></i>
+                            </a>
                           )}
                           {authorSocial.github && (
-                            <a href={authorSocial.github.startsWith('http') ? authorSocial.github : `https://${authorSocial.github}`} target="_blank" rel="noopener noreferrer" title="GitHub" className="mini-social-icon">🐱</a>
+                            <a href={authorSocial.github.startsWith('http') ? authorSocial.github : `https://${authorSocial.github}`} target="_blank" rel="noopener noreferrer" title="GitHub" className="mini-social-icon">
+                              <i className="fa-brands fa-github"></i>
+                            </a>
                           )}
                           {authorSocial.website && (
-                            <a href={authorSocial.website.startsWith('http') ? authorSocial.website : `https://${authorSocial.website}`} target="_blank" rel="noopener noreferrer" title="Website" className="mini-social-icon">🌐</a>
+                            <a href={authorSocial.website.startsWith('http') ? authorSocial.website : `https://${authorSocial.website}`} target="_blank" rel="noopener noreferrer" title="Website" className="mini-social-icon">
+                              <i className="fa-solid fa-globe"></i>
+                            </a>
                           )}
                         </div>
                       )}
@@ -627,7 +664,13 @@ export const PostDetailPage = () => {
             />
 
             {/* Social Comment & Encouragement Section */}
-            <CommentSection postId={post._id} postAuthorName={authorName} />
+            <CommentSection
+              postId={post._id}
+              postAuthorName={authorName}
+              allowComments={post.allowComments !== false}
+              isAuthor={canEdit || user?.role === 'admin'}
+              onToggleAllowComments={handleToggleAllowComments}
+            />
           </div>
 
           {/* Sidebar */}

@@ -6,6 +6,7 @@ import { commentService } from '../../services/commentService';
 import { formatDate } from '../../utils/formatDate';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { maskSensitiveText } from '../../utils/sensitiveFilter';
+import { AsmrKeyboardToggle } from '../common/AsmrKeyboardToggle';
 
 const CHEER_TYPES = [
   { id: 'encourage', label: '💪 Cố lên nhé' },
@@ -25,7 +26,13 @@ const CURATED_GIFS = [
   { id: 'sparkles', label: '✨ Tỏa sáng ngày mới', url: 'https://media.giphy.com/media/dzaUX7CAG0Ihi/giphy.gif' },
 ];
 
-export const CommentSection = ({ postId, postAuthorName }) => {
+export const CommentSection = ({
+  postId,
+  postAuthorName,
+  allowComments = true,
+  isAuthor = false,
+  onToggleAllowComments,
+}) => {
   const { user, isAuthenticated, openLoginModal } = useAuth();
   const { openChatWithUser, handleAddFriend, friendsList } = useChat();
   const [comments, setComments] = useState([]);
@@ -176,17 +183,100 @@ export const CommentSection = ({ postId, postAuthorName }) => {
 
   return (
     <div className="comment-section-box">
-      <div className="comment-section-header">
-        <h3 className="section-title">
-          💬 Lời Động Viên & Trò Chuyện ({totalCommentsCount})
-        </h3>
-        <p className="section-subtitle">
-          Một lời nói tử tế có thể thắp sáng cả một ngày u tối của ai đó. Bạn có thể trò chuyện và trả lời nhau tại đây.
-        </p>
+      <div className="comment-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <span>💬 Lời Động Viên & Trò Chuyện ({totalCommentsCount})</span>
+            {!allowComments && (
+              <span
+                style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: '999px',
+                  background: '#fee2e2',
+                  color: '#b91c1c',
+                  border: '1px solid #fca5a5',
+                }}
+              >
+                🔒 Đã khóa
+              </span>
+            )}
+          </h3>
+          <p className="section-subtitle">
+            Một lời nói tử tế có thể thắp sáng cả một ngày u tối của ai đó. Bạn có thể trò chuyện và trả lời nhau tại đây.
+          </p>
+        </div>
+
+        {/* Nút dành cho Tác giả / Admin: Bật hoặc Tắt bình luận */}
+        {isAuthor && onToggleAllowComments && (
+          <button
+            type="button"
+            onClick={onToggleAllowComments}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 15px',
+              borderRadius: '999px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: allowComments ? '1.5px solid #cbd5e1' : '1.5px solid #10b981',
+              background: allowComments ? '#f8fafc' : '#ecfdf5',
+              color: allowComments ? '#334155' : '#047857',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              transition: 'all 0.2s ease',
+            }}
+            title={allowComments ? 'Bấm để tắt tính năng bình luận cho bài viết này' : 'Bấm để mở lại tính năng bình luận'}
+          >
+            <span>{allowComments ? '🔒 Tắt bình luận' : '🔓 Mở lại bình luận'}</span>
+          </button>
+        )}
       </div>
 
-      {/* Form gửi bình luận / Trả lời */}
-      {isAuthenticated ? (
+      {/* Form gửi bình luận / Trả lời hoặc Thông báo khóa bình luận */}
+      {!allowComments ? (
+        <div
+          style={{
+            background: 'linear-gradient(135deg, rgba(248, 250, 252, 0.95), rgba(241, 245, 249, 0.95))',
+            border: '1.5px solid #cbd5e1',
+            borderRadius: '16px',
+            padding: '22px 20px',
+            textAlign: 'center',
+            marginBottom: '26px',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.04)',
+          }}
+        >
+          <div style={{ fontSize: '2rem', marginBottom: '6px' }}>🔒</div>
+          <h4 style={{ margin: '0 0 6px', color: '#0f172a', fontSize: '1.02rem', fontWeight: 800 }}>
+            Tính năng bình luận đã bị tắt bởi tác giả
+          </h4>
+          <p style={{ margin: 0, color: '#64748b', fontSize: '0.88rem', lineHeight: 1.5 }}>
+            Tác giả đã tạm khóa mục bình luận cho bài viết này. Các lời chia sẻ trước đó (nếu có) vẫn được lưu giữ an toàn bên dưới.
+          </p>
+          {isAuthor && onToggleAllowComments && (
+            <button
+              type="button"
+              onClick={onToggleAllowComments}
+              style={{
+                marginTop: '14px',
+                padding: '8px 18px',
+                borderRadius: '10px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #0d9488 0%, #059669 100%)',
+                color: '#ffffff',
+                fontWeight: 800,
+                fontSize: '0.86rem',
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(13, 148, 136, 0.3)',
+              }}
+            >
+              🔓 Bấm vào đây để mở lại tính năng bình luận
+            </button>
+          )}
+        </div>
+      ) : isAuthenticated ? (
         <form onSubmit={handleSubmit} className="comment-form">
           {errorMsg && <div className="modal-error">{errorMsg}</div>}
 
@@ -289,6 +379,9 @@ export const CommentSection = ({ postId, postAuthorName }) => {
                 style={{ display: 'none' }}
                 onChange={handleGifUpload}
               />
+
+              {/* ASMR Phím Cơ Toggle */}
+              <AsmrKeyboardToggle variant="badge" />
 
               {/* Bảng chọn GIF động */}
               {showGifPicker && (

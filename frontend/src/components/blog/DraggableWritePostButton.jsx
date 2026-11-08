@@ -174,8 +174,12 @@ export const DraggableWritePostButton = ({ onClick }) => {
       title="✍️ Viết bài tâm sự (Bấm để mở khung viết, hoặc giữ và kéo để di chuyển vị trí tùy thích)"
     >
       <button type="button" className="floating-write-post-btn inner-draggable-btn">
-        <span className="fab-drag-handle" title="Kéo để di chuyển">⠿</span>
-        <span className="fab-icon">✍️</span>
+        <span className="fab-drag-handle" title="Kéo để di chuyển">
+          <i className="fa-solid fa-grip-vertical" style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
+        </span>
+        <span className="fab-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+          <i className="fa-solid fa-feather-pointed"></i>
+        </span>
         <span className="fab-label">Viết tâm sự</span>
       </button>
     </div>

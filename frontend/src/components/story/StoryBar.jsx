@@ -110,13 +110,13 @@ export const StoryBar = ({ onOpenCreateStory, onOpenViewStory }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '1rem',
+              fontSize: '0.72rem',
               fontWeight: 800,
               border: '2px solid #ffffff',
               boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
             }}
           >
-            +
+            <i className="fa-solid fa-plus"></i>
           </div>
         </div>
         <span
@@ -201,7 +201,7 @@ export const StoryBar = ({ onOpenCreateStory, onOpenViewStory }) => {
                   }}
                   title={`Có nhạc nền: ${story.musicTitle}`}
                 >
-                  🎵
+                  <i className="fa-solid fa-music"></i>
                 </div>
               )}
               {story.mediaType === 'video' && (
@@ -224,7 +224,7 @@ export const StoryBar = ({ onOpenCreateStory, onOpenViewStory }) => {
                   }}
                   title="Story dạng Video"
                 >
-                  🎬
+                  <i className="fa-solid fa-video"></i>
                 </div>
               )}
             </div>

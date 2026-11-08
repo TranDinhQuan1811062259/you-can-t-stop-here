@@ -341,7 +341,7 @@ export const CreateStoryModal = ({ isOpen, onClose, storyToEdit = null }) => {
           onClick={handleModalClose}
           style={{ position: 'absolute', top: '18px', right: '18px', zIndex: 10 }}
         >
-          ✕
+          <i className="fa-solid fa-xmark"></i>
         </button>
 
         <div style={{ textAlign: 'center', marginBottom: '18px' }}>
@@ -356,9 +356,20 @@ export const CreateStoryModal = ({ isOpen, onClose, storyToEdit = null }) => {
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
               boxShadow: '0 2px 8px rgba(236, 72, 153, 0.3)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
             }}
           >
-            {isEditing ? '✏️ Chỉnh Sửa Story' : '✨ Tạo Story 24h Mới'}
+            {isEditing ? (
+              <>
+                <i className="fa-solid fa-pen"></i> Chỉnh Sửa Story
+              </>
+            ) : (
+              <>
+                <i className="fa-solid fa-wand-magic-sparkles"></i> Tạo Story 24h Mới
+              </>
+            )}
           </span>
           <h3 style={{ margin: '8px 0 3px', fontSize: '1.3rem', color: '#0f172a', fontWeight: 800 }}>
             Chia Sẻ Khoảnh Khắc & Nạp Bình Yên
@@ -468,7 +479,7 @@ export const CreateStoryModal = ({ isOpen, onClose, storyToEdit = null }) => {
                   boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
                 }}
               >
-                <span>🎵</span>
+                <i className="fa-solid fa-music"></i>
                 <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {MUSIC_PRESETS.find((p) => p.id === selectedMusicId)?.title || 'Lofi Chill'}
                 </span>
@@ -490,9 +501,12 @@ export const CreateStoryModal = ({ isOpen, onClose, storyToEdit = null }) => {
                       fontSize: '0.66rem',
                       fontWeight: 800,
                       cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
                     }}
                   >
-                    ✕ Gỡ
+                    <i className="fa-solid fa-xmark"></i> Gỡ
                   </button>
                 )}
                 <div
@@ -570,25 +584,25 @@ export const CreateStoryModal = ({ isOpen, onClose, storyToEdit = null }) => {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155' }}>
-                  🎨 Cây Cọ Vẽ Lên Story:
+                <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <i className="fa-solid fa-paintbrush"></i> Cây Cọ Vẽ Lên Story:
                 </span>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <button
                     type="button"
                     onClick={handleUndo}
                     title="Hoàn tác nét vẽ trước"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.78rem', color: '#64748b' }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.78rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
-                    ↩️ Undo
+                    <i className="fa-solid fa-rotate-left"></i> Undo
                   </button>
                   <button
                     type="button"
                     onClick={handleClearCanvas}
                     title="Xóa toàn bộ nét vẽ"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.78rem', color: '#ef4444' }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.78rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
-                    🗑️ Xóa nét
+                    <i className="fa-solid fa-trash-can"></i> Xóa nét
                   </button>
                 </div>
               </div>
@@ -675,8 +689,8 @@ export const CreateStoryModal = ({ isOpen, onClose, storyToEdit = null }) => {
             {/* Mục 1: Tải Ảnh hoặc Video lên Story */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <label style={{ fontSize: '0.84rem', fontWeight: 700 }}>
-                  🖼️ / 🎬 Hình ảnh hoặc Video (Tùy chọn):
+                <label style={{ fontSize: '0.84rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="fa-solid fa-photo-film"></i> Hình ảnh hoặc Video (Tùy chọn):
                 </label>
                 {mediaPreviewUrl && (
                   <span style={{ fontSize: '0.74rem', color: '#0d9488', fontWeight: 700 }}>
@@ -694,7 +708,7 @@ export const CreateStoryModal = ({ isOpen, onClose, storyToEdit = null }) => {
                   className="story-media-upload-btn"
                   title="Chọn ảnh (JPG, PNG, GIF) hoặc Video (MP4, WEBM) từ thiết bị"
                 >
-                  <span>📷</span>
+                  <i className="fa-solid fa-arrow-up-from-bracket"></i>
                   <span>{mediaPreviewUrl ? 'Đổi Tệp Khác' : 'Chọn Ảnh hoặc Video từ máy'}</span>
                 </button>
                 {mediaPreviewUrl && (
@@ -710,9 +724,12 @@ export const CreateStoryModal = ({ isOpen, onClose, storyToEdit = null }) => {
                       fontSize: '0.78rem',
                       fontWeight: 700,
                       cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
                     }}
                   >
-                    ✕ Gỡ Tệp
+                    <i className="fa-solid fa-trash-can"></i> Gỡ Tệp
                   </button>
                 )}
               </div>
@@ -756,8 +773,8 @@ export const CreateStoryModal = ({ isOpen, onClose, storyToEdit = null }) => {
             {/* Mục 3: Chọn Màu Nền Gradient (Ẩn nhẹ nếu đã có media) */}
             {!mediaPreviewUrl && (
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 700, display: 'block', marginBottom: '6px' }}>
-                  🎨 Phong cách màu nền Gradient:
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                  <i className="fa-solid fa-palette"></i> Phong cách màu nền Gradient:
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
                   {STORY_GRADIENTS.map((grad) => (
@@ -792,16 +809,25 @@ export const CreateStoryModal = ({ isOpen, onClose, storyToEdit = null }) => {
             {/* Mục 4: Chọn & Nghe Thử Nhạc Nền Đi Kèm */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: 700 }}>
-                  🎵 Chèn bản nhạc nền êm dịu (100% Web Audio):
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="fa-solid fa-music"></i> Chèn bản nhạc nền êm dịu (100% Web Audio):
                 </label>
                 <button
                   type="button"
                   onClick={handleTogglePreviewMusic}
                   className={`story-music-preview-btn ${isPlayingPreview ? 'is-playing' : ''}`}
                   title={isPlayingPreview ? 'Bấm để dừng nghe thử' : 'Bấm để nghe thử bản nhạc này'}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
                 >
-                  <span>{isPlayingPreview ? '⏹ Dừng' : '▶️ Nghe Thử'}</span>
+                  {isPlayingPreview ? (
+                    <>
+                      <i className="fa-solid fa-stop"></i> Dừng
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-play"></i> Nghe Thử
+                    </>
+                  )}
                 </button>
               </div>
               <select

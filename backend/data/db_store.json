@@ -1194,5 +1194,21 @@
       "expiresAt": "2026-11-08T12:35:31.085Z",
       "viewsCount": 39
     }
+  ],
+  "timeCapsules": [
+    {
+      "_id": "capsule_welcome_demo",
+      "title": "Gửi Tôi Của Một Ngày Nào Đó...",
+      "content": "Chào bạn! Khi bạn đọc được những dòng này, có thể những khó khăn của ngày hôm nay đã ở lại phía sau. Dù kết quả có thế nào, hãy nhớ rằng bạn đã luôn nỗ lực hết mình. Đừng quên mỉm cười và tự thưởng cho mình một tách trà ấm nhé! 🌿✨",
+      "creatorName": "Tôi của ngày hôm qua",
+      "creatorAvatar": "/images/man.jpg",
+      "mood": "hopeful",
+      "envelopeColor": "amber",
+      "musicTheme": "piano",
+      "unlockDate": "2026-11-08T11:25:03.271Z",
+      "isOpened": false,
+      "openedAt": null,
+      "createdAt": "2026-10-09T11:25:04.271Z"
+    }
   ]
 }

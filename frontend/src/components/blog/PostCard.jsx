@@ -151,7 +151,11 @@ export const PostCard = ({ post }) => {
               className={`card-visibility-pill ${post.visibility === 'friends' ? 'is-friends' : 'is-public'}`}
               title={post.visibility === 'friends' ? 'Chế độ: Chỉ bạn bè mới xem được' : 'Chế độ: Công khai cho tất cả'}
             >
-              {post.visibility === 'friends' ? '👥' : '🌐'}
+              {post.visibility === 'friends' ? (
+                <i className="fa-solid fa-user-group" style={{ fontSize: '0.75rem' }}></i>
+              ) : (
+                <i className="fa-solid fa-globe" style={{ fontSize: '0.75rem' }}></i>
+              )}
             </span>
             {hasAtmosphere && (
               <span
@@ -201,7 +205,13 @@ export const PostCard = ({ post }) => {
                 : `Bấm để kích hoạt A.I đọc bài viết: "${post.title}"`
             }
           >
-            <span className="audio-btn-icon">{isPlayingAi ? '⏸' : '🎧'}</span>
+            <span className="audio-btn-icon">
+              {isPlayingAi ? (
+                <i className="fa-solid fa-pause"></i>
+              ) : (
+                <i className="fa-solid fa-headphones"></i>
+              )}
+            </span>
             <span className="audio-btn-label">{isPlayingAi ? 'Đang đọc...' : 'Nghe AI đọc'}</span>
           </button>
         </div>
@@ -235,7 +245,7 @@ export const PostCard = ({ post }) => {
             title="Bấm để xem chi tiết lượt đọc, cảm xúc & bình luận"
           >
             <span className="pill-stat">
-              <span className="stat-icon">❤️</span>
+              <i className="fa-solid fa-heart stat-icon" style={{ color: 'var(--pastel-rose)', marginRight: '4px' }}></i>
               <span className="stat-val">
                 {post.showReactionCount !== false
                   ? (post.reactionCounts?.total || post.cheersCount || 0)
@@ -244,14 +254,14 @@ export const PostCard = ({ post }) => {
             </span>
             <span className="pill-divider">•</span>
             <span className="pill-stat">
-              <span className="stat-icon">👁️</span>
+              <i className="fa-regular fa-eye stat-icon" style={{ color: 'var(--pastel-sage)', marginRight: '4px' }}></i>
               <span className="stat-val">{post.views || 1}</span>
             </span>
             {post.sharesCount > 0 && (
               <>
                 <span className="pill-divider">•</span>
                 <span className="pill-stat">
-                  <span className="stat-icon">↗</span>
+                  <i className="fa-solid fa-share-nodes stat-icon" style={{ color: 'var(--pastel-amber)', marginRight: '4px' }}></i>
                   <span className="stat-val">{post.sharesCount}</span>
                 </span>
               </>
@@ -286,14 +296,14 @@ export const PostCard = ({ post }) => {
                 alignItems: 'center',
                 flexDirection: 'row',
                 flexWrap: 'nowrap',
-                gap: '4px',
+                gap: '6px',
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
                 minWidth: 'max-content',
                 wordBreak: 'keep-all',
               }}
             >
-              <span>💌</span>
+              <i className="fa-regular fa-paper-plane" style={{ color: 'var(--pastel-rose)', fontSize: '0.85rem' }}></i>
               <span style={{ whiteSpace: 'nowrap', display: 'inline', wordBreak: 'keep-all' }}>Chia{'\u00A0'}sẻ</span>
             </button>
 
@@ -306,11 +316,11 @@ export const PostCard = ({ post }) => {
                 flexShrink: 0,
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '3px',
+                gap: '5px',
               }}
             >
               <span>Đọc</span>
-              <span className="read-arrow">&rarr;</span>
+              <i className="fa-solid fa-arrow-right-long read-arrow"></i>
             </Link>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { playPaperShredSound, playSingingBowlSound, playClickSound } from '../../utils/soundEffects';
+import { AsmrKeyboardToggle } from '../common/AsmrKeyboardToggle';
 
 const MOOD_LIST = [
   { id: 'burnout', icon: '😫', label: 'Kiệt sức', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa', transformed: { icon: '🥰', label: 'Bình yên & Thư thái' } },
@@ -192,11 +193,14 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
             width: '32px',
             height: '32px',
             cursor: 'pointer',
-            fontSize: '1rem',
+            fontSize: '0.95rem',
             color: '#64748b',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          ✕
+          <i className="fa-solid fa-xmark"></i>
         </button>
 
         {/* Tiêu đề Modal */}
@@ -206,7 +210,7 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '3px 12px',
+              padding: '4px 14px',
               background: '#ecfdf5',
               border: '1px solid #a7f3d0',
               borderRadius: '999px',
@@ -216,7 +220,7 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
               marginBottom: '6px',
             }}
           >
-            <span>🌿</span>
+            <i className="fa-solid fa-spa"></i>
             <span>Trạm Sạc Năng Lượng & Xả Áp Lực Công Sở</span>
           </span>
           <h3 style={{ margin: '0 0 4px', fontSize: '1.35rem', color: '#0f172a', fontWeight: 800 }}>
@@ -262,7 +266,7 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
               gap: '6px',
             }}
           >
-            <span>📄</span>
+            <i className="fa-regular fa-file-lines"></i>
             <span>Máy Xé Giấy Deadline</span>
           </button>
           <button
@@ -289,9 +293,63 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
               gap: '6px',
             }}
           >
-            <span>🧘</span>
+            <i className="fa-solid fa-person-praying"></i>
             <span>Nghi Thức Tan Ca & Thở 4-7-8</span>
           </button>
+        </div>
+
+        {/* Thanh tiện ích nhanh: ASMR Phím cơ & Lối tắt sang Hộp thời gian / Radio */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound();
+                onClose();
+                window.dispatchEvent(new CustomEvent('freedom_open_time_capsule'));
+              }}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '8px',
+                background: 'rgba(245, 158, 11, 0.12)',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                color: '#b45309',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <i className="fa-solid fa-hourglass-half"></i> Hộp Thời Gian
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound();
+                onClose();
+                window.dispatchEvent(new CustomEvent('freedom_open_radio'));
+              }}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '8px',
+                background: 'rgba(99, 102, 241, 0.12)',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                color: '#4338ca',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <i className="fa-solid fa-radio"></i> Radio Đêm Muộn
+            </button>
+          </div>
+
+          <AsmrKeyboardToggle variant="badge" />
         </div>
 
         {/* =========================================================================

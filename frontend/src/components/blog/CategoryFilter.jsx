@@ -14,19 +14,28 @@ export const CategoryFilter = ({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Hàm suy đoán icon nếu category chưa có icon
-  const getCatIcon = (cat) => {
-    if (cat.icon) return cat.icon;
+  // Hàm suy đoán icon Font Awesome & tông màu pastel dịu nhẹ
+  const getCatMeta = (cat) => {
     const lower = (cat.name || '').toLowerCase();
-    if (lower.includes('thế giới') || lower.includes('quốc tế') || lower.includes('global')) return '🌍';
-    if (lower.includes('chiến sự') || lower.includes('chiến tranh') || lower.includes('hòa bình') || lower.includes('conflict')) return '🕊️';
-    if (lower.includes('xã hội') || lower.includes('thời cuộc') || lower.includes('society')) return '🌐';
-    if (lower.includes('kiệt sức') || lower.includes('burnout') || lower.includes('áp lực')) return '😫';
-    if (lower.includes('khủng hoảng') || lower.includes('career')) return '🧭';
-    if (lower.includes('chuyển ngành') || lower.includes('restart')) return '🌱';
-    if (lower.includes('động lực') || lower.includes('small wins') || lower.includes('tia sáng')) return '✨';
-    if (lower.includes('tâm sự') || lower.includes('life')) return '☕';
-    return '🏷️';
+    if (lower.includes('kiệt sức') || lower.includes('burnout') || lower.includes('áp lực')) {
+      return { icon: 'fa-solid fa-heart-pulse', colorClass: 'healing-icon-rose' };
+    }
+    if (lower.includes('chuyển ngành') || lower.includes('restart') || lower.includes('bắt đầu lại')) {
+      return { icon: 'fa-solid fa-seedling', colorClass: 'healing-icon-sage' };
+    }
+    if (lower.includes('động lực') || lower.includes('small wins') || lower.includes('tia sáng')) {
+      return { icon: 'fa-solid fa-sun', colorClass: 'healing-icon-amber' };
+    }
+    if (lower.includes('tâm sự') || lower.includes('life')) {
+      return { icon: 'fa-solid fa-mug-hot', colorClass: 'healing-icon-amber' };
+    }
+    if (lower.includes('thế giới') || lower.includes('quốc tế') || lower.includes('global')) {
+      return { icon: 'fa-solid fa-earth-americas', colorClass: 'healing-icon-sage' };
+    }
+    if (lower.includes('chiến sự') || lower.includes('hòa bình')) {
+      return { icon: 'fa-solid fa-dove', colorClass: 'healing-icon-sage' };
+    }
+    return { icon: 'fa-solid fa-bookmark', colorClass: 'healing-icon-sage' };
   };
 
   const handleCreateCategory = async (e) => {
@@ -81,25 +90,29 @@ export const CategoryFilter = ({
         <button
           className={`cat-btn ${activeCategory === '' ? 'active' : ''}`}
           onClick={() => onSelectCategory('')}
-          style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
         >
-          <span>🔥</span>
+          <span className="healing-icon-pill healing-icon-sage" style={{ width: '22px', height: '22px', fontSize: '0.72rem' }}>
+            <i className="fa-solid fa-layer-group"></i>
+          </span>
           <span>Tất cả bài viết</span>
         </button>
 
         {/* Danh sách thể loại */}
         {categories.map((cat) => {
           const isActive = activeCategory === cat.slug;
-          const icon = getCatIcon(cat);
+          const meta = getCatMeta(cat);
           return (
             <button
               key={cat._id || cat.slug}
               className={`cat-btn ${isActive ? 'active' : ''}`}
               onClick={() => onSelectCategory(cat.slug)}
               title={cat.description || cat.name}
-              style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
             >
-              <span>{icon}</span>
+              <span className={`healing-icon-pill ${meta.colorClass}`} style={{ width: '22px', height: '22px', fontSize: '0.72rem' }}>
+                <i className={meta.icon}></i>
+              </span>
               <span>{cat.name}</span>
             </button>
           );
@@ -114,17 +127,17 @@ export const CategoryFilter = ({
             whiteSpace: 'nowrap',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '6px',
-            background: 'linear-gradient(135deg, rgba(13, 148, 136, 0.12) 0%, rgba(16, 185, 129, 0.15) 100%)',
-            border: '1.5px dashed #0d9488',
-            color: '#0d9488',
+            gap: '8px',
+            background: 'var(--pastel-sage-bg)',
+            border: '1.5px dashed var(--pastel-sage-border)',
+            color: 'var(--pastel-sage)',
             fontWeight: 700,
             cursor: 'pointer',
           }}
-          title="Tạo thêm thể loại bài viết mới (Thời sự, Thế giới, Chiến sự...)"
+          title="Tạo thêm thể loại bài viết mới"
         >
-          <span>✨</span>
-          <span>+ Thêm thể loại</span>
+          <i className="fa-solid fa-plus" style={{ fontSize: '0.75rem' }}></i>
+          <span>Thêm thể loại</span>
         </button>
       </div>
 

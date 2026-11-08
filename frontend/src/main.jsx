@@ -4,10 +4,12 @@ import App from './App.jsx';
 import './index.css';
 import { initTheme } from './utils/themeUtils';
 import { getActiveSeason } from './utils/seasonUtils';
+import { initGlobalKeyboardAsmr } from './utils/keyboardSoundEngine';
 
-// Khởi tạo chế độ Ngày / Đêm & Favicon sắc nét theo thời tiết
+// Khởi tạo chế độ Ngày / Đêm & Favicon sắc nét theo thời tiết & ASMR Phím cơ
 initTheme();
 getActiveSeason();
+initGlobalKeyboardAsmr();
 
 // Đăng ký PWA Service Worker (Cho Smartphone, Tablet, PC, Mac)
 if ('serviceWorker' in navigator) {

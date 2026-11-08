@@ -7,6 +7,7 @@ import { MediaCameraCaptureModal } from './MediaCameraCaptureModal';
 import { formatPostContent } from '../../utils/contentFormatter';
 import { maskSensitiveText, analyzeContentSafety } from '../../utils/sensitiveFilter';
 import { PostAtmosphereSelector } from './PostAtmosphereSelector';
+import { AsmrKeyboardToggle } from '../common/AsmrKeyboardToggle';
 
 export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
   const [categories, setCategories] = useState([]);
@@ -18,6 +19,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
     coverImage: '',
     tags: '',
     showReactionCount: true,
+    allowComments: true,
     visibility: 'public',
     audioMood: 'auto',
     voiceGender: 'female',
@@ -267,6 +269,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
         coverImage: formData.coverImage || undefined,
         tags: cleanTags,
         showReactionCount: formData.showReactionCount,
+        allowComments: formData.allowComments,
         audioMood: formData.audioMood || 'auto',
         voiceGender: formData.voiceGender || 'female',
         voiceRegion: formData.voiceRegion || 'north',
@@ -292,10 +295,20 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <button className="modal-close-btn" onClick={onClose}>
-          ✕
+          <i className="fa-solid fa-xmark"></i>
         </button>
 
-        <h3 className="modal-heading">✍️ Trút Bầu Tâm Sự</h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', flexWrap: 'wrap', gap: '8px' }}>
+          <h3 className="modal-heading" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className="healing-icon-pill healing-icon-sage" style={{ width: '30px', height: '30px', fontSize: '0.85rem' }}>
+              <i className="fa-solid fa-feather-pointed"></i>
+            </span>
+            <span>Trút Bầu Tâm Sự</span>
+          </h3>
+          <div style={{ marginRight: '36px' }}>
+            <AsmrKeyboardToggle variant="pill" />
+          </div>
+        </div>
         <p className="modal-subtitle">
           Không gian lắng nghe những trăn trở trong công việc. Bạn có thể chèn video YouTube, hình ảnh và icon cảm xúc để bài viết sinh động hơn.
         </p>
@@ -813,6 +826,21 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
             </label>
             <p style={{ margin: '4px 0 0 28px', fontSize: '0.82rem', color: '#64748b' }}>
               Nếu bỏ chọn, bài viết chỉ hiển thị các biểu tượng cảm xúc (Đồng Cảm 🫂, Stop 🛑, Yêu thích ❤️, Cố Lên 💪) mà không hiển thị con số cụ thể.
+            </p>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 600, color: 'var(--bg-dark)', marginBottom: 0, marginTop: '12px' }}>
+              <input
+                type="checkbox"
+                checked={formData.allowComments}
+                onChange={(e) => setFormData({ ...formData, allowComments: e.target.checked })}
+                style={{ width: '18px', height: '18px', accentColor: 'var(--primary-color)', cursor: 'pointer' }}
+              />
+              <span>💬 Cho phép mọi người gửi bình luận & động viên dưới bài viết</span>
+            </label>
+            <p style={{ margin: '4px 0 0 28px', fontSize: '0.82rem', color: '#64748b' }}>
+              {formData.allowComments
+                ? 'Đang bật: Người đọc có thể gửi lời chia sẻ, bình luận và động viên bạn.'
+                : 'Đang tắt: Khóa tính năng bình luận, không ai có thể bình luận dưới bài viết này (bạn có thể mở lại bất cứ lúc nào).'}
             </p>
           </div>
 

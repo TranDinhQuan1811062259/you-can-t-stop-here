@@ -88,10 +88,11 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
           maxWidth: '580px',
           width: '95%',
           padding: '24px 28px',
-          background: '#ffffff',
-          color: '#0f172a',
+          background: 'var(--bg-card)',
+          color: 'var(--text-main)',
+          border: '1.5px solid var(--border-card)',
           borderRadius: '20px',
-          boxShadow: '0 25px 70px rgba(0, 0, 0, 0.5), 0 0 30px rgba(13, 148, 136, 0.15)',
+          boxShadow: '0 25px 70px rgba(0, 0, 0, 0.4), 0 0 30px var(--pastel-sage-glow)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -101,25 +102,27 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
           onClick={onClose}
           title="Đóng cửa sổ"
         >
-          ✕
+          <i className="fa-solid fa-xmark"></i>
         </button>
 
         {/* Tiêu đề Modal */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-          <span style={{ fontSize: '1.75rem' }}>⏰</span>
-          <h3 className="modal-heading" style={{ margin: 0, fontSize: '1.35rem', color: '#0f172a', fontWeight: 800 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
+          <span className="healing-icon-pill healing-icon-amber" style={{ width: '42px', height: '42px', fontSize: '1.15rem' }}>
+            <i className="fa-solid fa-clock"></i>
+          </span>
+          <h3 className="modal-heading" style={{ margin: 0, fontSize: '1.35rem', color: 'var(--text-main)', fontWeight: 800 }}>
             Cài Đặt Chế Độ Ngày & Đêm Theo Giờ
           </h3>
         </div>
-        <p className="modal-subtitle" style={{ margin: '0 0 16px', color: '#475569', fontSize: '0.88rem', lineHeight: 1.5 }}>
+        <p className="modal-subtitle" style={{ margin: '0 0 16px', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.5 }}>
           Tự động điều chỉnh màu sắc giao diện theo đồng hồ thời gian thực để bảo vệ thị giác, chống mỏi mắt khi làm việc buổi tối.
         </p>
 
         {/* Khung Thông Báo Giờ Thời Gian Thực & Trạng Thái Hiện Tại */}
         <div
           style={{
-            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-            border: '1.5px solid rgba(45, 212, 191, 0.45)',
+            background: 'var(--bg-page)',
+            border: '1.5px solid var(--pastel-sage-border)',
             borderRadius: '14px',
             padding: '14px 18px',
             marginBottom: '18px',
@@ -132,19 +135,21 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '1.35rem' }}>🕒</span>
+            <span className="healing-icon-pill healing-icon-sage" style={{ width: '38px', height: '38px', fontSize: '1.1rem' }}>
+              <i className="fa-regular fa-clock"></i>
+            </span>
             <div>
-              <div style={{ fontSize: '0.74rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>
+              <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>
                 Đồng hồ hệ thống
               </div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#2dd4bf', fontFamily: 'monospace' }}>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--pastel-sage)', fontFamily: 'monospace' }}>
                 {currentTimeStr || '00:00:00'}
               </div>
             </div>
           </div>
 
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.74rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>
+            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>
               Trạng thái đang hiển thị
             </div>
             <div
@@ -154,15 +159,15 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
                 gap: '6px',
                 padding: '5px 12px',
                 borderRadius: '999px',
-                background: currentActiveTheme === THEMES.LIGHT ? '#fef08a' : '#1e293b',
-                color: currentActiveTheme === THEMES.LIGHT ? '#713f12' : '#38bdf8',
+                background: currentActiveTheme === THEMES.LIGHT ? 'var(--pastel-amber-bg)' : 'var(--pastel-sage-bg)',
+                color: currentActiveTheme === THEMES.LIGHT ? 'var(--pastel-amber)' : 'var(--pastel-sage)',
                 fontSize: '0.84rem',
                 fontWeight: 800,
                 marginTop: '3px',
-                border: currentActiveTheme === THEMES.LIGHT ? '1.5px solid #facc15' : '1.5px solid rgba(56, 189, 248, 0.5)',
+                border: currentActiveTheme === THEMES.LIGHT ? '1.5px solid var(--pastel-amber-border)' : '1.5px solid var(--pastel-sage-border)',
               }}
             >
-              <span>{currentActiveTheme === THEMES.LIGHT ? '☀️' : '🌙'}</span>
+              <span>{currentActiveTheme === THEMES.LIGHT ? <i className="fa-solid fa-sun"></i> : <i className="fa-solid fa-moon"></i>}</span>
               <span>{currentActiveTheme === THEMES.LIGHT ? 'Chế Độ Ngày (Sáng)' : 'Chế Độ Đêm (Tối)'}</span>
             </div>
           </div>
@@ -170,8 +175,8 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
 
         {/* Lựa Chọn Phương Thức Hoạt Động */}
         <div style={{ marginBottom: '18px' }}>
-          <label style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0f172a', display: 'block', marginBottom: '8px' }}>
-            ⚙️ Chế độ hoạt động giao diện:
+          <label style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+            <i className="fa-solid fa-gear"></i> Chế độ hoạt động giao diện:
           </label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
             {/* Lựa chọn 1: Tự động theo giờ */}
@@ -179,20 +184,22 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
               type="button"
               onClick={() => handleModeChange(THEME_MODES.AUTO)}
               style={{
-                background: schedule.mode === THEME_MODES.AUTO ? '#ecfdf5' : '#f8fafc',
-                border: schedule.mode === THEME_MODES.AUTO ? '2px solid #059669' : '1.5px solid #cbd5e1',
+                background: schedule.mode === THEME_MODES.AUTO ? 'var(--pastel-sage-bg)' : 'var(--bg-input)',
+                border: schedule.mode === THEME_MODES.AUTO ? '2px solid var(--pastel-sage)' : '1.5px solid var(--border-card)',
                 borderRadius: '12px',
                 padding: '12px 8px',
                 cursor: 'pointer',
                 textAlign: 'center',
                 transition: 'all 0.2s ease',
-                color: schedule.mode === THEME_MODES.AUTO ? '#047857' : '#1e293b',
-                boxShadow: schedule.mode === THEME_MODES.AUTO ? '0 4px 14px rgba(5, 150, 105, 0.18)' : 'none',
+                color: schedule.mode === THEME_MODES.AUTO ? 'var(--pastel-sage)' : 'var(--text-main)',
+                boxShadow: schedule.mode === THEME_MODES.AUTO ? '0 4px 14px var(--pastel-sage-glow)' : 'none',
               }}
             >
-              <div style={{ fontSize: '1.35rem', marginBottom: '4px' }}>🕒</div>
+              <div style={{ fontSize: '1.25rem', marginBottom: '4px' }}>
+                <i className="fa-regular fa-clock"></i>
+              </div>
               <div style={{ fontSize: '0.86rem', fontWeight: 800 }}>Theo Giờ</div>
-              <div style={{ fontSize: '0.72rem', color: schedule.mode === THEME_MODES.AUTO ? '#047857' : '#64748b', fontWeight: 600, marginTop: '2px' }}>
+              <div style={{ fontSize: '0.72rem', color: schedule.mode === THEME_MODES.AUTO ? 'var(--pastel-sage)' : 'var(--text-muted)', fontWeight: 600, marginTop: '2px' }}>
                 Tự động đổi
               </div>
             </button>
@@ -202,20 +209,22 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
               type="button"
               onClick={() => handleModeChange(THEME_MODES.LIGHT)}
               style={{
-                background: schedule.mode === THEME_MODES.LIGHT ? '#fefce8' : '#f8fafc',
-                border: schedule.mode === THEME_MODES.LIGHT ? '2px solid #ca8a04' : '1.5px solid #cbd5e1',
+                background: schedule.mode === THEME_MODES.LIGHT ? 'var(--pastel-amber-bg)' : 'var(--bg-input)',
+                border: schedule.mode === THEME_MODES.LIGHT ? '2px solid var(--pastel-amber)' : '1.5px solid var(--border-card)',
                 borderRadius: '12px',
                 padding: '12px 8px',
                 cursor: 'pointer',
                 textAlign: 'center',
                 transition: 'all 0.2s ease',
-                color: schedule.mode === THEME_MODES.LIGHT ? '#854d0e' : '#1e293b',
-                boxShadow: schedule.mode === THEME_MODES.LIGHT ? '0 4px 14px rgba(202, 138, 4, 0.2)' : 'none',
+                color: schedule.mode === THEME_MODES.LIGHT ? 'var(--pastel-amber)' : 'var(--text-main)',
+                boxShadow: schedule.mode === THEME_MODES.LIGHT ? '0 4px 14px var(--pastel-amber-glow)' : 'none',
               }}
             >
-              <div style={{ fontSize: '1.35rem', marginBottom: '4px' }}>☀️</div>
+              <div style={{ fontSize: '1.25rem', marginBottom: '4px' }}>
+                <i className="fa-solid fa-sun"></i>
+              </div>
               <div style={{ fontSize: '0.86rem', fontWeight: 800 }}>Ban Ngày</div>
-              <div style={{ fontSize: '0.72rem', color: schedule.mode === THEME_MODES.LIGHT ? '#854d0e' : '#64748b', fontWeight: 600, marginTop: '2px' }}>
+              <div style={{ fontSize: '0.72rem', color: schedule.mode === THEME_MODES.LIGHT ? 'var(--pastel-amber)' : 'var(--text-muted)', fontWeight: 600, marginTop: '2px' }}>
                 Luôn sáng
               </div>
             </button>
@@ -225,20 +234,22 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
               type="button"
               onClick={() => handleModeChange(THEME_MODES.DARK)}
               style={{
-                background: schedule.mode === THEME_MODES.DARK ? '#f0f9ff' : '#f8fafc',
-                border: schedule.mode === THEME_MODES.DARK ? '2px solid #0284c7' : '1.5px solid #cbd5e1',
+                background: schedule.mode === THEME_MODES.DARK ? 'var(--pastel-sage-bg)' : 'var(--bg-input)',
+                border: schedule.mode === THEME_MODES.DARK ? '2px solid var(--pastel-sage)' : '1.5px solid var(--border-card)',
                 borderRadius: '12px',
                 padding: '12px 8px',
                 cursor: 'pointer',
                 textAlign: 'center',
                 transition: 'all 0.2s ease',
-                color: schedule.mode === THEME_MODES.DARK ? '#0369a1' : '#1e293b',
-                boxShadow: schedule.mode === THEME_MODES.DARK ? '0 4px 14px rgba(2, 132, 199, 0.2)' : 'none',
+                color: schedule.mode === THEME_MODES.DARK ? 'var(--pastel-sage)' : 'var(--text-main)',
+                boxShadow: schedule.mode === THEME_MODES.DARK ? '0 4px 14px var(--pastel-sage-glow)' : 'none',
               }}
             >
-              <div style={{ fontSize: '1.35rem', marginBottom: '4px' }}>🌙</div>
+              <div style={{ fontSize: '1.25rem', marginBottom: '4px' }}>
+                <i className="fa-solid fa-moon"></i>
+              </div>
               <div style={{ fontSize: '0.86rem', fontWeight: 800 }}>Ban Đêm</div>
-              <div style={{ fontSize: '0.72rem', color: schedule.mode === THEME_MODES.DARK ? '#0369a1' : '#64748b', fontWeight: 600, marginTop: '2px' }}>
+              <div style={{ fontSize: '0.72rem', color: schedule.mode === THEME_MODES.DARK ? 'var(--pastel-sage)' : 'var(--text-muted)', fontWeight: 600, marginTop: '2px' }}>
                 Luôn tối
               </div>
             </button>
@@ -248,8 +259,8 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
         {/* Khung Cài Đặt Khung Giờ (Chỉ Áp Dụng Khi Ở Chế Độ Tự Động) */}
         <div
           style={{
-            background: '#f8fafc',
-            border: '1.5px solid #cbd5e1',
+            background: 'var(--bg-page)',
+            border: '1.5px solid var(--border-card)',
             borderRadius: '14px',
             padding: '14px 18px',
             marginBottom: '18px',
@@ -258,12 +269,12 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
-              ⏱ Khung giờ chuyển đổi Ngày / Đêm:
+            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <i className="fa-solid fa-business-time"></i> Khung giờ chuyển đổi Ngày / Đêm:
             </span>
             {schedule.mode === THEME_MODES.AUTO && (
-              <span style={{ fontSize: '0.78rem', color: '#059669', fontWeight: 800 }}>
-                ✓ Đang kích hoạt
+              <span style={{ fontSize: '0.78rem', color: 'var(--pastel-sage)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <i className="fa-solid fa-check"></i> Đang kích hoạt
               </span>
             )}
           </div>
@@ -271,8 +282,8 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
             {/* Giờ Bắt Đầu Chế Độ Ngày */}
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#b45309', fontWeight: 700, marginBottom: '6px' }}>
-                <span>☀️</span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--pastel-amber)', fontWeight: 700, marginBottom: '6px' }}>
+                <i className="fa-solid fa-sun"></i>
                 <span>Bắt đầu Chế Độ Ngày:</span>
               </label>
               <input
@@ -284,9 +295,9 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
                   width: '100%',
                   padding: '9px 12px',
                   borderRadius: '8px',
-                  border: '1.5px solid #94a3b8',
-                  background: '#ffffff',
-                  color: '#0f172a',
+                  border: '1.5px solid var(--border-card)',
+                  background: 'var(--bg-input)',
+                  color: 'var(--text-main)',
                   fontSize: '1rem',
                   fontFamily: 'monospace',
                   fontWeight: 800,
@@ -294,15 +305,15 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
                   boxSizing: 'border-box',
                 }}
               />
-              <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px', display: 'block', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block', fontWeight: 600 }}>
                 Sáng ấm áp (Mặc định 06:00)
               </span>
             </div>
 
             {/* Giờ Bắt Đầu Chế Độ Đêm */}
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#0369a1', fontWeight: 700, marginBottom: '6px' }}>
-                <span>🌙</span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--pastel-sage)', fontWeight: 700, marginBottom: '6px' }}>
+                <i className="fa-solid fa-moon"></i>
                 <span>Bắt đầu Chế Độ Đêm:</span>
               </label>
               <input
@@ -314,9 +325,9 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
                   width: '100%',
                   padding: '9px 12px',
                   borderRadius: '8px',
-                  border: '1.5px solid #94a3b8',
-                  background: '#ffffff',
-                  color: '#0f172a',
+                  border: '1.5px solid var(--border-card)',
+                  background: 'var(--bg-input)',
+                  color: 'var(--text-main)',
                   fontSize: '1rem',
                   fontFamily: 'monospace',
                   fontWeight: 800,
@@ -324,7 +335,7 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
                   boxSizing: 'border-box',
                 }}
               />
-              <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px', display: 'block', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block', fontWeight: 600 }}>
                 Tối dịu mắt (Mặc định 18:00)
               </span>
             </div>

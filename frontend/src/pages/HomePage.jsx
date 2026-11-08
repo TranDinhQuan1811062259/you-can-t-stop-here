@@ -118,7 +118,9 @@ export const HomePage = () => {
         <section className="hero-banner" style={{ padding: '48px 0' }}>
           <div className="container hero-banner-container">
             <div className="hero-tag-pill-wrap">
-              <span className="hero-tag-pill">{currentCategoryIcon} Chủ đề tâm sự</span>
+              <span className="hero-tag-pill">
+                <i className="fa-solid fa-layer-group" style={{ marginRight: '6px' }}></i> Chủ đề tâm sự
+              </span>
             </div>
             <h1 className="hero-title" style={{ textTransform: 'capitalize' }}>
               {currentCategoryName}
@@ -129,7 +131,7 @@ export const HomePage = () => {
                 onClick={() => handleCategorySelect('')}
                 className="hero-back-link"
               >
-                &larr; Xem tất cả các câu chuyện khác
+                <i className="fa-solid fa-arrow-left" style={{ marginRight: '6px' }}></i> Xem tất cả các câu chuyện khác
               </button>
             </div>
           </div>
@@ -138,7 +140,9 @@ export const HomePage = () => {
         <section className="hero-banner" style={{ padding: '48px 0' }}>
           <div className="container hero-banner-container">
             <div className="hero-tag-pill-wrap">
-              <span className="hero-tag-pill">🔖 Chủ đề Hashtag</span>
+              <span className="hero-tag-pill">
+                <i className="fa-solid fa-hashtag" style={{ marginRight: '6px' }}></i> Chủ đề Hashtag
+              </span>
             </div>
             <h1 className="hero-title">
               #{selectedTag}
@@ -149,7 +153,7 @@ export const HomePage = () => {
                 onClick={handleClearTag}
                 className="hero-back-link"
               >
-                &larr; Xem tất cả các câu chuyện khác
+                <i className="fa-solid fa-arrow-left" style={{ marginRight: '6px' }}></i> Xem tất cả các câu chuyện khác
               </button>
             </div>
           </div>
@@ -158,7 +162,9 @@ export const HomePage = () => {
         <section className="hero-banner" style={{ padding: '48px 0' }}>
           <div className="container hero-banner-container">
             <div className="hero-tag-pill-wrap">
-              <span className="hero-tag-pill">🔍 Kết quả tìm kiếm</span>
+              <span className="hero-tag-pill">
+                <i className="fa-solid fa-magnifying-glass" style={{ marginRight: '6px' }}></i> Kết quả tìm kiếm
+              </span>
             </div>
             <h1 className="hero-title">
               "{searchQuery}"
@@ -172,7 +178,7 @@ export const HomePage = () => {
                 }}
                 className="hero-back-link"
               >
-                &larr; Xem tất cả các câu chuyện khác
+                <i className="fa-solid fa-arrow-left" style={{ marginRight: '6px' }}></i> Xem tất cả các câu chuyện khác
               </button>
             </div>
           </div>
@@ -197,7 +203,7 @@ export const HomePage = () => {
                   className="hero-btn-primary"
                   onClick={() => setIsCreateOpen(true)}
                 >
-                  ✍️ Viết tâm sự của bạn hôm nay
+                  <i className="fa-solid fa-feather-pointed" style={{ marginRight: '8px' }}></i> Viết tâm sự của bạn hôm nay
                 </button>
               ) : (
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
@@ -205,10 +211,10 @@ export const HomePage = () => {
                     className="hero-btn-primary"
                     onClick={openLoginModal}
                   >
-                    Đăng nhập để chia sẻ & Động viên
+                    <i className="fa-solid fa-arrow-right-to-bracket" style={{ marginRight: '8px' }}></i> Đăng nhập để chia sẻ &amp; Động viên
                   </button>
                   <a href="#posts-section" className="hero-btn-secondary">
-                    Đọc tâm sự của mọi người ↓
+                    Đọc tâm sự của mọi người <i className="fa-solid fa-arrow-down" style={{ marginLeft: '6px' }}></i>
                   </a>
                 </div>
               )}

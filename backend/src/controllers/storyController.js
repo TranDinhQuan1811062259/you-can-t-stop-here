@@ -1,5 +1,8 @@
 import { loadStore, saveStore } from '../utils/persistentStore.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
+import Conversation from '../models/Conversation.js';
+import Message from '../models/Message.js';
+import { checkDbReady } from '../config/db.js';
 
 const DEFAULT_STORIES = [
   {
@@ -241,5 +244,141 @@ export const deleteStory = async (req, res) => {
     });
   } catch (error) {
     return sendError(res, { message: error.message || 'Lỗi xóa story', status: 500 });
+  }
+};
+
+/**
+ * Phản hồi / Bình luận Story dạng tin nhắn trực tiếp (Direct Message)
+ * Gửi tin nhắn thẳng vào hộp thư trò chuyện của người đăng Story
+ */
+export const replyToStory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { message, reactionEmoji } = req.body;
+    const user = req.user;
+
+    if (!user) {
+      return sendError(res, { message: 'Vui lòng đăng nhập để gửi phản hồi', status: 401 });
+    }
+
+    if ((!message || !message.trim()) && !reactionEmoji) {
+      return sendError(res, { message: 'Vui lòng nhập nội dung tin nhắn hoặc chọn biểu tượng cảm xúc', status: 400 });
+    }
+
+    const store = loadStore();
+    store.stories = store.stories || [];
+    const story = store.stories.find((s) => s._id === id);
+
+    if (!story) {
+      return sendError(res, { message: 'Story không tồn tại hoặc đã hết hạn!', status: 404 });
+    }
+
+    const replyText = reactionEmoji
+      ? `${reactionEmoji}`
+      : message.trim();
+
+    const replyEntry = {
+      _id: `reply_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      user: {
+        _id: user._id,
+        name: user.name,
+        avatar: user.avatar,
+      },
+      content: replyText,
+      reactionEmoji: reactionEmoji || '',
+      createdAt: new Date().toISOString(),
+    };
+
+    story.replies = story.replies || [];
+    story.replies.push(replyEntry);
+    saveStore(store);
+
+    // Gửi tin nhắn trực tiếp (DM) cho tác giả Story nếu khác người đang đăng
+    const authorId = story.userId;
+    if (authorId && String(authorId) !== String(user._id)) {
+      try {
+        const storySnippet = story.content ? story.content.slice(0, 45) : (story.mediaType === 'video' ? '🎬 Video' : '📸 Hình ảnh');
+        const chatContent = reactionEmoji
+          ? `${reactionEmoji} Đã bày tỏ cảm xúc về Story: "${storySnippet}..."`
+          : `💬 [Trả lời Story "${storySnippet}..."]: ${replyText}`;
+
+        if (checkDbReady()) {
+          let conv = await Conversation.findOne({
+            participants: { $all: [user._id, authorId] },
+          });
+
+          if (!conv) {
+            conv = await Conversation.create({
+              participants: [user._id, authorId],
+              status: 'accepted',
+              lastMessage: {
+                content: chatContent,
+                sender: user._id,
+                createdAt: new Date(),
+              },
+            });
+          }
+
+          await Message.create({
+            conversation: conv._id,
+            sender: user._id,
+            receiver: authorId,
+            content: chatContent,
+            isRead: false,
+          });
+
+          conv.lastMessage = {
+            content: chatContent,
+            sender: user._id,
+            createdAt: new Date(),
+          };
+          conv.updatedAt = new Date();
+          await conv.save();
+        }
+
+        // Lưu bản ghi vào persistentStore
+        store.conversations = store.conversations || [];
+        store.messages = store.messages || [];
+
+        let storeConv = store.conversations.find(
+          (c) =>
+            c.participants &&
+            c.participants.includes(String(user._id)) &&
+            c.participants.includes(String(authorId))
+        );
+
+        if (!storeConv) {
+          storeConv = {
+            _id: `conv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            participants: [String(user._id), String(authorId)],
+            status: 'accepted',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          store.conversations.push(storeConv);
+        }
+
+        store.messages.push({
+          _id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          conversationId: storeConv._id,
+          senderId: String(user._id),
+          receiverId: String(authorId),
+          content: chatContent,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+        });
+
+        saveStore(store);
+      } catch (chatErr) {
+        console.warn('[Story Reply Chat Delivery Error]:', chatErr);
+      }
+    }
+
+    return sendSuccess(res, {
+      message: '✓ Đã gửi tin nhắn phản hồi Story thành công!',
+      data: replyEntry,
+    });
+  } catch (error) {
+    return sendError(res, { message: error.message || 'Lỗi gửi phản hồi story', status: 500 });
   }
 };

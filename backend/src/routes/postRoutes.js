@@ -11,6 +11,7 @@ import {
   reactToPost,
   sharePost,
   toggleReactionVisibility,
+  toggleAllowComments,
   moderatePost,
   getHashtags,
   addHashtag,
@@ -36,6 +37,7 @@ router.post('/:id/repost', protect, repostPost);
 // Tương tác yêu cầu đăng nhập
 router.post('/:id/react', protect, reactToPost);
 router.patch('/:id/reaction-visibility', protect, toggleReactionVisibility);
+router.patch('/:id/toggle-comments', protect, toggleAllowComments);
 
 // Đăng & Quản lý bài viết / tâm sự (Yêu cầu đăng nhập)
 router.post('/', protect, createPost);

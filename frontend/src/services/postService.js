@@ -26,6 +26,10 @@ export const postService = {
   toggleReactionVisibility: (id, showReactionCount) =>
     apiClient.patch(`/posts/${id}/reaction-visibility`, { showReactionCount }),
 
+  // Bật/tắt tính năng bình luận của bài viết
+  toggleComments: (id, allowComments) =>
+    apiClient.patch(`/posts/${id}/toggle-comments`, { allowComments }),
+
   // Lấy danh sách bài viết mới nhất (widget sidebar)
   getRecentPosts: (limit = 4) => apiClient.get('/posts/recent', { params: { limit } }),
 

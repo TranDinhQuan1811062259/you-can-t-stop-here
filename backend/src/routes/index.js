@@ -9,6 +9,7 @@ import newsletterRoutes from './newsletterRoutes.js';
 import musicRoutes from './musicRoutes.js';
 import eventRoutes from './eventRoutes.js';
 import storyRoutes from './storyRoutes.js';
+import timeCapsuleRoutes from './timeCapsuleRoutes.js';
 
 const router = express.Router();
 
@@ -22,6 +23,7 @@ router.use('/newsletter', newsletterRoutes);
 router.use('/music', musicRoutes);
 router.use('/events', eventRoutes);
 router.use('/stories', storyRoutes);
+router.use('/time-capsules', timeCapsuleRoutes);
 
 // Health check endpoint
 router.get('/health', (req, res) => {

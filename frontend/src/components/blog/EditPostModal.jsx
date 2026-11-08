@@ -7,6 +7,7 @@ import { MediaCameraCaptureModal } from './MediaCameraCaptureModal';
 import { formatPostContent } from '../../utils/contentFormatter';
 import { maskSensitiveText, analyzeContentSafety } from '../../utils/sensitiveFilter';
 import { PostAtmosphereSelector } from './PostAtmosphereSelector';
+import { AsmrKeyboardToggle } from '../common/AsmrKeyboardToggle';
 
 export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
   const [categories, setCategories] = useState([]);
@@ -21,6 +22,7 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
     tags: '',
     views: 1,
     showReactionCount: true,
+    allowComments: true,
     visibility: 'public',
     audioMood: 'auto',
     voiceGender: 'female',
@@ -67,6 +69,7 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
           tags: Array.isArray(post.tags) ? post.tags.join(', ') : (post.tags || ''),
           views: post.views !== undefined ? post.views : 1,
           showReactionCount: post.showReactionCount !== false,
+          allowComments: post.allowComments !== false,
           visibility: post.visibility || 'public',
           audioMood: post.audioMood || 'auto',
           voiceGender: post.voiceGender || 'female',
@@ -199,6 +202,7 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
         tags: cleanTags,
         views: parseInt(formData.views, 10) || 1,
         showReactionCount: formData.showReactionCount,
+        allowComments: formData.allowComments,
         audioMood: formData.audioMood || 'auto',
         voiceGender: formData.voiceGender || 'female',
         voiceRegion: formData.voiceRegion || 'north',
@@ -226,10 +230,20 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <button className="modal-close-btn" onClick={onClose}>
-          ✕
+          <i className="fa-solid fa-xmark"></i>
         </button>
 
-        <h3 className="modal-heading">✏️ Chỉnh Sửa Bài Viết</h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', flexWrap: 'wrap', gap: '8px' }}>
+          <h3 className="modal-heading" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className="healing-icon-pill healing-icon-amber" style={{ width: '30px', height: '30px', fontSize: '0.85rem' }}>
+              <i className="fa-solid fa-pen-to-square"></i>
+            </span>
+            <span>Chỉnh Sửa Bài Viết</span>
+          </h3>
+          <div style={{ marginRight: '36px' }}>
+            <AsmrKeyboardToggle variant="pill" />
+          </div>
+        </div>
         <p className="modal-subtitle">
           Cập nhật thông tin tác giả, tiêu đề, nội dung trực quan (WYSIWYG) và lượt đọc thực tế của bài viết.
         </p>
@@ -729,6 +743,21 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
             </label>
             <p style={{ margin: '4px 0 0 28px', fontSize: '0.82rem', color: '#64748b' }}>
               Nếu bỏ chọn, người đọc chỉ thấy các biểu tượng cảm xúc (Đồng Cảm 🫂, Stop 🛑, Yêu thích ❤️, Cố Lên 💪) mà không thấy con số cụ thể.
+            </p>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 600, color: 'var(--bg-dark)', marginBottom: 0, marginTop: '12px' }}>
+              <input
+                type="checkbox"
+                checked={formData.allowComments}
+                onChange={(e) => setFormData({ ...formData, allowComments: e.target.checked })}
+                style={{ width: '18px', height: '18px', accentColor: 'var(--primary-color)', cursor: 'pointer' }}
+              />
+              <span>💬 Cho phép mọi người gửi bình luận & động viên dưới bài viết</span>
+            </label>
+            <p style={{ margin: '4px 0 0 28px', fontSize: '0.82rem', color: '#64748b' }}>
+              {formData.allowComments
+                ? 'Đang bật: Người đọc có thể gửi lời chia sẻ, bình luận và động viên bạn.'
+                : 'Đang tắt: Khóa tính năng bình luận, không ai có thể bình luận dưới bài viết này (bạn có thể mở lại bất cứ lúc nào).'}
             </p>
           </div>
 
