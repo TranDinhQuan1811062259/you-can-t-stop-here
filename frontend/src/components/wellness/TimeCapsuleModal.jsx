@@ -13,18 +13,20 @@ const PRESET_DURATIONS = [
 ];
 
 const MOODS = [
-  { id: 'hopeful', label: 'Tia Sáng Hy Vọng (Lightning Moment 🎶)', icon: '✨', color: '#f59e0b' },
+  { id: 'heartbreak_love', label: 'Tâm Sự Tình Trường (Cô đơn, đơn phương, mất ai đó 🎶)', icon: '💔', color: '#f43f5e' },
+  { id: 'hopeful', label: 'Tia Sáng Hy Vọng (Đầy năng lượng & Niềm tin 🎶)', icon: '✨', color: '#f59e0b' },
   { id: 'anxious', label: 'Đang Lo Âu & Áp Lực', icon: '🌧️', color: '#0ea5e9' },
-  { id: 'tired', label: 'Mệt Mỏi Cần Ôm Ấp', icon: '🫂', color: '#f43f5e' },
+  { id: 'tired', label: 'Mệt Mỏi Cần Ôm Ấp', icon: '🫂', color: '#ec4899' },
   { id: 'dreamer', label: 'Mơ Mộng & Hoài Bão', icon: '🌙', color: '#8b5cf6' },
   { id: 'peaceful', label: 'An Yên & Tĩnh Lặng', icon: '🍵', color: '#10b981' },
 ];
 
 const ENVELOPES = [
+  { id: 'rose', name: 'San Hô & Tim Vỡ', bg: 'linear-gradient(135deg, #e11d48, #be123c)', border: '#fda4af' },
+  { id: 'twilight', name: 'Hoàng Hôn Tím', bg: 'linear-gradient(135deg, #7c3aed, #4c1d95)', border: '#c4b5fd' },
   { id: 'amber', name: 'Hoàng Kim', bg: 'linear-gradient(135deg, #d97706, #b45309)', border: '#fcd34d' },
   { id: 'emerald', name: 'Ngọc Bích', bg: 'linear-gradient(135deg, #059669, #047857)', border: '#6ee7b7' },
   { id: 'indigo', name: 'Huyền Bí', bg: 'linear-gradient(135deg, #4f46e5, #3730a3)', border: '#a5b4fc' },
-  { id: 'rose', name: 'San Hô', bg: 'linear-gradient(135deg, #e11d48, #be123c)', border: '#fda4af' },
   { id: 'slate', name: 'Tro Núi Lửa', bg: 'linear-gradient(135deg, #334155, #1e293b)', border: '#94a3b8' },
 ];
 
@@ -40,8 +42,8 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
   const [creatorName, setCreatorName] = useState('');
   const [selectedDurationDays, setSelectedDurationDays] = useState(90);
   const [customDate, setCustomDate] = useState('');
-  const [selectedMood, setSelectedMood] = useState('hopeful');
-  const [selectedEnvelope, setSelectedEnvelope] = useState('amber');
+  const [selectedMood, setSelectedMood] = useState('heartbreak_love');
+  const [selectedEnvelope, setSelectedEnvelope] = useState('rose');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Viewing Opened Capsule
@@ -505,10 +507,16 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
                       </option>
                     ))}
                   </select>
+                  {selectedMood === 'heartbreak_love' && (
+                    <div style={{ marginTop: '5px', fontSize: '0.72rem', color: '#fca5a5', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>💔</span>
+                      <span>Đang hòa cùng giai điệu vỗ về nỗi đau tình trường & cô đơn (lặp vô tận ♾️)</span>
+                    </div>
+                  )}
                   {selectedMood === 'hopeful' && (
                     <div style={{ marginTop: '5px', fontSize: '0.72rem', color: '#fde68a', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span>✨</span>
-                      <span>Đang hòa cùng giai điệu Tia Sáng Hy Vọng (lặp vô tận)</span>
+                      <span>Đang hòa cùng giai điệu Tia Sáng Hy Vọng (lặp vô tận ♾️)</span>
                     </div>
                   )}
                 </div>

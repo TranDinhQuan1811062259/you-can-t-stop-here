@@ -2,17 +2,69 @@ import React, { useState, useEffect, useRef } from 'react';
 import { playClickSound } from '../../utils/soundEffects';
 
 /**
+ * Trích xuất YouTube Video ID từ nhiều định dạng URL khác nhau
+ */
+const extractYouTubeId = (url) => {
+  if (!url) return '';
+  const trimmed = url.trim();
+  // Nếu đã là 11 ký tự id
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
+
+  const match = trimmed.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/
+  );
+  return match ? match[1] : '';
+};
+
+/**
+ * Danh sách Theme Nhạc Chữa Lành trong Hộp Thời Gian
+ */
+const MUSIC_THEMES = {
+  heartbreak_love: {
+    id: 'heartbreak_love',
+    badge: '💔 TÂM SỰ TÌNH TRƯỜNG • VỖ VỀ NỖI ĐAU',
+    moodName: 'Tình Trường & Cô Đơn',
+    tagline: 'Hạc cầm Lightning Moment vỗ về nỗi cô đơn, tình đơn phương và khoảng trống khi mất đi một người...',
+    accentColor: '#f43f5e',
+    glowColor: 'rgba(244, 63, 94, 0.25)',
+    cardBg: 'linear-gradient(135deg, rgba(225, 29, 72, 0.18) 0%, rgba(76, 29, 149, 0.35) 50%, rgba(15, 23, 42, 0.85) 100%)',
+    borderColor: 'rgba(244, 63, 94, 0.45)',
+    textColor: '#ffe4e6',
+    songTitle: 'Lightning Moment (Harp Version) • TypeD',
+    songSubtitle: 'Sáng tác: Ngô Hạo (吴浩) • Giai điệu hạc cầm da diết chia sẻ nỗi niềm tình cảm',
+    defaultVideoId: 'KVremu955Qk',
+  },
+  hopeful: {
+    id: 'hopeful',
+    badge: '✨ TIA SÁNG HY VỌNG • CHỮA LÀNH TÂM TRÍ',
+    moodName: 'Tia Sáng Hy Vọng',
+    tagline: 'Hạc cầm Lightning Moment thắp sáng niềm tin, tiếp thêm sức mạnh vươn lên vào tương lai...',
+    accentColor: '#f59e0b',
+    glowColor: 'rgba(245, 158, 11, 0.25)',
+    cardBg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.16) 0%, rgba(30, 27, 75, 0.75) 100%)',
+    borderColor: 'rgba(251, 191, 36, 0.4)',
+    textColor: '#fef3c7',
+    songTitle: 'Lightning Moment (Harp Version) • TypeD',
+    songSubtitle: 'Sáng tác: Ngô Hạo (吴浩) • Giai điệu hạc cầm xoa dịu tâm hồn và khơi gợi hy vọng',
+    defaultVideoId: 'KVremu955Qk',
+  },
+};
+
+/**
  * TimeCapsuleMusicPlayer
  * 
- * Phát bài nhạc chữa lành "Lightning Moment (竖琴版 • Harp Version) - TypeD (Sáng tác: 吴浩 / Wu Hao)"
- * Từ YouTube: https://www.youtube.com/watch?v=KVremu955Qk (ID: KVremu955Qk)
- * Cơ chế: Vòng lặp vô tận (Infinite Loop), điều khiển Play/Pause, Âm lượng, Mute, Thu gọn / Xem MV.
- * Tuân thủ bản quyền: Nhúng chính thức qua YouTube IFrame Player (YouTube TOS), lượt xem/nghe và bản quyền 
- * thuộc về đơn vị nắm bản quyền gốc (TypeD / 吴浩 / 海纳音子 ℗ 2025).
+ * Bộ phát nhạc nền lặp vô tận (Infinite Loop) cho Hộp Thời Gian
+ * Hỗ trợ các chủ đề cảm xúc:
+ * 1. 💔 Tâm sự tình trường (Cô đơn, đơn phương, khi mất ai đó)
+ * 2. ✨ Tia sáng hy vọng (Tiếp thêm niềm tin & nghị lực)
+ * 3. 🔗 Khả năng dán link YouTube bất kỳ để tùy biến theo ý thích
+ * 
+ * Bản quyền: Phát trực tiếp qua YouTube Embedded Player chính thức (chuẩn YouTube Developer TOS),
+ * bảo vệ quyền sở hữu trí tuệ của tác giả TypeD / 吴浩 (海纳音子 ℗ 2025).
  */
 export const TimeCapsuleMusicPlayer = ({
   autoPlay = true,
-  currentMood = 'hopeful',
+  currentMood = 'heartbreak_love',
   onMoodChange,
 }) => {
   const [isPlaying, setIsPlaying] = useState(true);
@@ -23,10 +75,19 @@ export const TimeCapsuleMusicPlayer = ({
   const [isReady, setIsReady] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
 
+  // Video ID hiện tại (mặc định là KVremu955Qk)
+  const [activeVideoId, setActiveVideoId] = useState('KVremu955Qk');
+
+  // Input dán URL YouTube tùy chỉnh
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customUrlInput, setCustomUrlInput] = useState('');
+  const [customSongName, setCustomSongName] = useState('');
+
   const iframeRef = useRef(null);
   const containerRef = useRef(null);
 
-  const VIDEO_ID = 'KVremu955Qk';
+  // Xác định cấu hình theme hiện tại
+  const theme = MUSIC_THEMES[currentMood] || MUSIC_THEMES.heartbreak_love;
 
   // Gửi lệnh điều khiển tới YouTube Iframe thông qua postMessage
   const postToPlayer = (func, args = []) => {
@@ -81,7 +142,7 @@ export const TimeCapsuleMusicPlayer = ({
     return () => {
       window.removeEventListener('message', handleMessage);
     };
-  }, [autoPlay, volume]);
+  }, [autoPlay, volume, activeVideoId]);
 
   // Đảm bảo âm thanh phát được ngay khi có cử chỉ người dùng (user gesture)
   useEffect(() => {
@@ -140,13 +201,30 @@ export const TimeCapsuleMusicPlayer = ({
     }
   };
 
-  // Trực tiếp phát video khi người dùng tương tác trong modal
-  const handleStartMusicPrompt = () => {
+  // Áp dụng link YouTube tùy chỉnh
+  const handleApplyCustomUrl = (e) => {
+    e.preventDefault();
     playClickSound();
-    setHasInteracted(true);
-    postToPlayer('unMute');
-    postToPlayer('setVolume', [volume]);
-    postToPlayer('playVideo');
+    const id = extractYouTubeId(customUrlInput);
+    if (!id) {
+      alert('Vui lòng nhập link YouTube hợp lệ (ví dụ: https://www.youtube.com/watch?v=...)');
+      return;
+    }
+    setActiveVideoId(id);
+    setCustomSongName(`Bài nhạc tùy chỉnh (${id})`);
+    setShowCustomInput(false);
+    setIsPlaying(true);
+  };
+
+  // Chọn chủ đề nhanh
+  const handleSelectTheme = (moodId) => {
+    playClickSound();
+    if (onMoodChange) {
+      onMoodChange(moodId);
+    }
+    setActiveVideoId('KVremu955Qk');
+    setCustomSongName('');
+    setShowCustomInput(false);
     setIsPlaying(true);
   };
 
@@ -156,9 +234,9 @@ export const TimeCapsuleMusicPlayer = ({
       className="hope-music-player-container"
       style={{
         borderRadius: '16px',
-        background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(30, 27, 75, 0.7) 100%)',
-        border: '1.5px solid rgba(251, 191, 36, 0.35)',
-        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.35), 0 0 25px rgba(245, 158, 11, 0.12)',
+        background: theme.cardBg,
+        border: `1.5px solid ${theme.borderColor}`,
+        boxShadow: `0 8px 30px rgba(0, 0, 0, 0.4), 0 0 25px ${theme.glowColor}`,
         padding: isCollapsed ? '10px 16px' : '14px 18px',
         marginBottom: '16px',
         position: 'relative',
@@ -166,19 +244,166 @@ export const TimeCapsuleMusicPlayer = ({
         overflow: 'hidden',
       }}
     >
-      {/* Tia sáng hy vọng lung linh nền */}
+      {/* Hiệu ứng ánh sáng nền lung linh */}
       <div
         style={{
           position: 'absolute',
           top: '-40px',
           right: '-40px',
-          width: '120px',
-          height: '120px',
-          background: 'radial-gradient(circle, rgba(251, 191, 36, 0.25) 0%, rgba(251, 191, 36, 0) 70%)',
+          width: '130px',
+          height: '130px',
+          background: `radial-gradient(circle, ${theme.glowColor} 0%, rgba(0, 0, 0, 0) 70%)`,
           pointerEvents: 'none',
-          filter: 'blur(10px)',
+          filter: 'blur(12px)',
         }}
       />
+
+      {/* Thanh chọn chủ đề nhanh */}
+      {!isCollapsed && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: '10px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <span style={{ fontSize: '0.74rem', color: '#cbd5e1', fontWeight: 600 }}>
+            Tâm trạng âm nhạc:
+          </span>
+
+          <button
+            type="button"
+            onClick={() => handleSelectTheme('heartbreak_love')}
+            style={{
+              padding: '4px 10px',
+              borderRadius: '20px',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              background:
+                currentMood === 'heartbreak_love' && !customSongName
+                  ? 'rgba(244, 63, 94, 0.3)'
+                  : 'rgba(255, 255, 255, 0.06)',
+              border:
+                currentMood === 'heartbreak_love' && !customSongName
+                  ? '1.5px solid #f43f5e'
+                  : '1px solid rgba(255, 255, 255, 0.12)',
+              color: currentMood === 'heartbreak_love' && !customSongName ? '#ffe4e6' : '#cbd5e1',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <span>💔</span>
+            <span>Tình Trường & Cô Đơn</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectTheme('hopeful')}
+            style={{
+              padding: '4px 10px',
+              borderRadius: '20px',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              background:
+                currentMood === 'hopeful' && !customSongName
+                  ? 'rgba(245, 158, 11, 0.3)'
+                  : 'rgba(255, 255, 255, 0.06)',
+              border:
+                currentMood === 'hopeful' && !customSongName
+                  ? '1.5px solid #f59e0b'
+                  : '1px solid rgba(255, 255, 255, 0.12)',
+              color: currentMood === 'hopeful' && !customSongName ? '#fef3c7' : '#cbd5e1',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <span>✨</span>
+            <span>Tia Sáng Hy Vọng</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              playClickSound();
+              setShowCustomInput(!showCustomInput);
+            }}
+            style={{
+              padding: '4px 10px',
+              borderRadius: '20px',
+              fontSize: '0.74rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              background: showCustomInput || customSongName ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.06)',
+              border: showCustomInput || customSongName ? '1.5px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.12)',
+              color: showCustomInput || customSongName ? '#bae6fd' : '#94a3b8',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <span>🔗</span>
+            <span>{customSongName ? 'Đổi Link' : 'Dán Link YouTube'}</span>
+          </button>
+        </div>
+      )}
+
+      {/* Khung nhập Link YouTube tùy chỉnh */}
+      {showCustomInput && (
+        <form
+          onSubmit={handleApplyCustomUrl}
+          style={{
+            display: 'flex',
+            gap: '8px',
+            marginBottom: '12px',
+            padding: '8px 12px',
+            borderRadius: '10px',
+            background: 'rgba(0, 0, 0, 0.35)',
+            border: '1px solid rgba(56, 189, 248, 0.3)',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          <input
+            type="text"
+            placeholder="Dán link bài hát YouTube (vd: https://www.youtube.com/watch?v=...)"
+            value={customUrlInput}
+            onChange={(e) => setCustomUrlInput(e.target.value)}
+            style={{
+              flex: 1,
+              padding: '6px 10px',
+              borderRadius: '8px',
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              color: '#f8fafc',
+              fontSize: '0.8rem',
+              outline: 'none',
+            }}
+          />
+          <button
+            type="submit"
+            style={{
+              padding: '6px 14px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+              border: 'none',
+              color: '#fff',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Phát Vô Tận ♾️
+          </button>
+        </form>
+      )}
 
       {/* Header thanh phát nhạc */}
       <div
@@ -195,23 +420,23 @@ export const TimeCapsuleMusicPlayer = ({
           <button
             type="button"
             onClick={togglePlay}
-            title={isPlaying ? 'Tạm dừng giai điệu' : 'Phát giai điệu Tia Sáng Hy Vọng'}
+            title={isPlaying ? 'Tạm dừng giai điệu' : 'Phát giai điệu vô tận'}
             style={{
               width: '42px',
               height: '42px',
               borderRadius: '50%',
               background: isPlaying
-                ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                ? `linear-gradient(135deg, ${theme.accentColor}, #be123c)`
                 : 'rgba(255, 255, 255, 0.1)',
-              border: '2px solid #fde68a',
-              color: isPlaying ? '#0f172a' : '#fef3c7',
+              border: `2px solid ${theme.textColor}`,
+              color: '#ffffff',
               fontSize: '1rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
               flexShrink: 0,
-              boxShadow: isPlaying ? '0 0 16px rgba(245, 158, 11, 0.6)' : 'none',
+              boxShadow: isPlaying ? `0 0 16px ${theme.glowColor}` : 'none',
               transition: 'all 0.2s ease',
             }}
           >
@@ -236,12 +461,12 @@ export const TimeCapsuleMusicPlayer = ({
                   letterSpacing: '0.5px',
                   padding: '2px 8px',
                   borderRadius: '6px',
-                  background: 'rgba(245, 158, 11, 0.25)',
-                  color: '#fef3c7',
-                  border: '1px solid rgba(251, 191, 36, 0.4)',
+                  background: 'rgba(0, 0, 0, 0.35)',
+                  color: theme.textColor,
+                  border: `1px solid ${theme.borderColor}`,
                 }}
               >
-                <span>✨</span> TIA SÁNG HY VỌNG
+                {theme.badge}
               </span>
 
               <span
@@ -266,16 +491,16 @@ export const TimeCapsuleMusicPlayer = ({
               style={{
                 fontSize: '0.88rem',
                 fontWeight: 700,
-                color: '#fef3c7',
+                color: theme.textColor,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
               }}
             >
-              Lightning Moment (Harp Version) • TypeD
+              {customSongName || theme.songTitle}
             </div>
             <div style={{ fontSize: '0.74rem', color: '#cbd5e1' }}>
-              Sáng tác: Ngô Hạo (吴浩) • Giai điệu hạc cầm xoa dịu tâm trí
+              {theme.tagline}
             </div>
           </div>
         </div>
@@ -288,7 +513,7 @@ export const TimeCapsuleMusicPlayer = ({
               style={{
                 width: '3.5px',
                 height: isPlaying ? `${height}px` : '4px',
-                background: '#fbbf24',
+                background: theme.accentColor,
                 borderRadius: '3px',
                 transition: 'height 0.2s ease',
                 animation: isPlaying ? `equalizerPulse 0.8s ease-in-out infinite alternate ${idx * 0.15}s` : 'none',
@@ -332,7 +557,7 @@ export const TimeCapsuleMusicPlayer = ({
                 onChange={handleVolumeChange}
                 style={{
                   width: '65px',
-                  accentColor: '#f59e0b',
+                  accentColor: theme.accentColor,
                   cursor: 'pointer',
                   height: '4px',
                 }}
@@ -355,9 +580,9 @@ export const TimeCapsuleMusicPlayer = ({
             style={{
               padding: '5px 9px',
               borderRadius: '8px',
-              background: showVideo ? 'rgba(245, 158, 11, 0.3)' : 'rgba(255, 255, 255, 0.08)',
-              border: showVideo ? '1px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.15)',
-              color: showVideo ? '#fde68a' : '#cbd5e1',
+              background: showVideo ? 'rgba(244, 63, 94, 0.3)' : 'rgba(255, 255, 255, 0.08)',
+              border: showVideo ? `1px solid ${theme.accentColor}` : '1px solid rgba(255, 255, 255, 0.15)',
+              color: showVideo ? theme.textColor : '#cbd5e1',
               fontSize: '0.75rem',
               fontWeight: 600,
               cursor: 'pointer',
@@ -409,8 +634,8 @@ export const TimeCapsuleMusicPlayer = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ color: '#38bdf8' }}>🕊️</span>
-            <span>Giai điệu tự động đồng hành cùng bạn khi viết thư gửi tương lai</span>
+            <span style={{ color: '#f43f5e' }}>🥀</span>
+            <span>Giai điệu lặp vô tận cùng bạn viết nên những tâm tư chân thật nhất</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ color: '#10b981' }}>🛡️</span>
@@ -446,11 +671,12 @@ export const TimeCapsuleMusicPlayer = ({
       >
         <iframe
           ref={iframeRef}
+          key={activeVideoId}
           id="yt-hope-capsule-player"
-          title="Tia Sáng Hy Vọng - Lightning Moment (Harp Version) TypeD"
+          title="Hộp Thời Gian - Nhạc Chữa Lành Lặp Vô Tận"
           width="100%"
           height="100%"
-          src={`https://www.youtube.com/embed/${VIDEO_ID}?enablejsapi=1&autoplay=1&loop=1&playlist=${VIDEO_ID}&playsinline=1&controls=1&rel=0&modestbranding=1`}
+          src={`https://www.youtube.com/embed/${activeVideoId}?enablejsapi=1&autoplay=1&loop=1&playlist=${activeVideoId}&playsinline=1&controls=1&rel=0&modestbranding=1`}
           frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
