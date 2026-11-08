@@ -103,7 +103,7 @@ export const PageTransitionAtmosphereOverlay = ({
 
       const timer = setTimeout(() => {
         setVisible(false);
-      }, 3200); // 3.2s tốc độ chậm rãi, êm ái, thư thái, để người dùng ngắm trọn vẹn mô hình 3D và không bị vèo qua quá nhanh
+      }, 3800); // 3.8s tốc độ chậm rãi, êm ái, thư thái: chạy ra giữa màn hình, dừng lại uy nghiêm rồi fade từ từ biến mất
       return () => clearTimeout(timer);
     } else {
       setVisible(false);
@@ -360,7 +360,7 @@ export const PageTransitionAtmosphereOverlay = ({
       )}
 
       {/* =========================================================================
-          8. 30/4: Xe tăng T-54 Thép Bọc Giáp 3D Lịch Sử mang cờ đỏ sao vàng chạy qua
+          8. 30/4: Xe tăng T-54 Thép Bọc Giáp 3D Lịch Sử mang cờ đỏ sao vàng chạy ra giữa màn hình & fade từ từ
          ========================================================================= */}
       {currentType === 'event_tank_304' && (
         <div className="fx-tank-304-container fx-3d-perspective-stage">
@@ -372,11 +372,14 @@ export const PageTransitionAtmosphereOverlay = ({
             style={{ position: 'absolute', inset: 0 }}
           />
 
-          {/* Vùng xoáy hút năng lượng 3D vào Header Title ("YOU CAN'T STOP HERE") */}
-          <div className="fx-title-suction-vortex fx-3d-vortex-portal">
-            <div className="vortex-ring-3d" />
-            <div className="vortex-core-3d" />
-            <span className="vortex-burst-text-3d">★ 30/4 ĐẠI THẮNG ★</span>
+          {/* Dải Băng ĐẠI THẮNG 30/4 Lịch Sử ở GIỮA MÀN HÌNH */}
+          <div className="fx-grand-celebration-banner banner-304">
+            <div className="banner-halo-glow" />
+            <div className="banner-badge-container">
+              <span className="banner-gold-star">★</span>
+              <span className="banner-headline">ĐẠI THẮNG MÙA XUÂN 30/4 ★ THỐNG NHẤT NON SÔNG</span>
+              <span className="banner-gold-star">★</span>
+            </div>
           </div>
         </div>
       )}
@@ -412,7 +415,7 @@ export const PageTransitionAtmosphereOverlay = ({
       )}
 
       {/* =========================================================================
-          9. 2/9: Tượng Đài Nắm Đấm Vinh Quang 3D Đồng Vàng + Hào Quang 360 độ
+          9. 2/9: Quốc Khánh 2/9: Chiến Sĩ 3D Cầm Cờ & Dải Băng Vinh Quang ở GIỮA MÀN HÌNH
          ========================================================================= */}
       {currentType === 'event_national_day_29' && (
         <div className="fx-national-day-29-container fx-3d-perspective-stage">
@@ -437,34 +440,14 @@ export const PageTransitionAtmosphereOverlay = ({
             />
           </div>
 
-          {/* Dải băng vinh quang Quốc Khánh 2/9 hào hùng */}
-          <div
-            style={{
-              position: 'absolute',
-              bottom: '18%',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 14,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              padding: '8px 24px',
-              background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.94) 0%, rgba(185, 28, 28, 0.96) 100%)',
-              border: '2px solid #facc15',
-              borderRadius: '999px',
-              boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5), 0 0 25px rgba(234, 179, 8, 0.6)',
-              color: '#fef08a',
-              fontWeight: 900,
-              fontSize: '1rem',
-              letterSpacing: '1px',
-              textShadow: '0 2px 8px rgba(0, 0, 0, 0.7)',
-              pointerEvents: 'none',
-              animation: 'fadeSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
-            }}
-          >
-            <span style={{ color: '#facc15', fontSize: '1.2rem' }}>★</span>
-            <span>CHÀO MỪNG QUỐC KHÁNH 2/9 ★ ĐỘC LẬP - TỰ DO - HẠNH PHÚC</span>
-            <span style={{ color: '#facc15', fontSize: '1.2rem' }}>★</span>
+          {/* Dải băng vinh quang Quốc Khánh 2/9 hào hùng ở GIỮA MÀN HÌNH */}
+          <div className="fx-grand-celebration-banner banner-29">
+            <div className="banner-halo-glow" />
+            <div className="banner-badge-container">
+              <span className="banner-gold-star">★</span>
+              <span className="banner-headline">CHÀO MỪNG QUỐC KHÁNH 2/9 ★ ĐỘC LẬP - TỰ DO - HẠNH PHÚC</span>
+              <span className="banner-gold-star">★</span>
+            </div>
           </div>
         </div>
       )}

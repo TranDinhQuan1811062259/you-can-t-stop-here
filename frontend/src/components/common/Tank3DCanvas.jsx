@@ -757,10 +757,8 @@ export const Tank3DCanvas = ({
         posAttr.needsUpdate = true;
       }
 
-      // 2. Quay bánh xích
-      wheelsList.forEach((w) => {
-        w.rotation.x += 0.06;
-      });
+      // 2. Quay bánh xích & tốc độ di chuyển
+      let wheelSpeedFactor = 1;
 
       // 3. Khói xả động cơ
       exhaustParticles.forEach((p) => {
@@ -780,10 +778,38 @@ export const Tank3DCanvas = ({
         tankRoot.rotation.x += (targetRotX - tankRoot.rotation.x) * 0.08;
         tankRoot.position.y = 0.12 + Math.sin(elapsed * 3) * 0.04;
       } else if (mode === 'parade') {
-        const paradeX = -7 + (elapsed * 1.6) % 15; // Tốc độ diễu hành xe tăng 565 chậm rãi, uy nghiêm, đầm chắc
-        tankRoot.position.set(paradeX, 0.12 + Math.sin(elapsed * 2.8) * 0.04, 0);
-        tankRoot.rotation.set(0, Math.PI / 2, 0);
-        tankRoot.scale.set(0.56, 0.56, 0.56);
+        // Hoạt cảnh diễu binh 30/4: Xe tăng chạy ra GIỮA MÀN HÌNH (X = 0), dừng lại uy nghiêm rồi fade từ từ biến mất
+        // Pha 1 (0 -> 1.5s): Chạy từ bên trái ngoài màn hình (X = -6.5) vào giữa màn hình (X = 0) với giảm tốc êm ái (ease-out)
+        // Pha 2 (1.5 -> 2.6s): Đứng trang trọng ở giữa màn hình, cờ đỏ sao vàng tung bay phấp phới, khói xả cuộn bay
+        // Pha 3 (2.6 -> 3.8s): Fade từ từ biến mất nhẹ nhàng, không bị giật hay vụt qua quá nhanh
+        const t = elapsed;
+        let paradeX = 0;
+        let opacity = 1;
+
+        if (t < 1.5) {
+          const progress = Math.min(1, t / 1.5);
+          const ease = 1 - Math.pow(1 - progress, 3);
+          paradeX = -6.5 * (1 - ease);
+          wheelSpeedFactor = 1 - progress * 0.75;
+        } else if (t < 2.6) {
+          paradeX = 0;
+          wheelSpeedFactor = 0.12;
+        } else {
+          paradeX = (t - 2.6) * 0.18;
+          const fadeProgress = Math.min(1, (t - 2.6) / 1.1);
+          opacity = 1 - Math.pow(fadeProgress, 1.5);
+          wheelSpeedFactor = 0.06;
+        }
+
+        const engineBob = Math.sin(t * 3.6) * 0.025;
+        tankRoot.position.set(paradeX, 0.12 + engineBob, 0);
+        // Góc nhìn 3D dũng mãnh hơi nghiêng về phía người xem
+        tankRoot.rotation.set(0.02, Math.PI / 2 - 0.25, 0);
+        tankRoot.scale.set(0.58, 0.58, 0.58);
+
+        if (renderer && renderer.domElement) {
+          renderer.domElement.style.opacity = Math.max(0, Math.min(1, opacity)).toFixed(3);
+        }
       } else if (mode === 'vortex_suction') {
         suctionProgress = Math.min(1, suctionProgress + 0.016);
 
@@ -824,6 +850,11 @@ export const Tank3DCanvas = ({
           }
         }
       }
+
+      // Quay bánh xích theo nhịp độ di chuyển thực tế
+      wheelsList.forEach((w) => {
+        w.rotation.x += 0.06 * wheelSpeedFactor;
+      });
 
       renderer.render(scene, camera);
     };

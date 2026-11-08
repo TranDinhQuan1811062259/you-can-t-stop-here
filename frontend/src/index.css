@@ -17588,6 +17588,111 @@ body {
 }
 
 /* -------------------------------------------------------------------------
+   DẢI BĂNG KHẨU HIỆU ĐẠI LỄ (30/4 & 2/9) Ở GIỮA MÀN HÌNH - CHẠY RA RỒI FADE TỪ TỪ
+   ------------------------------------------------------------------------- */
+.fx-grand-celebration-banner {
+  position: absolute;
+  bottom: 16%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  animation: grandBannerParade 3.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes grandBannerParade {
+  0% {
+    opacity: 0;
+    transform: translate3d(-50%, 35px, 0) scale(0.85);
+  }
+  38% {
+    /* ~1.45s: Tiến ra giữa màn hình oai phong */
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0) scale(1);
+  }
+  68% {
+    /* ~2.6s: Giữ vững vị trí trung tâm, rực rỡ */
+    opacity: 1;
+    transform: translate3d(-50%, -3px, 0) scale(1.02);
+  }
+  100% {
+    /* ~3.8s: Fade từ từ biến mất êm dịu, không giật */
+    opacity: 0;
+    transform: translate3d(-50%, -14px, 0) scale(0.96);
+  }
+}
+
+.fx-grand-celebration-banner .banner-badge-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 28px;
+  border-radius: 999px;
+  font-family: var(--font-heading, inherit);
+  font-weight: 900;
+  font-size: 1.05rem;
+  letter-spacing: 1.2px;
+  white-space: nowrap;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6), 0 0 30px rgba(234, 179, 8, 0.6);
+  border: 2px solid #facc15;
+  backdrop-filter: blur(8px);
+}
+
+.fx-grand-celebration-banner.banner-304 .banner-badge-container {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(153, 27, 27, 0.98) 100%);
+  color: #fef08a;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 15px rgba(250, 204, 21, 0.6);
+}
+
+.fx-grand-celebration-banner.banner-29 .banner-badge-container {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(185, 28, 28, 0.98) 100%);
+  color: #fef08a;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 15px rgba(250, 204, 21, 0.6);
+}
+
+.fx-grand-celebration-banner .banner-gold-star {
+  color: #facc15;
+  font-size: 1.25rem;
+  filter: drop-shadow(0 0 8px #facc15);
+  animation: starPulseGlow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes starPulseGlow {
+  0% { transform: scale(1); filter: drop-shadow(0 0 4px #facc15); }
+  100% { transform: scale(1.25); filter: drop-shadow(0 0 12px #fef08a); }
+}
+
+.fx-grand-celebration-banner .banner-halo-glow {
+  position: absolute;
+  width: 120%;
+  height: 140%;
+  background: radial-gradient(ellipse at center, rgba(234, 179, 8, 0.35) 0%, rgba(220, 38, 38, 0.15) 50%, transparent 75%);
+  filter: blur(12px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+@media (max-width: 640px) {
+  .fx-grand-celebration-banner {
+    bottom: 12%;
+    width: 92%;
+  }
+  .fx-grand-celebration-banner .banner-badge-container {
+    padding: 7px 16px;
+    font-size: 0.78rem;
+    letter-spacing: 0.5px;
+    gap: 6px;
+  }
+  .fx-grand-celebration-banner .banner-gold-star {
+    font-size: 1rem;
+  }
+}
+
+/* -------------------------------------------------------------------------
    9. 2/9: TƯỢNG ĐÀI NẮM ĐẤM VINH QUANG 3D ĐỒNG VÀNG + HÀO QUANG 360 ĐỘ
    ------------------------------------------------------------------------- */
 .fx-national-day-29-container {

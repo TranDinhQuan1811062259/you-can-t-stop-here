@@ -530,13 +530,38 @@ export const Soldier3DCanvas = ({
         soldierRoot.rotation.x += (targetRotX - soldierRoot.rotation.x) * 0.08;
         soldierRoot.position.y = 0.16 + Math.sin(elapsed * 2.4) * 0.015;
       } else if (mode === 'parade') {
-        const span = 14;
-        const speed = 1.75; // Tốc độ duyệt binh chậm rãi, uy nghiêm, thư thái
-        const paradeX = -7 + (elapsed * speed) % span;
-        const stepBob = Math.abs(Math.sin(elapsed * 3.8)) * 0.06;
+        // Hoạt cảnh duyệt binh Quốc Khánh 2/9:
+        // Chạy ra GIỮA MÀN HÌNH (X = 0), dừng lại trang nghiêm rồi fade từ từ biến mất
+        // Pha 1 (0 -> 1.5s): Chiến sĩ bước đều từ bên trái ngoài màn hình (X = -6.0) vào giữa màn hình (X = 0)
+        // Pha 2 (1.5 -> 2.6s): Dừng lại trang nghiêm ở giữa màn hình, cờ Tổ Quốc tung bay rực rỡ
+        // Pha 3 (2.6 -> 3.8s): Fade từ từ biến mất êm ái, thanh thoát
+        const t = elapsed;
+        let paradeX = 0;
+        let stepBob = 0;
+        let opacity = 1;
+
+        if (t < 1.5) {
+          const progress = Math.min(1, t / 1.5);
+          const ease = 1 - Math.pow(1 - progress, 3);
+          paradeX = -6.0 * (1 - ease);
+          stepBob = Math.abs(Math.sin(t * 4.2)) * 0.05 * (1 - progress * 0.4);
+        } else if (t < 2.6) {
+          paradeX = 0;
+          stepBob = Math.sin(t * 2.4) * 0.015; // nhịp thở trang nghiêm
+        } else {
+          paradeX = (t - 2.6) * 0.15;
+          const fadeProgress = Math.min(1, (t - 2.6) / 1.1);
+          opacity = 1 - Math.pow(fadeProgress, 1.5);
+          stepBob = Math.sin(t * 2.4) * 0.01;
+        }
+
         soldierRoot.position.set(paradeX, 0.16 + stepBob, 0);
-        soldierRoot.rotation.set(0.04, Math.PI / 2 - 0.22, 0);
-        soldierRoot.scale.set(0.70, 0.70, 0.70);
+        soldierRoot.rotation.set(0.04, Math.PI / 2 - 0.25, 0);
+        soldierRoot.scale.set(0.72, 0.72, 0.72);
+
+        if (renderer && renderer.domElement) {
+          renderer.domElement.style.opacity = Math.max(0, Math.min(1, opacity)).toFixed(3);
+        }
       }
 
       renderer.render(scene, camera);

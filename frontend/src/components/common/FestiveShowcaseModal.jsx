@@ -46,13 +46,13 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
   const handleTriggerParade = () => {
     playFestiveEventSound('quoc_khanh_2_9');
     setShowLiveParade(true);
-    setTimeout(() => setShowLiveParade(false), 5500); // 5.5s tốc độ chậm rãi, uy nghiêm, xem trọn vẹn mô hình 3D
+    setTimeout(() => setShowLiveParade(false), 4200); // Tốc độ duyệt binh chậm rãi, tiến vào giữa màn hình rồi fade từ từ
   };
 
   const handleTriggerTankParade = () => {
     playTank304TransitionSound();
     setShowLiveTank(true);
-    setTimeout(() => setShowLiveTank(false), 5500); // 5.5s tốc độ xe tăng 565 lướt qua đầm chắc, uy nghiêm
+    setTimeout(() => setShowLiveTank(false), 4200); // Xe tăng 565 tiến vào giữa màn hình oai phong rồi fade từ từ
   };
 
   return (
@@ -61,6 +61,14 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
       {showLiveParade && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100010, pointerEvents: 'none' }}>
           <Soldier3DCanvas mode="parade" width="100%" height="100%" style={{ position: 'fixed', inset: 0, zIndex: 100010 }} />
+          <div className="fx-grand-celebration-banner banner-29">
+            <div className="banner-halo-glow" />
+            <div className="banner-badge-container">
+              <span className="banner-gold-star">★</span>
+              <span className="banner-headline">CHÀO MỪNG QUỐC KHÁNH 2/9 ★ ĐỘC LẬP - TỰ DO - HẠNH PHÚC</span>
+              <span className="banner-gold-star">★</span>
+            </div>
+          </div>
         </div>
       )}
 
@@ -68,6 +76,14 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
       {showLiveTank && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100010, pointerEvents: 'none' }}>
           <Tank3DCanvas mode="parade" style={{ position: 'fixed', inset: 0, zIndex: 100010 }} />
+          <div className="fx-grand-celebration-banner banner-304">
+            <div className="banner-halo-glow" />
+            <div className="banner-badge-container">
+              <span className="banner-gold-star">★</span>
+              <span className="banner-headline">ĐẠI THẮNG MÙA XUÂN 30/4 ★ THỐNG NHẤT NON SÔNG</span>
+              <span className="banner-gold-star">★</span>
+            </div>
+          </div>
         </div>
       )}
 
