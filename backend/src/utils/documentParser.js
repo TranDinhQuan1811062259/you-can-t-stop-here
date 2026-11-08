@@ -1,10 +1,34 @@
 import zlib from 'zlib';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
+let pdfParseModule = null;
+let mammothModule = null;
+try {
+  pdfParseModule = require('pdf-parse');
+} catch (_) {}
+try {
+  mammothModule = require('mammoth');
+} catch (_) {}
 
 /**
  * Trích xuất text từ file Word (.docx)
- * Định dạng .docx thực chất là file PKZIP chứa word/document.xml
+ * Sử dụng mammoth engine chuẩn công nghiệp, có dự phòng bằng PKZIP XML parser
  */
-export function parseDocx(buffer) {
+export async function parseDocx(buffer) {
+  // 1. Thử dùng thư viện mammoth
+  if (mammothModule) {
+    try {
+      const result = await mammothModule.extractRawText({ buffer });
+      if (result && result.value && result.value.trim().length > 0) {
+        return result.value.trim();
+      }
+    } catch (mErr) {
+      console.warn('mammoth parsing warning, falling back to zip:', mErr.message);
+    }
+  }
+
   try {
     // 1. Tìm End of Central Directory (EOCD)
     let eocdOffset = -1;
@@ -145,8 +169,33 @@ function extractTextFromWordXml(xml) {
 
 /**
  * Trích xuất text từ file PDF
+ * Hỗ trợ Unicode Tiếng Việt, font nhúng, file xuất từ Google Docs, Word, Canva
  */
-export function parsePdf(buffer) {
+export async function parsePdf(buffer) {
+  // 1. Thử dùng thư viện PDFParse chính xác
+  if (pdfParseModule) {
+    try {
+      const PDFParse = pdfParseModule.PDFParse || pdfParseModule;
+      if (typeof PDFParse === 'function') {
+        const parser = new PDFParse({ data: buffer, verbosity: 0 });
+        const result = await parser.getText();
+        if (result) {
+          let text = '';
+          if (typeof result.text === 'string' && result.text.trim()) {
+            text = result.text.trim();
+          } else if (Array.isArray(result.pages) && result.pages.length > 0) {
+            text = result.pages.map((p) => (p && p.text ? p.text.trim() : '')).filter(Boolean).join('\n\n');
+          }
+          if (text && text.length > 5) {
+            return text;
+          }
+        }
+      }
+    } catch (pdfErr) {
+      console.warn('PDFParse module warning, trying fallback stream decompression:', pdfErr.message);
+    }
+  }
+
   try {
     const textPieces = [];
     const bufStr = buffer.toString('binary');
@@ -259,31 +308,40 @@ function extractPrintableStrings(buffer) {
 }
 
 /**
- * Hàm phân tích chung từ file tải lên
- * Nhận buffer và originalname, trả về { title, summary, content, wordCount }
+ * Hàm phân tích chung từ file tải lên (Bất đồng bộ)
+ * Nhận buffer và originalname, trả về { title, summary, content, htmlContent, wordCount, fileName }
  */
-export function parseDocument(buffer, originalname = 'bai-viet.txt') {
+export async function parseDocument(buffer, originalname = 'bai-viet.txt') {
   const ext = originalname.split('.').pop().toLowerCase();
   let fullText = '';
+  let htmlContent = '';
 
   if (ext === 'docx') {
-    fullText = parseDocx(buffer);
+    if (mammothModule) {
+      try {
+        const hRes = await mammothModule.convertToHtml({ buffer });
+        if (hRes && hRes.value && hRes.value.trim().length > 0) {
+          htmlContent = hRes.value.trim();
+        }
+      } catch (_) {}
+    }
+    fullText = await parseDocx(buffer);
   } else if (ext === 'pdf') {
-    fullText = parsePdf(buffer);
+    fullText = await parsePdf(buffer);
   } else if (ext === 'txt' || ext === 'md' || ext === 'rtf' || ext === 'csv') {
     fullText = buffer.toString('utf8');
   } else {
     // Thử kiểm tra magic bytes
     if (buffer.length > 4 && buffer[0] === 0x50 && buffer[1] === 0x4b) {
-      fullText = parseDocx(buffer);
+      fullText = await parseDocx(buffer);
     } else if (buffer.length > 4 && buffer.toString('ascii', 0, 4) === '%PDF') {
-      fullText = parsePdf(buffer);
+      fullText = await parsePdf(buffer);
     } else {
       fullText = buffer.toString('utf8');
     }
   }
 
-  fullText = fullText.trim();
+  fullText = (fullText || '').trim();
 
   // Tách các dòng hoặc đoạn văn
   const paragraphs = fullText
@@ -315,14 +373,19 @@ export function parseDocument(buffer, originalname = 'bai-viet.txt') {
     summary = title;
   }
 
-  // Nội dung đầy đủ
+  // Nội dung đầy đủ và định dạng HTML chuẩn cho trình soạn thảo
   const content = fullText;
+  if (!htmlContent && paragraphs.length > 0) {
+    htmlContent = paragraphs.map((p) => `<p>${p}</p>`).join('');
+  }
+
   const wordCount = fullText.split(/\s+/).filter(Boolean).length;
 
   return {
     title,
     summary,
     content,
+    htmlContent,
     wordCount,
     fileName: originalname,
   };

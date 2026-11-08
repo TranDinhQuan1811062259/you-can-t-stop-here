@@ -201,8 +201,9 @@ export const postService = {
   createPost: async (postData) => {
     try {
       const res = await apiClient.post('/posts', postData);
-      if (res && res.data) {
-        return res;
+      const created = res?.data || res;
+      if (created) {
+        return { data: created, success: true };
       }
     } catch (err) {
       console.warn('Backend chưa nhận được bài viết, lưu an toàn tại máy cục bộ:', err?.message);

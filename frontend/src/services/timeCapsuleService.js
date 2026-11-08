@@ -74,24 +74,35 @@ export const timeCapsuleService = {
         headers: { 'x-guest-id': guestId },
       });
 
-      if (res && res.data && Array.isArray(res.data)) {
-        const serverCapsules = res.data;
+      const serverList = Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data?.data)
+        ? res.data.data
+        : null;
+
+      if (serverList) {
         // Hợp nhất dữ liệu giữa server và local (tránh trùng lặp theo _id hoặc title + createdAt)
         const mergedMap = new Map();
 
         // Nạp server capsules trước
-        serverCapsules.forEach((c) => {
-          if (c && c._id) mergedMap.set(c._id, c);
+        serverList.forEach((c) => {
+          if (c && c._id) mergedMap.set(String(c._id), c);
         });
 
         // Nạp thêm các capsule được tạo khi offline ở local chưa kịp sync
         localList.forEach((c) => {
-          if (c && c._id && !mergedMap.has(c._id)) {
-            mergedMap.set(c._id, c);
+          if (c && c._id && !mergedMap.has(String(c._id))) {
+            mergedMap.set(String(c._id), c);
           }
         });
 
-        const mergedList = Array.from(mergedMap.values());
+        let mergedList = Array.from(mergedMap.values());
+        if (mergedList.length === 0) {
+          mergedList = [DEFAULT_WELCOME_CAPSULE];
+        }
+
         saveLocalCapsules(mergedList);
         return { data: mergedList, success: true, fromServer: true };
       }
@@ -148,10 +159,12 @@ export const timeCapsuleService = {
         { headers: { 'x-guest-id': guestId } }
       );
 
-      if (res && res.data) {
+      const serverCap = res?.data || (res && res._id ? res : null);
+      if (serverCap && serverCap._id) {
         // Cập nhật lại _id chuẩn từ server
-        const serverCap = res.data;
-        const finalized = updatedLocal.map((c) => (c._id === newCapsule._id ? { ...serverCap, content: data.content } : c));
+        const finalized = updatedLocal.map((c) =>
+          c._id === newCapsule._id ? { ...serverCap, content: data.content } : c
+        );
         saveLocalCapsules(finalized);
         return { data: serverCap, success: true };
       }

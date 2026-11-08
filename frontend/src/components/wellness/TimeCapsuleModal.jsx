@@ -57,9 +57,8 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
     try {
       setIsLoading(true);
       const res = await timeCapsuleService.getMyCapsules();
-      if (res?.data) {
-        setCapsules(res.data);
-      }
+      const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      setCapsules(list);
     } catch (err) {
       console.warn('Lỗi lấy danh sách hộp thời gian:', err);
     } finally {
@@ -101,7 +100,7 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
     try {
       setIsSubmitting(true);
       const unlockDate = calculateUnlockDate();
-      await timeCapsuleService.createCapsule({
+      const createdRes = await timeCapsuleService.createCapsule({
         title: title.trim(),
         content: content.trim(),
         creatorName: creatorName.trim() || 'Tôi của ngày hôm nay',
@@ -114,6 +113,11 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
       setAlertMsg('✨ Chiếc hộp thời gian đã được niêm phong và cất giữ an toàn!');
       setTitle('');
       setContent('');
+
+      if (createdRes?.data) {
+        setCapsules((prev) => [createdRes.data, ...prev.filter((c) => c._id !== createdRes.data._id)]);
+      }
+
       await fetchCapsules();
       setTimeout(() => {
         setActiveTab('vault');

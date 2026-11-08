@@ -237,26 +237,31 @@ export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
                 style={{
                   padding: '7px 8px',
                   borderRadius: '8px',
-                  border: isSelected ? '2px solid #0d9488' : '1px solid #e2e8f0',
-                  background: '#ffffff',
+                  border: isSelected
+                    ? `2px solid ${preset.accentColor || '#0d9488'}`
+                    : '1px solid #e2e8f0',
+                  background: isSelected ? preset.badgeBg || '#f0fdfa' : '#ffffff',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
                   fontSize: '0.76rem',
                   fontWeight: isSelected ? 700 : 500,
-                  color: isSelected ? '#0d9488' : '#475569',
+                  color: isSelected ? preset.accentColor || '#0d9488' : '#334155',
                   transition: 'all 0.15s ease',
-                  boxShadow: isSelected ? '0 2px 8px rgba(13, 148, 136, 0.2)' : 'none',
+                  boxShadow: isSelected
+                    ? `0 2px 10px ${preset.accentColor || '#0d9488'}35`
+                    : 'none',
                 }}
               >
                 <span
                   style={{
-                    width: '16px',
-                    height: '16px',
+                    width: '18px',
+                    height: '18px',
                     borderRadius: '50%',
-                    background: preset.previewBg,
-                    border: '1px solid #cbd5e1',
+                    background: preset.dotGradient || preset.previewBg,
+                    border: `2px solid ${preset.accentColor || '#cbd5e1'}`,
+                    boxShadow: `0 0 6px ${preset.accentColor || '#000'}40`,
                     flexShrink: 0,
                   }}
                 />
@@ -364,12 +369,12 @@ export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
           style={{
             position: 'relative',
             overflow: 'hidden',
-            borderRadius: '10px',
-            padding: '14px 18px',
+            borderRadius: '12px',
+            padding: '16px 20px',
             background: previewBackground,
             color: activeBgPreset.textColor,
-            border: `1.5px solid ${activeThemeMeta.accentColor}60`,
-            boxShadow: `0 4px 16px ${activeThemeMeta.accentColor}20`,
+            border: `2px solid ${activeBgPreset.accentColor || activeThemeMeta.accentColor}`,
+            boxShadow: activeBgPreset.boxShadow || `0 6px 20px ${activeThemeMeta.accentColor}25`,
             transition: 'all 0.3s ease',
           }}
         >
@@ -380,38 +385,86 @@ export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
           {currentAtmosphere.particleEffect === 'heartbeat_pulse' && <div className="preview-pulse-border" />}
           {currentAtmosphere.particleEffect === 'fireflies' && <div className="preview-fireflies-overlay" />}
 
-          <div style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                padding: '3px 8px',
-                borderRadius: '12px',
-                background: `${activeThemeMeta.accentColor}25`,
-                color: activeThemeMeta.accentColor,
-                border: `1px solid ${activeThemeMeta.accentColor}50`,
-              }}
-            >
-              <span>{activeThemeMeta.icon}</span>
-              <span>Không gian: {activeThemeMeta.badgeText}</span>
-            </span>
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 2,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '8px',
+              marginBottom: '10px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  padding: '3px 10px',
+                  borderRadius: '12px',
+                  background: `${activeThemeMeta.accentColor}28`,
+                  color: activeThemeMeta.accentColor,
+                  border: `1px solid ${activeThemeMeta.accentColor}60`,
+                }}
+              >
+                <span>{activeThemeMeta.icon}</span>
+                <span>Không gian: {activeThemeMeta.badgeText}</span>
+              </span>
+
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  padding: '3px 10px',
+                  borderRadius: '12px',
+                  background: activeBgPreset.badgeBg || `${activeBgPreset.accentColor}25`,
+                  color: activeBgPreset.accentColor,
+                  border: `1px solid ${activeBgPreset.accentColor}60`,
+                }}
+              >
+                <span>{activeBgPreset.icon}</span>
+                <span>Màu nền: {activeBgPreset.name}</span>
+              </span>
+            </div>
 
             {currentAtmosphere.theme !== 'default' && (
-              <span style={{ fontSize: '0.72rem', opacity: 0.85, fontStyle: 'italic' }}>
+              <span style={{ fontSize: '0.74rem', opacity: 0.9, fontStyle: 'italic', color: activeBgPreset.textColor }}>
                 🎧 Âm thanh: {activeThemeMeta.soundLabel}
               </span>
             )}
           </div>
 
           <div style={{ position: 'relative', zIndex: 2 }}>
-            <h5 style={{ margin: '0 0 4px 0', fontSize: '0.92rem', fontWeight: 700, color: activeBgPreset.textColor }}>
+            <h5
+              style={{
+                margin: '0 0 6px 0',
+                fontSize: '0.96rem',
+                fontWeight: 700,
+                color: activeBgPreset.textColor,
+                textShadow: activeBgPreset.id === 'default' ? 'none' : '0 1px 3px rgba(0,0,0,0.5)',
+              }}
+            >
               Tiêu đề bài viết tâm sự của bạn
             </h5>
-            <p style={{ margin: 0, fontSize: '0.78rem', opacity: 0.85, lineHeight: 1.4 }}>
-              Không gian bài viết này sẽ hiện với phong cách màu sắc đặc trưng và âm thanh duy trì khi người khác vào đọc...
+            <p
+              style={{
+                margin: 0,
+                fontSize: '0.8rem',
+                opacity: 0.92,
+                lineHeight: 1.5,
+                color: activeBgPreset.textColor,
+                textShadow: activeBgPreset.id === 'default' ? 'none' : '0 1px 2px rgba(0,0,0,0.4)',
+              }}
+            >
+              Không gian bài viết này sẽ hiện với phong cách màu sắc đặc trưng ({activeBgPreset.name}) và âm thanh duy trì khi người khác vào đọc...
             </p>
           </div>
         </div>

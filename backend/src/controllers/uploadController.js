@@ -126,7 +126,7 @@ export const parseUploadedDocument = async (req, res) => {
       });
     }
 
-    const parsedData = parseDocument(req.file.buffer, req.file.originalname);
+    const parsedData = await parseDocument(req.file.buffer, req.file.originalname);
 
     return sendSuccess(res, {
       message: `Đã trích xuất nội dung từ file "${req.file.originalname}" thành công`,

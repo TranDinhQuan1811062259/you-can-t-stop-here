@@ -33,6 +33,6 @@ export const uploadService = {
       },
     });
 
-    return response.data; // Trả về { title, summary, content, wordCount, fileName }
+    return response?.data || response; // Trả về { title, summary, content, htmlContent, wordCount, fileName }
   },
 };

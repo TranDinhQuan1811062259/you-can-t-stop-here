@@ -39,8 +39,8 @@ router.post('/:id/react', protect, reactToPost);
 router.patch('/:id/reaction-visibility', protect, toggleReactionVisibility);
 router.patch('/:id/toggle-comments', protect, toggleAllowComments);
 
-// Đăng & Quản lý bài viết / tâm sự (Yêu cầu đăng nhập)
-router.post('/', protect, createPost);
+// Đăng & Quản lý bài viết / tâm sự (Hỗ trợ cả Thành viên đăng nhập và Ẩn danh)
+router.post('/', optionalProtect, createPost);
 router.put('/:id', protect, updatePost);
 router.delete('/:id', protect, deletePost);
 router.patch('/:id/moderate', protect, moderatePost);

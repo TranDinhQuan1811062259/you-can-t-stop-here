@@ -1,6 +1,6 @@
 import express from 'express';
 import { uploadImage, parseUploadedDocument } from '../controllers/uploadController.js';
-import { protect } from '../middlewares/authMiddleware.js';
+import { protect, optionalProtect } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
@@ -28,6 +28,6 @@ const multerMiddleware = async (req, res, next) => {
 router.post('/', protect, multerMiddleware, uploadImage);
 
 // Endpoint trích xuất nội dung từ file Word (.docx), PDF (.pdf), Text (.txt)
-router.post('/document', protect, multerMiddleware, parseUploadedDocument);
+router.post('/document', optionalProtect, multerMiddleware, parseUploadedDocument);
 
 export default router;

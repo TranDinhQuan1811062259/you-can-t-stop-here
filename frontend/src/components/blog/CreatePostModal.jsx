@@ -12,13 +12,20 @@ import { PostSubmitAtmosphereOverlay } from './PostSubmitAtmosphereOverlay';
 import { getActiveSeason } from '../../utils/seasonUtils';
 import { eventService } from '../../services/eventService';
 
+const DEFAULT_FALLBACK_CATEGORIES = [
+  { _id: 'cat_work_life', name: 'Công Sở & Sự Nghiệp', icon: '💼', slug: 'cong-so' },
+  { _id: 'cat_emotion', name: 'Tâm Sự & Cảm Xúc', icon: '🌧️', slug: 'tam-su' },
+  { _id: 'cat_healing', name: 'Chữa Lành & Bình Yên', icon: '🌿', slug: 'chua-lanh' },
+  { _id: 'cat_life', name: 'Cuộc Sống Thường Nhật', icon: '☕', slug: 'cuoc-song' },
+];
+
 export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(DEFAULT_FALLBACK_CATEGORIES);
   const [formData, setFormData] = useState({
     title: '',
     summary: '',
     content: '',
-    category: '',
+    category: DEFAULT_FALLBACK_CATEGORIES[0]._id,
     coverImage: '',
     tags: '',
     showReactionCount: true,
@@ -71,12 +78,26 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
       categoryService
         .getCategories()
         .then((res) => {
-          setCategories(res.data || []);
-          if (res.data?.length > 0 && !formData.category) {
-            setFormData((prev) => ({ ...prev, category: res.data[0]._id }));
-          }
+          const list = Array.isArray(res?.data)
+            ? res.data
+            : Array.isArray(res)
+            ? res
+            : [];
+          const validList = list.length > 0 ? list : DEFAULT_FALLBACK_CATEGORIES;
+          setCategories(validList);
+          setFormData((prev) => ({
+            ...prev,
+            category: prev.category || validList[0]._id,
+          }));
         })
-        .catch((err) => console.warn('Lỗi lấy danh mục:', err));
+        .catch((err) => {
+          console.warn('Lỗi lấy danh mục:', err);
+          setCategories(DEFAULT_FALLBACK_CATEGORIES);
+          setFormData((prev) => ({
+            ...prev,
+            category: prev.category || DEFAULT_FALLBACK_CATEGORIES[0]._id,
+          }));
+        });
     }
   }, [isOpen]);
 
@@ -106,8 +127,8 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
         description: newCatDesc.trim(),
       });
 
-      const created = res.data?.data;
-      if (created) {
+      const created = res?.data?.data || res?.data || res;
+      if (created && (created._id || created.name)) {
         setCategories((prev) => {
           const exists = prev.some((c) => c._id === created._id || c.slug === created.slug);
           return exists ? prev : [...prev, created];
@@ -199,18 +220,35 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
       }
 
       const result = await uploadService.uploadDocument(file);
-      if (result) {
-        const formattedHtml = result.content
-          ? result.content.split(/\n{2,}/).map((p) => `<p>${p.trim()}</p>`).join('')
-          : '';
+      const docData = result?.data || result;
+
+      if (docData && (docData.content || docData.htmlContent || docData.title)) {
+        const extractedText = docData.content || '';
+        const formattedHtml =
+          docData.htmlContent ||
+          (extractedText
+            ? extractedText
+                .split(/\r?\n+/)
+                .map((p) => p.trim())
+                .filter(Boolean)
+                .map((p) => `<p>${p}</p>`)
+                .join('')
+            : '');
+
+        const fileBaseName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
 
         setFormData((prev) => ({
           ...prev,
-          title: prev.title || result.title || '',
-          summary: prev.summary || result.summary || '',
-          content: prev.content ? `${prev.content}${formattedHtml}` : formattedHtml,
+          title: prev.title || docData.title || fileBaseName,
+          summary: prev.summary || docData.summary || fileBaseName,
+          content: prev.content ? `${prev.content}<p><br/></p>${formattedHtml}` : formattedHtml,
         }));
-        setInfoMsg(`✓ Đã nhập thành công nội dung từ "${file.name}" (${result.wordCount || 0} từ)!`);
+        setActiveTab('edit');
+        setInfoMsg(
+          `✓ Đã trích xuất & hiển thị toàn bộ nội dung từ "${file.name}" (${docData.wordCount || 0} từ)!`
+        );
+      } else {
+        setErrorMsg('Không thể đọc nội dung từ file này. Vui lòng thử file Word hoặc PDF khác!');
       }
     } catch (err) {
       setErrorMsg(err.message || 'Không thể trích xuất file văn bản. Vui lòng kiểm tra lại định dạng file!');
@@ -249,9 +287,10 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
       ...prev,
       title: prev.title || title,
       summary: prev.summary || summary,
-      content: prev.content ? `${prev.content}${htmlContent}` : htmlContent,
+      content: prev.content ? `${prev.content}<p><br/></p>${htmlContent}` : htmlContent,
     }));
-    setInfoMsg(`✓ Đã nhập thành công nội dung từ "${fileName}"!`);
+    setActiveTab('edit');
+    setInfoMsg(`✓ Đã nhập và hiển thị toàn bộ nội dung từ "${fileName}"!`);
   };
 
   // ==========================================
@@ -259,8 +298,19 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
   // ==========================================
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.title || !formData.summary || !formData.content || !formData.category) {
-      setErrorMsg('Vui lòng điền đầy đủ các thông tin bắt buộc.');
+
+    let currentCategory = formData.category;
+    if (!currentCategory) {
+      if (categories && categories.length > 0) {
+        currentCategory = categories[0]._id;
+      } else {
+        currentCategory = DEFAULT_FALLBACK_CATEGORIES[0]._id;
+      }
+      setFormData((prev) => ({ ...prev, category: currentCategory }));
+    }
+
+    if (!formData.title?.trim() || !formData.summary?.trim() || !formData.content?.trim()) {
+      setErrorMsg('Vui lòng điền đầy đủ tiêu đề, tóm tắt và nội dung bài viết.');
       return;
     }
 
@@ -280,7 +330,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
         title: cleanTitle,
         summary: cleanSummary,
         content: cleanContent,
-        category: formData.category,
+        category: currentCategory,
         coverImage: formData.coverImage || undefined,
         tags: cleanTags,
         showReactionCount: formData.showReactionCount,
@@ -295,7 +345,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
       const btnRect = submitButtonRef.current?.getBoundingClientRect() || null;
       setSubmitEffect({
         buttonRect: btnRect,
-        createdData: res.data,
+        createdData: res?.data || res,
       });
     } catch (err) {
       setErrorMsg(err.message || 'Không thể đăng bài lúc này. Vui lòng thử lại!');

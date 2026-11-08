@@ -77,10 +77,13 @@ export const timeCapsuleController = {
         };
       });
 
-      return sendSuccess(res, sanitized, 'Lấy danh sách hộp thời gian thành công');
+      return sendSuccess(res, {
+        data: sanitized,
+        message: 'Lấy danh sách hộp thời gian thành công',
+      });
     } catch (err) {
       console.error('Lỗi getMyCapsules:', err);
-      return sendError(res, 'Không thể tải danh sách hộp thời gian', 500);
+      return sendError(res, { message: 'Không thể tải danh sách hộp thời gian', status: 500 });
     }
   },
 
@@ -92,12 +95,12 @@ export const timeCapsuleController = {
       const guestId = req.headers['x-guest-id'] || req.body.guestId || `guest_${Date.now()}`;
 
       if (!title || !content || !unlockDate) {
-        return sendError(res, 'Vui lòng điền tiêu đề, nội dung và thời gian mở khóa', 400);
+        return sendError(res, { message: 'Vui lòng điền tiêu đề, nội dung và thời gian mở khóa', status: 400 });
       }
 
       const unlockTime = new Date(unlockDate);
       if (isNaN(unlockTime.getTime())) {
-        return sendError(res, 'Thời gian mở khóa không hợp lệ', 400);
+        return sendError(res, { message: 'Thời gian mở khóa không hợp lệ', status: 400 });
       }
 
       const capsuleData = {
@@ -134,15 +137,14 @@ export const timeCapsuleController = {
       local.unshift(localRecord);
       saveStoreCapsules(local);
 
-      return sendSuccess(
-        res,
-        created || localRecord,
-        '✨ Chiếc hộp thời gian đã được khóa kín và cất giữ an toàn!',
-        201
-      );
+      return sendSuccess(res, {
+        data: created || localRecord,
+        message: '✨ Chiếc hộp thời gian đã được khóa kín và cất giữ an toàn!',
+        status: 201,
+      });
     } catch (err) {
       console.error('Lỗi createCapsule:', err);
-      return sendError(res, 'Không thể lưu hộp thời gian lúc này', 500);
+      return sendError(res, { message: 'Không thể lưu hộp thời gian lúc này', status: 500 });
     }
   },
 
@@ -194,10 +196,13 @@ export const timeCapsuleController = {
       }
 
       const result = target.toObject ? target.toObject() : target;
-      return sendSuccess(res, { ...result, isOpened: true, openedAt: now }, '🎉 Đã mở khóa bức thư từ quá khứ!');
+      return sendSuccess(res, {
+        data: { ...result, isOpened: true, openedAt: now },
+        message: '🎉 Đã mở khóa bức thư từ quá khứ!',
+      });
     } catch (err) {
       console.error('Lỗi openCapsule:', err);
-      return sendError(res, 'Không thể mở hộp thời gian', 500);
+      return sendError(res, { message: 'Không thể mở hộp thời gian', status: 500 });
     }
   },
 
@@ -215,9 +220,9 @@ export const timeCapsuleController = {
       const updated = local.filter((c) => String(c._id) !== String(id));
       saveStoreCapsules(updated);
 
-      return sendSuccess(res, null, 'Đã xóa chiếc hộp thời gian');
+      return sendSuccess(res, { data: null, message: 'Đã xóa chiếc hộp thời gian' });
     } catch (err) {
-      return sendError(res, 'Không thể xóa hộp thời gian', 500);
+      return sendError(res, { message: 'Không thể xóa hộp thời gian', status: 500 });
     }
   },
 };
