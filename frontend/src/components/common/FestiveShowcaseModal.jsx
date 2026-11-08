@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { playClickSound, playFestiveEventSound, playTank304TransitionSound } from '../../utils/soundEffects';
 import { Tank3DCanvas } from './Tank3DCanvas';
+import { Soldier3DCanvas } from './Soldier3DCanvas';
 import { SoldiersParade29 } from './SoldiersParade29';
 
 export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManager, user }) => {
@@ -227,7 +228,61 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
               2/9: KHỐI TIÊU BINH & CHIẾN SĨ QĐNDVN DUYỆT BINH RƯỚC CỜ
              ========================================================================= */}
           {is29 && (
-            <div className="festive-parade-29-stage" style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+            <div className="festive-parade-29-stage" style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
+              {/* Mô hình 3D Người Chiến Sĩ QĐNDVN K20 Tương Tác 360 độ */}
+              <div
+                style={{
+                  width: '100%',
+                  height: '240px',
+                  position: 'relative',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  background: 'radial-gradient(circle at 50% 50%, #1e293b 0%, #090d16 100%)',
+                  border: '1.5px solid rgba(218, 37, 29, 0.55)',
+                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.4), inset 0 0 30px rgba(218, 37, 29, 0.25)',
+                }}
+              >
+                <Soldier3DCanvas mode="showcase" width="100%" height="100%" />
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    left: '12px',
+                    right: '12px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '0.74rem',
+                      color: '#facc15',
+                      fontWeight: 800,
+                      background: 'rgba(0, 0, 0, 0.65)',
+                      padding: '3px 10px',
+                      borderRadius: '8px',
+                      backdropFilter: 'blur(4px)',
+                      border: '1px solid rgba(250, 204, 21, 0.3)',
+                    }}
+                  >
+                    🕹️ Giữ chuột và kéo để xoay 360° chiến sĩ K20
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      color: '#cbd5e1',
+                      background: 'rgba(0, 0, 0, 0.65)',
+                      padding: '3px 10px',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    Quân phục K20 & Cờ Quyết Thắng 3D
+                  </span>
+                </div>
+              </div>
+
               {/* Hai khối hình ảnh chiến sĩ & tiêu binh hào hùng */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
                 {/* 1. Khối Tiêu Binh Rước Cờ Quyết Thắng */}

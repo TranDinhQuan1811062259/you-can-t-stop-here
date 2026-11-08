@@ -36,10 +36,11 @@ export const Tank3DCanvas = ({
     const w = container.clientWidth || window.innerWidth || 400;
     const h = container.clientHeight || window.innerHeight || 300;
 
-    // 1. Scene & Camera
+    // 1. Scene & Camera (Căn chỉnh tâm chuẩn xác ở Y = 0.72, góc nhìn đối diện cân đối, không bị lệch xuống dưới)
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 1000);
-    camera.position.set(0, 2.9, 8.6);
+    const camera = new THREE.PerspectiveCamera(34, w / h, 0.1, 1000);
+    camera.position.set(0, 1.45, 6.2);
+    camera.lookAt(0, 0.72, 0);
 
     // 2. Renderer
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
@@ -75,8 +76,10 @@ export const Tank3DCanvas = ({
     victoryGlow.position.set(0, 2.5, 2);
     scene.add(victoryGlow);
 
-    // 4. Tank Root Group
+    // 4. Tank Root Group (Kích thước nhỏ gọn vừa vặn, thanh thoát)
     const tankRoot = new THREE.Group();
+    tankRoot.scale.set(0.68, 0.68, 0.68);
+    tankRoot.position.set(0, 0, 0);
     scene.add(tankRoot);
 
     let flagMesh = null;
@@ -708,6 +711,29 @@ export const Tank3DCanvas = ({
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
 
+    const onTouchStart = (e) => {
+      if (mode !== 'showcase' || !e.touches || e.touches.length === 0) return;
+      isDragging = true;
+      prevMouseX = e.touches[0].clientX;
+      prevMouseY = e.touches[0].clientY;
+    };
+    const onTouchMove = (e) => {
+      if (!isDragging || mode !== 'showcase' || !e.touches || e.touches.length === 0) return;
+      const dx = e.touches[0].clientX - prevMouseX;
+      const dy = e.touches[0].clientY - prevMouseY;
+      targetRotY += dx * 0.008;
+      targetRotX = Math.max(-0.4, Math.min(0.6, targetRotX + dy * 0.006));
+      prevMouseX = e.touches[0].clientX;
+      prevMouseY = e.touches[0].clientY;
+    };
+    const onTouchEnd = () => {
+      isDragging = false;
+    };
+
+    container.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchend', onTouchEnd);
+
     // =========================================================================
     // VÒNG LẶP ANIMATION (RENDER LOOP)
     // =========================================================================
@@ -810,6 +836,7 @@ export const Tank3DCanvas = ({
       const newH = container.clientHeight || window.innerHeight;
       camera.aspect = newW / newH;
       camera.updateProjectionMatrix();
+      camera.lookAt(0, 0.72, 0);
       renderer.setSize(newW, newH);
     };
 
@@ -820,6 +847,9 @@ export const Tank3DCanvas = ({
       container.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
+      container.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
       window.removeEventListener('resize', handleResize);
       if (container && renderer.domElement && container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
