@@ -17,6 +17,7 @@ export const FAB_SIZES = {
   mascot: { width: 80, height: 80 },
   pwa: { width: 360, height: 56 },
   pref: { width: 52, height: 52 },
+  radio: { width: 285, height: 46 },
 };
 
 export const MARGIN_LEFT = 20;
@@ -45,6 +46,7 @@ export const getFabKey = (type) => {
   if (type === 'mascot') return 'freedom_mascot_btn_pos';
   if (type === 'pwa') return 'freedom_pwa_btn_pos';
   if (type === 'pref') return 'freedom_pref_btn_pos';
+  if (type === 'radio') return 'freedom_radio_btn_pos';
   return 'freedom_write_btn_pos';
 };
 
@@ -160,6 +162,12 @@ export const getFabPos = (type) => {
         x: MARGIN_LEFT,
         y: Math.max(MARGIN_TOP, vpHeight - 52 - 24),
       };
+    } else if (type === 'radio') {
+      // Thanh Mini Radio mặc định: Góc dưới bên trái, phía trên cụm tiện ích pref, cách đáy 90px
+      currentPos = {
+        x: MARGIN_LEFT,
+        y: Math.max(MARGIN_TOP, vpHeight - 46 - 90),
+      };
     } else {
       // Nút Viết tâm sự mặc định: Nằm phía trên cả Mascot và Chat, cùng bám sát lề phải 20px
       currentPos = {
@@ -197,7 +205,7 @@ export const saveFabPos = (type, pos) => {
  *   để các nút luôn luôn giữ nguyên hàng dọc thẳng tắp bám sát lề 20px!
  */
 export const resolveAntiCollision = (movingType, candidatePos, keepOnEdge = false) => {
-  const allTypes = ['chat', 'write', 'mascot', 'pwa', 'pref'];
+  const allTypes = ['chat', 'write', 'mascot', 'pwa', 'pref', 'radio'];
   const otherTypes = allTypes.filter((t) => t !== movingType);
   const movingSize = FAB_SIZES[movingType] || { width: 60, height: 60 };
   const { width: vpWidth } = getViewport();
