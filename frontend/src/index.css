@@ -11588,24 +11588,24 @@ body.theme-light .quote-body {
 }
 
 .mascot-graphic-wrap {
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  background: rgba(15, 23, 42, 0.88);
-  border: 2px solid var(--event-accent, #facc15);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(220, 38, 38, 0.35);
+  width: 62px;
+  height: 62px;
+  border-radius: 50% !important;
+  background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+  border: 2.5px solid var(--event-accent, #facc15) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 16px rgba(220, 38, 38, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  overflow: visible;
+  overflow: hidden !important;
   position: relative;
 }
 
 [data-theme="light"] .mascot-graphic-wrap,
 body.theme-light .mascot-graphic-wrap {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.95);
   border-color: #f59e0b;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12), 0 0 16px rgba(245, 158, 11, 0.25);
 }
@@ -11619,27 +11619,22 @@ body.theme-light .mascot-graphic-wrap {
 /* Xe Tăng 565 Mascot Badge */
 .mascot-tank565-container {
   position: relative;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.mascot-tank-badge {
-  position: relative;
-  width: 52px;
-  height: 52px;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid #facc15;
-  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.55), 0 0 10px rgba(250, 204, 21, 0.4);
-  background: #1e293b;
 }
 
 .mascot-tank-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: scale(1.18);
+  object-position: center;
+  border-radius: 50%;
+  transform: scale(1.12);
 }
 
 .mascot-tank-stencil {
@@ -11647,48 +11642,45 @@ body.theme-light .mascot-graphic-wrap {
   bottom: 2px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(15, 23, 42, 0.88);
+  background: rgba(15, 23, 42, 0.92);
   color: #facc15;
   font-size: 0.62rem;
   font-weight: 900;
   padding: 1px 5px;
   border-radius: 4px;
-  border: 1px solid rgba(250, 204, 21, 0.4);
+  border: 1px solid rgba(250, 204, 21, 0.6);
   letter-spacing: 0.5px;
+  z-index: 2;
 }
 
 .mascot-tank-flag-mini {
   position: absolute;
-  top: -2px;
-  right: -2px;
-  font-size: 0.85rem;
+  top: 1px;
+  right: 3px;
+  font-size: 0.8rem;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  z-index: 2;
 }
 
 /* Người Lính 2/9 Mascot Badge */
 .mascot-soldier-container {
   position: relative;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.mascot-soldier-badge {
-  position: relative;
-  width: 52px;
-  height: 52px;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid #facc15;
-  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.55), 0 0 10px rgba(250, 204, 21, 0.4);
-  background: #1e293b;
 }
 
 .mascot-soldier-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: scale(1.15);
+  object-position: center 20%;
+  border-radius: 50%;
+  transform: scale(1.12);
 }
 
 .mascot-soldier-star {
@@ -11698,21 +11690,24 @@ body.theme-light .mascot-graphic-wrap {
   transform: translateX(-50%);
   color: #ffff00;
   font-size: 0.72rem;
-  filter: drop-shadow(0 0 3px #facc15);
+  filter: drop-shadow(0 0 4px #dc2626);
+  z-index: 2;
 }
 
 .mascot-soldier-flag-mini {
   position: absolute;
-  bottom: -1px;
-  right: -2px;
-  font-size: 0.85rem;
+  bottom: 2px;
+  right: 3px;
+  font-size: 0.8rem;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  z-index: 2;
 }
 
 .mascot-ribbon-img {
-  width: 48px;
-  height: auto;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 .mascot-heart8-img {
@@ -11730,20 +11725,20 @@ body.theme-light .mascot-graphic-wrap {
 }
 
 .mascot-label-pill {
-  margin-top: 4px;
-  padding: 2px 8px;
+  margin-top: 6px;
+  padding: 3px 12px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  font-size: 0.68rem;
-  font-weight: 700;
+  background: rgba(15, 23, 42, 0.94);
+  border: 1.5px solid rgba(250, 204, 21, 0.6);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5), 0 0 10px rgba(220, 38, 38, 0.35);
+  font-size: 0.72rem;
+  font-weight: 800;
   color: #fde047;
   white-space: nowrap;
-  max-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: none !important;
+  overflow: visible;
   text-align: center;
+  letter-spacing: 0.3px;
 }
 
 [data-theme="light"] .mascot-label-pill,
