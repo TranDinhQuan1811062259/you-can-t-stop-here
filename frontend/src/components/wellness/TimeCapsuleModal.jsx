@@ -3,6 +3,7 @@ import { timeCapsuleService } from '../../services/timeCapsuleService';
 import { playClickSound, playSingingBowlSound } from '../../utils/soundEffects';
 import { AsmrKeyboardToggle } from '../common/AsmrKeyboardToggle';
 import { triggerAsmrKeySound } from '../../utils/keyboardSoundEngine';
+import { TimeCapsuleMusicPlayer } from './TimeCapsuleMusicPlayer';
 
 const PRESET_DURATIONS = [
   { label: '1 Tháng (30 ngày)', days: 30, icon: '🌱' },
@@ -12,7 +13,7 @@ const PRESET_DURATIONS = [
 ];
 
 const MOODS = [
-  { id: 'hopeful', label: 'Hy Vọng & Đầy Năng Lượng', icon: '✨', color: '#f59e0b' },
+  { id: 'hopeful', label: 'Tia Sáng Hy Vọng (Lightning Moment 🎶)', icon: '✨', color: '#f59e0b' },
   { id: 'anxious', label: 'Đang Lo Âu & Áp Lực', icon: '🌧️', color: '#0ea5e9' },
   { id: 'tired', label: 'Mệt Mỏi Cần Ôm Ấp', icon: '🫂', color: '#f43f5e' },
   { id: 'dreamer', label: 'Mơ Mộng & Hoài Bão', icon: '🌙', color: '#8b5cf6' },
@@ -355,6 +356,13 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
           {/* TAB 1: VIẾT THƯ MỚI */}
           {activeTab === 'write' && (
             <form onSubmit={handleCreateCapsule} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Nhạc nền Tia Sáng Hy Vọng: Lightning Moment (Harp Version) - TypeD */}
+              <TimeCapsuleMusicPlayer
+                autoPlay={true}
+                currentMood={selectedMood}
+                onMoodChange={setSelectedMood}
+              />
+
               <div>
                 <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>
                   Tiêu đề bức thư *
@@ -497,6 +505,12 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
                       </option>
                     ))}
                   </select>
+                  {selectedMood === 'hopeful' && (
+                    <div style={{ marginTop: '5px', fontSize: '0.72rem', color: '#fde68a', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>✨</span>
+                      <span>Đang hòa cùng giai điệu Tia Sáng Hy Vọng (lặp vô tận)</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>
