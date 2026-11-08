@@ -36,11 +36,11 @@ export const Tank3DCanvas = ({
     const w = container.clientWidth || window.innerWidth || 400;
     const h = container.clientHeight || window.innerHeight || 300;
 
-    // 1. Scene & Camera (Căn chỉnh tâm chuẩn xác ở Y = 0.72, góc nhìn đối diện cân đối, không bị lệch xuống dưới)
+    // 1. Scene & Camera (Căn chỉnh tâm chuẩn xác ở Y = 0.55, góc nhìn đối diện cân đối hoàn hảo, không bị lệch xuống dưới)
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(34, w / h, 0.1, 1000);
-    camera.position.set(0, 1.45, 6.2);
-    camera.lookAt(0, 0.72, 0);
+    camera.position.set(0, 1.25, 5.6);
+    camera.lookAt(0, 0.55, 0);
 
     // 2. Renderer
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
@@ -76,10 +76,10 @@ export const Tank3DCanvas = ({
     victoryGlow.position.set(0, 2.5, 2);
     scene.add(victoryGlow);
 
-    // 4. Tank Root Group (Kích thước nhỏ gọn vừa vặn, thanh thoát)
+    // 4. Tank Root Group (Kích thước nhỏ gọn vừa vặn, thanh thoát, nâng nhẹ Y = 0.12 để cân đối)
     const tankRoot = new THREE.Group();
-    tankRoot.scale.set(0.68, 0.68, 0.68);
-    tankRoot.position.set(0, 0, 0);
+    tankRoot.scale.set(0.56, 0.56, 0.56);
+    tankRoot.position.set(0, 0.12, 0);
     scene.add(tankRoot);
 
     let flagMesh = null;
@@ -778,11 +778,12 @@ export const Tank3DCanvas = ({
       if (mode === 'showcase') {
         tankRoot.rotation.y += (targetRotY - tankRoot.rotation.y) * 0.08;
         tankRoot.rotation.x += (targetRotX - tankRoot.rotation.x) * 0.08;
-        tankRoot.position.y = Math.sin(elapsed * 3) * 0.04;
+        tankRoot.position.y = 0.12 + Math.sin(elapsed * 3) * 0.04;
       } else if (mode === 'parade') {
         const paradeX = -7 + (elapsed * 3.5) % 15;
-        tankRoot.position.set(paradeX, Math.sin(elapsed * 5) * 0.05, 0);
+        tankRoot.position.set(paradeX, 0.12 + Math.sin(elapsed * 5) * 0.05, 0);
         tankRoot.rotation.set(0, Math.PI / 2, 0);
+        tankRoot.scale.set(0.56, 0.56, 0.56);
       } else if (mode === 'vortex_suction') {
         suctionProgress = Math.min(1, suctionProgress + 0.016);
 
@@ -836,7 +837,7 @@ export const Tank3DCanvas = ({
       const newH = container.clientHeight || window.innerHeight;
       camera.aspect = newW / newH;
       camera.updateProjectionMatrix();
-      camera.lookAt(0, 0.72, 0);
+      camera.lookAt(0, 0.55, 0);
       renderer.setSize(newW, newH);
     };
 

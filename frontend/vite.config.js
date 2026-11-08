@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import fs from 'fs';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -32,11 +33,24 @@ export default defineConfig({
         target: 'http://127.0.0.1:5050',
         changeOrigin: true,
         secure: false,
+        bypass: (req) => {
+          // Nếu file tĩnh đã có sẵn trong frontend/public/uploads, bỏ qua proxy để Vite tự phục vụ trực tiếp
+          try {
+            const cleanName = (req.url || '').split('?')[0].replace(/^\/uploads\/?/, '');
+            if (cleanName) {
+              const localFile = path.resolve(__dirname, 'public/uploads', cleanName);
+              if (fs.existsSync(localFile)) {
+                return req.url;
+              }
+            }
+          } catch (e) {}
+          return null;
+        },
         configure: (proxy) => {
           proxy.on('error', (err, req, res) => {
             if (!res.headersSent) {
-              res.writeHead(404);
-              res.end();
+              res.writeHead(404, { 'Content-Type': 'text/plain' });
+              res.end('File not found or backend server is offline');
             }
           });
         },

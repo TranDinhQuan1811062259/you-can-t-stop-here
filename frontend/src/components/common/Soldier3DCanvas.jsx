@@ -30,11 +30,11 @@ export const Soldier3DCanvas = ({
     const w = container.clientWidth || window.innerWidth || 400;
     const h = container.clientHeight || window.innerHeight || 300;
 
-    // 1. Scene & Camera (Căn chỉnh tâm chuẩn xác ở Y = 0.95, cân đối hoàn hảo, không bị lệch xuống dưới)
+    // 1. Scene & Camera (Căn chỉnh tâm chuẩn xác ở Y = 0.82, cân đối hoàn hảo, không bị lệch xuống dưới)
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(35, w / h, 0.1, 1000);
-    camera.position.set(0, 1.45, 4.8);
-    camera.lookAt(0, 0.95, 0);
+    camera.position.set(0, 1.20, 4.4);
+    camera.lookAt(0, 0.82, 0);
 
     // 2. Renderer
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
@@ -70,9 +70,9 @@ export const Soldier3DCanvas = ({
 
     // 4. Soldier Root Group
     const soldierRoot = new THREE.Group();
-    // Thu gọn kích thước vừa vặn (scale = 0.72), đặt tâm cân đối
-    soldierRoot.scale.set(0.72, 0.72, 0.72);
-    soldierRoot.position.set(0, 0.05, 0);
+    // Thu gọn kích thước vừa vặn (scale = 0.68), nâng Y = 0.16 cân đối hoàn hảo
+    soldierRoot.scale.set(0.68, 0.68, 0.68);
+    soldierRoot.position.set(0, 0.16, 0);
     scene.add(soldierRoot);
 
     let flagMesh = null;
@@ -528,15 +528,15 @@ export const Soldier3DCanvas = ({
       if (mode === 'showcase') {
         soldierRoot.rotation.y += (targetRotY - soldierRoot.rotation.y) * 0.08;
         soldierRoot.rotation.x += (targetRotX - soldierRoot.rotation.x) * 0.08;
-        soldierRoot.position.y = 0.05 + Math.sin(elapsed * 2.4) * 0.015;
+        soldierRoot.position.y = 0.16 + Math.sin(elapsed * 2.4) * 0.015;
       } else if (mode === 'parade') {
         const span = 14;
         const speed = 3.6;
         const paradeX = -7 + (elapsed * speed) % span;
         const stepBob = Math.abs(Math.sin(elapsed * 5.8)) * 0.08;
-        soldierRoot.position.set(paradeX, 0.05 + stepBob, 0);
+        soldierRoot.position.set(paradeX, 0.16 + stepBob, 0);
         soldierRoot.rotation.set(0.04, Math.PI / 2 - 0.22, 0);
-        soldierRoot.scale.set(0.85, 0.85, 0.85);
+        soldierRoot.scale.set(0.70, 0.70, 0.70);
       }
 
       renderer.render(scene, camera);
@@ -551,7 +551,7 @@ export const Soldier3DCanvas = ({
       const newH = container.clientHeight || window.innerHeight;
       camera.aspect = newW / newH;
       camera.updateProjectionMatrix();
-      camera.lookAt(0, 0.95, 0);
+      camera.lookAt(0, 0.82, 0);
       renderer.setSize(newW, newH);
     };
 

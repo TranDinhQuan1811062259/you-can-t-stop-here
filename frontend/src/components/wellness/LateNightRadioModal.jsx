@@ -740,6 +740,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const [isMiniMode, setIsMiniMode] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [showPlaylistDrawer, setShowPlaylistDrawer] = useState(false);
 
   // Chỉ số bài hát đang phát (0 -> 7)
@@ -992,10 +993,11 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     });
   };
 
-  // Lắng nghe sự kiện mở Radio từ bất kỳ đâu để tự thoát chế độ thu nhỏ
+  // Lắng nghe sự kiện mở Radio từ bất kỳ đâu để tự thoát chế độ thu nhỏ và mở modal ngay
   useEffect(() => {
     const handleOpenRadio = () => {
       setIsMiniMode(false);
+      setInternalOpen(true);
     };
     window.addEventListener('freedom_open_radio', handleOpenRadio);
     return () => window.removeEventListener('freedom_open_radio', handleOpenRadio);
@@ -1004,13 +1006,23 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       setIsMiniMode(false);
+      setInternalOpen(true);
     }
   }, [isOpen]);
+
+  const isModalVisible = (isOpen || internalOpen) && !isMiniMode;
 
   const handleExpandRadio = () => {
     playClickSound();
     setIsMiniMode(false);
+    setInternalOpen(true);
     window.dispatchEvent(new CustomEvent('freedom_open_radio'));
+  };
+
+  const handleCloseFullModal = () => {
+    playClickSound();
+    setInternalOpen(false);
+    if (onClose) onClose();
   };
 
   // =========================================================================
@@ -1047,7 +1059,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
       const dx = e.clientX - dragStartRef.current.mouseX;
       const dy = e.clientY - dragStartRef.current.mouseY;
 
-      if (Math.hypot(dx, dy) > 4) {
+      if (Math.hypot(dx, dy) > 8) {
         hasMovedRef.current = true;
       }
 
@@ -1061,7 +1073,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
         const dx = e.touches[0].clientX - dragStartRef.current.mouseX;
         const dy = e.touches[0].clientY - dragStartRef.current.mouseY;
 
-        if (Math.hypot(dx, dy) > 4) {
+        if (Math.hypot(dx, dy) > 8) {
           hasMovedRef.current = true;
         }
 
@@ -1080,6 +1092,9 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
           saveFabPos('radio', snapped);
           return snapped;
         });
+        setTimeout(() => {
+          hasMovedRef.current = false;
+        }, 120);
       } else {
         // Người dùng nhấp/chạm mà không kéo -> Mở ngay toàn bộ modal Radio!
         if (e && e.target && e.target.closest && e.target.closest('button')) return;
@@ -1241,7 +1256,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     );
   }
 
-  if (!isOpen) return null;
+  if (!isModalVisible) return null;
 
   // =========================================================================
   // GIAO DIỆN MODAL TOÀN PHẦN (FULLSCREEN DIALOG VIEW)
@@ -1263,8 +1278,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
-          playClickSound();
-          onClose();
+          handleCloseFullModal();
         }
       }}
     >
@@ -1358,7 +1372,8 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                 onClick={() => {
                   playClickSound();
                   setIsMiniMode(true);
-                  onClose();
+                  setInternalOpen(false);
+                  if (onClose) onClose();
                 }}
                 title="Thu nhỏ thành thanh nổi có thể kéo thả di chuyển tự do khắp màn hình"
                 style={{
@@ -1383,10 +1398,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
             {/* Nút Đóng Modal */}
             <button
               type="button"
-              onClick={() => {
-                playClickSound();
-                onClose();
-              }}
+              onClick={handleCloseFullModal}
               style={{
                 background: 'rgba(255, 255, 255, 0.08)',
                 border: 'none',

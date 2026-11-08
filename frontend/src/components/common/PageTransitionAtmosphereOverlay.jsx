@@ -427,32 +427,45 @@ export const PageTransitionAtmosphereOverlay = ({
             ))}
           </div>
 
-          {/* Cụm trung tâm: Tượng đài nắm đấm 3D mạ vàng & Lá cờ Tổ quốc bay cuộn sóng */}
-          <div className="fx-glory-fist-center fx-3d-monument-wrap">
-            {/* Cờ đỏ sao vàng lụa 3D bay kiêu hãnh */}
-            <div className="fx-glory-flag-3d">
-              <span className="glory-star-3d">★</span>
-              <span className="glory-flag-wave-shine" />
-            </div>
-
-            {/* Cánh tay nắm đấm vinh quang bằng đồng vàng nổi khối 3D */}
-            <div className="fx-glory-fist-symbol fx-3d-gold-fist">
-              <div className="fist-metal-core">✊</div>
-              <div className="fist-glow-halo-3d" />
-            </div>
-
-            <div className="fx-glory-banner-text-3d">
-              2/9 QUỐC KHÁNH VIỆT NAM ★ ĐỘC LẬP - TỰ DO
-            </div>
+          {/* Mô hình 3D Người Chiến Sĩ QĐNDVN K20 cầm cờ Quyết Thắng lướt duyệt binh qua màn hình */}
+          <div style={{ position: 'absolute', inset: 0, zIndex: 12, pointerEvents: 'none' }}>
+            <Soldier3DCanvas
+              mode="parade"
+              width="100%"
+              height="100%"
+              style={{ position: 'absolute', inset: 0 }}
+            />
           </div>
 
-          {/* Mô hình Người Chiến Sĩ QĐNDVN K20 3D rước cờ Quyết Thắng duyệt binh lướt qua màn hình */}
-          <Soldier3DCanvas
-            mode="parade"
-            width="100%"
-            height="100%"
-            style={{ position: 'absolute', inset: 0, zIndex: 12 }}
-          />
+          {/* Dải băng vinh quang Quốc Khánh 2/9 hào hùng */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '18%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 14,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '8px 24px',
+              background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.94) 0%, rgba(185, 28, 28, 0.96) 100%)',
+              border: '2px solid #facc15',
+              borderRadius: '999px',
+              boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5), 0 0 25px rgba(234, 179, 8, 0.6)',
+              color: '#fef08a',
+              fontWeight: 900,
+              fontSize: '1rem',
+              letterSpacing: '1px',
+              textShadow: '0 2px 8px rgba(0, 0, 0, 0.7)',
+              pointerEvents: 'none',
+              animation: 'fadeSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
+            }}
+          >
+            <span style={{ color: '#facc15', fontSize: '1.2rem' }}>★</span>
+            <span>CHÀO MỪNG QUỐC KHÁNH 2/9 ★ ĐỘC LẬP - TỰ DO - HẠNH PHÚC</span>
+            <span style={{ color: '#facc15', fontSize: '1.2rem' }}>★</span>
+          </div>
         </div>
       )}
 

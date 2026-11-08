@@ -1,0 +1,13 @@
+{
+  "name": "you-cant-stop-here",
+  "version": "1.0.0",
+  "private": true,
+  "description": "You Can't Stop Here - Nền tảng chia sẻ tâm sự, chữa lành áp lực cuộc sống & deadline",
+  "scripts": {
+    "dev": "start-project.bat",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "start-project.bat"
+  }
+}

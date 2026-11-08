@@ -1161,7 +1161,7 @@
       "isBuiltin": true
     }
   ],
-  "adminPreviewEventId": "quoc_khanh_2_9",
+  "adminPreviewEventId": "giai_phong_30_4",
   "stories": [
     {
       "_id": "story_1794083881804_xfi0",
@@ -1221,6 +1221,40 @@
     }
   ],
   "timeCapsules": [
+    {
+      "_id": "6af0bb5fe15fbc9850557c3e",
+      "userId": "6aec5b46ee112662b33c0e32",
+      "title": "Tôi sẽ không qua 30",
+      "content": "Tôi nghĩ tầm năm nay hoặc năm sau tôi sẽ không còn sống với gia đình này nữa, tôi muốn được giải thoát, tôi hiện tại đã có tiền đề và cơ sở để bắt đầu tự tạo ra những sản phẩm mang tính cá nhân cho mình dù chưa có thu nhập chính thức nhưng tôi tin là sẽ sớm thôi và với khao khát phát triển của mình thì tối nghĩ đó sẽ chỉ là câu chuyện sớm muộn và tôi muốn vươn lên, như đóa hoa hồng đang dần vương lên màn trời xanh thẳm... và một ngày nào đó tên tuổi của tôi sẽ được ghi vào sử sách của thế giới",
+      "unlockDate": "2027-11-08T18:11:43.845Z",
+      "mood": "hopeful",
+      "envelopeColor": "emerald",
+      "musicTheme": "piano",
+      "creatorName": "Tôi của ngày hôm nay",
+      "creatorAvatar": "/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg",
+      "user": "6aec5b46ee112662b33c0e32",
+      "guestId": "guest_1794137123411_roeast3",
+      "isOpened": false,
+      "openedAt": null,
+      "createdAt": "2026-11-08T18:11:44.018Z"
+    },
+    {
+      "_id": "6af0ba4ae15fbc9850557b90",
+      "userId": "6aec5b46ee112662b33c0e32",
+      "title": "Tôi muốn giải thoát",
+      "content": "Ngày nào đó tôi vẫn sẽ ở không gian riêng, tôi muốn thoát khỏi cái gia đình này... Tôi muốn tự do và số lượng Web tôi thu nhập ít nhất cũng phải trở thành một người giàu có",
+      "unlockDate": "2027-02-06T18:07:06.334Z",
+      "mood": "hopeful",
+      "envelopeColor": "emerald",
+      "musicTheme": "piano",
+      "creatorName": "Tôi của ngày hôm nay",
+      "creatorAvatar": "/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg",
+      "user": "6aec5b46ee112662b33c0e32",
+      "guestId": "guest_1794137123411_roeast3",
+      "isOpened": false,
+      "openedAt": null,
+      "createdAt": "2026-11-08T18:07:06.608Z"
+    },
     {
       "_id": "capsule_welcome_demo",
       "title": "Gửi Tôi Của Một Ngày Nào Đó...",
