@@ -15,7 +15,7 @@ export const PwaInstallPrompt = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showFloatingPill, setShowFloatingPill] = useState(false);
   const [installSuccess, setInstallSuccess] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(true);
 
   // Khả năng kéo thả di dời tự do đa góc như các nút khác
   const [btnPos, setBtnPos] = useState(() => {

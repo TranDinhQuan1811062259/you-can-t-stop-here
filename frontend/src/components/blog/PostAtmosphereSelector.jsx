@@ -67,9 +67,17 @@ export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
   };
 
   const handleBgPresetChange = (presetId) => {
+    let autoParticle = currentAtmosphere.particleEffect;
+    if (presetId === 'sadness_rain' && autoParticle === 'none') autoParticle = 'rain';
+    if (presetId === 'horror_dark' && autoParticle === 'none') autoParticle = 'fog';
+    if (presetId === 'joy_sunset' && autoParticle === 'none') autoParticle = 'sparkles';
+    if (presetId === 'healing_emerald' && autoParticle === 'none') autoParticle = 'fireflies';
+    if (presetId === 'drama_crimson' && autoParticle === 'none') autoParticle = 'heartbeat_pulse';
+
     onChange({
       ...currentAtmosphere,
       bgPreset: presetId,
+      particleEffect: autoParticle,
     });
   };
 
@@ -446,26 +454,38 @@ export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
             <h5
               style={{
                 margin: '0 0 6px 0',
-                fontSize: '0.96rem',
-                fontWeight: 700,
+                fontSize: '1.05rem',
+                fontWeight: 800,
                 color: activeBgPreset.textColor,
-                textShadow: activeBgPreset.id === 'default' ? 'none' : '0 1px 3px rgba(0,0,0,0.5)',
+                textShadow: activeBgPreset.id === 'default' ? 'none' : '0 1px 4px rgba(0,0,0,0.6)',
+                letterSpacing: '0.2px',
               }}
             >
-              Tiêu đề bài viết tâm sự của bạn
+              Tiêu đề bài viết: Không gian {activeBgPreset.name} {activeBgPreset.icon}
             </h5>
             <p
               style={{
-                margin: 0,
-                fontSize: '0.8rem',
-                opacity: 0.92,
-                lineHeight: 1.5,
+                margin: '0 0 10px',
+                fontSize: '0.84rem',
+                opacity: 0.95,
+                lineHeight: 1.6,
                 color: activeBgPreset.textColor,
-                textShadow: activeBgPreset.id === 'default' ? 'none' : '0 1px 2px rgba(0,0,0,0.4)',
+                textShadow: activeBgPreset.id === 'default' ? 'none' : '0 1px 2px rgba(0,0,0,0.5)',
               }}
             >
-              Không gian bài viết này sẽ hiện với phong cách màu sắc đặc trưng ({activeBgPreset.name}) và âm thanh duy trì khi người khác vào đọc...
+              Không gian bài viết này sẽ hiện với phong cách màu sắc đặc trưng ({activeBgPreset.name}), hiệu ứng chuyển động ({currentAtmosphere.particleEffect !== 'none' ? currentAtmosphere.particleEffect : 'ánh sáng nền'}) và âm thanh duy trì khi người khác vào đọc...
             </p>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '10px', background: 'rgba(255, 255, 255, 0.18)', backdropFilter: 'blur(4px)', color: activeBgPreset.textColor }}>
+                🌟 Tương phản cao
+              </span>
+              <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '10px', background: 'rgba(255, 255, 255, 0.18)', backdropFilter: 'blur(4px)', color: activeBgPreset.textColor }}>
+                🍃 Nhịp thở cảm xúc
+              </span>
+              <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '10px', background: 'rgba(255, 255, 255, 0.18)', backdropFilter: 'blur(4px)', color: activeBgPreset.textColor }}>
+                🎵 Âm thanh sống động
+              </span>
+            </div>
           </div>
         </div>
       </div>

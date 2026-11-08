@@ -197,6 +197,58 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
   // ==========================================
   // NHẬP TỪ FILE WORD / PDF / TXT
   // ==========================================
+  const extractClientSideText = async (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const buffer = e.target?.result;
+          if (!buffer) return resolve('');
+          const textDecoder = new TextDecoder('utf-8', { fatal: false });
+          const rawStr = textDecoder.decode(buffer);
+
+          // Nếu là PDF
+          if (file.name.toLowerCase().endsWith('.pdf')) {
+            const matches = [];
+            const tjRegex = /\(([\s\S]*?)\)\s*(?:Tj|'|")/g;
+            let m;
+            while ((m = tjRegex.exec(rawStr)) !== null) {
+              const cleaned = m[1].replace(/\\[nrtbf\\()]/g, ' ').trim();
+              if (cleaned.length > 1) matches.push(cleaned);
+            }
+            if (matches.length > 0) {
+              return resolve(matches.join(' '));
+            }
+          }
+
+          // Nếu là DOCX (XML bên trong zip)
+          if (file.name.toLowerCase().endsWith('.docx')) {
+            const xmlTextMatches = [];
+            const tRegex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
+            let tm;
+            while ((tm = tRegex.exec(rawStr)) !== null) {
+              if (tm[1]) xmlTextMatches.push(tm[1]);
+            }
+            if (xmlTextMatches.length > 0) {
+              return resolve(xmlTextMatches.join(' '));
+            }
+          }
+
+          // Lọc các chuỗi ký tự in được (printable strings)
+          const printable = rawStr.match(/[\p{L}\p{N}\p{P}\p{Z}\s]{4,}/gu);
+          if (printable && printable.length > 0) {
+            return resolve(printable.filter((s) => !/[<>{}\\\/]{3,}/.test(s)).join('\n\n'));
+          }
+          resolve('');
+        } catch (_) {
+          resolve('');
+        }
+      };
+      reader.onerror = () => resolve('');
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
   const handleDocFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -219,8 +271,13 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
         return;
       }
 
-      const result = await uploadService.uploadDocument(file);
-      const docData = result?.data || result;
+      let docData = null;
+      try {
+        const result = await uploadService.uploadDocument(file);
+        docData = result?.data || result;
+      } catch (uploadErr) {
+        console.warn('Backend uploadDocument failed, using client-side extraction:', uploadErr);
+      }
 
       if (docData && (docData.content || docData.htmlContent || docData.title)) {
         const extractedText = docData.content || '';
@@ -248,7 +305,14 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
           `✓ Đã trích xuất & hiển thị toàn bộ nội dung từ "${file.name}" (${docData.wordCount || 0} từ)!`
         );
       } else {
-        setErrorMsg('Không thể đọc nội dung từ file này. Vui lòng thử file Word hoặc PDF khác!');
+        // Fallback sang trích xuất trực tiếp trên client nếu backend không đọc được
+        const clientText = await extractClientSideText(file);
+        if (clientText && clientText.trim().length > 10) {
+          applyImportedText(clientText, file.name);
+          setInfoMsg(`✓ Đã trích xuất & hiển thị toàn bộ nội dung từ "${file.name}"!`);
+        } else {
+          setErrorMsg('Không thể đọc nội dung từ file này. Vui lòng thử file Word hoặc PDF khác!');
+        }
       }
     } catch (err) {
       setErrorMsg(err.message || 'Không thể trích xuất file văn bản. Vui lòng kiểm tra lại định dạng file!');

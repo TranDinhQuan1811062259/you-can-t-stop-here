@@ -18249,5 +18249,72 @@ body.theme-light .mini-radio-action-btn {
   background: rgba(255, 255, 255, 0.35);
 }
 
+/* =========================================================================
+   FIX TƯƠNG PHẢN CHẾ ĐỘ NGÀY (LIGHT MODE) & BẢO TOÀN TEXT BÀI VIẾT CÓ ATMOSPHERE
+   ========================================================================= */
+
+/* 1. Đảm bảo bài viết có Không Gian Cảm Xúc luôn giữ nguyên màu chữ tương phản cao */
+.post-main-content.has-custom-atmosphere-bg .post-body,
+.post-main-content.has-custom-atmosphere-bg .post-body p,
+.post-main-content.has-custom-atmosphere-bg .post-body span,
+.post-main-content.has-custom-atmosphere-bg .post-body li,
+.post-main-content.has-custom-atmosphere-bg .post-body h1,
+.post-main-content.has-custom-atmosphere-bg .post-body h2,
+.post-main-content.has-custom-atmosphere-bg .post-body h3,
+.post-main-content.has-custom-atmosphere-bg .post-body h4,
+.post-main-content.has-custom-atmosphere-bg .post-body blockquote {
+  color: inherit !important;
+}
+
+/* 2. Huy hiệu chế độ xem (Công khai / Bạn bè) ở Chế độ Ngày - Rõ nét, không bị chìm */
+body.theme-light .card-visibility-pill.is-public,
+[data-theme="light"] .card-visibility-pill.is-public,
+.mode-light .card-visibility-pill.is-public {
+  background: rgba(13, 148, 136, 0.15) !important;
+  color: #0f766e !important;
+  border: 1.5px solid rgba(13, 148, 136, 0.45) !important;
+  font-weight: 700 !important;
+}
+
+body.theme-light .card-visibility-pill.is-friends,
+[data-theme="light"] .card-visibility-pill.is-friends,
+.mode-light .card-visibility-pill.is-friends {
+  background: rgba(217, 119, 6, 0.15) !important;
+  color: #b45309 !important;
+  border: 1.5px solid rgba(217, 119, 6, 0.45) !important;
+  font-weight: 700 !important;
+}
+
+/* 3. Phụ đề & Tóm tắt bài viết ở Chế độ Ngày - Tương phản đạt chuẩn WCAG AA */
+body.theme-light .card-author-sub,
+[data-theme="light"] .card-author-sub,
+.mode-light .card-author-sub {
+  color: #475569 !important;
+  font-weight: 600 !important;
+}
+
+body.theme-light .hero-back-link,
+[data-theme="light"] .hero-back-link,
+.mode-light .hero-back-link {
+  color: #0369a1 !important;
+  font-weight: 700 !important;
+}
+
+body.theme-light .hero-back-link:hover,
+[data-theme="light"] .hero-back-link:hover,
+.mode-light .hero-back-link:hover {
+  color: #0284c7 !important;
+  background: rgba(2, 132, 199, 0.12) !important;
+}
+
+/* 4. Khung viền và nút trong Chế độ Ngày */
+body.theme-light .sort-select-box,
+[data-theme="light"] .sort-select-box {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  background-color: #ffffff !important;
+}
+
+
 
 
