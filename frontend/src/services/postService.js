@@ -124,12 +124,21 @@ export const postService = {
           });
         }
 
+        const page = Math.max(1, parseInt(params.page) || 1);
+        const limit = Math.max(1, parseInt(params.limit) || 6);
+        const total = filtered.length;
+        const totalPages = Math.ceil(total / limit) || 1;
+        const paginated = filtered.slice((page - 1) * limit, page * limit);
+
         return {
-          data: filtered,
+          data: paginated,
           pagination: {
-            total: filtered.length,
-            totalPages: 1,
-            currentPage: 1,
+            total,
+            totalPages,
+            page,
+            limit,
+            hasPrevPage: page > 1,
+            hasNextPage: page < totalPages,
           },
           success: true,
           fromCache: true,

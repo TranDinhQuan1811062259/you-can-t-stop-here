@@ -2,10 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { postService } from '../services/postService';
 
 export const usePosts = (queryParams = {}) => {
+  const limit = Math.max(1, parseInt(queryParams.limit) || 6);
+  const page = Math.max(1, parseInt(queryParams.page) || 1);
+
   const [posts, setPosts] = useState(() => {
     try {
       const cached = localStorage.getItem('freedom_cached_posts');
-      return cached ? JSON.parse(cached) : [];
+      const list = cached ? JSON.parse(cached) : [];
+      return Array.isArray(list) ? list.slice(0, 6) : [];
     } catch (e) {
       return [];
     }
@@ -18,13 +22,17 @@ export const usePosts = (queryParams = {}) => {
     let isSubscribed = true;
     if (posts.length === 0) setLoading(true);
 
+    const mergedParams = { limit: 6, ...queryParams };
+
     postService
-      .getPosts(queryParams)
+      .getPosts(mergedParams)
       .then((res) => {
         if (isSubscribed) {
           const raw = res.data?.posts || res.data || [];
           const list = Array.isArray(raw) ? raw : [];
-          setPosts(list);
+          // Đảm bảo tối đa 6 bài viết mỗi trang
+          const paginatedList = list.slice(0, limit);
+          setPosts(paginatedList);
           setPagination(res.pagination || null);
           setError(null);
           try {
@@ -42,7 +50,18 @@ export const usePosts = (queryParams = {}) => {
             if (cached) {
               const list = JSON.parse(cached);
               if (Array.isArray(list) && list.length > 0) {
-                setPosts(list);
+                const total = list.length;
+                const totalPages = Math.ceil(total / limit) || 1;
+                const sliced = list.slice((page - 1) * limit, page * limit);
+                setPosts(sliced);
+                setPagination({
+                  total,
+                  totalPages,
+                  page,
+                  limit,
+                  hasPrevPage: page > 1,
+                  hasNextPage: page < totalPages,
+                });
                 setError(null);
                 return;
               }

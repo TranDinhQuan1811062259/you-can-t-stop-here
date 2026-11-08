@@ -1,7 +1,7 @@
 import React from 'react';
 import { PostCard } from './PostCard';
 
-export const PostList = ({ posts = [] }) => {
+export const PostList = ({ posts = [], maxPosts = 6 }) => {
   if (!posts || posts.length === 0) {
     return (
       <div className="empty-state">
@@ -11,9 +11,11 @@ export const PostList = ({ posts = [] }) => {
     );
   }
 
+  const displayPosts = maxPosts ? posts.slice(0, maxPosts) : posts;
+
   return (
     <div className="posts-grid">
-      {posts.map((post) => (
+      {displayPosts.map((post) => (
         <PostCard key={post._id || post.slug} post={post} />
       ))}
     </div>

@@ -1681,9 +1681,23 @@ body.theme-light .hero-back-link:hover,
 /* ================= POST GRID & POST CARD ================= */
 .posts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 30px;
   margin-bottom: 48px;
+}
+
+@media (max-width: 1080px) {
+  .posts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+  }
+}
+
+@media (max-width: 680px) {
+  .posts-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
 }
 
 .post-card {

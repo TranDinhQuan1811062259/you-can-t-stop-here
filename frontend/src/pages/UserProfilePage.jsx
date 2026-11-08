@@ -7,6 +7,7 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { PostCard } from '../components/blog/PostCard';
 import { ProfileMusicPlayer } from '../components/profile/ProfileMusicPlayer';
+import { Pagination } from '../components/common/Pagination';
 
 /**
  * Phân tích và tạo liên kết cho các hashtag trong tiểu sử
@@ -92,6 +93,14 @@ export const UserProfilePage = () => {
   }
 
   const { user, stats, friendshipStatus, posts } = profileData;
+  const [profilePostsPage, setProfilePostsPage] = useState(1);
+  const POSTS_PER_PAGE = 6;
+  const totalUserPosts = posts?.length || 0;
+  const totalUserPostPages = Math.ceil(totalUserPosts / POSTS_PER_PAGE) || 1;
+  const paginatedUserPosts = (posts || []).slice(
+    (profilePostsPage - 1) * POSTS_PER_PAGE,
+    profilePostsPage * POSTS_PER_PAGE
+  );
 
   // Xác định tình trạng bạn bè thực tế dựa trên danh bạ local và backend
   const isSelf =
@@ -464,11 +473,29 @@ export const UserProfilePage = () => {
         </div>
 
         {posts && posts.length > 0 ? (
-          <div className="posts-grid">
-            {posts.map((post) => (
-              <PostCard key={post._id} post={post} />
-            ))}
-          </div>
+          <>
+            <div className="posts-grid">
+              {paginatedUserPosts.map((post) => (
+                <PostCard key={post._id} post={post} />
+              ))}
+            </div>
+            {totalUserPostPages > 1 && (
+              <Pagination
+                pagination={{
+                  page: profilePostsPage,
+                  totalPages: totalUserPostPages,
+                  total: totalUserPosts,
+                  limit: POSTS_PER_PAGE,
+                  hasPrevPage: profilePostsPage > 1,
+                  hasNextPage: profilePostsPage < totalUserPostPages,
+                }}
+                onPageChange={(newPage) => {
+                  setProfilePostsPage(newPage);
+                  window.scrollTo({ top: 400, behavior: 'smooth' });
+                }}
+              />
+            )}
+          </>
         ) : (
           <div className="profile-empty-posts">
             <span className="empty-icon">📭</span>
