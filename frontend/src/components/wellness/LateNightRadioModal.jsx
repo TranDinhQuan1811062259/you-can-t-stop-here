@@ -1161,15 +1161,37 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     window.dispatchEvent(new CustomEvent('freedom_open_radio'));
   };
 
-  const handleCloseFullModal = () => {
+  // Thu nhỏ thành thanh Mini Pill nổi (khi bấm ra ngoài hoặc bấm nút Thu nhỏ)
+  const handleMinimize = () => {
     playClickSound();
     stopSpeaking();
-    if (isPlaying) {
-      setIsMiniMode(true);
-    }
+    setIsMiniMode(true);
     setInternalOpen(false);
     if (onClose) onClose();
   };
+
+  // Tắt hẳn trạm Radio (khi người dùng chủ động bấm nút ✕)
+  const handleCloseFullModal = () => {
+    playClickSound();
+    stopSpeaking();
+    stopRadioEngine();
+    setIsPlaying(false);
+    setIsMiniMode(false);
+    setInternalOpen(false);
+    if (onClose) onClose();
+  };
+
+  // Lắng nghe phím ESC để thu nhỏ êm ái thay vì tắt
+  useEffect(() => {
+    if (!isModalVisible) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleMinimize();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isModalVisible]);
 
   // =========================================================================
   // XỬ LÝ KÉO THẢ CHUẨN XÁC TOÀN CẦU (WINDOW LISTENERS - DI CHUYỂN MƯỢT MÀ 100%)
@@ -1276,13 +1298,15 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     stopRadioEngine();
     setIsPlaying(false);
     setIsMiniMode(false);
+    setInternalOpen(false);
     stopSpeaking();
+    if (onClose) onClose();
   };
 
   // =========================================================================
-  // GIAO DIỆN MINI FLOATING PILL (KHI THU NHỎ & ĐANG PHÁT)
+  // GIAO DIỆN MINI FLOATING PILL (KHI THU NHỎ)
   // =========================================================================
-  if (isMiniMode && isPlaying) {
+  if (isMiniMode) {
     return (
       <aside
         ref={btnRef}
@@ -1439,7 +1463,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
-          handleCloseFullModal();
+          handleMinimize();
         }
       }}
     >
@@ -1534,39 +1558,33 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
             </button>
 
             {/* Nút Thu Nhỏ */}
-            {isPlaying && (
-              <button
-                type="button"
-                onClick={() => {
-                  playClickSound();
-                  setIsMiniMode(true);
-                  setInternalOpen(false);
-                  if (onClose) onClose();
-                }}
-                title="Thu nhỏ thành thanh nổi có thể kéo thả di chuyển tự do khắp màn hình"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  borderRadius: '9px',
-                  color: '#cbd5e1',
-                  padding: '5px 10px',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  transition: 'all 0.2s',
-                }}
-              >
-                <i className="fa-regular fa-window-minimize"></i> Thu Nhỏ
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleMinimize}
+              title="Thu nhỏ thành thanh nổi có thể kéo thả di chuyển tự do khắp màn hình (hoặc bấm ra ngoài vùng tối)"
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '9px',
+                color: '#cbd5e1',
+                padding: '5px 10px',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                transition: 'all 0.2s',
+              }}
+            >
+              <i className="fa-regular fa-window-minimize"></i> Thu Nhỏ
+            </button>
 
-            {/* Nút Đóng Modal */}
+            {/* Nút Đóng / Tắt hẳn Modal */}
             <button
               type="button"
               onClick={handleCloseFullModal}
+              title="Tắt hẳn trạm Radio"
               style={{
                 background: 'rgba(255, 255, 255, 0.08)',
                 border: 'none',
@@ -1579,8 +1597,9 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '0.9rem',
+                transition: 'background 0.2s, color 0.2s',
               }}
-              aria-label="Đóng"
+              aria-label="Tắt hẳn"
             >
               ✕
             </button>
