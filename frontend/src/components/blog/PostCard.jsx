@@ -146,7 +146,7 @@ export const PostCard = ({ post }) => {
               style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
             >
               <span>{categoryIcon}</span>
-              <span>{categoryName}</span>
+              <span className="card-category-badge-text">{categoryName}</span>
             </Link>
             <span
               className={`card-visibility-pill ${post.visibility === 'friends' ? 'is-friends' : 'is-public'}`}

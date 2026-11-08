@@ -81,11 +81,15 @@ export const AsmrKeyboardToggle = ({ variant = 'badge', className = '', placemen
           fontSize: '0.82rem',
           fontWeight: 600,
           cursor: 'pointer',
-          border: enabled ? `1.5px solid ${activeProfileData.color || '#10b981'}` : '1px solid rgba(255, 255, 255, 0.18)',
+          border: enabled
+            ? `1.5px solid ${activeProfileData.color || '#10b981'}`
+            : '1px solid var(--border-card, rgba(255, 255, 255, 0.18))',
           background: enabled
             ? `linear-gradient(135deg, ${activeProfileData.color || '#10b981'}25, rgba(6, 95, 70, 0.35))`
-            : 'rgba(255, 255, 255, 0.06)',
-          color: enabled ? (activeProfileData.color || '#34d399') : '#94a3b8',
+            : 'var(--bg-input, rgba(255, 255, 255, 0.06))',
+          color: enabled
+            ? activeProfileData.color || 'var(--pastel-sage, #059669)'
+            : 'var(--text-main, #334155)',
           transition: 'all 0.2s ease',
           backdropFilter: 'blur(8px)',
           userSelect: 'none',

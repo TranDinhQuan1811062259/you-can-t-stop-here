@@ -1455,9 +1455,9 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
         background: 'rgba(5, 5, 20, 0.88)',
         backdropFilter: 'blur(14px)',
         display: 'flex',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px 12px',
+        padding: '16px 12px',
         overflowY: 'auto',
         animation: 'fadeIn 0.25s ease-out',
       }}
@@ -1472,7 +1472,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
         style={{
           width: '100%',
           maxWidth: '560px',
-          maxHeight: 'min(90vh, 700px)',
+          maxHeight: 'min(92vh, 680px)',
           margin: 'auto',
           background: 'linear-gradient(160deg, #0b0f19 0%, #1a1742 60%, #090d16 100%)',
           border: `1.5px solid ${activeTrack.themeColor}55`,
@@ -1843,7 +1843,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                   maxHeight: '145px',
                   overflowY: 'auto',
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
                   gap: '6px',
                   animation: 'fadeIn 0.2s ease',
                 }}
@@ -1858,22 +1858,45 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '6px 9px',
+                        padding: '6px 10px',
                         borderRadius: '7px',
                         background: isCur ? `${t.themeColor}25` : 'rgba(255, 255, 255, 0.04)',
                         border: `1px solid ${isCur ? t.themeColor : 'transparent'}`,
                         cursor: 'pointer',
                         fontSize: '0.76rem',
                         color: isCur ? '#fff' : '#cbd5e1',
+                        minWidth: 0,
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span>{t.icon}</span>
-                        <strong style={{ color: isCur ? t.themeColor : 'inherit' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
+                        <span style={{ flexShrink: 0 }}>{t.icon}</span>
+                        <strong
+                          style={{
+                            color: isCur ? t.themeColor : 'inherit',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
                           {i + 1}. {t.title}
                         </strong>
                       </div>
-                      {isCur && <span style={{ color: t.themeColor, fontSize: '0.7rem' }}>Đang phát ılı</span>}
+                      {isCur && (
+                        <span
+                          style={{
+                            color: t.themeColor,
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            flexShrink: 0,
+                            marginLeft: '6px',
+                            background: `${t.themeColor}18`,
+                            padding: '1px 5px',
+                            borderRadius: '4px',
+                          }}
+                        >
+                          Đang phát ılı
+                        </span>
+                      )}
                     </div>
                   );
                 })}
