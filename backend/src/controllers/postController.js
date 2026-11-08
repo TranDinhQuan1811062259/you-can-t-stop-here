@@ -7,6 +7,17 @@ import { slugify } from '../utils/slugify.js';
 import { loadStore, saveStore } from '../utils/persistentStore.js';
 import { maskSensitiveText, analyzeContentSafety } from '../utils/sensitiveFilter.js';
 
+export const removeVietnameseTones = (str) => {
+  if (!str) return '';
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .trim();
+};
+
 const fallbackCategories = [
   { _id: 'cat_1', name: 'Áp lực & Kiệt sức (Burnout)', slug: 'ap-luc-kiet-suc-burnout' },
   { _id: 'cat_2', name: 'Khủng hoảng nghề nghiệp (Career Crisis)', slug: 'khung-hoang-nghe-nghiep-career-crisis' },
@@ -153,12 +164,47 @@ export const getPosts = async (req, res) => {
     }
 
     if (q) {
-      const lowerQ = q.toLowerCase();
-      filtered = filtered.filter(
-        (p) =>
-          p.title?.toLowerCase().includes(lowerQ) ||
-          p.summary?.toLowerCase().includes(lowerQ)
-      );
+      const lowerQ = q.toLowerCase().trim();
+      const cleanQ = removeVietnameseTones(lowerQ);
+
+      filtered = filtered.filter((p) => {
+        const title = (p.title || '').toLowerCase();
+        const summary = (p.summary || '').toLowerCase();
+        const content = (p.content || '').toLowerCase();
+        const author = (p.author || p.user?.name || '').toLowerCase();
+        const catName = (typeof p.category === 'string' ? p.category : p.category?.name || '').toLowerCase();
+        const catSlug = (p.category?.slug || '').toLowerCase();
+        const tags = (p.tags || []).map((t) => String(t).toLowerCase());
+
+        // 1. Kiểm tra khớp trực tiếp (chuẩn xác có dấu)
+        if (
+          title.includes(lowerQ) ||
+          summary.includes(lowerQ) ||
+          content.includes(lowerQ) ||
+          author.includes(lowerQ) ||
+          catName.includes(lowerQ) ||
+          catSlug.includes(lowerQ) ||
+          tags.some((t) => t.includes(lowerQ))
+        ) {
+          return true;
+        }
+
+        // 2. Kiểm tra khớp không dấu (đảm bảo gõ "ap luc" vẫn tìm ra bài viết "áp lực")
+        if (cleanQ) {
+          if (
+            removeVietnameseTones(title).includes(cleanQ) ||
+            removeVietnameseTones(summary).includes(cleanQ) ||
+            removeVietnameseTones(content).includes(cleanQ) ||
+            removeVietnameseTones(author).includes(cleanQ) ||
+            removeVietnameseTones(catName).includes(cleanQ) ||
+            tags.some((t) => removeVietnameseTones(t).includes(cleanQ))
+          ) {
+            return true;
+          }
+        }
+
+        return false;
+      });
     }
 
     // Lọc theo chế độ hiển thị (visibility: 'public' | 'friends')

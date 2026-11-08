@@ -10,7 +10,7 @@ import { FestiveShowcaseModal } from '../common/FestiveShowcaseModal';
 import { StressReliefModal } from '../wellness/StressReliefModal';
 import { TimeCapsuleModal } from '../wellness/TimeCapsuleModal';
 import { LateNightRadioModal } from '../wellness/LateNightRadioModal';
-import { postService } from '../../services/postService';
+import { postService, getCachedPosts, removeVietnameseTones } from '../../services/postService';
 import { eventService } from '../../services/eventService';
 import { isSoundEnabled, toggleSound, playClickSound, playFestiveEventSound } from '../../utils/soundEffects';
 import { getActiveSeason, setActiveSeason, SEASONS } from '../../utils/seasonUtils';
@@ -60,15 +60,79 @@ export const Header = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') || '');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [liveResults, setLiveResults] = useState([]);
+  const [isSearchingLive, setIsSearchingLive] = useState(false);
+  const searchContainerRef = useRef(null);
 
   useEffect(() => {
     setSearchTerm(searchParams.get('q') || '');
   }, [searchParams]);
 
+  // Gợi ý tìm kiếm trực tiếp ngay khi gõ từ khóa (Live Search Suggestions)
+  useEffect(() => {
+    const trimmed = searchTerm.trim();
+    if (trimmed.length < 2) {
+      setLiveResults([]);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setIsSearchingLive(true);
+      postService
+        .getPosts({ q: trimmed, limit: 5 })
+        .then((res) => {
+          const raw = res.data?.posts || res.data || [];
+          setLiveResults(Array.isArray(raw) ? raw.slice(0, 5) : []);
+        })
+        .catch(() => {
+          try {
+            const cached = getCachedPosts();
+            const cleanQ = removeVietnameseTones(trimmed.toLowerCase());
+            const matched = cached.filter((p) => {
+              const title = (p.title || '').toLowerCase();
+              const summary = (p.summary || '').toLowerCase();
+              return (
+                title.includes(trimmed.toLowerCase()) ||
+                summary.includes(trimmed.toLowerCase()) ||
+                removeVietnameseTones(title).includes(cleanQ) ||
+                removeVietnameseTones(summary).includes(cleanQ)
+              );
+            });
+            setLiveResults(matched.slice(0, 5));
+          } catch (_) {
+            setLiveResults([]);
+          }
+        })
+        .finally(() => setIsSearchingLive(false));
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Đóng hộp gợi ý tìm kiếm khi click chuột ra ngoài
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setIsSearchFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
   const handleSearchSubmit = (e) => {
     e?.preventDefault();
+    playClickSound();
+    setIsSearchFocused(false);
     if (searchTerm.trim()) {
       navigate(`/?q=${encodeURIComponent(searchTerm.trim())}`);
+      setTimeout(() => {
+        const postsEl = document.getElementById('posts-section');
+        if (postsEl) {
+          postsEl.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 150);
     } else {
       navigate('/');
     }
@@ -550,31 +614,124 @@ export const Header = () => {
 
           {/* Cụm Giữa Hàng 1: Thanh Tìm Kiếm Thông Minh & Khẩu Hiệu (Lấp đầy khoảng trống trung tâm) */}
           <div className="header-top-center">
-            <form className="header-search-form" onSubmit={handleSearchSubmit}>
-              <span className="header-search-icon" style={{ display: 'flex', alignItems: 'center' }}>
-                <i className="fa-solid fa-magnifying-glass"></i>
-              </span>
-              <input
-                type="text"
-                placeholder="Tìm kiếm tâm sự, lời khuyên, bài viết..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="header-search-input"
-              />
-              {searchTerm && (
+            <div ref={searchContainerRef} className="header-search-wrapper">
+              <form className="header-search-form" onSubmit={handleSearchSubmit}>
+                {/* Nút Tìm Kiếm (Kính lúp tương tác có thể click trực tiếp) */}
                 <button
-                  type="button"
-                  className="header-search-clear"
-                  onClick={() => {
-                    setSearchTerm('');
-                    navigate('/');
-                  }}
-                  title="Xóa tìm kiếm"
+                  type="submit"
+                  className="header-search-icon-btn"
+                  title="Bấm để tìm kiếm tâm sự"
+                  aria-label="Tìm kiếm"
                 >
-                  <i className="fa-solid fa-xmark"></i>
+                  <i className="fa-solid fa-magnifying-glass"></i>
                 </button>
+
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm tâm sự, lời khuyên, bài viết..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setIsSearchFocused(false);
+                  }}
+                  className="header-search-input"
+                />
+
+                {searchTerm && (
+                  <button
+                    type="button"
+                    className="header-search-clear"
+                    onClick={() => {
+                      setSearchTerm('');
+                      navigate('/');
+                    }}
+                    title="Xóa từ khóa"
+                    aria-label="Xóa từ khóa"
+                  >
+                    <i className="fa-solid fa-xmark"></i>
+                  </button>
+                )}
+
+                {/* Nút Tìm Kiếm Nổi Bật (Primary Action Search Button) */}
+                <button
+                  type="submit"
+                  className={`header-search-submit-btn ${searchTerm.trim() ? 'is-active' : ''}`}
+                  title="Tìm kiếm ngay"
+                >
+                  <span>Tìm</span>
+                  <i className="fa-solid fa-arrow-right" style={{ fontSize: '0.65rem' }}></i>
+                </button>
+              </form>
+
+              {/* Hộp Gợi Ý Tìm Kiếm Trực Tiếp (Live Search Suggestions Dropdown) */}
+              {isSearchFocused && searchTerm.trim().length >= 2 && (
+                <div className="header-search-dropdown">
+                  <div className="header-search-dropdown-header">
+                    <span>
+                      <i className="fa-solid fa-bolt" style={{ color: '#facc15', marginRight: '6px' }}></i>
+                      {isSearchingLive ? 'Đang tìm kiếm bài viết...' : 'Kết quả gợi ý nhanh:'}
+                    </span>
+                    <span className="search-hint-esc">Esc để đóng</span>
+                  </div>
+
+                  {liveResults.length > 0 ? (
+                    <div className="header-search-results-list">
+                      {liveResults.map((p) => (
+                        <div
+                          key={p._id || p.slug}
+                          className="header-search-result-item"
+                          onClick={() => {
+                            playClickSound();
+                            navigate(`/posts/${p.slug}`);
+                            setIsSearchFocused(false);
+                          }}
+                        >
+                          <div className="search-result-icon">
+                            <span>{p.category?.icon || '📝'}</span>
+                          </div>
+                          <div className="search-result-info">
+                            <strong className="search-result-title">{p.title}</strong>
+                            <div className="search-result-meta">
+                              <span className="search-result-cat">{p.category?.name || 'Tâm sự'}</span>
+                              <span>•</span>
+                              <span>{p.author || 'Tác giả'}</span>
+                              {p.views > 0 && (
+                                <>
+                                  <span>•</span>
+                                  <span>{p.views} lượt xem</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Nút Xem Tất Cả Kết Quả */}
+                      <button
+                        type="button"
+                        className="header-search-view-all-btn"
+                        onClick={handleSearchSubmit}
+                      >
+                        <i className="fa-solid fa-magnifying-glass" style={{ marginRight: '6px' }}></i>
+                        Xem toàn bộ kết quả cho "{searchTerm.trim()}"
+                      </button>
+                    </div>
+                  ) : !isSearchingLive ? (
+                    <div className="header-search-empty">
+                      <span>Không tìm thấy bài viết nào khớp với "{searchTerm.trim()}"</span>
+                      <button
+                        type="button"
+                        className="header-search-try-all"
+                        onClick={handleSearchSubmit}
+                      >
+                        Tìm kiếm trên toàn bộ hệ thống &rarr;
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               )}
-            </form>
+            </div>
 
             <div className="header-daily-quote-pill" title="Slogan truyền động lực cộng đồng Freedom">
               <span className="quote-sparkle" style={{ color: 'var(--pastel-amber)' }}>

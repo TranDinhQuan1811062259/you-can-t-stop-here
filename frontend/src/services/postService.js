@@ -3,6 +3,17 @@ import apiClient from './apiClient';
 const POSTS_CACHE_KEY = 'freedom_cached_posts_v2';
 const LOCAL_POSTS_KEY = 'freedom_offline_created_posts_v2';
 
+export const removeVietnameseTones = (str) => {
+  if (!str) return '';
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .trim();
+};
+
 export const getCachedPosts = () => {
   try {
     const raw = localStorage.getItem(POSTS_CACHE_KEY);
@@ -57,10 +68,66 @@ export const postService = {
       const offline = getOfflineCreatedPosts();
       const combined = [...offline, ...cached.filter((c) => !offline.some((o) => o._id === c._id))];
       if (combined.length > 0) {
+        let filtered = combined;
+
+        if (params.category) {
+          const lowerCat = params.category.toLowerCase();
+          filtered = filtered.filter(
+            (p) =>
+              p.category?.slug === params.category ||
+              p.category?._id === params.category ||
+              p.category?.name?.toLowerCase() === lowerCat ||
+              (typeof p.category === 'string' && (p.category === params.category || p.category.toLowerCase() === lowerCat))
+          );
+        }
+
+        if (params.tag) {
+          const cleanTag = params.tag.replace(/^#/, '').trim().toLowerCase();
+          filtered = filtered.filter((p) => (p.tags || []).some((t) => t.toLowerCase() === cleanTag));
+        }
+
+        if (params.q) {
+          const lowerQ = params.q.toLowerCase().trim();
+          const cleanQ = removeVietnameseTones(lowerQ);
+
+          filtered = filtered.filter((p) => {
+            const title = (p.title || '').toLowerCase();
+            const summary = (p.summary || '').toLowerCase();
+            const content = (p.content || '').toLowerCase();
+            const author = (p.author || p.user?.name || '').toLowerCase();
+            const catName = (typeof p.category === 'string' ? p.category : p.category?.name || '').toLowerCase();
+            const tags = (p.tags || []).map((t) => String(t).toLowerCase());
+
+            if (
+              title.includes(lowerQ) ||
+              summary.includes(lowerQ) ||
+              content.includes(lowerQ) ||
+              author.includes(lowerQ) ||
+              catName.includes(lowerQ) ||
+              tags.some((t) => t.includes(lowerQ))
+            ) {
+              return true;
+            }
+
+            if (cleanQ) {
+              return (
+                removeVietnameseTones(title).includes(cleanQ) ||
+                removeVietnameseTones(summary).includes(cleanQ) ||
+                removeVietnameseTones(content).includes(cleanQ) ||
+                removeVietnameseTones(author).includes(cleanQ) ||
+                removeVietnameseTones(catName).includes(cleanQ) ||
+                tags.some((t) => removeVietnameseTones(t).includes(cleanQ))
+              );
+            }
+
+            return false;
+          });
+        }
+
         return {
-          data: {
-            posts: combined,
-            totalPosts: combined.length,
+          data: filtered,
+          pagination: {
+            total: filtered.length,
             totalPages: 1,
             currentPage: 1,
           },

@@ -22,12 +22,13 @@ export const usePosts = (queryParams = {}) => {
       .getPosts(queryParams)
       .then((res) => {
         if (isSubscribed) {
-          const list = res.data || [];
+          const raw = res.data?.posts || res.data || [];
+          const list = Array.isArray(raw) ? raw : [];
           setPosts(list);
           setPagination(res.pagination || null);
           setError(null);
           try {
-            if (list.length > 0) {
+            if (list.length > 0 && !queryParams.q && !queryParams.category && !queryParams.tag) {
               localStorage.setItem('freedom_cached_posts', JSON.stringify(list));
             }
           } catch (e) {}
