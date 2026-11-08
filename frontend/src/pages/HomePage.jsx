@@ -124,7 +124,7 @@ export const HomePage = () => {
               </span>
             </div>
             <h1 className="hero-title" style={{ textTransform: 'capitalize' }}>
-              {currentCategoryName}
+              <IdleWeatherText>{currentCategoryName}</IdleWeatherText>
             </h1>
             <div style={{ marginTop: '16px' }}>
               <button
@@ -146,7 +146,7 @@ export const HomePage = () => {
               </span>
             </div>
             <h1 className="hero-title">
-              #{selectedTag}
+              <IdleWeatherText>#{selectedTag}</IdleWeatherText>
             </h1>
             <div style={{ marginTop: '16px' }}>
               <button
@@ -168,7 +168,7 @@ export const HomePage = () => {
               </span>
             </div>
             <h1 className="hero-title">
-              "{searchQuery}"
+              <IdleWeatherText>"{searchQuery}"</IdleWeatherText>
             </h1>
             <div style={{ marginTop: '16px' }}>
               <button

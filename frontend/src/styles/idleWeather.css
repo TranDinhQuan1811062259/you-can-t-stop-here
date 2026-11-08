@@ -205,32 +205,109 @@
   filter: drop-shadow(0 2px 6px rgba(14, 165, 233, 0.5));
 }
 
-/* Chữ đóng tuyết phát sáng băng giá */
+/* Chữ đóng tuyết phát sáng băng giá và phủ trắng dần từng ký tự */
 .weather-season-winter.idle-level-1 .idle-weather-inner-text {
-  text-shadow: 0 0 6px rgba(186, 230, 253, 0.6);
+  filter: brightness(1.12);
+  text-shadow: 0 0 8px rgba(224, 242, 254, 0.8), 0 0 14px rgba(186, 230, 253, 0.5);
+  transition: all 0.5s ease;
 }
 .weather-season-winter.idle-level-2 .idle-weather-inner-text {
-  text-shadow: 0 0 10px rgba(186, 230, 253, 0.85), 0 1px 2px rgba(2, 132, 199, 0.4);
+  color: #e0f2fe !important;
+  -webkit-text-fill-color: #e0f2fe !important;
+  text-shadow: 0 0 10px #ffffff, 0 0 18px rgba(56, 189, 248, 0.85), 0 1px 3px rgba(2, 132, 199, 0.5);
+  filter: drop-shadow(0 1px 4px rgba(14, 165, 233, 0.4));
+  transition: all 0.5s ease;
 }
 .weather-season-winter.idle-level-3 .idle-weather-inner-text {
-  text-shadow: 0 0 14px rgba(224, 242, 254, 0.95), 0 0 25px rgba(56, 189, 248, 0.7);
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
+  text-shadow: 0 0 14px #ffffff, 0 0 25px rgba(56, 189, 248, 0.95), 0 0 38px rgba(14, 165, 233, 0.7);
+  filter: drop-shadow(0 2px 6px rgba(14, 165, 233, 0.6));
+  letter-spacing: 0.5px;
+  transition: all 0.5s ease;
 }
 .weather-season-winter.idle-level-4 .idle-weather-inner-text {
-  text-shadow: 0 0 18px #ffffff, 0 0 30px rgba(56, 189, 248, 0.9), 0 0 45px rgba(14, 165, 233, 0.6);
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  text-shadow: 0 0 20px #ffffff, 0 0 35px #38bdf8, 0 0 52px #0284c7;
+  filter: drop-shadow(0 3px 10px rgba(14, 165, 233, 0.85));
+  letter-spacing: 1px;
+  animation: winterFrostSparkle 3s infinite alternate ease-in-out;
 }
 
-/* Khi cử động chuột: Tuyết rụng xuống và tan ra */
+@keyframes winterFrostSparkle {
+  0% {
+    text-shadow: 0 0 18px #ffffff, 0 0 32px #38bdf8, 0 0 45px #0284c7;
+  }
+  100% {
+    text-shadow: 0 0 25px #ffffff, 0 0 42px #7dd3fc, 0 0 60px #38bdf8;
+  }
+}
+
+/* Khi cử động chuột / vuốt ngón tay: Tuyết rụng vỡ rơi lả tả xuống đất */
+.winter-snow-melt-off .idle-weather-inner-text {
+  animation: winterFrostShatterOff 0.85s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
+}
+
+@keyframes winterFrostShatterOff {
+  0% {
+    color: #ffffff;
+    filter: drop-shadow(0 0 14px #ffffff);
+    transform: scale(1.02);
+  }
+  25% {
+    transform: translate(-1px, 2px) rotate(-0.5deg);
+  }
+  50% {
+    color: inherit;
+    -webkit-text-fill-color: inherit;
+    filter: drop-shadow(0 4px 10px rgba(56, 189, 248, 0.4));
+  }
+  100% {
+    color: inherit;
+    -webkit-text-fill-color: inherit;
+    filter: none;
+    transform: translate(0, 0) rotate(0);
+  }
+}
+
 .winter-snow-melt-off .snow-cap-accumulation,
-.winter-snow-melt-off .snow-icicles-accumulation {
-  transform: translateY(14px) scaleY(0.4);
-  opacity: 0;
-  transition: all 0.55s cubic-bezier(0.4, 0, 0.2, 1) !important;
+.winter-snow-melt-off .snow-icicles-accumulation,
+.winter-snow-melt-off .card-snow-cap-ridge,
+.winter-snow-melt-off .card-frost-icicles-fringe {
+  animation: snowShatterFallDown 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
 }
 
-.winter-snow-melt-off .decor-winter {
-  transform: translateY(22px) rotate(25deg);
-  opacity: 0;
-  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
+@keyframes snowShatterFallDown {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+  25% {
+    transform: translateY(4px) scaleX(1.02) rotate(-1deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(38px) scaleY(0.2) rotate(3deg);
+    filter: blur(2px);
+  }
+}
+
+.winter-snow-melt-off .decor-winter,
+.winter-snow-melt-off .card-frost-corner {
+  animation: snowFlakesFallAway 0.85s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+}
+
+@keyframes snowFlakesFallAway {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(12px, 42px) rotate(65deg) scale(0.3);
+    filter: blur(1.5px);
+  }
 }
 
 /* =========================================================================
@@ -238,16 +315,22 @@
    ========================================================================= */
 
 .weather-season-spring.idle-level-1 .idle-weather-inner-text {
-  text-shadow: 0 0 6px rgba(244, 114, 182, 0.4);
+  text-shadow: 0 0 8px rgba(244, 114, 182, 0.5);
 }
 .weather-season-spring.idle-level-2 .idle-weather-inner-text {
-  text-shadow: 0 0 10px rgba(244, 114, 182, 0.6), 0 0 18px rgba(236, 72, 153, 0.3);
+  color: #fbcfe8 !important;
+  -webkit-text-fill-color: #fbcfe8 !important;
+  text-shadow: 0 0 12px rgba(244, 114, 182, 0.85), 0 0 22px rgba(236, 72, 153, 0.4);
 }
 .weather-season-spring.idle-level-3 .idle-weather-inner-text {
-  text-shadow: 0 0 14px rgba(244, 114, 182, 0.8), 0 0 24px rgba(236, 72, 153, 0.5);
+  color: #f472b6 !important;
+  -webkit-text-fill-color: #f472b6 !important;
+  text-shadow: 0 0 16px rgba(244, 114, 182, 0.95), 0 0 28px rgba(236, 72, 153, 0.6);
 }
 .weather-season-spring.idle-level-4 .idle-weather-inner-text {
-  text-shadow: 0 0 18px rgba(251, 113, 133, 0.9), 0 0 32px rgba(236, 72, 153, 0.7);
+  color: #ec4899 !important;
+  -webkit-text-fill-color: #ec4899 !important;
+  text-shadow: 0 0 20px #fdf2f8, 0 0 35px #f472b6, 0 0 50px #ec4899;
 }
 
 .decor-spring {
@@ -266,11 +349,25 @@
   }
 }
 
-/* Khi cử động chuột: Hoa bay tung theo gió */
-.spring-petals-scatter .decor-spring {
-  transform: translate(35px, -35px) rotate(70deg) scale(0.6) !important;
-  opacity: 0 !important;
-  transition: all 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+/* Khi cử động chuột / vuốt ngón tay: Hoa bay tung theo gió */
+.spring-petals-scatter .decor-spring,
+.spring-petals-scatter .card-spring-flower {
+  animation: springPetalsDriftAway 0.85s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+}
+
+@keyframes springPetalsDriftAway {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0) scale(1);
+  }
+  30% {
+    transform: translate(12px, -8px) rotate(25deg) scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(50px, 35px) rotate(120deg) scale(0.35);
+    filter: blur(1.5px);
+  }
 }
 
 /* =========================================================================
@@ -278,16 +375,22 @@
    ========================================================================= */
 
 .weather-season-autumn.idle-level-1 .idle-weather-inner-text {
-  text-shadow: 0 0 6px rgba(251, 146, 60, 0.4);
+  text-shadow: 0 0 8px rgba(251, 146, 60, 0.5);
 }
 .weather-season-autumn.idle-level-2 .idle-weather-inner-text {
-  text-shadow: 0 0 10px rgba(251, 146, 60, 0.65), 0 0 18px rgba(234, 88, 12, 0.3);
+  color: #fed7aa !important;
+  -webkit-text-fill-color: #fed7aa !important;
+  text-shadow: 0 0 12px rgba(251, 146, 60, 0.8), 0 0 20px rgba(234, 88, 12, 0.4);
 }
 .weather-season-autumn.idle-level-3 .idle-weather-inner-text {
-  text-shadow: 0 0 14px rgba(251, 146, 60, 0.85), 0 0 24px rgba(234, 88, 12, 0.5);
+  color: #fb923c !important;
+  -webkit-text-fill-color: #fb923c !important;
+  text-shadow: 0 0 16px rgba(251, 146, 60, 0.95), 0 0 28px rgba(234, 88, 12, 0.6);
 }
 .weather-season-autumn.idle-level-4 .idle-weather-inner-text {
-  text-shadow: 0 0 18px rgba(249, 115, 22, 0.9), 0 0 30px rgba(234, 88, 12, 0.7);
+  color: #ea580c !important;
+  -webkit-text-fill-color: #ea580c !important;
+  text-shadow: 0 0 20px #fff7ed, 0 0 35px #fb923c, 0 0 50px #c2410c;
 }
 
 .decor-autumn {
@@ -306,9 +409,160 @@
   }
 }
 
-/* Khi cử động chuột: Gió thu quét lá bay đi */
-.autumn-leaves-scatter .decor-autumn {
-  transform: translate(45px, -20px) rotate(110deg) scale(0.5) !important;
-  opacity: 0 !important;
-  transition: all 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+/* Khi cử động chuột / vuốt ngón tay: Gió thu quét lá rơi rụng xuống đất */
+.autumn-leaves-scatter .decor-autumn,
+.autumn-leaves-scatter .card-autumn-leaf {
+  animation: autumnLeavesRustleFall 0.85s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
 }
+
+@keyframes autumnLeavesRustleFall {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0) scale(1);
+  }
+  25% {
+    transform: translate(-8px, -4px) rotate(-15deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(30px, 45px) rotate(90deg) scale(0.35);
+    filter: blur(1px);
+  }
+}
+
+/* =========================================================================
+   5. HIỆU ỨNG TÍCH TỤ THỜI TIẾT TRÊN KHUNG BÀI VIẾT (POST CARD FRAME)
+   ========================================================================= */
+
+.post-card {
+  position: relative;
+  overflow: visible !important;
+  transition: box-shadow 0.4s ease, border-color 0.4s ease;
+}
+
+.card-idle-weather-frame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+  border-radius: inherit;
+  transition: all 0.4s ease;
+}
+
+/* Mùa Đông trên Khung Bài Viết */
+.card-idle-weather-frame.weather-season-winter.idle-level-1 {
+  box-shadow: 0 0 10px rgba(186, 230, 253, 0.35);
+}
+.card-idle-weather-frame.weather-season-winter.idle-level-2 {
+  box-shadow: 0 0 16px rgba(186, 230, 253, 0.6), inset 0 0 8px rgba(255, 255, 255, 0.4);
+}
+.card-idle-weather-frame.weather-season-winter.idle-level-3 {
+  box-shadow: 0 0 22px rgba(56, 189, 248, 0.7), inset 0 0 14px rgba(255, 255, 255, 0.6);
+}
+.card-idle-weather-frame.weather-season-winter.idle-level-4 {
+  box-shadow: 0 0 30px rgba(14, 165, 233, 0.85), inset 0 0 20px rgba(255, 255, 255, 0.8);
+}
+
+/* Dải tuyết nắp trắng xốp trên nóc thẻ bài viết */
+.card-snow-cap-ridge {
+  position: absolute;
+  top: -6px;
+  left: -2px;
+  right: -2px;
+  height: 8px;
+  background: linear-gradient(180deg, #ffffff 0%, #e0f2fe 70%, rgba(186, 230, 253, 0.95) 100%);
+  border-radius: 16px 16px 4px 4px;
+  box-shadow: 0 2px 10px rgba(56, 189, 248, 0.5), 0 0 12px rgba(255, 255, 255, 0.9);
+  transition: all 0.5s ease;
+  animation: snowGlisten 3s infinite alternate ease-in-out;
+}
+.snow-cap-level-2.card-snow-cap-ridge { height: 10px; top: -7px; }
+.snow-cap-level-3.card-snow-cap-ridge { height: 13px; top: -9px; }
+.snow-cap-level-4.card-snow-cap-ridge { height: 16px; top: -11px; }
+
+/* Góc tuyết đọng trên thẻ */
+.card-frost-corner {
+  position: absolute;
+  font-size: 16px;
+  filter: drop-shadow(0 0 6px #ffffff);
+  transition: all 0.4s ease;
+  z-index: 16;
+}
+.card-frost-corner.top-left { top: -10px; left: 6px; }
+.card-frost-corner.top-right { top: -10px; right: 6px; }
+
+/* Nhũ băng rủ dưới dải nắp tuyết */
+.card-frost-icicles-fringe {
+  position: absolute;
+  top: 6px;
+  left: 10px;
+  right: 10px;
+  height: 8px;
+  background-image: radial-gradient(circle at 10% 0, #ffffff 3px, transparent 4px),
+    radial-gradient(circle at 35% 0, #e0f2fe 4px, transparent 5px),
+    radial-gradient(circle at 65% 0, #ffffff 3.5px, transparent 4.5px),
+    radial-gradient(circle at 88% 0, #e0f2fe 4px, transparent 5px);
+  background-repeat: repeat-x;
+  background-size: 32px 10px;
+}
+
+/* Mùa Xuân trên Khung Bài Viết */
+.card-spring-blooms-wrap {
+  position: absolute;
+  top: -11px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-around;
+  padding: 0 12px;
+  pointer-events: none;
+}
+.card-spring-flower {
+  font-size: 16px;
+  filter: drop-shadow(0 2px 6px rgba(236, 72, 153, 0.4));
+  animation: springFlowerBloom 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Mùa Thu trên Khung Bài Viết */
+.card-autumn-leaves-wrap {
+  position: absolute;
+  top: -11px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-around;
+  padding: 0 12px;
+  pointer-events: none;
+}
+.card-autumn-leaf {
+  font-size: 17px;
+  filter: drop-shadow(0 2px 6px rgba(194, 65, 12, 0.4));
+  animation: autumnLeafRest 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Mùa Hạ trên Khung Bài Viết */
+.card-summer-heat-wrap {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.card-summer-heat-haze {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.45);
+  animation: summerHeatWobble 2.5s infinite ease-in-out;
+}
+.card-summer-drip {
+  position: absolute;
+  bottom: -6px;
+  width: 6px;
+  height: 10px;
+  background: linear-gradient(180deg, #f59e0b 0%, #ef4444 100%);
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.5);
+  animation: dripStretch 2s infinite ease-in-out;
+}
+.card-summer-drip.drip-left { left: 16px; }
+.card-summer-drip.drip-right { right: 16px; }

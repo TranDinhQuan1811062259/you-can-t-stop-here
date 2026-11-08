@@ -7,6 +7,7 @@ import { playClickSound } from '../../utils/soundEffects';
 import { ATMOSPHERE_THEMES } from '../../utils/postAtmosphereEngine';
 import { SharePostModal } from './SharePostModal';
 import { IdleWeatherText } from '../common/IdleWeatherText';
+import { PostCardIdleOverlay } from './PostCardIdleOverlay';
 
 export const PostCard = ({ post }) => {
   const { user } = useAuth();
@@ -125,6 +126,9 @@ export const PostCard = ({ post }) => {
       className={`post-card ${post.isFlagged ? 'is-flagged-card' : ''} ${hasAtmosphere ? 'has-atmosphere-card' : ''}`}
       style={hasAtmosphere ? { borderTop: `3px solid ${customAccentColor}` } : {}}
     >
+      {/* Hiệu ứng thời tiết tích tụ trên khung bài viết khi nhàn rỗi (Tuyết / Hoa / Lá / Tan chảy) */}
+      <PostCardIdleOverlay />
+
       <div className="card-img-wrap">
         <Link to={`/post/${post.slug}`} className="card-img-link" title={post.title}>
           <img
@@ -238,7 +242,11 @@ export const PostCard = ({ post }) => {
           </h3>
         </Link>
 
-        <p className="card-summary">{post.summary}</p>
+        {post.summary && (
+          <IdleWeatherText as="p" className="card-summary">
+            {post.summary}
+          </IdleWeatherText>
+        )}
 
         <div className="card-footer">
           {/* Cụm thống kê gọn gàng, bấm vào để xem chi tiết bài viết */}

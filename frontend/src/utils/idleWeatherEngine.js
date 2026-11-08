@@ -11,19 +11,21 @@ import { getActiveSeason } from './seasonUtils';
 let idleTimer = null;
 let lastActivityTime = Date.now();
 let currentIdleSeconds = 0;
-let currentIdleLevel = 0; // 0: active, 1: 5s, 2: 12s, 3: 22s, 4: 35s+
+let currentIdleLevel = 0; // 0: active, 1: 4s, 2: 9s, 3: 16s, 4: 25s+
+let lastNonZeroIdleLevel = 1;
 let isRecovering = false;
 let recoveryTimeout = null;
 const listeners = new Set();
 
-const LEVEL_THRESHOLDS = [5, 12, 22, 35]; // Mốc giây chuyển cấp độ
+const LEVEL_THRESHOLDS = [4, 9, 16, 25]; // Mốc giây chuyển cấp độ tích trữ nhanh nhạy
 
 const notifyListeners = () => {
   const activeSeason = getActiveSeason();
   const payload = {
     idleSeconds: currentIdleSeconds,
     idleLevel: currentIdleLevel,
-    idleRatio: Math.min(1, currentIdleSeconds / 35),
+    lastIdleLevel: lastNonZeroIdleLevel,
+    idleRatio: Math.min(1, currentIdleSeconds / 25),
     isRecovering,
     seasonId: activeSeason?.id || 'winter',
   };
@@ -48,6 +50,7 @@ const handleUserActivity = () => {
 
   if (wasIdle && !isRecovering) {
     isRecovering = true;
+    lastNonZeroIdleLevel = currentIdleLevel;
     currentIdleLevel = 0;
     notifyListeners();
 
@@ -55,7 +58,7 @@ const handleUserActivity = () => {
     recoveryTimeout = setTimeout(() => {
       isRecovering = false;
       notifyListeners();
-    }, 900); // 900ms để chạy animation chữ liền lại / tuyết rụng / hoa bay
+    }, 950); // 950ms để chạy trọn vẹn animation tuyết vỡ rơi rụng / hoa lá rơi xào xạc
     return;
   }
 
@@ -75,6 +78,10 @@ const tick = () => {
   else if (currentIdleSeconds >= LEVEL_THRESHOLDS[1]) level = 2;
   else if (currentIdleSeconds >= LEVEL_THRESHOLDS[0]) level = 1;
 
+  if (level > 0) {
+    lastNonZeroIdleLevel = level;
+  }
+
   if (level !== currentIdleLevel || currentIdleSeconds % 2 === 0) {
     currentIdleLevel = level;
     notifyListeners();
@@ -84,7 +91,18 @@ const tick = () => {
 export const initIdleWeatherEngine = () => {
   if (typeof window === 'undefined') return;
 
-  const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'wheel', 'scroll'];
+  const activityEvents = [
+    'mousemove',
+    'mousedown',
+    'pointermove',
+    'pointerdown',
+    'keydown',
+    'touchstart',
+    'touchmove',
+    'touchend',
+    'wheel',
+    'scroll',
+  ];
   activityEvents.forEach((ev) => {
     window.addEventListener(ev, handleUserActivity, { passive: true });
   });
@@ -111,7 +129,8 @@ export const subscribeIdleWeather = (callback) => {
   callback({
     idleSeconds: currentIdleSeconds,
     idleLevel: currentIdleLevel,
-    idleRatio: Math.min(1, currentIdleSeconds / 35),
+    lastIdleLevel: lastNonZeroIdleLevel,
+    idleRatio: Math.min(1, currentIdleSeconds / 25),
     isRecovering,
     seasonId: activeSeason?.id || 'winter',
   });
@@ -126,7 +145,8 @@ export const getIdleWeatherState = () => {
   return {
     idleSeconds: currentIdleSeconds,
     idleLevel: currentIdleLevel,
-    idleRatio: Math.min(1, currentIdleSeconds / 35),
+    lastIdleLevel: lastNonZeroIdleLevel,
+    idleRatio: Math.min(1, currentIdleSeconds / 25),
     isRecovering,
     seasonId: activeSeason?.id || 'winter',
   };

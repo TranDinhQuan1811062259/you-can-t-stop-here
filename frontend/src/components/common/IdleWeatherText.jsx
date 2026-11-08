@@ -9,7 +9,8 @@ export const IdleWeatherText = ({
   enableAllSeasons = true,
   ...props
 }) => {
-  const { idleLevel, idleRatio, isRecovering, seasonId } = useIdleWeather();
+  const { idleLevel, lastIdleLevel, idleRatio, isRecovering, seasonId } = useIdleWeather();
+  const effectiveLevel = idleLevel > 0 ? idleLevel : (isRecovering ? (lastIdleLevel || 2) : 0);
 
   const isSummer = seasonId === 'summer';
   const isWinter = seasonId === 'winter';
@@ -18,11 +19,11 @@ export const IdleWeatherText = ({
 
   // Tính số lượng hạt bám theo cấp độ nhàn rỗi (Level 0 -> 4)
   const decorations = useMemo(() => {
-    if (idleLevel === 0 && !isRecovering) return [];
+    if (effectiveLevel === 0 && !isRecovering) return [];
 
     if (isWinter) {
       const counts = [0, 3, 6, 9, 14];
-      const count = counts[idleLevel] || 0;
+      const count = counts[effectiveLevel] || 0;
       return Array.from({ length: count }).map((_, i) => ({
         id: i,
         char: ['❄️', '❅', '✻', '•', '🌨️'][i % 5],
@@ -35,7 +36,7 @@ export const IdleWeatherText = ({
 
     if (isSpring) {
       const counts = [0, 3, 6, 10, 16];
-      const count = counts[idleLevel] || 0;
+      const count = counts[effectiveLevel] || 0;
       return Array.from({ length: count }).map((_, i) => ({
         id: i,
         char: ['🌸', '💮', '🌱', '🌷', '🌿'][i % 5],
@@ -48,7 +49,7 @@ export const IdleWeatherText = ({
 
     if (isAutumn) {
       const counts = [0, 3, 6, 9, 15];
-      const count = counts[idleLevel] || 0;
+      const count = counts[effectiveLevel] || 0;
       return Array.from({ length: count }).map((_, i) => ({
         id: i,
         char: ['🍂', '🍁', '🍃', '🌾'][i % 4],
@@ -62,24 +63,24 @@ export const IdleWeatherText = ({
     if (isSummer) {
       // Mùa hạ: Các giọt tan chảy ròng ròng từ chân chữ
       const counts = [0, 2, 5, 8, 12];
-      const count = counts[idleLevel] || 0;
+      const count = counts[effectiveLevel] || 0;
       return Array.from({ length: count }).map((_, i) => ({
         id: i,
         char: '💧',
         left: `${(i * 17 + 9) % 90}%`,
-        height: 6 + idleLevel * 5 + (i % 3) * 4,
+        height: 6 + effectiveLevel * 5 + (i % 3) * 4,
         delay: `${(i * 0.2).toFixed(2)}s`,
       }));
     }
 
     return [];
-  }, [idleLevel, seasonId, isRecovering, isWinter, isSpring, isAutumn, isSummer]);
+  }, [effectiveLevel, seasonId, isRecovering, isWinter, isSpring, isAutumn, isSummer]);
 
   // Tạo class trạng thái
   const weatherClass = useMemo(() => {
     const classes = ['idle-weather-text-wrap'];
     classes.push(`weather-season-${seasonId}`);
-    classes.push(`idle-level-${idleLevel}`);
+    classes.push(`idle-level-${effectiveLevel}`);
 
     if (isRecovering) {
       classes.push('is-recovering');
@@ -89,12 +90,12 @@ export const IdleWeatherText = ({
       if (isAutumn) classes.push('autumn-leaves-scatter');
     }
 
-    if (idleLevel > 0) {
+    if (effectiveLevel > 0) {
       classes.push('is-weather-accumulated');
     }
 
     return classes.join(' ');
-  }, [seasonId, idleLevel, isRecovering, isSummer, isWinter, isSpring, isAutumn]);
+  }, [seasonId, effectiveLevel, isRecovering, isSummer, isWinter, isSpring, isAutumn]);
 
   return (
     <Component
@@ -107,17 +108,17 @@ export const IdleWeatherText = ({
       {...props}
     >
       {/* Lớp tuyết nắp phủ trên đỉnh chữ (Mùa đông tuyết tích trữ dày) */}
-      {isWinter && idleLevel > 0 && (
+      {isWinter && (effectiveLevel > 0 || isRecovering) && (
         <span
-          className={`snow-cap-accumulation snow-cap-level-${idleLevel}`}
+          className={`snow-cap-accumulation snow-cap-level-${effectiveLevel}`}
           aria-hidden="true"
         />
       )}
 
       {/* Lớp băng tuyết màng nhũ (Icicles rủ xuống) */}
-      {isWinter && idleLevel >= 2 && (
+      {isWinter && (effectiveLevel >= 2 || isRecovering) && (
         <span
-          className={`snow-icicles-accumulation icicles-level-${idleLevel}`}
+          className={`snow-icicles-accumulation icicles-level-${effectiveLevel}`}
           aria-hidden="true"
         />
       )}

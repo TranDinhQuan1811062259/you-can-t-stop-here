@@ -13,6 +13,7 @@ import { PostAudioPlayer } from '../components/blog/PostAudioPlayer';
 import { PostAtmosphereSoundBar } from '../components/blog/PostAtmosphereSoundBar';
 import { ATMOSPHERE_THEMES, BACKGROUND_PRESETS } from '../utils/postAtmosphereEngine';
 import { SharePostModal } from '../components/blog/SharePostModal';
+import { IdleWeatherText } from '../components/common/IdleWeatherText';
 import { formatPostContent } from '../utils/contentFormatter';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
@@ -406,7 +407,9 @@ export const PostDetailPage = () => {
                 )}
               </div>
 
-              <h1 className="post-full-title">{post.title}</h1>
+              <h1 className="post-full-title">
+                <IdleWeatherText>{post.title}</IdleWeatherText>
+              </h1>
 
               <div className="post-author-bar">
                 <div className="post-author-left">

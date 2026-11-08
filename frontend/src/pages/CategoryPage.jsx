@@ -5,6 +5,7 @@ import { PostList } from '../components/blog/PostList';
 import { Pagination } from '../components/common/Pagination';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { IdleWeatherText } from '../components/common/IdleWeatherText';
 
 export const CategoryPage = () => {
   const { categorySlug } = useParams();
@@ -48,7 +49,7 @@ export const CategoryPage = () => {
             <span className="hero-tag-pill">{categoryIcon} Chủ đề tâm sự</span>
           </div>
           <h1 className="hero-title" style={{ textTransform: 'capitalize' }}>
-            {categoryDisplayName}
+            <IdleWeatherText>{categoryDisplayName}</IdleWeatherText>
           </h1>
           <div style={{ marginTop: '16px' }}>
             <Link to="/" className="hero-back-link">
