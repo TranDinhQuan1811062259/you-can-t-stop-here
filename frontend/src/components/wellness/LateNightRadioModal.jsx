@@ -992,6 +992,27 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     });
   };
 
+  // Lắng nghe sự kiện mở Radio từ bất kỳ đâu để tự thoát chế độ thu nhỏ
+  useEffect(() => {
+    const handleOpenRadio = () => {
+      setIsMiniMode(false);
+    };
+    window.addEventListener('freedom_open_radio', handleOpenRadio);
+    return () => window.removeEventListener('freedom_open_radio', handleOpenRadio);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsMiniMode(false);
+    }
+  }, [isOpen]);
+
+  const handleExpandRadio = () => {
+    playClickSound();
+    setIsMiniMode(false);
+    window.dispatchEvent(new CustomEvent('freedom_open_radio'));
+  };
+
   // =========================================================================
   // XỬ LÝ KÉO THẢ CHUẨN XÁC TOÀN CẦU (WINDOW LISTENERS - DI CHUYỂN MƯỢT MÀ 100%)
   // =========================================================================
@@ -1009,7 +1030,6 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
   const handleMouseDown = (e) => {
     if (e.button !== 0) return;
     if (e.target.closest('button')) return;
-    e.preventDefault();
     handleStartDrag(e.clientX, e.clientY);
   };
 
@@ -1051,7 +1071,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
       }
     };
 
-    const handleEndDrag = () => {
+    const handleEndDrag = (e) => {
       setIsDragging(false);
 
       if (hasMovedRef.current) {
@@ -1060,6 +1080,10 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
           saveFabPos('radio', snapped);
           return snapped;
         });
+      } else {
+        // Người dùng nhấp/chạm mà không kéo -> Mở ngay toàn bộ modal Radio!
+        if (e && e.target && e.target.closest && e.target.closest('button')) return;
+        handleExpandRadio();
       }
     };
 
@@ -1081,10 +1105,8 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
       hasMovedRef.current = false;
       return;
     }
-    if (e.target.closest('button')) return;
-    playClickSound();
-    setIsMiniMode(false);
-    window.dispatchEvent(new CustomEvent('freedom_open_radio'));
+    if (e && e.target && e.target.closest && e.target.closest('button')) return;
+    handleExpandRadio();
   };
 
   const handleCloseMini = (e) => {
@@ -1189,6 +1211,20 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
           aria-label="Tạm dừng hoặc phát"
         >
           {isPlaying ? '⏸' : '▶️'}
+        </button>
+
+        {/* Nút Phóng To / Mở Rộng toàn màn hình */}
+        <button
+          type="button"
+          className="mini-radio-action-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleExpandRadio();
+          }}
+          title="Mở rộng lại giao diện Trạm Radio"
+          aria-label="Mở rộng"
+        >
+          🗖
         </button>
 
         {/* Nút Đóng / Tắt Mini Player */}
