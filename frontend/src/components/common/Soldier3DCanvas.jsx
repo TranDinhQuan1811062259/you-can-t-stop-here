@@ -531,9 +531,9 @@ export const Soldier3DCanvas = ({
         soldierRoot.position.y = 0.16 + Math.sin(elapsed * 2.4) * 0.015;
       } else if (mode === 'parade') {
         const span = 14;
-        const speed = 3.6;
+        const speed = 1.75; // Tốc độ duyệt binh chậm rãi, uy nghiêm, thư thái
         const paradeX = -7 + (elapsed * speed) % span;
-        const stepBob = Math.abs(Math.sin(elapsed * 5.8)) * 0.08;
+        const stepBob = Math.abs(Math.sin(elapsed * 3.8)) * 0.06;
         soldierRoot.position.set(paradeX, 0.16 + stepBob, 0);
         soldierRoot.rotation.set(0.04, Math.PI / 2 - 0.22, 0);
         soldierRoot.scale.set(0.70, 0.70, 0.70);

@@ -147,16 +147,16 @@ const startLofiRainEngine = (ctx, masterNode) => {
       b0 = 0.99886 * b0 + white * 0.0555179;
       b1 = 0.99332 * b1 + white * 0.0750759;
       b2 = 0.96900 * b2 + white * 0.1538520;
-      data[i] = (b0 + b1 + b2 + white * 0.5362) * 0.08;
+      data[i] = (b0 + b1 + b2 + white * 0.5362) * 0.05;
     }
     rainSource = ctx.createBufferSource();
     rainSource.buffer = noiseBuffer;
     rainSource.loop = true;
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(950, ctx.currentTime);
+    filter.frequency.setValueAtTime(650, ctx.currentTime);
     const rainGain = ctx.createGain();
-    rainGain.gain.setValueAtTime(0.22, ctx.currentTime);
+    rainGain.gain.setValueAtTime(0.065, ctx.currentTime);
     rainSource.connect(filter);
     filter.connect(rainGain);
     rainGain.connect(node);
@@ -169,16 +169,17 @@ const startLofiRainEngine = (ctx, masterNode) => {
     const crackleBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = crackleBuffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() > 0.992 ? (Math.random() * 2 - 1) * 0.22 : 0;
+      // Tiếng đĩa than rất thưa và nhẹ nhàng, không gây rè hay chát tai
+      data[i] = Math.random() > 0.998 ? (Math.random() * 2 - 1) * 0.08 : 0;
     }
     vinylSource = ctx.createBufferSource();
     vinylSource.buffer = crackleBuffer;
     vinylSource.loop = true;
     const filter = ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(2500, ctx.currentTime);
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1200, ctx.currentTime);
     const vinylGain = ctx.createGain();
-    vinylGain.gain.setValueAtTime(0.18, ctx.currentTime);
+    vinylGain.gain.setValueAtTime(0.016, ctx.currentTime);
     vinylSource.connect(filter);
     filter.connect(vinylGain);
     vinylGain.connect(node);
@@ -205,7 +206,7 @@ const startLofiRainEngine = (ctx, masterNode) => {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, now);
       gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(0.07, now + 0.15);
+      gain.gain.linearRampToValueAtTime(0.05, now + 0.18);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.2);
       osc.connect(gain);
       gain.connect(node);
@@ -341,15 +342,15 @@ const startCampfireEngine = (ctx, masterNode) => {
     const bufferSize = ctx.sampleRate * 2;
     const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.12;
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.06;
     windSource = ctx.createBufferSource();
     windSource.buffer = noiseBuffer;
     windSource.loop = true;
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(320, ctx.currentTime);
+    filter.frequency.setValueAtTime(280, ctx.currentTime);
     const windGain = ctx.createGain();
-    windGain.gain.setValueAtTime(0.18, ctx.currentTime);
+    windGain.gain.setValueAtTime(0.08, ctx.currentTime);
     windSource.connect(filter);
     filter.connect(windGain);
     windGain.connect(node);
@@ -362,16 +363,17 @@ const startCampfireEngine = (ctx, masterNode) => {
     const fireBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = fireBuffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() > 0.993 ? (Math.random() * 2 - 1) * 0.35 : (Math.random() * 2 - 1) * 0.02;
+      // Đốm lửa nổ tí tách rất êm ái, thưa thớt, không bị rè
+      data[i] = Math.random() > 0.998 ? (Math.random() * 2 - 1) * 0.12 : (Math.random() * 2 - 1) * 0.005;
     }
     crackleSource = ctx.createBufferSource();
     crackleSource.buffer = fireBuffer;
     crackleSource.loop = true;
     const filter = ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(1800, ctx.currentTime);
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1100, ctx.currentTime);
     const fireGain = ctx.createGain();
-    fireGain.gain.setValueAtTime(0.24, ctx.currentTime);
+    fireGain.gain.setValueAtTime(0.022, ctx.currentTime);
     crackleSource.connect(filter);
     filter.connect(fireGain);
     fireGain.connect(node);
@@ -696,10 +698,26 @@ const startRadioEngine = (engineType = 'lofi_rain', volume = 0.5) => {
 
   if (!masterGainNode) {
     masterGainNode = ctx.createGain();
-    masterGainNode.gain.setValueAtTime(volume, ctx.currentTime);
-    masterGainNode.connect(ctx.destination);
+    masterGainNode.gain.setValueAtTime(volume * 0.8, ctx.currentTime);
+
+    // Bộ lọc Lowpass làm mịn toàn dải, triệt tiêu mọi tạp âm số chát tai
+    const masterFilter = ctx.createBiquadFilter();
+    masterFilter.type = 'lowpass';
+    masterFilter.frequency.setValueAtTime(4200, ctx.currentTime);
+
+    // Bộ nén Dynamics Compressor chuẩn phòng thu - chống tuyệt đối rè loa / clipping
+    const compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-18, ctx.currentTime);
+    compressor.knee.setValueAtTime(12, ctx.currentTime);
+    compressor.ratio.setValueAtTime(4.2, ctx.currentTime);
+    compressor.attack.setValueAtTime(0.003, ctx.currentTime);
+    compressor.release.setValueAtTime(0.25, ctx.currentTime);
+
+    masterGainNode.connect(masterFilter);
+    masterFilter.connect(compressor);
+    compressor.connect(ctx.destination);
   } else {
-    masterGainNode.gain.setValueAtTime(volume, ctx.currentTime);
+    masterGainNode.gain.setValueAtTime(volume * 0.8, ctx.currentTime);
   }
 
   isRadioPlayingInternal = true;

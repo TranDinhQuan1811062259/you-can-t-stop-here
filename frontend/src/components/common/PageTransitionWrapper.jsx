@@ -83,7 +83,7 @@ export const PageTransitionWrapper = ({ children }) => {
       setIsTransitioning(true);
       const timer = setTimeout(() => {
         setIsTransitioning(false);
-      }, 850); // Chuyển trang dịu mắt, thư thái cho người cận thị
+      }, 1600); // 1.6s chuyển trang dịu mắt, chuyển động thư thái, không bị vèo qua quá nhanh
 
       prevPathRef.current = currentPath;
       return () => clearTimeout(timer);
@@ -96,7 +96,7 @@ export const PageTransitionWrapper = ({ children }) => {
       const { direction } = e.detail || {};
       setTransitionDirection(direction === 'next' ? 'forward' : 'backward');
       setIsTransitioning(true);
-      setTimeout(() => setIsTransitioning(false), 850);
+      setTimeout(() => setIsTransitioning(false), 1600);
     };
 
     window.addEventListener('freedom_pagination_change', handlePaginationChange);

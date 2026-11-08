@@ -46,13 +46,13 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
   const handleTriggerParade = () => {
     playFestiveEventSound('quoc_khanh_2_9');
     setShowLiveParade(true);
-    setTimeout(() => setShowLiveParade(false), 3400);
+    setTimeout(() => setShowLiveParade(false), 5500); // 5.5s tốc độ chậm rãi, uy nghiêm, xem trọn vẹn mô hình 3D
   };
 
   const handleTriggerTankParade = () => {
     playTank304TransitionSound();
     setShowLiveTank(true);
-    setTimeout(() => setShowLiveTank(false), 3500);
+    setTimeout(() => setShowLiveTank(false), 5500); // 5.5s tốc độ xe tăng 565 lướt qua đầm chắc, uy nghiêm
   };
 
   return (

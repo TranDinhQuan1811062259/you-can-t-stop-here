@@ -780,8 +780,8 @@ export const Tank3DCanvas = ({
         tankRoot.rotation.x += (targetRotX - tankRoot.rotation.x) * 0.08;
         tankRoot.position.y = 0.12 + Math.sin(elapsed * 3) * 0.04;
       } else if (mode === 'parade') {
-        const paradeX = -7 + (elapsed * 3.5) % 15;
-        tankRoot.position.set(paradeX, 0.12 + Math.sin(elapsed * 5) * 0.05, 0);
+        const paradeX = -7 + (elapsed * 1.6) % 15; // Tốc độ diễu hành xe tăng 565 chậm rãi, uy nghiêm, đầm chắc
+        tankRoot.position.set(paradeX, 0.12 + Math.sin(elapsed * 2.8) * 0.04, 0);
         tankRoot.rotation.set(0, Math.PI / 2, 0);
         tankRoot.scale.set(0.56, 0.56, 0.56);
       } else if (mode === 'vortex_suction') {

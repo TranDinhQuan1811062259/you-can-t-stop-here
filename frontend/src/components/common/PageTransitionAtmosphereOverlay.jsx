@@ -103,7 +103,7 @@ export const PageTransitionAtmosphereOverlay = ({
 
       const timer = setTimeout(() => {
         setVisible(false);
-      }, 1800); // 1.8s tốc độ chậm rãi, êm ái, thư thái, chống mỏi mắt cho người cận thị
+      }, 3200); // 3.2s tốc độ chậm rãi, êm ái, thư thái, để người dùng ngắm trọn vẹn mô hình 3D và không bị vèo qua quá nhanh
       return () => clearTimeout(timer);
     } else {
       setVisible(false);
