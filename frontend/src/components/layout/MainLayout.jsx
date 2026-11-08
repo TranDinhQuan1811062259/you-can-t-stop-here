@@ -22,6 +22,8 @@ import { PwaInstallPrompt } from '../common/PwaInstallPrompt';
 import { IdleWeatherSvgFilters } from '../common/IdleWeatherSvgFilters';
 import { initIdleWeatherEngine } from '../../utils/idleWeatherEngine';
 import {
+  ASMR_PROFILES,
+  getAsmrProfile,
   isAsmrKeyboardEnabled,
   setAsmrKeyboardEnabled,
   triggerAsmrKeySound,
@@ -46,6 +48,7 @@ export const MainLayout = () => {
   const [themeSchedule, setThemeSchedule] = useState(() => getThemeSchedule());
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
   const [asmrOn, setAsmrOn] = useState(() => isAsmrKeyboardEnabled());
+  const [asmrProfile, setAsmrProfileState] = useState(() => getAsmrProfile());
   const [activeSeason, setActiveSeasonState] = useState(() => getActiveSeason());
   const [isAiPlayerActive, setIsAiPlayerActive] = useState(false);
   const [isPrefCollapsed, setIsPrefCollapsed] = useState(() => {
@@ -226,6 +229,9 @@ export const MainLayout = () => {
     const handleAsmrChange = (e) => {
       setAsmrOn(e.detail?.enabled ?? isAsmrKeyboardEnabled());
     };
+    const handleAsmrProfileChange = (e) => {
+      setAsmrProfileState(e.detail?.profile || getAsmrProfile());
+    };
     const handleAudioState = (e) => {
       const state = e.detail?.state;
       setIsAiPlayerActive(state === 'playing' || state === 'paused');
@@ -238,6 +244,7 @@ export const MainLayout = () => {
     window.addEventListener('freedom_season_changed', handleSeasonChange);
     window.addEventListener('freedom_theme_schedule_changed', handleScheduleChange);
     window.addEventListener('freedom_asmr_state_changed', handleAsmrChange);
+    window.addEventListener('freedom_asmr_profile_changed', handleAsmrProfileChange);
     window.addEventListener('freedom_ai_audio_state_change', handleAudioState);
     window.addEventListener('freedom_ai_player_visibility', handleAudioVisibility);
 
@@ -260,6 +267,7 @@ export const MainLayout = () => {
       window.removeEventListener('freedom_season_changed', handleSeasonChange);
       window.removeEventListener('freedom_theme_schedule_changed', handleScheduleChange);
       window.removeEventListener('freedom_asmr_state_changed', handleAsmrChange);
+      window.removeEventListener('freedom_asmr_profile_changed', handleAsmrProfileChange);
       window.removeEventListener('freedom_ai_audio_state_change', handleAudioState);
       window.removeEventListener('freedom_ai_player_visibility', handleAudioVisibility);
       window.removeEventListener('online', handleOnline);
@@ -453,15 +461,18 @@ export const MainLayout = () => {
                 setAsmrKeyboardEnabled(next);
                 if (next) triggerAsmrKeySound({ key: 'Enter' });
               }}
-              title={asmrOn ? 'ASMR Phím cơ: ĐANG BẬT. Bấm để tắt.' : 'ASMR Phím cơ: ĐANG TẮT. Bấm để bật.'}
+              title={
+                asmrOn
+                  ? `ASMR: ĐANG BẬT (${ASMR_PROFILES[asmrProfile]?.name || 'Phím cơ'}). Bấm để tắt.`
+                  : 'ASMR Bàn phím: ĐANG TẮT. Bấm để bật.'
+              }
             >
               <span className="pref-icon">
-                <i
-                  className="fa-solid fa-keyboard"
-                  style={{ color: asmrOn ? 'var(--pastel-sage)' : 'var(--text-faint)' }}
-                ></i>
+                <span style={{ fontSize: '0.9rem' }}>{asmrOn ? (ASMR_PROFILES[asmrProfile]?.icon || '⌨️') : '⌨️'}</span>
               </span>
-              <span className="pref-label">{asmrOn ? 'ASMR Bật' : 'ASMR'}</span>
+              <span className="pref-label">
+                {asmrOn ? (ASMR_PROFILES[asmrProfile]?.name?.replace('Phím Cơ ', '') || 'ASMR Bật') : 'ASMR'}
+              </span>
             </button>
 
             {/* Nút Thu Gọn Tiện Ích */}

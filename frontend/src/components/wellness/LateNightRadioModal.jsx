@@ -1293,6 +1293,9 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
           top: `${btnPos.y}px`,
           right: 'auto',
           bottom: 'auto',
+          width: '310px',
+          maxWidth: 'calc(100vw - 32px)',
+          boxSizing: 'border-box',
           zIndex: isDragging ? 99995 : 99980,
           cursor: isDragging ? 'grabbing' : 'grab',
           transition: isDragging
@@ -1312,7 +1315,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
         tabIndex={0}
       >
         {/* Nút cầm kéo tay cầm Drag Handle */}
-        <span className="mini-radio-drag-handle" title="Giữ và kéo để di chuyển vị trí">
+        <span className="mini-radio-drag-handle" title="Giữ và kéo để di chuyển vị trí" style={{ flexShrink: 0 }}>
           <i className="fa-solid fa-grip-vertical" style={{ fontSize: '0.78rem', opacity: 0.7 }}></i>
         </span>
 
@@ -1320,10 +1323,11 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
         <span
           className="mini-radio-station-icon"
           style={{
-            fontSize: '1.1rem',
+            fontSize: '1rem',
             animation: isPlaying ? 'pulseDot 1.4s infinite alternate' : 'none',
             display: 'inline-flex',
             alignItems: 'center',
+            flexShrink: 0,
           }}
         >
           {activeTrack.icon}
@@ -1332,70 +1336,82 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
         {/* Tên bài hát & số thứ tự */}
         <span
           className="mini-radio-title-text"
-          style={{ whiteSpace: 'nowrap', fontWeight: 800, fontSize: '0.8rem', color: '#f8fafc', maxWidth: '145px', overflow: 'hidden', textOverflow: 'ellipsis' }}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            whiteSpace: 'nowrap',
+            fontWeight: 800,
+            fontSize: '0.78rem',
+            color: '#f8fafc',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
         >
           {trackIndex + 1}. {activeTrack.title}
         </span>
 
         {/* Dải sóng nhạc mini */}
-        <div style={{ display: 'flex', gap: '2px', alignItems: 'flex-end', height: '14px', margin: '0 2px' }}>
-          <span style={{ width: '3px', height: '12px', background: activeTrack.themeColor, borderRadius: '2px', animation: 'pulseDot 0.8s infinite alternate' }} />
-          <span style={{ width: '3px', height: '7px', background: '#e0e7ff', borderRadius: '2px', animation: 'pulseDot 1.1s infinite alternate' }} />
-          <span style={{ width: '3px', height: '14px', background: activeTrack.themeColor, borderRadius: '2px', animation: 'pulseDot 0.6s infinite alternate' }} />
+        <div style={{ display: 'flex', gap: '2px', alignItems: 'flex-end', height: '14px', margin: '0 1px', flexShrink: 0 }}>
+          <span style={{ width: '2.5px', height: '11px', background: activeTrack.themeColor, borderRadius: '2px', animation: 'pulseDot 0.8s infinite alternate' }} />
+          <span style={{ width: '2.5px', height: '6px', background: '#e0e7ff', borderRadius: '2px', animation: 'pulseDot 1.1s infinite alternate' }} />
+          <span style={{ width: '2.5px', height: '13px', background: activeTrack.themeColor, borderRadius: '2px', animation: 'pulseDot 0.6s infinite alternate' }} />
         </div>
 
-        {/* Nút đổi bài tiếp theo (Next Track) */}
-        <button
-          type="button"
-          className="mini-radio-action-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleNextTrack();
-          }}
-          title="Chuyển sang bài nhạc tiếp theo"
-          aria-label="Bài tiếp theo"
-        >
-          ⏭️
-        </button>
+        {/* Cụm 4 nút điều khiển mini - Giữ vững không bị xô lệch */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+          {/* Nút đổi bài tiếp theo (Next Track) */}
+          <button
+            type="button"
+            className="mini-radio-action-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleNextTrack();
+            }}
+            title="Chuyển sang bài nhạc tiếp theo"
+            aria-label="Bài tiếp theo"
+          >
+            ⏭️
+          </button>
 
-        {/* Nút Tạm Dừng / Phát tiếp */}
-        <button
-          type="button"
-          className="mini-radio-action-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleTogglePlay();
-          }}
-          title={isPlaying ? 'Tạm dừng nhạc' : 'Phát tiếp'}
-          aria-label="Tạm dừng hoặc phát"
-        >
-          {isPlaying ? '⏸' : '▶️'}
-        </button>
+          {/* Nút Tạm Dừng / Phát tiếp */}
+          <button
+            type="button"
+            className="mini-radio-action-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleTogglePlay();
+            }}
+            title={isPlaying ? 'Tạm dừng nhạc' : 'Phát tiếp'}
+            aria-label="Tạm dừng hoặc phát"
+          >
+            {isPlaying ? '⏸' : '▶️'}
+          </button>
 
-        {/* Nút Phóng To / Mở Rộng toàn màn hình */}
-        <button
-          type="button"
-          className="mini-radio-action-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleExpandRadio();
-          }}
-          title="Mở rộng lại giao diện Trạm Radio"
-          aria-label="Mở rộng"
-        >
-          🗖
-        </button>
+          {/* Nút Phóng To / Mở Rộng toàn màn hình */}
+          <button
+            type="button"
+            className="mini-radio-action-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleExpandRadio();
+            }}
+            title="Mở rộng lại giao diện Trạm Radio"
+            aria-label="Mở rộng"
+          >
+            🗖
+          </button>
 
-        {/* Nút Đóng / Tắt Mini Player */}
-        <button
-          type="button"
-          className="mini-radio-action-btn mini-radio-close-btn"
-          onClick={handleCloseMini}
-          title="Tắt trạm Radio"
-          aria-label="Đóng"
-        >
-          ✕
-        </button>
+          {/* Nút Đóng / Tắt Mini Player */}
+          <button
+            type="button"
+            className="mini-radio-action-btn mini-radio-close-btn"
+            onClick={handleCloseMini}
+            title="Tắt trạm Radio"
+            aria-label="Đóng"
+          >
+            ✕
+          </button>
+        </div>
       </aside>
     );
   }
@@ -1415,9 +1431,9 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
         background: 'rgba(5, 5, 20, 0.88)',
         backdropFilter: 'blur(14px)',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'center',
-        padding: '16px 12px',
+        padding: '24px 12px',
         overflowY: 'auto',
         animation: 'fadeIn 0.25s ease-out',
       }}
@@ -1432,7 +1448,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
         style={{
           width: '100%',
           maxWidth: '560px',
-          maxHeight: 'min(92vh, 730px)',
+          maxHeight: 'min(90vh, 700px)',
           margin: 'auto',
           background: 'linear-gradient(160deg, #0b0f19 0%, #1a1742 60%, #090d16 100%)',
           border: `1.5px solid ${activeTrack.themeColor}55`,
@@ -1454,9 +1470,11 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'rgba(15, 23, 42, 0.85)',
-            backdropFilter: 'blur(10px)',
+            background: 'rgba(15, 23, 42, 0.95)',
+            backdropFilter: 'blur(12px)',
             flexShrink: 0,
+            position: 'sticky',
+            top: 0,
             zIndex: 30,
           }}
         >
@@ -1655,14 +1673,14 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
               {/* Cụm Loa Chính Phát Nhạc */}
               <div
                 style={{
-                  width: '106px',
-                  height: '106px',
+                  width: '88px',
+                  height: '88px',
                   borderRadius: '50%',
                   background: isPlaying
                     ? `radial-gradient(circle, ${activeTrack.themeColor}dd 0%, #1e1b4b 60%, #0f172a 100%)`
                     : 'radial-gradient(circle, #334155 0%, #1e293b 100%)',
                   border: isPlaying ? `3px solid ${activeTrack.themeColor}` : '3px solid #475569',
-                  boxShadow: isPlaying ? `0 0 30px ${activeTrack.glowColor}` : 'none',
+                  boxShadow: isPlaying ? `0 0 24px ${activeTrack.glowColor}` : 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1672,7 +1690,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                 onClick={handleTogglePlay}
                 title={isPlaying ? 'Bấm để tạm dừng nhạc' : 'Bấm để phát nhạc'}
               >
-                <span style={{ fontSize: '2.2rem' }}>{isPlaying ? '⏸' : '▶️'}</span>
+                <span style={{ fontSize: '1.85rem' }}>{isPlaying ? '⏸' : '▶️'}</span>
               </div>
 
               {/* Nút Bài Kế Tiếp (Next Track) */}

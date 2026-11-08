@@ -17,7 +17,7 @@ export const FAB_SIZES = {
   mascot: { width: 80, height: 80 },
   pwa: { width: 360, height: 56 },
   pref: { width: 52, height: 52 },
-  radio: { width: 285, height: 46 },
+  radio: { width: 310, height: 46 },
 };
 
 export const MARGIN_LEFT = 20;
