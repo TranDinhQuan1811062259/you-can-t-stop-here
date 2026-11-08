@@ -8,6 +8,9 @@ import { formatPostContent } from '../../utils/contentFormatter';
 import { maskSensitiveText, analyzeContentSafety } from '../../utils/sensitiveFilter';
 import { PostAtmosphereSelector } from './PostAtmosphereSelector';
 import { AsmrKeyboardToggle } from '../common/AsmrKeyboardToggle';
+import { PostSubmitAtmosphereOverlay } from './PostSubmitAtmosphereOverlay';
+import { getActiveSeason } from '../../utils/seasonUtils';
+import { eventService } from '../../services/eventService';
 
 export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
   const [categories, setCategories] = useState([]);
@@ -49,10 +52,22 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
   const [newCatDesc, setNewCatDesc] = useState('');
   const [creatingCatLoading, setCreatingCatLoading] = useState(false);
 
+  // States cho Hiệu ứng đăng bài theo Sự kiện & 4 Mùa
+  const [submitEffect, setSubmitEffect] = useState(null);
+  const [activeSeason, setActiveSeasonState] = useState(() => getActiveSeason());
+  const [activeEvent, setActiveEvent] = useState(null);
+  const submitButtonRef = useRef(null);
+
   const docFileInputRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
+      setActiveSeasonState(getActiveSeason());
+      eventService
+        .getActiveEvent()
+        .then((res) => setActiveEvent(res?.data || null))
+        .catch(() => setActiveEvent(null));
+
       categoryService
         .getCategories()
         .then((res) => {
@@ -276,13 +291,14 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
         atmosphere: formData.atmosphere,
       });
 
-      if (onPostCreated) {
-        onPostCreated(res.data);
-      }
-      onClose();
+      // Kích hoạt hiệu ứng Đăng Bài theo Sự Kiện (hoặc Mùa Màng)
+      const btnRect = submitButtonRef.current?.getBoundingClientRect() || null;
+      setSubmitEffect({
+        buttonRect: btnRect,
+        createdData: res.data,
+      });
     } catch (err) {
       setErrorMsg(err.message || 'Không thể đăng bài lúc này. Vui lòng thử lại!');
-    } finally {
       setLoading(false);
     }
   };
@@ -860,6 +876,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
               Hủy
             </button>
             <button
+              ref={submitButtonRef}
               type="submit"
               className="modal-submit-btn"
               style={{ flex: 2, margin: 0 }}
@@ -877,6 +894,23 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
         onClose={() => setIsCoverCameraOpen(false)}
         onMediaCaptured={handleCoverCameraCaptured}
       />
+
+      {/* Hiệu ứng Đăng Bài Viết hoành tráng theo Sự kiện Lễ Hội & 4 Mùa Thời Tiết */}
+      {submitEffect && (
+        <PostSubmitAtmosphereOverlay
+          activeSeason={activeSeason}
+          activeEvent={activeEvent}
+          buttonRect={submitEffect.buttonRect}
+          onComplete={() => {
+            if (onPostCreated) {
+              onPostCreated(submitEffect.createdData);
+            }
+            setLoading(false);
+            setSubmitEffect(null);
+            onClose();
+          }}
+        />
+      )}
     </div>
   );
 };

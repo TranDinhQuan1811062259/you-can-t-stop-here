@@ -172,6 +172,23 @@ export const DEFAULT_FESTIVE_EVENTS = [
     isActive: true,
     isBuiltin: true,
   },
+  {
+    id: 'le_hoi_halloween',
+    name: 'Lễ Hội Ma Quái Halloween (Spooky Halloween)',
+    shortName: 'Halloween',
+    icon: '🎃',
+    bannerTitle: 'Happy Halloween • Đêm Hội Ma Quái & Hóa Trang Kỳ Bí',
+    bannerDesc: 'Bí ngô lập lòe, kẹo ngọt Trick-or-Treat và những câu chuyện huyền bí thắp sáng màn đêm',
+    startDay: 30,
+    startMonth: 10,
+    durationDays: 3,
+    particles: ['🎃', '🦇', '👻', '🕸️', '🍬', '✨', '🕷️'],
+    particleType: 'halloween',
+    themeColor: '#7c3aed',
+    accentColor: '#ea580c',
+    isActive: true,
+    isBuiltin: true,
+  },
 ];
 
 /**
@@ -207,8 +224,23 @@ export const isEventHappeningToday = (event, checkDate = new Date()) => {
  */
 export const getStoredEvents = () => {
   const store = loadStore();
+  let updated = false;
+
   if (!Array.isArray(store.festiveEvents) || store.festiveEvents.length === 0) {
     store.festiveEvents = [...DEFAULT_FESTIVE_EVENTS];
+    updated = true;
+  } else {
+    // Tự động bổ sung các sự kiện builtin mới (ví dụ Halloween) nếu store cũ chưa có
+    DEFAULT_FESTIVE_EVENTS.forEach((defEv) => {
+      const exists = store.festiveEvents.some((e) => e.id === defEv.id);
+      if (!exists) {
+        store.festiveEvents.push(defEv);
+        updated = true;
+      }
+    });
+  }
+
+  if (updated) {
     saveStore(store);
   }
   return store.festiveEvents;

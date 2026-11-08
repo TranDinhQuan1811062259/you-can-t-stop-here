@@ -1,7 +1,13 @@
+@import './styles/idleWeather.css';
+@import './styles/postSubmitAtmosphere.css';
+
 /* ========================================================
    You Can't Stop Here - Global Styles & Design System
    Không gian sẻ chia và động viên người đi làm
    ======================================================== */
+
+@import './styles/idleWeather.css';
+@import './styles/postSubmitAtmosphere.css';
 
 /* ========================================================
    You Can't Stop Here - Global Styles & Design System

@@ -1,0 +1,411 @@
+/* =========================================================================
+   POST SUBMIT ATMOSPHERIC EFFECTS - HIỆU ỨNG ĐĂNG BÀI VIẾT THEO SỰ KIỆN & 4 MÙA
+   ========================================================================= */
+
+@keyframes backdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* =========================================================================
+   1. CỔNG HÚT XOÁY NĂNG LƯỢNG (30/4 SUCTION VORTEX VÀO NÚT BUTTON)
+   ========================================================================= */
+.submit-button-suction-vortex {
+  width: 140px;
+  height: 140px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.vortex-core-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 4px dashed #facc15;
+  box-shadow: 0 0 25px #ef4444, inset 0 0 25px #facc15;
+  animation: spinVortexFast 0.65s infinite linear;
+}
+
+.vortex-spiral-ring {
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  border: 3px solid rgba(239, 68, 68, 0.7);
+  border-top-color: #facc15;
+  box-shadow: 0 0 35px rgba(239, 68, 68, 0.85);
+  animation: spinVortexRev 0.85s infinite linear;
+}
+
+.vortex-gold-flare {
+  position: absolute;
+  inset: 30%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, #facc15 50%, transparent 100%);
+  animation: vortexPulse 0.4s infinite alternate ease-in-out;
+}
+
+@keyframes spinVortexFast {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.15); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes spinVortexRev {
+  0% { transform: rotate(360deg) scale(1.15); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+
+@keyframes vortexPulse {
+  0% { transform: scale(0.8); opacity: 0.7; }
+  100% { transform: scale(1.3); opacity: 1; }
+}
+
+/* =========================================================================
+   2. TẾT GIAO THỪA: PHÁO HOA TẦM CAO RỰC RỠ ĐẦY TRỜI
+   ========================================================================= */
+.fireworks-sky-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.grand-firework-burst {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.fw-flash {
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  top: -70px;
+  left: -70px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, rgba(239, 68, 68, 0.8) 50%, transparent 80%);
+  animation: flashBurst 0.6s ease-out forwards;
+}
+
+.fw-flash-gold {
+  background: radial-gradient(circle, #ffffff 0%, rgba(250, 204, 21, 0.9) 60%, transparent 80%);
+  width: 180px;
+  height: 180px;
+  top: -90px;
+  left: -90px;
+}
+
+.fw-flash-cyan {
+  background: radial-gradient(circle, #ffffff 0%, rgba(6, 182, 212, 0.85) 60%, transparent 80%);
+}
+
+@keyframes flashBurst {
+  0% { transform: scale(0.1); opacity: 1; }
+  50% { transform: scale(1.6); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.fw-spark {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  animation: sparkShoot 1.4s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+
+.spark-red {
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444, 0 0 16px #facc15;
+}
+.spark-gold {
+  background: #facc15;
+  box-shadow: 0 0 10px #facc15, 0 0 20px #ffffff;
+}
+.spark-cyan {
+  background: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8, 0 0 16px #06b6d4;
+}
+
+@keyframes sparkShoot {
+  0% { transform: rotate(var(--angle, 0deg)) translate(0px); opacity: 1; }
+  60% { opacity: 0.9; }
+  100% { transform: rotate(var(--angle, 0deg)) translate(140px) translateY(40px); opacity: 0; }
+}
+
+.giao-thua-floating-items {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.giao-thua-item {
+  position: absolute;
+  top: -60px;
+  animation: fallDownGiaoThua 2.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes fallDownGiaoThua {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  20% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(105vh) rotate(360deg); opacity: 0; }
+}
+
+/* =========================================================================
+   3. HALLOWEEN: ĐÀN DƠI TÚA RA & BÍ NGÔ MA QUÁI
+   ========================================================================= */
+.bats-eruption-portal {
+  position: absolute;
+  pointer-events: none;
+}
+
+.halloween-bat {
+  position: absolute;
+  font-size: 2rem;
+  filter: drop-shadow(0 0 8px #7c3aed);
+  animation: batEruptFly 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes batEruptFly {
+  0% {
+    transform: scale(0.2) translate(0, 0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6) translate(var(--tx, 180px), var(--ty, -280px)) rotate(30deg);
+    opacity: 0;
+  }
+}
+
+.halloween-pumpkin-center {
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 4;
+}
+
+.pumpkin-jack-o-lantern {
+  font-size: 5rem;
+  filter: drop-shadow(0 0 25px #f97316) drop-shadow(0 0 45px #7c3aed);
+  animation: pumpkinCackle 0.8s infinite alternate ease-in-out;
+}
+
+@keyframes pumpkinCackle {
+  0% { transform: scale(1) rotate(-6deg); }
+  100% { transform: scale(1.18) rotate(6deg); }
+}
+
+.ghost-float {
+  position: absolute;
+  font-size: 3rem;
+  animation: ghostSway 2s infinite alternate ease-in-out;
+}
+.ghost-1 { top: -40px; left: -80px; }
+.ghost-2 { top: -20px; right: -80px; animation-delay: 0.5s; }
+
+@keyframes ghostSway {
+  0% { transform: translateY(0) rotate(-10deg); opacity: 0.5; }
+  100% { transform: translateY(-25px) rotate(10deg); opacity: 0.95; }
+}
+
+/* =========================================================================
+   4. CÁC HIỆU ỨNG LỄ HỘI KHÁC & 4 MÙA TỰ NHIÊN
+   ========================================================================= */
+.women-flower-petal,
+.balloon-fly-item,
+.teacher-item,
+.spring-bloom-item,
+.summer-firefly-item,
+.autumn-leaf-vortex-item,
+.winter-crystal-flake {
+  position: absolute;
+  font-size: 2.2rem;
+  pointer-events: none;
+}
+
+.women-flower-petal {
+  top: -50px;
+  animation: fallDownGiaoThua 2.2s ease-in forwards;
+  filter: drop-shadow(0 4px 10px rgba(244, 114, 182, 0.5));
+}
+
+.balloon-fly-item {
+  bottom: -60px;
+  animation: riseUpBalloons 2.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes riseUpBalloons {
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(-110vh) scale(1.2); opacity: 0; }
+}
+
+.spring-bloom-item {
+  top: -50px;
+  animation: fallDownGiaoThua 2.3s ease-out forwards;
+}
+
+.summer-godrays-pillar {
+  position: absolute;
+  top: 0;
+  left: 30%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(250, 204, 21, 0.45) 0%, rgba(245, 158, 11, 0.2) 60%, transparent 100%);
+  clip-path: polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%);
+  animation: godrayPulse 2s infinite alternate ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes godrayPulse {
+  0% { opacity: 0.4; transform: scaleX(0.95); }
+  100% { opacity: 0.85; transform: scaleX(1.1); }
+}
+
+.summer-firefly-item {
+  bottom: 20%;
+  animation: fireflyHover 2.2s infinite alternate ease-in-out;
+}
+
+@keyframes fireflyHover {
+  0% { transform: translate(0, 0) scale(0.8); opacity: 0.4; }
+  100% { transform: translate(30px, -60px) scale(1.3); opacity: 1; filter: drop-shadow(0 0 12px #fde047); }
+}
+
+.autumn-leaf-vortex-item {
+  top: 15%;
+  animation: autumnVortexSpin 2.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes autumnVortexSpin {
+  0% { transform: rotate(0) translate(220px) scale(0.4); opacity: 0; }
+  30% { opacity: 1; }
+  80% { transform: rotate(720deg) translate(40px) scale(1.1); opacity: 1; }
+  100% { transform: rotate(1080deg) translate(0px) scale(0); opacity: 0; }
+}
+
+.winter-crystal-flake {
+  top: -50px;
+  animation: fallDownGiaoThua 2.2s ease-in-out forwards;
+  filter: drop-shadow(0 0 10px #38bdf8);
+}
+
+.christmas-sleigh-flight {
+  position: absolute;
+  top: 25%;
+  left: -20%;
+  font-size: 2.8rem;
+  animation: sleighFlyAcross 2.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  filter: drop-shadow(0 4px 15px rgba(250, 204, 21, 0.7));
+}
+
+@keyframes sleighFlyAcross {
+  0% { transform: translateX(0) translateY(40px) scale(0.8); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateX(130vw) translateY(-60px) scale(1.1); opacity: 0; }
+}
+
+/* =========================================================================
+   5. BANNER CHÚC MỪNG HOÀNH TRÁNG TRUNG TÂM (CENTER CELEBRATION BANNER)
+   ========================================================================= */
+.submit-fx-center-banner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(15, 23, 42, 0.88);
+  border: 2px solid var(--border-highlight, #facc15);
+  border-radius: 24px;
+  padding: 24px 36px;
+  text-align: center;
+  color: #ffffff;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.8), 0 0 40px var(--glow-highlight, rgba(250, 204, 21, 0.45));
+  backdrop-filter: blur(14px);
+  z-index: 10;
+  max-width: 620px;
+  width: 90%;
+  animation: bannerSlideUpIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes bannerSlideUpIn {
+  0% {
+    transform: translate(-50%, -35%) scale(0.7);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.banner-icon-star,
+.banner-icon-tet,
+.banner-icon-halloween,
+.banner-icon-women,
+.banner-icon-kids,
+.banner-icon-teacher,
+.banner-icon-xmas,
+.banner-icon-spring,
+.banner-icon-summer,
+.banner-icon-autumn,
+.banner-icon-winter {
+  display: inline-block;
+  font-size: 2.8rem;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 14px currentColor);
+}
+
+.banner-title-text {
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #ffffff 0%, #fef08a 50%, #facc15 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.banner-sub-text {
+  font-size: 0.92rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+/* Biến thể màu cho từng loại banner */
+.banner-304 {
+  --border-highlight: #ef4444;
+  --glow-highlight: rgba(239, 68, 68, 0.6);
+}
+.banner-tet {
+  --border-highlight: #facc15;
+  --glow-highlight: rgba(250, 204, 21, 0.7);
+}
+.banner-halloween {
+  --border-highlight: #7c3aed;
+  --glow-highlight: rgba(124, 58, 237, 0.7);
+}
+.banner-women {
+  --border-highlight: #f472b6;
+  --glow-highlight: rgba(244, 114, 182, 0.6);
+}
+.banner-spring {
+  --border-highlight: #ec4899;
+  --glow-highlight: rgba(236, 72, 153, 0.6);
+}
+.banner-summer {
+  --border-highlight: #f59e0b;
+  --glow-highlight: rgba(245, 158, 11, 0.6);
+}
+.banner-autumn {
+  --border-highlight: #ea580c;
+  --glow-highlight: rgba(234, 88, 12, 0.6);
+}
+.banner-winter {
+  --border-highlight: #38bdf8;
+  --glow-highlight: rgba(56, 189, 248, 0.6);
+}

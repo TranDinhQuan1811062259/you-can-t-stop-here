@@ -6,6 +6,7 @@ import { postService } from '../../services/postService';
 import { playClickSound } from '../../utils/soundEffects';
 import { ATMOSPHERE_THEMES } from '../../utils/postAtmosphereEngine';
 import { SharePostModal } from './SharePostModal';
+import { IdleWeatherText } from '../common/IdleWeatherText';
 
 export const PostCard = ({ post }) => {
   const { user } = useAuth();
@@ -232,7 +233,9 @@ export const PostCard = ({ post }) => {
         </Link>
 
         <Link to={`/post/${post.slug}`}>
-          <h3 className="card-title">{post.title}</h3>
+          <h3 className="card-title">
+            <IdleWeatherText>{post.title}</IdleWeatherText>
+          </h3>
         </Link>
 
         <p className="card-summary">{post.summary}</p>

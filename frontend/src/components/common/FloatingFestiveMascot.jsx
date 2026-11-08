@@ -181,6 +181,10 @@ export const FloatingFestiveMascot = ({ onOpenShowcase }) => {
   const is304 = activeEvent.id === 'giai_phong_30_4' || activeEvent.name?.includes('30/4');
   const is29 = activeEvent.id === 'quoc_khanh_2_9' || activeEvent.name?.includes('2/9');
   const is83 = activeEvent.id === 'quoc_te_phu_nu_8_3' || activeEvent.name?.includes('8/3');
+  const isHalloween =
+    activeEvent.id === 'le_hoi_halloween' ||
+    activeEvent.id?.includes('halloween') ||
+    activeEvent.name?.toLowerCase().includes('halloween');
 
   const handleClick = (e) => {
     // Nếu vừa kéo thả xong thì không kích hoạt mở modal
@@ -288,7 +292,21 @@ export const FloatingFestiveMascot = ({ onOpenShowcase }) => {
           </div>
         )}
 
-        {!is304 && !is29 && !is83 && (
+        {isHalloween && (
+          <div className="mascot-halloween-container fluid-waving-halloween" title="Bí ngô ma thuật & Dơi đêm Halloween">
+            <span className="mascot-halloween-pumpkin" style={{ fontSize: '2rem', display: 'inline-block', filter: 'drop-shadow(0 0 10px #f97316)' }}>
+              🎃
+            </span>
+            <span className="mascot-halloween-bat" style={{ position: 'absolute', top: '-6px', right: '-4px', fontSize: '1rem', animation: 'flyBat 1.4s infinite alternate ease-in-out' }}>
+              🦇
+            </span>
+            <span className="mascot-halloween-ghost" style={{ position: 'absolute', bottom: '-4px', left: '-6px', fontSize: '0.9rem', opacity: 0.85 }}>
+              👻
+            </span>
+          </div>
+        )}
+
+        {!is304 && !is29 && !is83 && !isHalloween && (
           <div className="mascot-default-icon" style={{ pointerEvents: 'none' }}>
             <span className="mascot-emoji" style={{ pointerEvents: 'none' }}>{activeEvent.icon || '🎊'}</span>
           </div>

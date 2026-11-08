@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { playPageTransitionAtmosphereSound } from '../../utils/soundEffects';
+import { Tank3DCanvas } from './Tank3DCanvas';
 
 export const PageTransitionAtmosphereOverlay = ({
   isTransitioning,
@@ -63,6 +64,13 @@ export const PageTransitionAtmosphereOverlay = ({
       eventName.includes('giáng sinh')
     ) {
       return 'event_santa_sleigh';
+    }
+    if (
+      eventId.includes('halloween') ||
+      eventName.includes('halloween') ||
+      eventName.includes('ma quái')
+    ) {
+      return 'event_halloween';
     }
     if (
       eventId.includes('phu_nu') ||
@@ -354,63 +362,49 @@ export const PageTransitionAtmosphereOverlay = ({
          ========================================================================= */}
       {currentType === 'event_tank_304' && (
         <div className="fx-tank-304-container fx-3d-perspective-stage">
-          <div className="fx-heroic-tank-unit fx-tank-3d-model">
-            {/* Bóng đổ mặt đất 3D sâu hun hút của xe tăng */}
-            <div className="fx-tank-ground-shadow-3d" />
-
-            {/* Cột ăng-ten & Cờ đỏ sao vàng lụa 3D dập dờn trong gió */}
-            <div className="fx-tank-vn-flag-wrap fx-3d-flag-rig">
-              <div className="fx-tank-flagpole fx-3d-pole" />
-              <div className="fx-tank-vn-flag fx-3d-cloth-flag">
-                <span className="flag-star">★</span>
-                <span className="fx-flag-silk-sheen" />
-              </div>
-            </div>
-
-            {/* Tháp pháo tròn 3D đúc thép bọc giáp (Sloped Armor Dome) */}
-            <div className="fx-tank-turret-dome-3d">
-              {/* Nòng pháo dài 3D có vành kim loại đúc & loa giảm giật */}
-              <div className="fx-tank-cannon-barrel-3d">
-                <span className="fx-cannon-muzzle-brake" />
-              </div>
-              {/* Cửa hầm chỉ huy tròn trên đỉnh tháp pháo */}
-              <div className="fx-tank-commander-cupola" />
-              {/* Thân tháp pháo vát cạnh thép quân sự */}
-              <div className="fx-tank-turret-body-3d" />
-            </div>
-
-            {/* Thân xe tăng thép nghiêng vát 3D (Cast Armor Hull) */}
-            <div className="fx-tank-hull-armor-3d">
-              <div className="fx-tank-hull-top-plate" />
-              <div className="fx-tank-hull-front-glacis" />
-              <div className="fx-tank-fender-guards" />
-            </div>
-
-            {/* Băng xích bánh tì chịu lực thép đúc 3D (5 bánh đôi huyền thoại) */}
-            <div className="fx-tank-tracks-system-3d">
-              <div className="fx-track-tread-belt" />
-              <div className="fx-road-wheels-array">
-                <span className="track-wheel-3d wheel-1" />
-                <span className="track-wheel-3d wheel-2" />
-                <span className="track-wheel-3d wheel-3" />
-                <span className="track-wheel-3d wheel-4" />
-                <span className="track-wheel-3d wheel-5" />
-              </div>
-            </div>
-
-            {/* Làn khói ống xả 3D cuộn ra phía sau */}
-            <div className="fx-tank-exhaust-smoke-3d">
-              <span className="smoke-puff-3d puff-1" />
-              <span className="smoke-puff-3d puff-2" />
-              <span className="smoke-puff-3d puff-3" />
-            </div>
-          </div>
+          {/* Cỗ xe tăng 3D WebGL Three.js chân thực */}
+          <Tank3DCanvas
+            mode="parade"
+            width="100%"
+            height="100%"
+            style={{ position: 'absolute', inset: 0 }}
+          />
 
           {/* Vùng xoáy hút năng lượng 3D vào Header Title ("YOU CAN'T STOP HERE") */}
           <div className="fx-title-suction-vortex fx-3d-vortex-portal">
             <div className="vortex-ring-3d" />
             <div className="vortex-core-3d" />
             <span className="vortex-burst-text-3d">★ 30/4 ĐẠI THẮNG ★</span>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          8B. HALLOWEEN: Đàn dơi đen bay lượn xé gió & Bí ngô ma thuật 3D
+         ========================================================================= */}
+      {currentType === 'event_halloween' && (
+        <div className="fx-halloween-container fx-3d-perspective-stage">
+          <div className="fx-halloween-bats-flight">
+            {[...Array(12)].map((_, i) => (
+              <span
+                key={i}
+                className="fx-spooky-bat"
+                style={{
+                  top: `${15 + (i * 7) % 70}%`,
+                  left: `${(i * 9) % 85}%`,
+                  animationDelay: `${i * 0.1}s`,
+                  fontSize: `${1.4 + (i % 3) * 0.4}rem`,
+                }}
+              >
+                🦇
+              </span>
+            ))}
+          </div>
+
+          <div className="fx-halloween-floating-jack">
+            <span className="jack-lantern-icon">🎃</span>
+            <span className="halloween-spooky-ghost">👻</span>
+            <div className="halloween-mist-fog" />
           </div>
         </div>
       )}

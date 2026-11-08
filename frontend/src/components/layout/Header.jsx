@@ -15,6 +15,7 @@ import { eventService } from '../../services/eventService';
 import { isSoundEnabled, toggleSound, playClickSound, playFestiveEventSound } from '../../utils/soundEffects';
 import { getActiveSeason, setActiveSeason, SEASONS } from '../../utils/seasonUtils';
 import { formatDate } from '../../utils/formatDate';
+import { IdleWeatherText } from '../common/IdleWeatherText';
 import {
   startWeatherAmbient,
   stopWeatherAmbient,
@@ -273,7 +274,7 @@ export const Header = () => {
                 <i className="fa-solid fa-seedling"></i>
               </span>
               <span className={`logo-text seasonal-logo-text season-${activeSeason.id}`}>
-                YOU CAN'T STOP HERE
+                <IdleWeatherText>YOU CAN'T STOP HERE</IdleWeatherText>
               </span>
               <span className={`seasonal-logo-sparkle season-${activeSeason.id}`} aria-hidden="true">
                 {activeSeason.titleAccent}

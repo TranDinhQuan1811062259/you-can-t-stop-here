@@ -679,6 +679,67 @@ const playCelebrationFanfareSound = (ctx, now) => {
 };
 
 /**
+ * 7. Tiếng Gió Rít & Đàn Organ Ma Mị Đêm Halloween (Spooky Organ & Ghostly Wind)
+ */
+const playHalloweenSpookySound = (ctx, now) => {
+  // A. Hợp âm đàn Organ ma quái (D minor / D - F - A - C#)
+  const spookyNotes = [
+    { freq: 293.66, t: 0.00, dur: 2.8, vol: 0.16 }, // D4
+    { freq: 349.23, t: 0.15, dur: 2.6, vol: 0.14 }, // F4
+    { freq: 440.00, t: 0.30, dur: 2.4, vol: 0.15 }, // A4
+    { freq: 554.37, t: 0.45, dur: 2.5, vol: 0.18 }, // C#5 (âm hưởng rùng rợn bí ẩn)
+  ];
+
+  spookyNotes.forEach((n) => {
+    const t = now + n.t;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(n.freq, t);
+    // Rung tần số nhẹ (vibrato) tạo cảm giác ma quái rùng mình
+    osc.frequency.linearRampToValueAtTime(n.freq + 4, t + n.dur * 0.5);
+    osc.frequency.linearRampToValueAtTime(n.freq - 3, t + n.dur);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1100, t);
+    filter.frequency.exponentialRampToValueAtTime(450, t + n.dur);
+
+    gain.gain.setValueAtTime(0.001, t);
+    gain.gain.linearRampToValueAtTime(n.vol, t + 0.12);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + n.dur);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    routeAudio(ctx, gain, 0.7, 0.75); // Reverb sâu hun hút
+    osc.start(t);
+    osc.stop(t + n.dur + 0.05);
+  });
+
+  // B. Tiếng gió rít hú rờn rợn
+  const windBuf = createNoiseBuffer(ctx, 2.2);
+  const windSource = ctx.createBufferSource();
+  windSource.buffer = windBuf;
+  const windFilter = ctx.createBiquadFilter();
+  windFilter.type = 'bandpass';
+  windFilter.frequency.setValueAtTime(320, now);
+  windFilter.frequency.exponentialRampToValueAtTime(750, now + 0.9);
+  windFilter.frequency.exponentialRampToValueAtTime(220, now + 2.0);
+  windFilter.Q.setValueAtTime(4.5, now);
+
+  const windGain = ctx.createGain();
+  windGain.gain.setValueAtTime(0.01, now);
+  windGain.gain.linearRampToValueAtTime(0.08, now + 0.7);
+  windGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.1);
+
+  windSource.connect(windFilter);
+  windFilter.connect(windGain);
+  routeAudio(ctx, windGain, 0.6, 0.8);
+  windSource.start(now);
+  windSource.stop(now + 2.2);
+};
+
+/**
  * Tự động phân tích và xác định loại âm thanh phù hợp nhất dựa trên ID hoặc Tên sự kiện
  */
 export const getFestiveSoundType = (eventOrId) => {
@@ -756,6 +817,16 @@ export const getFestiveSoundType = (eventOrId) => {
     return 'school_chime';
   }
 
+  // 7. Lễ Hội Halloween: Âm hưởng đàn organ ma mị & tiếng gió rít bí ẩn
+  if (
+    id === 'le_hoi_halloween' ||
+    id?.includes('halloween') ||
+    name.includes('halloween') ||
+    name.includes('ma quái')
+  ) {
+    return 'halloween_spooky';
+  }
+
   // Mặc định: Kèn ăn mừng & pháo hoa giấy
   return 'celebration';
 };
@@ -791,6 +862,9 @@ export const playFestiveEventSound = (eventOrId) => {
         break;
       case 'school_chime':
         playSchoolChimeSound(ctx, now);
+        break;
+      case 'halloween_spooky':
+        playHalloweenSpookySound(ctx, now);
         break;
       case 'celebration':
       default:

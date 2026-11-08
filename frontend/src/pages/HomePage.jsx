@@ -13,6 +13,7 @@ import { CommunityMoodWall } from '../components/blog/CommunityMoodWall';
 import { StoryBar } from '../components/story/StoryBar';
 import { CreateStoryModal } from '../components/story/CreateStoryModal';
 import { StoryViewerModal } from '../components/story/StoryViewerModal';
+import { IdleWeatherText } from '../components/common/IdleWeatherText';
 
 export const HomePage = () => {
   const { isAuthenticated, openLoginModal } = useAuth();
@@ -190,7 +191,9 @@ export const HomePage = () => {
               <span className="hero-tag-pill">Cộng đồng sẻ chia của người đi làm</span>
             </div>
             <h1 className="hero-title">
-              YOU CAN'T <span>STOP HERE</span>
+              <IdleWeatherText>
+                YOU CAN'T <span>STOP HERE</span>
+              </IdleWeatherText>
             </h1>
             <p className="hero-subtitle">
               Trút bỏ những áp lực deadline, kiệt sức và bất an nơi công sở.

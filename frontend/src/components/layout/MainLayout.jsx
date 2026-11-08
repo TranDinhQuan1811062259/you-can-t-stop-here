@@ -19,6 +19,8 @@ import { ThemeScheduleModal } from '../common/ThemeScheduleModal';
 import { FloatingFestiveMascot } from '../common/FloatingFestiveMascot';
 import { PageTransitionWrapper } from '../common/PageTransitionWrapper';
 import { PwaInstallPrompt } from '../common/PwaInstallPrompt';
+import { IdleWeatherSvgFilters } from '../common/IdleWeatherSvgFilters';
+import { initIdleWeatherEngine } from '../../utils/idleWeatherEngine';
 import {
   isAsmrKeyboardEnabled,
   setAsmrKeyboardEnabled,
@@ -210,6 +212,7 @@ export const MainLayout = () => {
   useEffect(() => {
     initGlobalSoundEffects();
     initThemeWatcher();
+    const cleanupIdleEngine = initIdleWeatherEngine();
 
     const handleThemeChange = (e) => {
       setCurrentThemeMode(e.detail || getActiveTheme());
@@ -252,6 +255,7 @@ export const MainLayout = () => {
     window.addEventListener('offline', handleOffline);
 
     return () => {
+      if (cleanupIdleEngine) cleanupIdleEngine();
       window.removeEventListener('freedom_theme_changed', handleThemeChange);
       window.removeEventListener('freedom_season_changed', handleSeasonChange);
       window.removeEventListener('freedom_theme_schedule_changed', handleScheduleChange);
@@ -527,6 +531,9 @@ export const MainLayout = () => {
 
       {/* PWA App Install Banner & Modal (Cho Smartphone, Tablet, PC, Mac) */}
       <PwaInstallPrompt />
+
+      {/* SVG Filters cho hiệu ứng Mùa Hè tan chảy & Mùa Đông băng giá */}
+      <IdleWeatherSvgFilters />
     </div>
   );
 };
