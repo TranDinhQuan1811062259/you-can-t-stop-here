@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { playClickSound, playFestiveEventSound } from '../../utils/soundEffects';
+import { playClickSound, playFestiveEventSound, playTank304TransitionSound } from '../../utils/soundEffects';
 import { Tank3DCanvas } from './Tank3DCanvas';
+import { SoldiersParade29 } from './SoldiersParade29';
 
 export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManager, user }) => {
   const [activeTab, setActiveTab] = useState('celebrate'); // 'celebrate' | 'details'
   const [confettiActive, setConfettiActive] = useState(false);
+  const [showLiveParade, setShowLiveParade] = useState(false);
+  const [showLiveTank, setShowLiveTank] = useState(false);
 
   useEffect(() => {
     if (isOpen && event) {
       setConfettiActive(true);
-      // Kích hoạt âm thanh đặc trưng của sự kiện khi mở popup
       playFestiveEventSound(event);
       const timer = setTimeout(() => setConfettiActive(false), 4000);
       return () => clearTimeout(timer);
@@ -30,10 +32,8 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
 
   const handleTriggerCelebration = () => {
     playClickSound();
-    // Phát âm thanh đặc trưng của sự kiện khi bấm nút kích hoạt hiệu ứng
     playFestiveEventSound(event);
     setConfettiActive(true);
-    // Phát sự kiện toàn cục để AmbientBackground tăng số lượng hạt bay trong 6 giây
     window.dispatchEvent(
       new CustomEvent('freedom_festive_burst', {
         detail: { eventId: event.id, duration: 6000 },
@@ -42,41 +42,52 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
     setTimeout(() => setConfettiActive(false), 3000);
   };
 
+  const handleTriggerParade = () => {
+    playFestiveEventSound('quoc_khanh_2_9');
+    setShowLiveParade(true);
+    setTimeout(() => setShowLiveParade(false), 3400);
+  };
+
+  const handleTriggerTankParade = () => {
+    playTank304TransitionSound();
+    setShowLiveTank(true);
+    setTimeout(() => setShowLiveTank(false), 3500);
+  };
+
   return (
     <div className="modal-backdrop festive-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+      {/* Khối duyệt binh toàn màn hình khi người dùng bấm nút kích hoạt */}
+      {showLiveParade && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100010, pointerEvents: 'none' }}>
+          <SoldiersParade29 style={{ position: 'fixed', bottom: '6%', zIndex: 100010 }} />
+        </div>
+      )}
+
+      {/* Xe tăng 565 lướt qua toàn màn hình khi người dùng bấm nút kích hoạt */}
+      {showLiveTank && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100010, pointerEvents: 'none' }}>
+          <Tank3DCanvas mode="parade" style={{ position: 'fixed', inset: 0, zIndex: 100010 }} />
+        </div>
+      )}
+
       <div
         className={`modal-container festive-showcase-container event-type-${event.id}`}
         onClick={(e) => e.stopPropagation()}
-        style={{
-          '--event-color': event.themeColor || '#dc2626',
-          '--event-accent': event.accentColor || '#facc15',
-        }}
+        style={{ maxWidth: '640px' }}
       >
         {/* Nút đóng */}
-        <button
-          type="button"
-          className="modal-close festive-modal-close"
-          onClick={onClose}
-          aria-label="Đóng popup sự kiện"
-        >
+        <button type="button" className="festive-modal-close-icon" onClick={onClose} aria-label="Đóng">
           ✕
         </button>
 
-        {/* Cụm Header Lễ Hội */}
+        {/* Tiêu đề sự kiện */}
         <div className="festive-modal-header">
-          <div className="festive-tag-badge">
-            <span className="badge-flag-icon">{event.icon || '🎊'}</span>
-            <span className="badge-text">
-              {is304
-                ? 'ĐẠI THẮNG MÙA XUÂN 1975 • QUỐC TẾ LAO ĐỘNG 1/5'
-                : is29
-                ? 'TẾT ĐỘC LẬP • NGÀY QUỐC KHÁNH 2 THÁNG 9'
-                : is83
-                ? 'CHÚC MỪNG NGÀY QUỐC TẾ PHỤ NỮ 8/3'
-                : 'SỰ KIỆN LỄ HỘI ĐẶC BIỆT TRONG NĂM'}
-            </span>
+          <div className="festive-modal-badge">
+            <span className="badge-sparkle">✨</span>
+            <span className="badge-text">{event.shortName || event.name}</span>
+            <span className="badge-sparkle">✨</span>
           </div>
-          <h2 className="festive-modal-title">{event.name}</h2>
+          <h2 className="festive-modal-title">{event.bannerTitle || event.name}</h2>
           <p className="festive-modal-slogan">
             {event.bannerDesc || event.slogan || 'Không gian chia sẻ và tôn vinh những khoảnh khắc ý nghĩa của dân tộc!'}
           </p>
@@ -84,9 +95,12 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
 
         {/* Khung Hero Trưng Bày Đồ Họa 3D Tung Bay Dẻo Dẻo */}
         <div className="festive-stage-showcase">
+          {/* =========================================================================
+              30/4: XE TĂNG 565 NGUYÊN MẪU DUYỆT BINH & 3D INTERACTIVE VIEWER
+             ========================================================================= */}
           {is304 && (
             <div className="festive-flags-duo-stage" style={{ flexDirection: 'column', gap: '14px' }}>
-              {/* Cỗ Xe Tăng T-54 3D WebGL Three.js Tương Tác 360 độ */}
+              {/* Cỗ Xe Tăng T-54B Số Hiệu 565 3D WebGL Three.js Tương Tác 360 độ */}
               <div
                 style={{
                   width: '100%',
@@ -124,7 +138,7 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
                       border: '1px solid rgba(250, 204, 21, 0.3)',
                     }}
                   >
-                    🕹️ Giữ chuột và kéo để xoay 360° xe tăng 3D
+                    🕹️ Giữ chuột và kéo để xoay 360° xe tăng 565
                   </span>
                   <span
                     style={{
@@ -135,9 +149,53 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
                       borderRadius: '8px',
                     }}
                   >
-                    Hỗ trợ file /models/tank3d.glb
+                    Nguyên mẫu T-54B số hiệu 565
                   </span>
                 </div>
+              </div>
+
+              {/* Ảnh tư liệu thực tế Xe tăng 565 duyệt binh */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  background: 'rgba(15, 23, 42, 0.75)',
+                  borderRadius: '14px',
+                  padding: '8px 12px',
+                  border: '1px solid rgba(250, 204, 21, 0.35)',
+                }}
+              >
+                <img
+                  src="/festive/tank-565-parade.jpg"
+                  alt="Xe tăng 565 duyệt binh thực tế"
+                  style={{ width: '110px', height: '65px', objectFit: 'cover', borderRadius: '8px' }}
+                />
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <div style={{ color: '#facc15', fontWeight: 900, fontSize: '0.85rem' }}>
+                    ★ Xe Tăng T-54B Số Hiệu 565 Duyệt Binh (Báo Thanh Niên)
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.74rem', marginTop: '2px' }}>
+                    Sơn rằn ri ngụy trang 3 tông màu, giáp ERA mũi xe, trưởng xe đứng chào quân lễ kiêu hãnh.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleTriggerTankParade}
+                  style={{
+                    background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                    color: '#fef08a',
+                    border: '1px solid #facc15',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontWeight: 800,
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  💥 Lướt qua màn hình
+                </button>
               </div>
 
               {/* Hai lá cờ 30/4 tung bay kiêu hãnh */}
@@ -165,20 +223,115 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
             </div>
           )}
 
+          {/* =========================================================================
+              2/9: KHỐI TIÊU BINH & CHIẾN SĨ QĐNDVN DUYỆT BINH RƯỚC CỜ
+             ========================================================================= */}
           {is29 && (
-            <div className="festive-ribbon-stage" title="Biểu tượng 2/9 dải lụa đỏ uốn lượn bay dẻo dẻo">
-              <div className="ribbon-29-wrap">
-                <img
-                  src="/festive/event-2-9-ribbon.png"
-                  alt="Biểu Tượng Quốc Khánh 2/9 Dải Lụa Đỏ Vàng"
-                  className="festive-ribbon-img fluid-waving-ribbon"
-                />
-                <div className="ribbon-sparkle-halo" />
-                <div className="ribbon-golden-shine" />
+            <div className="festive-parade-29-stage" style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+              {/* Hai khối hình ảnh chiến sĩ & tiêu binh hào hùng */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
+                {/* 1. Khối Tiêu Binh Rước Cờ Quyết Thắng */}
+                <div
+                  style={{
+                    position: 'relative',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    border: '1.5px solid #facc15',
+                    boxShadow: '0 6px 20px rgba(220, 38, 38, 0.4)',
+                  }}
+                >
+                  <img
+                    src="/festive/soldiers-marching-29.jpg"
+                    alt="Khối tiêu binh duyệt binh rước cờ Quyết Thắng 2/9"
+                    style={{ width: '100%', height: '155px', objectFit: 'cover', display: 'block' }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      background: 'linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.95) 100%)',
+                      padding: '6px 10px',
+                      color: '#facc15',
+                      fontWeight: 800,
+                      fontSize: '0.76rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span>🚩 Khối Tiêu Binh Giương Cờ</span>
+                    <span style={{ color: '#fff', fontSize: '0.68rem' }}>QĐNDVN</span>
+                  </div>
+                </div>
+
+                {/* 2. Người Chiến Sĩ K20 Quân Đội Nhân Dân Việt Nam */}
+                <div
+                  style={{
+                    position: 'relative',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    border: '1.5px solid #facc15',
+                    boxShadow: '0 6px 20px rgba(220, 38, 38, 0.4)',
+                  }}
+                >
+                  <img
+                    src="/festive/soldier-vietnam-k20.jpg"
+                    alt="Người chiến sĩ Quân Đội Nhân Dân Việt Nam quân phục K20"
+                    style={{ width: '100%', height: '155px', objectFit: 'cover', display: 'block' }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      background: 'linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.95) 100%)',
+                      padding: '6px 10px',
+                      color: '#facc15',
+                      fontWeight: 800,
+                      fontSize: '0.76rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span>🎖️ Người Lính K20 Kiên Cường</span>
+                    <span style={{ color: '#fff', fontSize: '0.68rem' }}>Sẵn Sàng</span>
+                  </div>
+                </div>
               </div>
-              <div className="festive-stage-caption">
+
+              {/* Nút bấm kích hoạt khối duyệt binh chạy qua màn hình ngay lập tức */}
+              <button
+                type="button"
+                onClick={handleTriggerParade}
+                style={{
+                  background: 'linear-gradient(135deg, #da251d 0%, #b91c1c 100%)',
+                  color: '#fef08a',
+                  border: '1.5px solid #facc15',
+                  borderRadius: '12px',
+                  padding: '11px 18px',
+                  fontWeight: 900,
+                  fontSize: '0.88rem',
+                  letterSpacing: '0.5px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 18px rgba(218, 37, 29, 0.55)',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <span>🎖️ BẤM ĐỂ KHỐI DUYỆT BINH CHẠY QUA MÀN HÌNH</span>
+                <span>🇻🇳</span>
+              </button>
+
+              <div className="festive-stage-caption" style={{ marginTop: '4px' }}>
                 <span className="caption-star">⭐</span>
-                <strong>Bản Tuyên Ngôn Độc Lập 1945</strong> • Độc lập - Tự do - Hạnh phúc
+                <strong>BẢN TUYÊN NGÔN ĐỘC LẬP 2/9/1945</strong> • Độc lập - Tự do - Hạnh phúc
                 <span className="caption-star">⭐</span>
               </div>
             </div>
@@ -193,7 +346,6 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
                     alt="Số 8 Trái Tim 8/3"
                     className="festive-heart8-img"
                   />
-                  {/* Chùm bóng bay pastel bay lơ lửng */}
                   <div className="mini-floating-balloons-cluster">
                     <span className="balloon-p p1">🎈</span>
                     <span className="balloon-p p2">💖</span>
@@ -268,9 +420,9 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
             <span className="btn-burst-icon">✨</span>
             <span>
               {is304
-                ? 'Thả Cờ Bay Ngập Tràn Màn Hình'
+                ? 'Thả Cờ Bay & Sao Vàng Ngập Tràn'
                 : is29
-                ? 'Thả Dải Lụa 2/9 & Sao Vàng'
+                ? 'Thả Cờ Đỏ Sao Vàng 2/9'
                 : is83
                 ? 'Thả Bóng Bay & Trái Tim'
                 : 'Kích Hoạt Hiệu Ứng Bùng Nổ'}

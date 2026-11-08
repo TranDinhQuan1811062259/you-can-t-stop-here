@@ -3,22 +3,21 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /**
- * Tank3DCanvas - Bộ dựng xe tăng 3D T-54B Quân Đội Nhân Dân Việt Nam (Nguyên mẫu Xe 565 Duyệt Binh)
- * - Tái hiện chuẩn xác cỗ xe tăng 565 từ ảnh thực tế:
+ * Tank3DCanvas - Bộ dựng xe tăng 3D T-54B Quân Đội Nhân Dân Việt Nam (Xe Tăng 565 Duyệt Binh)
+ * - Tái hiện chuẩn xác cỗ xe tăng 565 từ ảnh thực tế Báo Thanh Niên:
  *   + Sơn rằn ri ngụy trang quân sự đa tông màu (3-tone military camouflage)
- *   + Số hiệu chiến thuật "565" khuôn tô quân sự màu trắng sắc nét
+ *   + Số hiệu chiến thuật "565" khuôn tô quân sự màu trắng sắc nét trên hai bên tháp pháo
  *   + Phù hiệu Quân Đội Nhân Dân Việt Nam (Ngôi sao vàng trên nền đỏ tròn viền vàng)
  *   + Hệ thống giáp phản ứng nổ ERA xếp hàng trên mũi xe và phiến giáp vát nghiêng tháp pháo
  *   + Đồng chí Trưởng xe đội mũ công tác xe tăng Liên Xô/Việt Nam giơ tay chào quân lễ nghiêm trang
  *   + Súng máy phòng không 12.7mm DShK, đèn pha hồng ngoại L-2G, 2 thùng phuy nhiên liệu phụ 200L phía sau
  *   + Cờ đỏ sao vàng lụa 3D uốn lượn sóng trên cần ăng-ten
  *   + 10 bánh tì chịu lực moay-ơ hình sao, dải xích lăn bánh và khói xả động cơ
- * - Hỗ trợ nạp model tùy biến .glb từ người dùng (nếu có tải về đặt tại /models/tank3d.glb)
  * - Chế độ: 'showcase' (xoay 360 độ tương tác), 'parade' (duyệt binh lướt qua), 'vortex_suction' (xoáy ốc hút vào nút đăng bài)
  */
 export const Tank3DCanvas = ({
   mode = 'showcase', // 'showcase' | 'parade' | 'vortex_suction'
-  modelUrl = '/models/tank3d.glb',
+  modelUrl = null, // Mặc định null để dựng ngay Xe Tăng 565 Procedural tuyệt đối không bị dính HTML 404
   targetPoint = null, // { x, y } toạ độ nút button đăng bài trên màn hình
   onSuctionComplete = null,
   width = '100%',
@@ -27,48 +26,52 @@ export const Tank3DCanvas = ({
   style = {},
 }) => {
   const mountRef = useRef(null);
-  const [modelTypeLoaded, setModelTypeLoaded] = useState('procedural'); // 'custom_glb' | 'procedural'
+  const [modelTypeLoaded, setModelTypeLoaded] = useState('procedural');
   const animFrameRef = useRef(null);
 
   useEffect(() => {
     const container = mountRef.current;
     if (!container) return;
 
-    const w = container.clientWidth || window.innerWidth;
-    const h = container.clientHeight || window.innerHeight;
+    const w = container.clientWidth || window.innerWidth || 400;
+    const h = container.clientHeight || window.innerHeight || 300;
 
     // 1. Scene & Camera
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 1000);
-    camera.position.set(0, 3.0, 8.8);
+    camera.position.set(0, 2.9, 8.6);
 
     // 2. Renderer
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(w, h);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.18;
+    renderer.toneMappingExposure = 1.25;
     container.appendChild(renderer.domElement);
 
-    // 3. Lighting (Ánh sáng chuẩn quân sự & PBR kim khí)
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
+    // 3. Lighting (Ánh sáng chuẩn quân sự & PBR kim khí nổi bật các góc cạnh giáp)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.15);
     scene.add(ambientLight);
 
-    const sunLight = new THREE.DirectionalLight(0xfffaed, 2.6);
+    const sunLight = new THREE.DirectionalLight(0xfffaed, 2.8);
     sunLight.position.set(6, 12, 8);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 1024;
     sunLight.shadow.mapSize.height = 1024;
     scene.add(sunLight);
 
-    const rimLight = new THREE.DirectionalLight(0xfacc15, 1.4);
+    const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.85);
+    fillLight.position.set(-6, 3, 5);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xfacc15, 1.6);
     rimLight.position.set(-8, 5, -6);
     scene.add(rimLight);
 
     // Ánh sáng hào quang đỏ sao vàng
-    const victoryGlow = new THREE.PointLight(0xef4444, 2.2, 16);
+    const victoryGlow = new THREE.PointLight(0xef4444, 2.5, 16);
     victoryGlow.position.set(0, 2.5, 2);
     scene.add(victoryGlow);
 
@@ -141,11 +144,12 @@ export const Tank3DCanvas = ({
       const tex = new THREE.CanvasTexture(canvas);
       tex.wrapS = THREE.RepeatWrapping;
       tex.wrapT = THREE.RepeatWrapping;
+      tex.needsUpdate = true;
       return tex;
     };
 
     // 2. Tấm số hiệu chiến thuật "565" & Phù hiệu QĐNDVN hai bên tháp pháo
-    const createTurretMarkingTexture = () => {
+    const createTurretMarkingTexture = (isRightSide = false) => {
       const canvas = document.createElement('canvas');
       canvas.width = 512;
       canvas.height = 256;
@@ -168,25 +172,26 @@ export const Tank3DCanvas = ({
       ctx.lineWidth = 6;
       ctx.strokeRect(6, 6, 500, 244);
 
-      // A. Phù hiệu tròn Quân Đội Nhân Dân Việt Nam
-      const cx = 95;
+      // Phù hiệu tròn Quân Đội Nhân Dân Việt Nam
+      const roundelX = isRightSide ? 415 : 95;
+      const textX = isRightSide ? 185 : 330;
       const cy = 128;
       const r = 56;
 
       ctx.beginPath();
-      ctx.arc(cx, cy, r + 4, 0, Math.PI * 2);
+      ctx.arc(roundelX, cy, r + 4, 0, Math.PI * 2);
       ctx.fillStyle = '#facc15';
       ctx.fill();
 
       ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.arc(roundelX, cy, r, 0, Math.PI * 2);
       ctx.fillStyle = '#da251d';
       ctx.fill();
 
       // Ngôi sao vàng 5 cánh
       ctx.fillStyle = '#ffff00';
       ctx.save();
-      ctx.translate(cx, cy);
+      ctx.translate(roundelX, cy);
       ctx.beginPath();
       for (let s = 0; s < 5; s++) {
         ctx.lineTo(Math.cos(((18 + s * 72) * Math.PI) / 180) * 35, -Math.sin(((18 + s * 72) * Math.PI) / 180) * 35);
@@ -196,24 +201,25 @@ export const Tank3DCanvas = ({
       ctx.fill();
       ctx.restore();
 
-      // B. Số hiệu chiến thuật 565 màu trắng khuôn tô
+      // Số hiệu chiến thuật 565 màu trắng khuôn tô quân sự
       ctx.fillStyle = '#ffffff';
-      ctx.font = '900 110px "Arial Black", Impact, sans-serif';
+      ctx.font = '900 112px "Arial Black", Impact, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
       ctx.shadowBlur = 8;
-      ctx.fillText('565', 330, 128);
+      ctx.fillText('565', textX, 128);
 
       // Khe hở khuôn tô quân sự (Stencil cutouts)
       ctx.strokeStyle = '#3f5438';
       ctx.lineWidth = 7;
       ctx.beginPath();
-      ctx.moveTo(195, 125);
-      ctx.lineTo(465, 125);
+      ctx.moveTo(textX - 135, 125);
+      ctx.lineTo(textX + 135, 125);
       ctx.stroke();
 
       const tex = new THREE.CanvasTexture(canvas);
+      tex.needsUpdate = true;
       return tex;
     };
 
@@ -221,8 +227,16 @@ export const Tank3DCanvas = ({
     // HÀM DỰNG XE TĂNG 3D PROCEDURAL T-54B XE 565 DUYỆT BINH CHÂN THỰC
     // =========================================================================
     const buildProceduralTank = () => {
+      // Dọn dẹp trước nếu có model cũ
+      while (tankRoot.children.length > 0) {
+        tankRoot.remove(tankRoot.children[0]);
+      }
+      wheelsList = [];
+      exhaustParticles = [];
+
       const camoTexture = createCamouflageTexture();
-      const turretMarkingTexture = createTurretMarkingTexture();
+      const turretMarkingTexL = createTurretMarkingTexture(false);
+      const turretMarkingTexR = createTurretMarkingTexture(true);
 
       // Vật liệu thép sơn rằn ri quân sự PBR
       const camoArmorMat = new THREE.MeshStandardMaterial({
@@ -318,19 +332,27 @@ export const Tank3DCanvas = ({
 
       // Tấm bảng số hiệu chiến thuật "565" & Phù hiệu QĐNDVN hai bên hông tháp pháo
       const turretSideGeom = new THREE.PlaneGeometry(1.35, 0.62);
-      const turretSideMat = new THREE.MeshStandardMaterial({
-        map: turretMarkingTexture,
+
+      const turretSideMatL = new THREE.MeshStandardMaterial({
+        map: turretMarkingTexL,
         roughness: 0.45,
         metalness: 0.2,
-        side: THREE.DoubleSide,
+        side: THREE.FrontSide,
       });
 
-      const numberPlateL = new THREE.Mesh(turretSideGeom, turretSideMat);
+      const numberPlateL = new THREE.Mesh(turretSideGeom, turretSideMatL);
       numberPlateL.position.set(-1.18, 1.32, -0.15);
       numberPlateL.rotation.y = -Math.PI / 2;
       tankRoot.add(numberPlateL);
 
-      const numberPlateR = new THREE.Mesh(turretSideGeom, turretSideMat);
+      const turretSideMatR = new THREE.MeshStandardMaterial({
+        map: turretMarkingTexR,
+        roughness: 0.45,
+        metalness: 0.2,
+        side: THREE.FrontSide,
+      });
+
+      const numberPlateR = new THREE.Mesh(turretSideGeom, turretSideMatR);
       numberPlateR.position.set(1.18, 1.32, -0.15);
       numberPlateR.rotation.y = Math.PI / 2;
       tankRoot.add(numberPlateR);
@@ -556,6 +578,7 @@ export const Tank3DCanvas = ({
       fCtx.restore();
 
       const flagTexture = new THREE.CanvasTexture(flagCanvas);
+      flagTexture.needsUpdate = true;
       const flagMat = new THREE.MeshStandardMaterial({
         map: flagTexture,
         side: THREE.DoubleSide,
@@ -597,42 +620,60 @@ export const Tank3DCanvas = ({
     };
 
     // =========================================================================
-    // NẠP MODEL .GLB TÙY BIẾN TỪ MẠNG HOẶC DÙNG XE TĂNG 565 PROCEDURAL
+    // NẠP MODEL .GLB AN TOÀN HOẶC DỰNG NGAY XE TĂNG 565 PROCEDURAL
     // =========================================================================
-    const loader = new GLTFLoader();
-    loader.load(
-      modelUrl,
-      (gltf) => {
-        // Tải thành công file .glb của người dùng
-        const model = gltf.scene;
-        const box = new THREE.Box3().setFromObject(model);
-        const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 3.6 / maxDim;
-        model.scale.set(scale, scale, scale);
+    if (modelUrl) {
+      // Chỉ nạp nếu người dùng truyền URL cụ thể và kiểm tra không phải file HTML 404
+      fetch(modelUrl, { method: 'HEAD' })
+        .then((res) => {
+          const ct = res.headers.get('content-type') || '';
+          if (res.ok && !ct.includes('text/html')) {
+            const loader = new GLTFLoader();
+            loader.load(
+              modelUrl,
+              (gltf) => {
+                const model = gltf.scene;
+                const box = new THREE.Box3().setFromObject(model);
+                const size = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scale = 3.6 / maxDim;
+                model.scale.set(scale, scale, scale);
 
-        box.setFromObject(model);
-        const center = box.getCenter(new THREE.Vector3());
-        model.position.sub(center);
-        model.position.y += 1.2;
+                box.setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                model.position.sub(center);
+                model.position.y += 1.2;
 
-        model.traverse((child) => {
-          if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
+                model.traverse((child) => {
+                  if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                  }
+                });
+
+                tankRoot.add(model);
+                setModelTypeLoaded('custom_glb');
+              },
+              undefined,
+              () => {
+                buildProceduralTank();
+                setModelTypeLoaded('procedural');
+              }
+            );
+          } else {
+            buildProceduralTank();
+            setModelTypeLoaded('procedural');
           }
+        })
+        .catch(() => {
+          buildProceduralTank();
+          setModelTypeLoaded('procedural');
         });
-
-        tankRoot.add(model);
-        setModelTypeLoaded('custom_glb');
-      },
-      undefined,
-      (err) => {
-        // Chưa có file .glb -> Tự động dựng Xe tăng 565 chân thực
-        buildProceduralTank();
-        setModelTypeLoaded('procedural');
-      }
-    );
+    } else {
+      // Mặc định: Dựng ngay cỗ xe tăng 565 không cần chờ mạng!
+      buildProceduralTank();
+      setModelTypeLoaded('procedural');
+    }
 
     // =========================================================================
     // ĐIỀU KHIỂN CHUYỂN ĐỘNG & TƯƠNG TÁC

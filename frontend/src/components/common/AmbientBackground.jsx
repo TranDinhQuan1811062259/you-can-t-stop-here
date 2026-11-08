@@ -96,13 +96,16 @@ export const AmbientBackground = ({ profileLayout }) => {
           customImg = '/festive/flag-vn-waving.png';
           imgType = 'flag-vn';
         } else if (idx % 4 === 2) {
-          customImg = '/festive/flag-liberation-30-4.png';
-          imgType = 'flag-liberation';
+          customImg = '/festive/tank-565-parade.jpg';
+          imgType = 'tank-565';
         }
       } else if (is29) {
-        if (idx % 3 === 0) {
-          customImg = '/festive/event-2-9-ribbon.png';
-          imgType = 'ribbon-29';
+        if (idx % 4 === 0) {
+          customImg = '/festive/flag-vn-waving.png';
+          imgType = 'flag-vn';
+        } else if (idx % 4 === 2) {
+          customImg = '/festive/soldier-vietnam-k20.jpg';
+          imgType = 'soldier-29';
         }
       } else if (is83) {
         if (idx % 4 === 0) {

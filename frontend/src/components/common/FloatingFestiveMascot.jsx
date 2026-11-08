@@ -252,29 +252,38 @@ export const FloatingFestiveMascot = ({ onOpenShowcase }) => {
         style={{ pointerEvents: 'none', userSelect: 'none' }}
       >
         {is304 && (
-          <div className="mascot-flag-container fluid-waving-flag" title="Quốc kỳ Việt Nam tung bay dẻo dẻo">
-            <img
-              src="/festive/flag-vn-waving.png"
-              alt="Cờ Việt Nam"
-              className="mascot-flag-img"
-              draggable={false}
-              onDragStart={(e) => e.preventDefault()}
-              style={{ pointerEvents: 'none', userSelect: 'none', WebkitUserDrag: 'none' }}
-            />
-            <span className="mascot-flag-glare" style={{ pointerEvents: 'none' }} />
+          <div className="mascot-tank565-container fluid-waving-tank" title="30/4: Xe tăng 565 Quân Đội Nhân Dân Việt Nam đại thắng">
+            <div className="mascot-tank-badge">
+              <img
+                src="/festive/tank-565-parade.jpg"
+                alt="Xe Tăng 565 Duyệt Binh 30/4"
+                className="mascot-tank-img"
+                draggable={false}
+                onDragStart={(e) => e.preventDefault()}
+                style={{ pointerEvents: 'none', userSelect: 'none', WebkitUserDrag: 'none' }}
+              />
+              <span className="mascot-tank-stencil">565</span>
+              <span className="mascot-tank-flag-mini">🇻🇳</span>
+            </div>
+            <div className="mascot-tank-glow-ring" />
           </div>
         )}
 
         {is29 && (
-          <div className="mascot-ribbon-container fluid-waving-ribbon" title="Dải lụa 2/9 bay dẻo dẻo">
-            <img
-              src="/festive/event-2-9-ribbon.png"
-              alt="2/9 Dải Lụa Đỏ Vàng"
-              className="mascot-ribbon-img"
-              draggable={false}
-              onDragStart={(e) => e.preventDefault()}
-              style={{ pointerEvents: 'none', userSelect: 'none', WebkitUserDrag: 'none' }}
-            />
+          <div className="mascot-soldier-container fluid-waving-soldier" title="2/9 Quốc Khánh: Người lính & Khối tiêu binh QĐNDVN rước cờ Quyết Thắng">
+            <div className="mascot-soldier-badge">
+              <img
+                src="/festive/soldier-vietnam-k20.jpg"
+                alt="Người Lính Quân Đội Nhân Dân Việt Nam K20"
+                className="mascot-soldier-img"
+                draggable={false}
+                onDragStart={(e) => e.preventDefault()}
+                style={{ pointerEvents: 'none', userSelect: 'none', WebkitUserDrag: 'none' }}
+              />
+              <span className="mascot-soldier-star">★</span>
+              <span className="mascot-soldier-flag-mini">🚩</span>
+            </div>
+            <div className="mascot-soldier-glow-ring" />
           </div>
         )}
 

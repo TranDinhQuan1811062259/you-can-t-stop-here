@@ -1134,9 +1134,34 @@
       "accentColor": "#ef4444",
       "isActive": true,
       "isBuiltin": true
+    },
+    {
+      "id": "le_hoi_halloween",
+      "name": "Lễ Hội Ma Quái Halloween (Spooky Halloween)",
+      "shortName": "Halloween",
+      "icon": "🎃",
+      "bannerTitle": "Happy Halloween • Đêm Hội Ma Quái & Hóa Trang Kỳ Bí",
+      "bannerDesc": "Bí ngô lập lòe, kẹo ngọt Trick-or-Treat và những câu chuyện huyền bí thắp sáng màn đêm",
+      "startDay": 30,
+      "startMonth": 10,
+      "durationDays": 3,
+      "particles": [
+        "🎃",
+        "🦇",
+        "👻",
+        "🕸️",
+        "🍬",
+        "✨",
+        "🕷️"
+      ],
+      "particleType": "halloween",
+      "themeColor": "#7c3aed",
+      "accentColor": "#ea580c",
+      "isActive": true,
+      "isBuiltin": true
     }
   ],
-  "adminPreviewEventId": null,
+  "adminPreviewEventId": "quoc_khanh_2_9",
   "stories": [
     {
       "_id": "story_1794083881804_xfi0",
