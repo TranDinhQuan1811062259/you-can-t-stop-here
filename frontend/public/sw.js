@@ -59,6 +59,17 @@ self.addEventListener('fetch', (event) => {
   // Bỏ qua các scheme không phải HTTP/HTTPS (ví dụ chrome-extension://)
   if (!url.protocol.startsWith('http')) return;
 
+  // Bỏ qua hoàn toàn môi trường dev local và các tài nguyên module của Vite
+  if (
+    url.hostname === 'localhost' ||
+    url.hostname === '127.0.0.1' ||
+    url.pathname.startsWith('/src/') ||
+    url.pathname.startsWith('/@') ||
+    url.pathname.startsWith('/node_modules/')
+  ) {
+    return;
+  }
+
   // 1. Đối với API: Network-first
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
