@@ -1,4 +1,7 @@
 # Node dependencies
+.vite
+.vite/
+frontend/.vite/
 node_modules/
 npm-debug.log*
 yarn-debug.log*
