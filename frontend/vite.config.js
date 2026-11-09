@@ -3,17 +3,29 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import fs from 'fs';
 
+// Tự động phân giải đường dẫn thực (realpath) để tương thích 100% với Windows NTFS Junction / Symlink
+const projectRoot = fs.existsSync(__dirname) ? fs.realpathSync(__dirname) : __dirname;
+
 // https://vitejs.dev/config/
 export default defineConfig({
+  root: projectRoot,
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(projectRoot, './src'),
     },
   },
   server: {
     port: 3000,
     strictPort: false,
+    fs: {
+      strict: false,
+      allow: [
+        projectRoot,
+        path.resolve(__dirname),
+        path.resolve(projectRoot, '..'),
+      ],
+    },
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:5050',
@@ -38,7 +50,7 @@ export default defineConfig({
           try {
             const cleanName = (req.url || '').split('?')[0].replace(/^\/uploads\/?/, '');
             if (cleanName) {
-              const localFile = path.resolve(__dirname, 'public/uploads', cleanName);
+              const localFile = path.resolve(projectRoot, 'public/uploads', cleanName);
               if (fs.existsSync(localFile)) {
                 return req.url;
               }
