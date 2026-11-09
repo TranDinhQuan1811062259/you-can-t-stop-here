@@ -15,7 +15,20 @@ export const PwaInstallPrompt = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showFloatingPill, setShowFloatingPill] = useState(false);
   const [installSuccess, setInstallSuccess] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(true);
+  const [isMinimized, setIsMinimized] = useState(() => {
+    try {
+      const saved = localStorage.getItem('freedom_pwa_minimized');
+      if (saved !== null) return saved === 'true';
+    } catch (_) {}
+    return true;
+  });
+
+  const handleSetMinimized = (val) => {
+    setIsMinimized(val);
+    try {
+      localStorage.setItem('freedom_pwa_minimized', String(val));
+    } catch (_) {}
+  };
 
   // Khả năng kéo thả di dời tự do đa góc như các nút khác
   const [btnPos, setBtnPos] = useState(() => {
@@ -286,7 +299,7 @@ export const PwaInstallPrompt = () => {
                 hasMovedRef.current = false;
                 return;
               }
-              setIsMinimized(false);
+              handleSetMinimized(false);
             }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
@@ -390,7 +403,7 @@ export const PwaInstallPrompt = () => {
               bottom: 'auto',
               zIndex: isDragging ? 10000 : 9998,
               cursor: isDragging ? 'grabbing' : 'grab',
-              maxWidth: 'min(380px, calc(100vw - 44px))',
+              maxWidth: 'min(440px, calc(100vw - 32px))',
               width: 'max-content',
               boxSizing: 'border-box',
               background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(13, 148, 136, 0.88) 100%)',
@@ -460,7 +473,7 @@ export const PwaInstallPrompt = () => {
             </div>
 
             {/* Thông tin mô tả ứng dụng */}
-            <div style={{ minWidth: 0, flex: '1 1 auto', overflow: 'hidden' }}>
+            <div style={{ minWidth: 0, flex: '1 1 auto' }}>
               <div
                 style={{
                   fontWeight: 800,
@@ -472,7 +485,7 @@ export const PwaInstallPrompt = () => {
                   lineHeight: 1.3,
                 }}
               >
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', color: '#ffffff' }}>
+                <span style={{ color: '#ffffff', whiteSpace: 'nowrap', flexShrink: 0, fontWeight: 800 }}>
                   Cài Freedom App
                 </span>
                 <span
@@ -497,12 +510,10 @@ export const PwaInstallPrompt = () => {
                   color: '#99f6e4',
                   fontWeight: 500,
                   whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
                   marginTop: '1px',
                 }}
               >
-                ⚡ Mượt mà • Tải nhanh • Dùng như app gốc
+                ⚡ Tải nhanh • Dùng như app gốc
               </div>
             </div>
 
@@ -518,10 +529,10 @@ export const PwaInstallPrompt = () => {
                   background: '#ffffff',
                   color: '#0f766e',
                   border: 'none',
-                  padding: '7px 14px',
+                  padding: '6px 12px',
                   borderRadius: '999px',
                   fontWeight: 800,
-                  fontSize: '0.8rem',
+                  fontSize: '0.78rem',
                   cursor: 'pointer',
                   boxShadow: '0 4px 14px rgba(255, 255, 255, 0.3), 0 2px 6px rgba(0,0,0,0.2)',
                   whiteSpace: 'nowrap',
@@ -539,7 +550,7 @@ export const PwaInstallPrompt = () => {
                   e.currentTarget.style.boxShadow = '0 4px 14px rgba(255, 255, 255, 0.3), 0 2px 6px rgba(0,0,0,0.2)';
                 }}
               >
-                {deferredPrompt ? '📲 Cài ngay' : 'Tải App'}
+                {deferredPrompt ? 'Cài ngay' : 'Tải App'}
               </button>
 
               {/* Nút Thu gọn dạng mini pill */}
@@ -547,7 +558,7 @@ export const PwaInstallPrompt = () => {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setIsMinimized(true);
+                  handleSetMinimized(true);
                 }}
                 style={{
                   background: 'rgba(255, 255, 255, 0.1)',

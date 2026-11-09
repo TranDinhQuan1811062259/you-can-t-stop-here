@@ -1684,6 +1684,11 @@ body.theme-light .hero-back-link:hover,
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 30px;
   margin-bottom: 48px;
+  padding-bottom: 56px; /* Khoảng đệm bảo vệ an toàn để thanh nổi góc dưới không bao giờ che khuất nút Đọc và Cảm xúc */
+}
+
+#posts-section {
+  padding-bottom: 64px;
 }
 
 @media (max-width: 1080px) {

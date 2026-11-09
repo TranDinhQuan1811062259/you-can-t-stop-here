@@ -68,17 +68,52 @@ export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
 
   const handleBgPresetChange = (presetId) => {
     let autoParticle = currentAtmosphere.particleEffect;
-    if (presetId === 'sadness_rain' && autoParticle === 'none') autoParticle = 'rain';
-    if (presetId === 'horror_dark' && autoParticle === 'none') autoParticle = 'fog';
-    if (presetId === 'joy_sunset' && autoParticle === 'none') autoParticle = 'sparkles';
-    if (presetId === 'healing_emerald' && autoParticle === 'none') autoParticle = 'fireflies';
-    if (presetId === 'drama_crimson' && autoParticle === 'none') autoParticle = 'heartbeat_pulse';
+    let autoTheme = currentAtmosphere.theme;
+
+    // Tự động đồng bộ Theme và Âm thanh phù hợp với Màu nền đã chọn nếu chưa chọn Theme cụ thể
+    if (presetId === 'sadness_rain') {
+      if (autoParticle === 'none') autoParticle = 'rain';
+      if (autoTheme === 'default' || autoTheme === 'horror' || autoTheme === 'warmth') autoTheme = 'rain';
+    } else if (presetId === 'horror_dark') {
+      if (autoParticle === 'none') autoParticle = 'fog';
+      if (autoTheme === 'default' || autoTheme === 'rain' || autoTheme === 'warmth') autoTheme = 'horror';
+    } else if (presetId === 'joy_sunset') {
+      if (autoParticle === 'none') autoParticle = 'sparkles';
+      if (autoTheme === 'default' || autoTheme === 'horror' || autoTheme === 'rain') autoTheme = 'warmth';
+    } else if (presetId === 'healing_emerald') {
+      if (autoParticle === 'none') autoParticle = 'fireflies';
+      if (autoTheme === 'default' || autoTheme === 'horror') autoTheme = 'forest';
+    } else if (presetId === 'drama_crimson') {
+      if (autoParticle === 'none') autoParticle = 'heartbeat_pulse';
+      if (autoTheme === 'default' || autoTheme === 'peace') autoTheme = 'drama';
+    } else if (presetId === 'cyberpunk') {
+      if (autoParticle === 'none') autoParticle = 'sparkles';
+      if (autoTheme === 'default') autoTheme = 'nostalgia';
+    } else if (presetId === 'dream_pink') {
+      if (autoParticle === 'none') autoParticle = 'sparkles';
+      if (autoTheme === 'default') autoTheme = 'peace';
+    } else if (presetId === 'default') {
+      autoTheme = 'default';
+      autoParticle = 'none';
+    }
 
     onChange({
       ...currentAtmosphere,
+      theme: autoTheme,
+      soundEnabled: autoTheme !== 'default',
       bgPreset: presetId,
       particleEffect: autoParticle,
     });
+
+    // Nếu đang nghe preview, cập nhật luôn âm thanh tương ứng
+    if (previewingSound) {
+      if (autoTheme === 'default') {
+        stopPostAtmosphere();
+        setPreviewingSound(false);
+      } else {
+        startPostAtmosphere(autoTheme, 0.4);
+      }
+    }
   };
 
   const handleParticleChange = (particleId) => {
@@ -230,9 +265,9 @@ export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
         </span>
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(115px, 1fr))',
-            gap: '7px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '8px',
           }}
         >
           {BACKGROUND_PRESETS.map((preset) => {
@@ -243,37 +278,38 @@ export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
                 type="button"
                 onClick={() => handleBgPresetChange(preset.id)}
                 style={{
-                  padding: '7px 8px',
-                  borderRadius: '8px',
+                  padding: '7px 13px',
+                  borderRadius: '20px',
                   border: isSelected
                     ? `2px solid ${preset.accentColor || '#0d9488'}`
-                    : '1px solid #e2e8f0',
-                  background: isSelected ? preset.badgeBg || '#f0fdfa' : '#ffffff',
+                    : '1.5px solid #e2e8f0',
+                  background: isSelected ? (preset.badgeBg || '#f0fdfa') : '#ffffff',
                   cursor: 'pointer',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '0.76rem',
+                  gap: '7px',
+                  fontSize: '0.82rem',
                   fontWeight: isSelected ? 700 : 500,
-                  color: isSelected ? preset.accentColor || '#0d9488' : '#334155',
+                  color: isSelected ? (preset.accentColor || '#0d9488') : '#334155',
                   transition: 'all 0.15s ease',
                   boxShadow: isSelected
-                    ? `0 2px 10px ${preset.accentColor || '#0d9488'}35`
-                    : 'none',
+                    ? `0 3px 12px ${preset.accentColor || '#0d9488'}35`
+                    : '0 1px 3px rgba(0,0,0,0.04)',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 <span
                   style={{
-                    width: '18px',
-                    height: '18px',
+                    width: '16px',
+                    height: '16px',
                     borderRadius: '50%',
                     background: preset.dotGradient || preset.previewBg,
-                    border: `2px solid ${preset.accentColor || '#cbd5e1'}`,
+                    border: `1.5px solid ${preset.accentColor || '#cbd5e1'}`,
                     boxShadow: `0 0 6px ${preset.accentColor || '#000'}40`,
                     flexShrink: 0,
                   }}
                 />
-                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <span style={{ whiteSpace: 'nowrap' }}>
                   {preset.name}
                 </span>
               </button>
@@ -411,13 +447,14 @@ export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '5px',
-                  fontSize: '0.75rem',
+                  fontSize: '0.76rem',
                   fontWeight: 700,
-                  padding: '3px 10px',
+                  padding: '4px 10px',
                   borderRadius: '12px',
-                  background: `${activeThemeMeta.accentColor}28`,
-                  color: activeThemeMeta.accentColor,
-                  border: `1px solid ${activeThemeMeta.accentColor}60`,
+                  background: activeBgPreset.id === 'default' ? `${activeThemeMeta.accentColor}18` : 'rgba(255, 255, 255, 0.16)',
+                  color: activeBgPreset.id === 'default' ? activeThemeMeta.accentColor : '#ffffff',
+                  border: `1px solid ${activeBgPreset.id === 'default' ? `${activeThemeMeta.accentColor}50` : 'rgba(255, 255, 255, 0.35)'}`,
+                  backdropFilter: 'blur(8px)',
                 }}
               >
                 <span>{activeThemeMeta.icon}</span>
@@ -429,13 +466,14 @@ export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '5px',
-                  fontSize: '0.75rem',
+                  fontSize: '0.76rem',
                   fontWeight: 700,
-                  padding: '3px 10px',
+                  padding: '4px 10px',
                   borderRadius: '12px',
-                  background: activeBgPreset.badgeBg || `${activeBgPreset.accentColor}25`,
-                  color: activeBgPreset.accentColor,
-                  border: `1px solid ${activeBgPreset.accentColor}60`,
+                  background: activeBgPreset.id === 'default' ? `${activeBgPreset.accentColor}18` : 'rgba(255, 255, 255, 0.16)',
+                  color: activeBgPreset.id === 'default' ? activeBgPreset.accentColor : '#38bdf8',
+                  border: `1px solid ${activeBgPreset.id === 'default' ? `${activeBgPreset.accentColor}50` : 'rgba(56, 189, 248, 0.45)'}`,
+                  backdropFilter: 'blur(8px)',
                 }}
               >
                 <span>{activeBgPreset.icon}</span>

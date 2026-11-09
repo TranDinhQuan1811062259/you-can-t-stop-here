@@ -9,6 +9,8 @@ import { EditPostModal } from '../components/blog/EditPostModal';
 import { AdminModerationModal } from '../components/admin/AdminModerationModal';
 import { PostReactionsBar } from '../components/blog/PostReactionsBar';
 import { AnonymousWarmthBox } from '../components/blog/AnonymousWarmthBox';
+import { PeaceCandleBox } from '../components/blog/PeaceCandleBox';
+import { CinemaReadingOverlay } from '../components/blog/CinemaReadingOverlay';
 import { PostAudioPlayer } from '../components/blog/PostAudioPlayer';
 import { PostAtmosphereSoundBar } from '../components/blog/PostAtmosphereSoundBar';
 import { ATMOSPHERE_THEMES, BACKGROUND_PRESETS } from '../utils/postAtmosphereEngine';
@@ -35,6 +37,7 @@ export const PostDetailPage = () => {
   const [isModerationOpen, setIsModerationOpen] = useState(false);
   const [adminDeleting, setAdminDeleting] = useState(false);
   const [adminApproving, setAdminApproving] = useState(false);
+  const [isCinemaMode, setIsCinemaMode] = useState(false);
 
   const handleAdminDelete = async () => {
     const confirmed = window.confirm(
@@ -275,10 +278,40 @@ export const PostDetailPage = () => {
               {post.category?.name || 'Tâm sự'}
             </Link>
           </div>
-          <Link to="/" className="hero-back-link">
-            <i className="fa-solid fa-arrow-left" style={{ marginRight: '6px' }}></i>
-            Xem tất cả các câu chuyện khác
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Nút Kích Hoạt Chế Độ Rạp Phim Chìm Đắm */}
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound();
+                setIsCinemaMode(true);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 14px',
+                borderRadius: '20px',
+                background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(99, 102, 241, 0.2) 100%)',
+                border: '1px solid rgba(56, 189, 248, 0.4)',
+                color: '#38bdf8',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 2px 10px rgba(56, 189, 248, 0.15)',
+                transition: 'all 0.2s ease',
+              }}
+              title="Bật Chế Độ Rạp Phim Chìm Đắm (Không xao nhãng, tự cuộn, tùy chỉnh cỡ chữ)"
+            >
+              <span>🎬</span>
+              <span>Đọc Chìm Đắm</span>
+            </button>
+
+            <Link to="/" className="hero-back-link">
+              <i className="fa-solid fa-arrow-left" style={{ marginRight: '6px' }}></i>
+              Xem tất cả các câu chuyện khác
+            </Link>
+          </div>
         </div>
 
         <div className="post-detail-layout">
@@ -660,6 +693,12 @@ export const PostDetailPage = () => {
               />
             </article>
 
+            {/* 🕯️ Nến Thắp Bình Yên (Gửi Lời Chúc Thầm Lặng) */}
+            <PeaceCandleBox
+              postId={post._id || post.slug}
+              authorName={authorName}
+            />
+
             {/* 💌 Hộp Thư Sưởi Ấm Tâm Hồn (Gửi Cái Ôm & Tách Trà Ẩn Danh) */}
             <AnonymousWarmthBox
               postId={post._id || post.slug}
@@ -898,6 +937,15 @@ export const PostDetailPage = () => {
               navigate('/', { replace: true });
             }
           }}
+        />
+      )}
+
+      {/* Chế Độ Đọc Chìm Đắm Rạp Phim (Cinema Mode) */}
+      {isCinemaMode && (
+        <CinemaReadingOverlay
+          post={post}
+          atmosphere={postAtmosphere}
+          onClose={() => setIsCinemaMode(false)}
         />
       )}
     </div>

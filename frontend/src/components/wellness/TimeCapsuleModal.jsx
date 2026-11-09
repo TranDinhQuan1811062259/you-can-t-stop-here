@@ -4,6 +4,7 @@ import { playClickSound, playSingingBowlSound } from '../../utils/soundEffects';
 import { AsmrKeyboardToggle } from '../common/AsmrKeyboardToggle';
 import { triggerAsmrKeySound } from '../../utils/keyboardSoundEngine';
 import { TimeCapsuleMusicPlayer } from './TimeCapsuleMusicPlayer';
+import { TimeCapsuleGardenView } from './TimeCapsuleGardenView';
 
 const PRESET_DURATIONS = [
   { label: '1 Tháng (30 ngày)', days: 30, icon: '🌱' },
@@ -45,6 +46,9 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
   const [selectedMood, setSelectedMood] = useState('heartbreak_love');
   const [selectedEnvelope, setSelectedEnvelope] = useState('rose');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Chế độ xem Kho Hộp: 'garden' (Khu vườn hạt mầm sinh động) | 'list' (Danh sách cổ điển)
+  const [vaultViewMode, setVaultViewMode] = useState('garden');
 
   // Viewing Opened Capsule
   const [readingCapsule, setReadingCapsule] = useState(null);
@@ -668,127 +672,205 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
                   </button>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {capsules.map((cap) => {
-                    const countdown = formatCountdown(cap.unlockDate);
-                    const canOpen = countdown.canOpen || cap.canOpen || cap.isOpened;
-
-                    return (
-                      <div
-                        key={cap._id}
-                        onClick={() => canOpen && handleOpenCapsule(cap)}
+                <div>
+                  {/* Thanh Chuyển Chế Độ Xem Kho Hộp: Khu Vườn vs Danh Sách */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '14px',
+                      flexWrap: 'wrap',
+                      gap: '8px',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.8rem', color: '#cbd5e1', fontWeight: 600 }}>
+                      Không gian lưu giữ kỷ niệm:
+                    </span>
+                    <div style={{ display: 'inline-flex', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '10px', padding: '3px' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playClickSound();
+                          setVaultViewMode('garden');
+                        }}
                         style={{
-                          padding: '16px 20px',
-                          borderRadius: '16px',
-                          background: canOpen
-                            ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(15, 23, 42, 0.8))'
-                            : 'rgba(255, 255, 255, 0.03)',
-                          border: canOpen
-                            ? '1.5px solid rgba(245, 158, 11, 0.5)'
-                            : '1px solid rgba(255, 255, 255, 0.08)',
-                          cursor: canOpen ? 'pointer' : 'default',
+                          padding: '5px 12px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          background: vaultViewMode === 'garden' ? 'rgba(16, 185, 129, 0.3)' : 'transparent',
+                          color: vaultViewMode === 'garden' ? '#6ee7b7' : '#94a3b8',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '14px',
-                          transition: 'all 0.2s ease',
+                          gap: '5px',
+                          transition: 'all 0.15s ease',
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
+                        <span>🪴</span>
+                        <span>Khu Vườn</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playClickSound();
+                          setVaultViewMode('list');
+                        }}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          background: vaultViewMode === 'list' ? 'rgba(245, 158, 11, 0.3)' : 'transparent',
+                          color: vaultViewMode === 'list' ? '#fcd34d' : '#94a3b8',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <span>📋</span>
+                        <span>Danh Sách</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Render theo chế độ đã chọn */}
+                  {vaultViewMode === 'garden' ? (
+                    <TimeCapsuleGardenView
+                      capsules={capsules}
+                      currentTime={currentTime}
+                      onOpenCapsule={handleOpenCapsule}
+                      onDeleteCapsule={handleDeleteCapsule}
+                    />
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {capsules.map((cap) => {
+                        const countdown = formatCountdown(cap.unlockDate);
+                        const canOpen = countdown.canOpen || cap.canOpen || cap.isOpened;
+
+                        return (
                           <div
+                            key={cap._id}
+                            onClick={() => canOpen && handleOpenCapsule(cap)}
                             style={{
-                              width: '46px',
-                              height: '46px',
-                              borderRadius: '14px',
-                              background: canOpen ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.06)',
+                              padding: '16px 20px',
+                              borderRadius: '16px',
+                              background: canOpen
+                                ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(15, 23, 42, 0.8))'
+                                : 'rgba(255, 255, 255, 0.03)',
+                              border: canOpen
+                                ? '1.5px solid rgba(245, 158, 11, 0.5)'
+                                : '1px solid rgba(255, 255, 255, 0.08)',
+                              cursor: canOpen ? 'pointer' : 'default',
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '1.4rem',
-                              flexShrink: 0,
+                              justifyContent: 'space-between',
+                              gap: '14px',
+                              transition: 'all 0.2s ease',
                             }}
                           >
-                            {canOpen ? '✨' : '🔒'}
-                          </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
+                              <div
+                                style={{
+                                  width: '46px',
+                                  height: '46px',
+                                  borderRadius: '14px',
+                                  background: canOpen ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.06)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '1.4rem',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {canOpen ? '✨' : '🔒'}
+                              </div>
 
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <h4
-                              style={{
-                                margin: '0 0 4px',
-                                fontSize: '0.96rem',
-                                fontWeight: 700,
-                                color: canOpen ? '#fef3c7' : '#e2e8f0',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                              }}
-                            >
-                              {cap.title}
-                            </h4>
-                            <div style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                              <span>Từ: {cap.creatorName || 'Tôi'}</span>
-                              <span>•</span>
-                              <span style={{ color: canOpen ? '#34d399' : '#f59e0b', fontWeight: 600 }}>
-                                {canOpen ? '🔓 Sẵn sàng mở khóa' : `⏳ ${countdown.text}`}
-                              </span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <h4
+                                  style={{
+                                    margin: '0 0 4px',
+                                    fontSize: '0.96rem',
+                                    fontWeight: 700,
+                                    color: canOpen ? '#fef3c7' : '#e2e8f0',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                  }}
+                                >
+                                  {cap.title}
+                                </h4>
+                                <div style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                  <span>Từ: {cap.creatorName || 'Tôi'}</span>
+                                  <span>•</span>
+                                  <span style={{ color: canOpen ? '#34d399' : '#f59e0b', fontWeight: 600 }}>
+                                    {canOpen ? '🔓 Sẵn sàng mở khóa' : `⏳ ${countdown.text}`}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {canOpen ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenCapsule(cap)}
+                                  style={{
+                                    padding: '8px 16px',
+                                    borderRadius: '10px',
+                                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                    border: 'none',
+                                    color: '#0f172a',
+                                    fontWeight: 700,
+                                    fontSize: '0.82rem',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+                                  }}
+                                >
+                                  Mở Thư Ngay
+                                </button>
+                              ) : (
+                                <span
+                                  style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    color: '#94a3b8',
+                                    fontSize: '0.76rem',
+                                  }}
+                                >
+                                  Đang Khóa
+                                </span>
+                              )}
+
+                              {cap._id !== 'capsule_welcome_demo' && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDeleteCapsule(cap._id, e)}
+                                  title="Xóa hộp này"
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#ef4444',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    padding: '4px',
+                                  }}
+                                >
+                                  🗑️
+                                </button>
+                              )}
                             </div>
                           </div>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {canOpen ? (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenCapsule(cap)}
-                              style={{
-                                padding: '8px 16px',
-                                borderRadius: '10px',
-                                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                                border: 'none',
-                                color: '#0f172a',
-                                fontWeight: 700,
-                                fontSize: '0.82rem',
-                                cursor: 'pointer',
-                                boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
-                              }}
-                            >
-                              Mở Thư Ngay
-                            </button>
-                          ) : (
-                            <span
-                              style={{
-                                padding: '6px 12px',
-                                borderRadius: '8px',
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                color: '#94a3b8',
-                                fontSize: '0.76rem',
-                              }}
-                            >
-                              Đang Khóa
-                            </span>
-                          )}
-
-                          {cap._id !== 'capsule_welcome_demo' && (
-                            <button
-                              type="button"
-                              onClick={(e) => handleDeleteCapsule(cap._id, e)}
-                              title="Xóa hộp này"
-                              style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#ef4444',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                padding: '4px',
-                              }}
-                            >
-                              🗑️
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

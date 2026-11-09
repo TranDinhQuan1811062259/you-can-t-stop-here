@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { playClickSound } from '../../utils/soundEffects';
+import { AnonymousWhisperWall } from './AnonymousWhisperWall';
 import {
   getFabPos,
   saveFabPos,
@@ -760,6 +761,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
   const [isMiniMode, setIsMiniMode] = useState(false);
   const [internalOpen, setInternalOpen] = useState(false);
   const [showPlaylistDrawer, setShowPlaylistDrawer] = useState(false);
+  const [activeModalTab, setActiveModalTab] = useState('radio'); // 'radio' | 'whispers'
 
   // Chỉ số bài hát đang phát (0 -> 7)
   const [trackIndex, setTrackIndex] = useState(() => {
@@ -1606,8 +1608,72 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Thanh Lướt Nhanh 8 Bài Nhạc Chữa Lành */}
-        <div className="radio-stations-nav" style={{ flexShrink: 0 }}>
+        {/* Cụm Chuyển Đổi Tab: [ 📻 Trạm Phát Radio ] vs [ 💬 Thì Thầm Vô Danh ] */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '8px',
+            padding: '8px 16px',
+            background: 'rgba(10, 15, 30, 0.85)',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            flexShrink: 0,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setActiveModalTab('radio')}
+            style={{
+              flex: 1,
+              padding: '7px 12px',
+              borderRadius: '10px',
+              border: activeModalTab === 'radio' ? `1.5px solid ${activeTrack.themeColor}` : '1px solid rgba(255,255,255,0.1)',
+              background: activeModalTab === 'radio' ? `${activeTrack.themeColor}25` : 'transparent',
+              color: activeModalTab === 'radio' ? '#fff' : '#94a3b8',
+              fontWeight: activeModalTab === 'radio' ? 700 : 500,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <span>📻 Trạm Phát Radio</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveModalTab('whispers')}
+            style={{
+              flex: 1,
+              padding: '7px 12px',
+              borderRadius: '10px',
+              border: activeModalTab === 'whispers' ? `1.5px solid ${activeTrack.themeColor}` : '1px solid rgba(255,255,255,0.1)',
+              background: activeModalTab === 'whispers' ? `${activeTrack.themeColor}25` : 'transparent',
+              color: activeModalTab === 'whispers' ? '#fff' : '#94a3b8',
+              fontWeight: activeModalTab === 'whispers' ? 700 : 500,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <span>💬 Bức Tường Thì Thầm</span>
+            <span style={{ fontSize: '0.62rem', padding: '1px 6px', borderRadius: '8px', background: '#ec4899', color: '#fff', fontWeight: 800 }}>Mới</span>
+          </button>
+        </div>
+
+        {activeModalTab === 'whispers' ? (
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+            <AnonymousWhisperWall themeColor={activeTrack.themeColor} />
+          </div>
+        ) : (
+          <>
+            {/* Thanh Lướt Nhanh 8 Bài Nhạc Chữa Lành */}
+            <div className="radio-stations-nav" style={{ flexShrink: 0 }}>
           {RADIO_TRACKS.map((track, idx) => {
             const isActive = idx === trackIndex;
             return (
@@ -2143,7 +2209,9 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
             </form>
           </div>
         </div>
-      </div>
-    </div>
+      </>
+    )}
+  </div>
+</div>
   );
 };

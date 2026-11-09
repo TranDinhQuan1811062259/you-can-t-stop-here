@@ -15,7 +15,7 @@ export const FAB_SIZES = {
   chat: { width: 60, height: 60 },
   write: { width: 160, height: 48 },
   mascot: { width: 80, height: 80 },
-  pwa: { width: 360, height: 56 },
+  pwa: { width: 160, height: 44 },
   pref: { width: 52, height: 52 },
   radio: { width: 310, height: 46 },
 };
@@ -151,10 +151,10 @@ export const getFabPos = (type) => {
         y: Math.max(MARGIN_TOP, vpHeight - 60 - 24 - 80 - 14),
       };
     } else if (type === 'pwa') {
-      // Thanh Cài đặt App mặc định: Nằm ở góc trên bên phải, cách lề phải 20px
+      // Thanh Cài đặt App mặc định: Nằm gọn gàng sát mép trên bên phải, không che chắn bài viết
       currentPos = {
-        x: Math.max(MARGIN_LEFT, vpWidth - 360 - MARGIN_RIGHT),
-        y: 112,
+        x: Math.max(MARGIN_LEFT, vpWidth - 160 - MARGIN_RIGHT),
+        y: 72,
       };
     } else if (type === 'pref') {
       // Cụm Tiện ích Ngày/Đêm & Âm thanh mặc định: Góc dưới cùng bên trái, cách lề trái 20px, cách đáy 24px
