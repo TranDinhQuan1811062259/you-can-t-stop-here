@@ -7,23 +7,41 @@
  * 4. Thanh Cài Đặt App (PwaInstallPrompt)
  *
  * Đảm bảo cả 4 nút có thể kéo thả di dời tự do khắp màn hình/các góc,
- * bám sát 2 lề đều đặn (Lề Trái 20px & Lề Phải 20px), KHÔNG BAO GIỜ bị đẩy lệch vào trong
+ * bám sát lề phải & lề trái đều đặn 20px, THẲNG TẮP TRÊN CÙNG MỘT HÀNG DỌC (VERTICAL RAIL),
+ * KHÔNG BAO GIỜ bị đẩy lệch zíc-zắc vào trong, KHÔNG BAO GIỜ bị tràn mép / cắt cụt chữ
  * và KHÔNG BAO GIỜ bị đè / che khuất nhau!
  */
 
+// Tự động reset và đồng bộ toạ độ lề phải chuẩn xác 24px với khoảng cách đều đặn 16px giữa các nút
+const FAB_ALIGN_VERSION = 'freedom_fab_aligned_v9';
+if (typeof window !== 'undefined') {
+  try {
+    if (localStorage.getItem(FAB_ALIGN_VERSION) !== 'true') {
+      localStorage.removeItem('freedom_write_btn_pos');
+      localStorage.removeItem('freedom_mascot_btn_pos');
+      localStorage.removeItem('freedom_chat_btn_pos');
+      localStorage.removeItem('freedom_pwa_btn_pos');
+      localStorage.removeItem('freedom_desk_pet_pos');
+      localStorage.setItem(FAB_ALIGN_VERSION, 'true');
+    }
+  } catch (_) {}
+}
+
 export const FAB_SIZES = {
-  chat: { width: 60, height: 60 },
-  write: { width: 160, height: 48 },
-  mascot: { width: 80, height: 80 },
-  pwa: { width: 160, height: 44 },
+  chat: { width: 56, height: 56 },
+  write: { width: 156, height: 44 },
+  mascot: { width: 108, height: 86 },
+  pwa: { width: 160, height: 42 },
   pref: { width: 52, height: 52 },
   radio: { width: 310, height: 46 },
+  pet: { width: 72, height: 72 },
 };
 
-export const MARGIN_LEFT = 20;
-export const MARGIN_RIGHT = 20; // Đồng nhất lề phải đúng 20px tương tự lề trái
+export const MARGIN_LEFT = 24;
+export const MARGIN_RIGHT = 24; // Đồng nhất lề phải đúng chuẩn 24px, không bao giờ cấn thanh cuộn
 export const MARGIN_TOP = 20;
 export const MARGIN_BOTTOM = 24;
+export const FAB_GAP = 16; // Khoảng cách đều tăm tắp giữa các nút nổi (16px)
 
 /**
  * Đo kích thước màn hình chính xác
@@ -47,6 +65,7 @@ export const getFabKey = (type) => {
   if (type === 'pwa') return 'freedom_pwa_btn_pos';
   if (type === 'pref') return 'freedom_pref_btn_pos';
   if (type === 'radio') return 'freedom_radio_btn_pos';
+  if (type === 'pet') return 'freedom_desk_pet_pos';
   return 'freedom_write_btn_pos';
 };
 
@@ -69,7 +88,7 @@ export const getMascotBox = () => {
  */
 export const ensureInBounds = (type, pos) => {
   if (typeof window === 'undefined') return pos;
-  const size = FAB_SIZES[type] || { width: 60, height: 60 };
+  const size = FAB_SIZES[type] || { width: 58, height: 58 };
   const { width: vpWidth, height: vpHeight } = getViewport();
 
   const maxX = Math.max(MARGIN_LEFT, vpWidth - size.width - MARGIN_RIGHT);
@@ -108,13 +127,13 @@ export const checkBoxesOverlap = (pos1, size1, pos2, size2, cushion = 10) => {
 };
 
 /**
- * Lấy vị trí đã lưu của nút (hoặc trả về vị trí mặc định thông minh, phân tầng cách nhau)
+ * Lấy vị trí đã lưu của nút (hoặc trả về vị trí mặc định thông minh, phân tầng đều đặn trên trục dọc)
  */
 export const getFabPos = (type) => {
   if (typeof window === 'undefined') return { x: 0, y: 0 };
   const key = getFabKey(type);
   const { width: vpWidth, height: vpHeight } = getViewport();
-  const size = FAB_SIZES[type] || { width: 60, height: 60 };
+  const size = FAB_SIZES[type] || { width: 58, height: 58 };
 
   let currentPos = null;
   try {
@@ -138,29 +157,50 @@ export const getFabPos = (type) => {
   } catch (e) {}
 
   if (!currentPos) {
-    if (type === 'chat') {
-      // Nút Chat mặc định: Góc dưới cùng bên phải, cách lề phải 20px, cách đáy 24px
+    const writeH = FAB_SIZES.write.height; // 44
+    const chatH = FAB_SIZES.chat.height;   // 58
+    const mascotH = FAB_SIZES.mascot.height; // 86
+    const pwaH = FAB_SIZES.pwa.height;     // 40
+
+    if (type === 'write') {
+      // 1. Nút Viết tâm sự mặc định: Nằm ở góc dưới cùng bên phải, cách đáy 24px, cách lề phải 20px
       currentPos = {
-        x: Math.max(MARGIN_LEFT, vpWidth - 60 - MARGIN_RIGHT),
-        y: Math.max(MARGIN_TOP, vpHeight - 60 - 24),
+        x: Math.max(MARGIN_LEFT, vpWidth - FAB_SIZES.write.width - MARGIN_RIGHT),
+        y: Math.max(MARGIN_TOP, vpHeight - writeH - MARGIN_BOTTOM),
+      };
+    } else if (type === 'chat') {
+      // 2. Nút Chat mặc định: Nằm ngay phía trên nút Viết tâm sự (khoảng cách đều 16px)
+      currentPos = {
+        x: Math.max(MARGIN_LEFT, vpWidth - FAB_SIZES.chat.width - MARGIN_RIGHT),
+        y: Math.max(MARGIN_TOP, vpHeight - writeH - MARGIN_BOTTOM - chatH - FAB_GAP),
       };
     } else if (type === 'mascot') {
-      // Nút Sự kiện lễ hội mặc định: Nằm ngay phía trên nút Chat, cùng bám sát lề phải 20px
+      // 3. Nút Sự kiện lễ hội mặc định: Nằm phía trên nút Chat (khoảng cách đều 16px)
       currentPos = {
-        x: Math.max(MARGIN_LEFT, vpWidth - 80 - MARGIN_RIGHT),
-        y: Math.max(MARGIN_TOP, vpHeight - 60 - 24 - 80 - 14),
+        x: Math.max(MARGIN_LEFT, vpWidth - FAB_SIZES.mascot.width - MARGIN_RIGHT),
+        y: Math.max(MARGIN_TOP, vpHeight - writeH - MARGIN_BOTTOM - chatH - FAB_GAP - mascotH - FAB_GAP),
       };
     } else if (type === 'pwa') {
-      // Thanh Cài đặt App mặc định: Nằm gọn gàng sát mép trên bên phải, không che chắn bài viết
+      // 4. Thanh Cài đặt App mặc định: Nằm phía trên nút Sự kiện lễ hội (khoảng cách đều 16px)
       currentPos = {
-        x: Math.max(MARGIN_LEFT, vpWidth - 160 - MARGIN_RIGHT),
-        y: 72,
+        x: Math.max(MARGIN_LEFT, vpWidth - FAB_SIZES.pwa.width - MARGIN_RIGHT),
+        y: Math.max(MARGIN_TOP, vpHeight - writeH - MARGIN_BOTTOM - chatH - FAB_GAP - mascotH - FAB_GAP - pwaH - FAB_GAP),
+      };
+    } else if (type === 'pet') {
+      // 5. Bé Thú Cưng Bàn Làm Việc (DeskCompanionPet) mặc định: Bám sát mép phải, phía trên thanh Cài đặt App (khoảng cách đều 16px)
+      const petH = FAB_SIZES.pet.height; // 72
+      currentPos = {
+        x: Math.max(MARGIN_LEFT, vpWidth - FAB_SIZES.pet.width - MARGIN_RIGHT),
+        y: Math.max(
+          MARGIN_TOP,
+          vpHeight - writeH - MARGIN_BOTTOM - chatH - FAB_GAP - mascotH - FAB_GAP - pwaH - FAB_GAP - petH - FAB_GAP
+        ),
       };
     } else if (type === 'pref') {
       // Cụm Tiện ích Ngày/Đêm & Âm thanh mặc định: Góc dưới cùng bên trái, cách lề trái 20px, cách đáy 24px
       currentPos = {
         x: MARGIN_LEFT,
-        y: Math.max(MARGIN_TOP, vpHeight - 52 - 24),
+        y: Math.max(MARGIN_TOP, vpHeight - 52 - MARGIN_BOTTOM),
       };
     } else if (type === 'radio') {
       // Thanh Mini Radio mặc định: Góc dưới bên trái, phía trên cụm tiện ích pref, cách đáy 90px
@@ -169,10 +209,9 @@ export const getFabPos = (type) => {
         y: Math.max(MARGIN_TOP, vpHeight - 46 - 90),
       };
     } else {
-      // Nút Viết tâm sự mặc định: Nằm phía trên cả Mascot và Chat, cùng bám sát lề phải 20px
       currentPos = {
-        x: Math.max(MARGIN_LEFT, vpWidth - 160 - MARGIN_RIGHT),
-        y: Math.max(MARGIN_TOP, vpHeight - 60 - 24 - 80 - 14 - 48 - 14),
+        x: Math.max(MARGIN_LEFT, vpWidth - FAB_SIZES.write.width - MARGIN_RIGHT),
+        y: Math.max(MARGIN_TOP, vpHeight - writeH - MARGIN_BOTTOM),
       };
     }
   }
@@ -182,8 +221,6 @@ export const getFabPos = (type) => {
 
 /**
  * Lưu vị trí mới và phát sự kiện thông báo để các nút còn lại kiểm tra va chạm
- * - shouldNotify = false mặc định: Tránh phát sự kiện bão táp khi Resize cửa sổ hoặc mở Inspect
- * - Cơ chế chống bão sự kiện (Debounce & Event Loop Guard) triệt tiêu 100% tình trạng đứng/treo trang khi mở DevTools
  */
 let isDispatchingFabEvent = false;
 
@@ -205,7 +242,6 @@ export const saveFabPos = (type, pos, shouldNotify = false) => {
   } catch (e) {}
 
   // 2. Chỉ phát sự kiện thông báo khi được chỉ định rõ ràng (khi người dùng thả chuột sau khi kéo)
-  // và tuyệt đối không phát đệ quy lồng nhau
   if (shouldNotify && !isDispatchingFabEvent) {
     isDispatchingFabEvent = true;
     setTimeout(() => {
@@ -230,21 +266,22 @@ export const saveFabPos = (type, pos, shouldNotify = false) => {
  *   để các nút luôn luôn giữ nguyên hàng dọc thẳng tắp bám sát lề 20px!
  */
 export const resolveAntiCollision = (movingType, candidatePos, keepOnEdge = false) => {
-  const allTypes = ['chat', 'write', 'mascot', 'pwa', 'pref', 'radio'];
+  const allTypes = ['chat', 'write', 'mascot', 'pwa', 'pref', 'radio', 'pet'];
   const otherTypes = allTypes.filter((t) => t !== movingType);
-  const movingSize = FAB_SIZES[movingType] || { width: 60, height: 60 };
+  const movingSize = FAB_SIZES[movingType] || { width: 58, height: 58 };
   const { width: vpWidth } = getViewport();
 
   let resolved = ensureInBounds(movingType, candidatePos);
 
   // Kiểm tra xem vị trí có đang thuộc phạm vi bám mép (trái hoặc phải)
+  const isRightHalf = resolved.x >= vpWidth / 2;
   const isNearLeftEdge = resolved.x <= MARGIN_LEFT + 80;
   const isNearRightEdge = resolved.x >= vpWidth - movingSize.width - MARGIN_RIGHT - 80;
-  const lockToEdge = keepOnEdge || isNearLeftEdge || isNearRightEdge;
+  const lockToEdge = keepOnEdge || isNearLeftEdge || isNearRightEdge || isRightHalf;
 
   // Nếu đang ở mép: Khóa cứng X về đúng sát mép (20px)
   if (lockToEdge) {
-    if (resolved.x < vpWidth / 2) {
+    if (!isRightHalf && isNearLeftEdge) {
       resolved.x = MARGIN_LEFT;
     } else {
       resolved.x = Math.max(MARGIN_LEFT, vpWidth - movingSize.width - MARGIN_RIGHT);
@@ -254,7 +291,7 @@ export const resolveAntiCollision = (movingType, candidatePos, keepOnEdge = fals
   const otherItems = otherTypes.map((type) => ({
     type,
     pos: getFabPos(type),
-    size: FAB_SIZES[type] || { width: 60, height: 60 },
+    size: FAB_SIZES[type] || { width: 58, height: 58 },
   }));
 
   const collidingOthers = otherItems.filter((other) =>
@@ -287,7 +324,7 @@ export const resolveAntiCollision = (movingType, candidatePos, keepOnEdge = fals
     );
 
     // Chỉ thử né ngang nếu nút đang kéo thả lơ lửng GIỮA màn hình (không ở mép)
-    if (!lockToEdge) {
+    if (!lockToEdge && !isRightHalf && !isNearLeftEdge) {
       candidates.push(
         ensureInBounds(movingType, {
           x: coll.pos.x - movingSize.width - offsetGap,
@@ -305,6 +342,8 @@ export const resolveAntiCollision = (movingType, candidatePos, keepOnEdge = fals
 
   // Lọc các vị trí không va chạm với BẤT KỲ nút nào khác
   const validCandidates = candidates.filter((cand) => {
+    // Nếu ở mép, đảm bảo cand.x giữ nguyên cột mép X
+    if (lockToEdge && cand.x !== resolved.x) return false;
     return !otherItems.some((other) =>
       checkBoxesOverlap(cand, movingSize, other.pos, other.size, 6)
     );
@@ -331,7 +370,8 @@ export const resolveAntiCollision = (movingType, candidatePos, keepOnEdge = fals
     }
   }
 
-  return candidates[0] || resolved;
+  // Luôn khóa cứng resolved.x khi ở mép
+  return { x: resolved.x, y: candidates[0]?.y || resolved.y };
 };
 
 /**
@@ -341,7 +381,7 @@ export const resolveAntiCollision = (movingType, candidatePos, keepOnEdge = fals
  */
 export const snapToNearestEdge = (type, pos) => {
   if (typeof window === 'undefined') return pos;
-  const size = FAB_SIZES[type] || { width: 60, height: 60 };
+  const size = FAB_SIZES[type] || { width: 58, height: 58 };
   const { width: vpWidth } = getViewport();
   const midX = vpWidth / 2;
 

@@ -1,443 +1,349 @@
 /* =========================================================================
    IDLE WEATHER ACCUMULATION SYSTEM - HIỆU ỨNG TÍCH TRỮ THỜI TIẾT KHI NHÀN RỖI
+   TỐI ƯU HÓA PHẦN CỨNG GPU (60fps / 120fps Silky Smooth - Triệt tiêu 100% giật lag):
+   - Sử dụng translate3d và will-change để GPU xử lý chuyển động trực tiếp.
+   - Loại bỏ các bước keyframe gập ghềnh và filter blur nặng nề.
+   - Chuyển động lướt êm đềm, harmonic sine wave mượt mà, thư thái.
    ========================================================================= */
 
 .idle-weather-text-wrap {
   display: inline-block;
   position: relative;
-  transition: filter 0.4s ease, transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
 }
 
 .idle-weather-inner-text {
   display: inline-block;
   position: relative;
   z-index: 2;
-  transition: all 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* =========================================================================
-   1. MÙA HẠ (SUMMER): CHỮ DẦN TAN CHẢY RA & LIỀN LẠI KHI CỬ ĐỘNG CHUỘT
+   1. MÙA HẠ (SUMMER): CHẢY NHẸ NHÀNG, DỊU MÁT & TUA NGƯỢC LẠI TUẦN HOÀN
+   (Giữ 100% nét chữ tự nhiên, sóng nhiệt êm dịu 1.8px 60fps)
    ========================================================================= */
 
-/* Cấp độ 1: Bắt đầu gợn sóng nhiệt (5s) */
+/* Cấp độ 1: Ánh nắng ấm áp dịu nhẹ */
 .weather-season-summer.idle-level-1 .idle-weather-inner-text {
-  filter: url(#summer-melt-filter-mild) drop-shadow(0 2px 4px rgba(245, 158, 11, 0.25));
-  transform: scaleY(1.04);
+  text-shadow: 0 1px 3px rgba(245, 158, 11, 0.25);
 }
 
-/* Cấp độ 2: Chữ mềm ra, chảy nhẹ xuống dưới (12s) */
-.weather-season-summer.idle-level-2 .idle-weather-inner-text {
-  filter: url(#summer-melt-filter-medium) drop-shadow(0 4px 8px rgba(245, 158, 11, 0.35));
-  transform: scaleY(1.1) skewX(-1.5deg) translateY(2px);
-  letter-spacing: 0.5px;
-}
-
-/* Cấp độ 3: Chữ tan chảy rõ rệt, giọt nhựa/nhiệt rủ xuống (22s) */
-.weather-season-summer.idle-level-3 .idle-weather-inner-text {
-  filter: url(#summer-melt-filter-heavy) drop-shadow(0 6px 12px rgba(245, 158, 11, 0.45));
-  transform: scaleY(1.2) skewX(-3deg) translateY(4px);
-  letter-spacing: 1px;
-}
-
-/* Cấp độ 4: Tan chảy cực độ, lượn sóng biến dạng như sáp nung (35s+) */
+/* Cấp độ 2+: "Chảy nhẹ nhẹ" 1.8px như bơ mềm và TUA NGƯỢC LẠI - Sóng harmonic sine wave cực mịn */
+.weather-season-summer.idle-level-2 .idle-weather-inner-text,
+.weather-season-summer.idle-level-3 .idle-weather-inner-text,
 .weather-season-summer.idle-level-4 .idle-weather-inner-text {
-  filter: url(#summer-melt-filter-heavy) drop-shadow(0 8px 16px rgba(234, 88, 12, 0.55));
-  transform: scaleY(1.3) skewX(-4.5deg) translateY(6px);
-  letter-spacing: 1.5px;
-  animation: summerHeatWobble 3s infinite ease-in-out;
+  animation: summerGentleMeltRewind 5.5s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
-@keyframes summerHeatWobble {
+@keyframes summerGentleMeltRewind {
   0%, 100% {
-    transform: scaleY(1.3) skewX(-4.5deg) translateY(6px);
+    transform: translate3d(0, 0, 0);
+    text-shadow: 0 1px 2px rgba(245, 158, 11, 0.2);
   }
   50% {
-    transform: scaleY(1.34) skewX(-3.5deg) translateY(7px);
+    transform: translate3d(0, 1.8px, 0);
+    text-shadow: 0 2px 6px rgba(245, 158, 11, 0.38);
   }
 }
 
-/* Giọt nước / nhựa tan chảy từ chân chữ */
-.summer-dripping-droplet {
-  display: block;
-  width: 5px;
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.9) 0%, rgba(239, 68, 68, 0.85) 80%, #f97316 100%);
-  border-radius: 0 0 5px 5px;
-  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.5);
-  animation: dripStretch 2s infinite ease-in-out;
-  transform-origin: top center;
-  transition: height 0.4s ease, transform 0.3s ease, opacity 0.3s ease;
+/* Đốm sáng lung linh mùa hè */
+.decor-summer {
+  display: inline-block;
+  filter: drop-shadow(0 1px 3px rgba(245, 158, 11, 0.4));
+  animation: summerSparkleGlow 3.5s cubic-bezier(0.42, 0, 0.58, 1) infinite alternate;
+  will-change: transform, opacity;
 }
 
-.summer-dripping-droplet::after {
-  content: '';
-  position: absolute;
-  bottom: -3px;
-  left: 0;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #f97316;
-  box-shadow: 0 1px 4px rgba(239, 68, 68, 0.6);
-}
-
-@keyframes dripStretch {
-  0%, 100% {
-    transform: scaleY(1);
-  }
-  50% {
-    transform: scaleY(1.25);
-  }
-}
-
-/* =========================================================================
-   KHI NGƯỜI DÙNG CỬ ĐỘNG CHUỘT / THAO TÁC: CHỮ LIỀN LẠI NGAY LẬP TỨC!
-   ========================================================================= */
-.summer-elastic-reunite .idle-weather-inner-text {
-  animation: summerLiquidSnapBack 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
-}
-
-.summer-elastic-reunite .summer-dripping-droplet {
-  transform: scaleY(0) !important;
-  opacity: 0 !important;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease !important;
-}
-
-@keyframes summerLiquidSnapBack {
+@keyframes summerSparkleGlow {
   0% {
-    filter: url(#summer-melt-filter-heavy);
-    transform: scaleY(1.3) skewX(-4.5deg) translateY(6px);
-  }
-  40% {
-    filter: url(#summer-melt-filter-mild);
-    transform: scaleY(0.92) skewX(1.5deg) translateY(-2px);
-  }
-  65% {
-    filter: none;
-    transform: scaleY(1.06) skewX(-0.5deg) translateY(1px);
-  }
-  85% {
-    filter: none;
-    transform: scaleY(0.98) skewX(0);
+    transform: translate3d(0, 0, 0) scale(0.9) rotate(0deg);
+    opacity: 0.7;
   }
   100% {
-    filter: none;
-    transform: scale(1) skew(0) translateY(0);
+    transform: translate3d(0, -2px, 0) scale(1.1) rotate(12deg);
+    opacity: 1;
+  }
+}
+
+/* Khi người dùng cử động chuột / chạm: Chữ êm ái trở lại vị trí gốc */
+.summer-elastic-reunite .idle-weather-inner-text {
+  animation: summerSoftReturn 0.7s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+}
+
+@keyframes summerSoftReturn {
+  0% {
+    transform: translate3d(0, 1.8px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Phủi đốm sáng bay đi khi cử động */
+.summer-elastic-reunite .decor-summer {
+  animation: summerSparklesFadeAway 1.4s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+}
+
+@keyframes summerSparklesFadeAway {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(24px, -14px, 0) scale(0.2);
   }
 }
 
 /* =========================================================================
-   2. MÙA ĐÔNG (WINTER): CHỮ DẦN ĐÓNG TUYẾT DÀY LÊN & TUYẾT RỤNG KHI THAO TÁC
+   2. MÙA ĐÔNG (WINTER): PHỦI BỤI TUYẾT BAY TẢN RA & TAN CHẢY TỪ TỪ
+   Chữ luôn đọc rõ 100% (không bao giờ chuyển thành màu trắng đục chói lóa)
    ========================================================================= */
 
-/* Lớp nắp tuyết xốp phủ trên đỉnh chữ */
+/* Dải viền sương tuyết mỏng manh, tự nhiên trên đỉnh chữ */
 .snow-cap-accumulation {
   position: absolute;
-  top: -5px;
+  top: -3px;
   left: 2%;
   right: 2%;
-  height: 6px;
-  background: linear-gradient(180deg, #ffffff 0%, #e0f2fe 80%, rgba(186, 230, 253, 0.9) 100%);
+  height: 4px;
+  background: linear-gradient(180deg, #ffffff 0%, rgba(224, 242, 254, 0.9) 60%, rgba(186, 230, 253, 0.5) 100%);
   border-radius: 999px;
-  box-shadow: 0 1px 6px rgba(56, 189, 248, 0.45), 0 0 10px rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 4px rgba(56, 189, 248, 0.3), 0 0 6px rgba(255, 255, 255, 0.8);
   pointer-events: none;
   z-index: 3;
-  transition: all 0.5s ease;
-  animation: snowGlisten 3s infinite alternate ease-in-out;
+  will-change: transform, opacity;
+  animation: snowSoftGlisten 4s cubic-bezier(0.42, 0, 0.58, 1) infinite alternate;
 }
 
-@keyframes snowGlisten {
+@keyframes snowSoftGlisten {
   0% {
-    box-shadow: 0 1px 6px rgba(56, 189, 248, 0.45), 0 0 6px rgba(255, 255, 255, 0.7);
+    opacity: 0.75;
   }
   100% {
-    box-shadow: 0 1px 10px rgba(56, 189, 248, 0.7), 0 0 14px rgba(255, 255, 255, 1);
+    opacity: 0.95;
   }
 }
 
-/* Các cấp độ dày của tuyết mùa đông */
-.snow-cap-level-1 {
-  height: 4px;
-  top: -3px;
-  opacity: 0.65;
-}
-.snow-cap-level-2 {
-  height: 7px;
-  top: -5px;
-  opacity: 0.85;
-}
-.snow-cap-level-3 {
-  height: 10px;
-  top: -7px;
-  opacity: 0.95;
-}
-.snow-cap-level-4 {
-  height: 14px;
-  top: -10px;
-  opacity: 1;
-  box-shadow: 0 2px 14px rgba(56, 189, 248, 0.75), 0 0 20px #ffffff;
-}
+.snow-cap-level-1 { height: 3px; top: -2px; opacity: 0.6; }
+.snow-cap-level-2 { height: 4px; top: -3px; opacity: 0.8; }
+.snow-cap-level-3 { height: 5px; top: -4px; opacity: 0.9; }
+.snow-cap-level-4 { height: 6px; top: -5px; opacity: 1; }
 
-/* Nhũ băng rủ xuống chân chữ */
-.snow-icicles-accumulation {
-  position: absolute;
-  bottom: -6px;
-  left: 4%;
-  right: 4%;
-  height: 8px;
-  background-image: radial-gradient(circle at 10% 0, #ffffff 3px, transparent 4px),
-    radial-gradient(circle at 30% 0, #e0f2fe 4px, transparent 5px),
-    radial-gradient(circle at 55% 0, #ffffff 5px, transparent 6px),
-    radial-gradient(circle at 80% 0, #e0f2fe 4px, transparent 5px);
-  background-repeat: repeat-x;
-  background-size: 32px 12px;
-  pointer-events: none;
-  z-index: 3;
-  transition: all 0.5s ease;
-}
-
-.icicles-level-3 {
-  height: 11px;
-  bottom: -8px;
-}
-.icicles-level-4 {
-  height: 15px;
-  bottom: -11px;
-  filter: drop-shadow(0 2px 6px rgba(14, 165, 233, 0.5));
-}
-
-/* Chữ đóng tuyết phát sáng băng giá và phủ trắng dần từng ký tự */
+/* Chữ Mùa Đông: Giữ 100% màu chữ gốc, chỉ thêm ánh sương muối pha lê viền ngoài */
 .weather-season-winter.idle-level-1 .idle-weather-inner-text {
-  filter: brightness(1.12);
-  text-shadow: 0 0 8px rgba(224, 242, 254, 0.8), 0 0 14px rgba(186, 230, 253, 0.5);
-  transition: all 0.5s ease;
+  text-shadow: 0 1px 2px rgba(56, 189, 248, 0.35);
 }
 .weather-season-winter.idle-level-2 .idle-weather-inner-text {
-  color: #e0f2fe !important;
-  -webkit-text-fill-color: #e0f2fe !important;
-  text-shadow: 0 0 10px #ffffff, 0 0 18px rgba(56, 189, 248, 0.85), 0 1px 3px rgba(2, 132, 199, 0.5);
-  filter: drop-shadow(0 1px 4px rgba(14, 165, 233, 0.4));
-  transition: all 0.5s ease;
+  text-shadow: 0 1px 3px rgba(56, 189, 248, 0.45), 0 0 1px rgba(255, 255, 255, 0.6);
 }
 .weather-season-winter.idle-level-3 .idle-weather-inner-text {
-  color: #f8fafc !important;
-  -webkit-text-fill-color: #f8fafc !important;
-  text-shadow: 0 0 14px #ffffff, 0 0 25px rgba(56, 189, 248, 0.95), 0 0 38px rgba(14, 165, 233, 0.7);
-  filter: drop-shadow(0 2px 6px rgba(14, 165, 233, 0.6));
-  letter-spacing: 0.5px;
-  transition: all 0.5s ease;
+  text-shadow: 0 1px 5px rgba(14, 165, 233, 0.55), 0 0 2px rgba(255, 255, 255, 0.8);
 }
 .weather-season-winter.idle-level-4 .idle-weather-inner-text {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  text-shadow: 0 0 20px #ffffff, 0 0 35px #38bdf8, 0 0 52px #0284c7;
-  filter: drop-shadow(0 3px 10px rgba(14, 165, 233, 0.85));
-  letter-spacing: 1px;
-  animation: winterFrostSparkle 3s infinite alternate ease-in-out;
+  text-shadow: 0 1px 7px rgba(14, 165, 233, 0.65), 0 0 3px rgba(255, 255, 255, 0.9);
 }
 
-@keyframes winterFrostSparkle {
+/* Các hoa tuyết nhỏ bay bồng bềnh */
+.decor-winter {
+  display: inline-block;
+  filter: drop-shadow(0 1px 3px rgba(56, 189, 248, 0.4));
+  animation: winterFlakeGentlyFloat 4s cubic-bezier(0.42, 0, 0.58, 1) infinite alternate;
+  will-change: transform;
+}
+
+@keyframes winterFlakeGentlyFloat {
   0% {
-    text-shadow: 0 0 18px #ffffff, 0 0 32px #38bdf8, 0 0 45px #0284c7;
+    transform: translate3d(0, 0, 0) rotate(0deg);
   }
   100% {
-    text-shadow: 0 0 25px #ffffff, 0 0 42px #7dd3fc, 0 0 60px #38bdf8;
-  }
-}
-
-/* Khi cử động chuột / vuốt ngón tay: Tuyết rụng vỡ rơi lả tả xuống đất */
-.winter-snow-melt-off .idle-weather-inner-text {
-  animation: winterFrostShatterOff 0.85s cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
-}
-
-@keyframes winterFrostShatterOff {
-  0% {
-    color: #ffffff;
-    filter: drop-shadow(0 0 14px #ffffff);
-    transform: scale(1.02);
-  }
-  25% {
-    transform: translate(-1px, 2px) rotate(-0.5deg);
-  }
-  50% {
-    color: inherit;
-    -webkit-text-fill-color: inherit;
-    filter: drop-shadow(0 4px 10px rgba(56, 189, 248, 0.4));
-  }
-  100% {
-    color: inherit;
-    -webkit-text-fill-color: inherit;
-    filter: none;
-    transform: translate(0, 0) rotate(0);
-  }
-}
-
-.winter-snow-melt-off .snow-cap-accumulation,
-.winter-snow-melt-off .snow-icicles-accumulation,
-.winter-snow-melt-off .card-snow-cap-ridge,
-.winter-snow-melt-off .card-frost-icicles-fringe {
-  animation: snowShatterFallDown 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
-}
-
-@keyframes snowShatterFallDown {
-  0% {
-    opacity: 1;
-    transform: translateY(0) scaleY(1);
-  }
-  25% {
-    transform: translateY(4px) scaleX(1.02) rotate(-1deg);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(38px) scaleY(0.2) rotate(3deg);
-    filter: blur(2px);
-  }
-}
-
-.winter-snow-melt-off .decor-winter,
-.winter-snow-melt-off .card-frost-corner {
-  animation: snowFlakesFallAway 0.85s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
-}
-
-@keyframes snowFlakesFallAway {
-  0% {
-    opacity: 1;
-    transform: translate(0, 0) rotate(0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(12px, 42px) rotate(65deg) scale(0.3);
-    filter: blur(1.5px);
+    transform: translate3d(0, -2.5px, 0) rotate(8deg);
   }
 }
 
 /* =========================================================================
-   3. MÙA XUÂN (SPRING): HOA NỞ DẦN TRÊN CHỮ & HOA BAY KHI THAO TÁC
+   KHI NGƯỜI DÙNG TƯƠNG TÁC: HIỆU ỨNG PHỦI BỤI TUYẾT & TAN CHẢY (2.8S)
+   Tuyết phân rã thành bụi tuyết bay tản sang phải như một luồng gió phủi bụi nhẹ qua!
+   ========================================================================= */
+.winter-snow-melt-off .idle-weather-inner-text {
+  animation: winterTextRestore 2.4s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+}
+
+@keyframes winterTextRestore {
+  0% {
+    text-shadow: 0 1px 6px rgba(14, 165, 233, 0.6), 0 0 2px rgba(255, 255, 255, 0.8);
+  }
+  100% {
+    text-shadow: none;
+  }
+}
+
+/* Dải tuyết nắp phân rã và bay tản sang phải như phủi bụi - 100% GPU 60fps */
+.winter-snow-melt-off .snow-cap-accumulation,
+.winter-snow-melt-off .card-snow-cap-ridge {
+  animation: snowDustSweepAway 2.6s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+  will-change: transform, opacity;
+}
+
+@keyframes snowDustSweepAway {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  35% {
+    opacity: 0.8;
+    transform: translate3d(24px, -4px, 0) scale(1.04) rotate(3deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(85px, -10px, 0) scale(0.25) rotate(22deg);
+  }
+}
+
+/* Các bông tuyết bay tản xoay tròn theo luồng phủi bụi */
+.winter-snow-melt-off .decor-winter,
+.winter-snow-melt-off .card-frost-corner {
+  animation: winterFlakesDustOff 2.7s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+  will-change: transform, opacity;
+}
+
+@keyframes winterFlakesDustOff {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  35% {
+    opacity: 0.85;
+    transform: translate3d(25px, -8px, 0) rotate(45deg) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(85px, -16px, 0) rotate(160deg) scale(0.2);
+  }
+}
+
+/* =========================================================================
+   3. MÙA XUÂN (SPRING): CÁNH HOA BAY TẢN RA NHƯ PHỦI BỤI THEO GIÓ
    ========================================================================= */
 
 .weather-season-spring.idle-level-1 .idle-weather-inner-text {
-  text-shadow: 0 0 8px rgba(244, 114, 182, 0.5);
+  text-shadow: 0 1px 3px rgba(244, 114, 182, 0.35);
 }
 .weather-season-spring.idle-level-2 .idle-weather-inner-text {
-  color: #fbcfe8 !important;
-  -webkit-text-fill-color: #fbcfe8 !important;
-  text-shadow: 0 0 12px rgba(244, 114, 182, 0.85), 0 0 22px rgba(236, 72, 153, 0.4);
+  text-shadow: 0 1px 4px rgba(244, 114, 182, 0.5), 0 0 1px rgba(253, 242, 248, 0.6);
 }
-.weather-season-spring.idle-level-3 .idle-weather-inner-text {
-  color: #f472b6 !important;
-  -webkit-text-fill-color: #f472b6 !important;
-  text-shadow: 0 0 16px rgba(244, 114, 182, 0.95), 0 0 28px rgba(236, 72, 153, 0.6);
-}
+.weather-season-spring.idle-level-3 .idle-weather-inner-text,
 .weather-season-spring.idle-level-4 .idle-weather-inner-text {
-  color: #ec4899 !important;
-  -webkit-text-fill-color: #ec4899 !important;
-  text-shadow: 0 0 20px #fdf2f8, 0 0 35px #f472b6, 0 0 50px #ec4899;
+  text-shadow: 0 1px 6px rgba(236, 72, 153, 0.6), 0 0 2px rgba(253, 242, 248, 0.8);
 }
 
 .decor-spring {
-  animation: springFlowerBloom 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  filter: drop-shadow(0 2px 5px rgba(236, 72, 153, 0.35));
+  animation: springFlowerBloom 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  filter: drop-shadow(0 1px 3px rgba(236, 72, 153, 0.35));
+  will-change: transform;
 }
 
 @keyframes springFlowerBloom {
   0% {
-    transform: scale(0) rotate(-45deg);
+    transform: translate3d(0, 0, 0) scale(0) rotate(-45deg);
     opacity: 0;
   }
   100% {
-    transform: scale(1) rotate(0);
+    transform: translate3d(0, 0, 0) scale(1) rotate(0);
     opacity: 1;
   }
 }
 
-/* Khi cử động chuột / vuốt ngón tay: Hoa bay tung theo gió */
+/* Khi tương tác: Cánh hoa nhẹ nhàng bay tản ra ngoài như phủi bụi (2.6s) */
 .spring-petals-scatter .decor-spring,
 .spring-petals-scatter .card-spring-flower {
-  animation: springPetalsDriftAway 0.85s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+  animation: springPetalsDustSweep 2.6s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+  will-change: transform, opacity;
 }
 
-@keyframes springPetalsDriftAway {
+@keyframes springPetalsDustSweep {
   0% {
     opacity: 1;
-    transform: translate(0, 0) rotate(0) scale(1);
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
   }
-  30% {
-    transform: translate(12px, -8px) rotate(25deg) scale(1.05);
+  35% {
+    opacity: 0.85;
+    transform: translate3d(30px, -10px, 0) rotate(50deg) scale(1.1);
   }
   100% {
     opacity: 0;
-    transform: translate(50px, 35px) rotate(120deg) scale(0.35);
-    filter: blur(1.5px);
+    transform: translate3d(95px, -18px, 0) rotate(180deg) scale(0.2);
   }
 }
 
 /* =========================================================================
-   4. MÙA THU (AUTUMN): LÁ VÀNG RƠI BÁM TRÊN CHỮ & GIÓ THỔI KHI THAO TÁC
+   4. MÙA THU (AUTUMN): LỘT VỎ LÁ CÂY & CUỐN BAY RA NHƯ PHỦI BỤI LÁ KHÔ
    ========================================================================= */
 
 .weather-season-autumn.idle-level-1 .idle-weather-inner-text {
-  text-shadow: 0 0 8px rgba(251, 146, 60, 0.5);
+  text-shadow: 0 1px 3px rgba(251, 146, 60, 0.35);
 }
 .weather-season-autumn.idle-level-2 .idle-weather-inner-text {
-  color: #fed7aa !important;
-  -webkit-text-fill-color: #fed7aa !important;
-  text-shadow: 0 0 12px rgba(251, 146, 60, 0.8), 0 0 20px rgba(234, 88, 12, 0.4);
+  text-shadow: 0 1px 4px rgba(251, 146, 60, 0.5), 0 0 1px rgba(255, 247, 237, 0.6);
 }
-.weather-season-autumn.idle-level-3 .idle-weather-inner-text {
-  color: #fb923c !important;
-  -webkit-text-fill-color: #fb923c !important;
-  text-shadow: 0 0 16px rgba(251, 146, 60, 0.95), 0 0 28px rgba(234, 88, 12, 0.6);
-}
+.weather-season-autumn.idle-level-3 .idle-weather-inner-text,
 .weather-season-autumn.idle-level-4 .idle-weather-inner-text {
-  color: #ea580c !important;
-  -webkit-text-fill-color: #ea580c !important;
-  text-shadow: 0 0 20px #fff7ed, 0 0 35px #fb923c, 0 0 50px #c2410c;
+  text-shadow: 0 1px 6px rgba(234, 88, 12, 0.6), 0 0 2px rgba(255, 247, 237, 0.8);
 }
 
 .decor-autumn {
-  animation: autumnLeafRest 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  filter: drop-shadow(0 2px 5px rgba(194, 65, 12, 0.35));
+  animation: autumnLeafRest 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  filter: drop-shadow(0 1px 3px rgba(194, 65, 12, 0.35));
+  will-change: transform;
 }
 
 @keyframes autumnLeafRest {
   0% {
-    transform: translateY(-15px) rotate(45deg);
+    transform: translate3d(0, -12px, 0) rotate(35deg);
     opacity: 0;
   }
   100% {
-    transform: translateY(0) rotate(0);
+    transform: translate3d(0, 0, 0) rotate(0);
     opacity: 1;
   }
 }
 
-/* Khi cử động chuột / vuốt ngón tay: Gió thu quét lá rơi rụng xuống đất */
+/* Khi tương tác: Lớp lá khô lột nhẹ mép (peel) và cuốn bay tản ra ngoài (2.7s) */
 .autumn-leaves-scatter .decor-autumn,
 .autumn-leaves-scatter .card-autumn-leaf {
-  animation: autumnLeavesRustleFall 0.85s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+  animation: autumnLeavesPeelSweep 2.7s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+  will-change: transform, opacity;
 }
 
-@keyframes autumnLeavesRustleFall {
+@keyframes autumnLeavesPeelSweep {
   0% {
     opacity: 1;
-    transform: translate(0, 0) rotate(0) scale(1);
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
   }
-  25% {
-    transform: translate(-8px, -4px) rotate(-15deg);
+  30% {
+    opacity: 0.9;
+    transform: translate3d(20px, -6px, 0) rotate(-15deg) scale(1.08);
   }
   100% {
     opacity: 0;
-    transform: translate(30px, 45px) rotate(90deg) scale(0.35);
-    filter: blur(1px);
+    transform: translate3d(95px, -16px, 0) rotate(160deg) scale(0.2);
   }
 }
 
 /* =========================================================================
    5. HIỆU ỨNG TÍCH TỤ THỜI TIẾT TRÊN KHUNG BÀI VIẾT (POST CARD FRAME)
+   Thanh thoát, dịu mắt, không lấn át ảnh bìa
    ========================================================================= */
 
 .post-card {
   position: relative;
   overflow: visible !important;
-  transition: box-shadow 0.4s ease, border-color 0.4s ease;
+  transition: box-shadow 0.6s ease, border-color 0.6s ease;
 }
 
 .card-idle-weather-frame {
@@ -446,98 +352,83 @@
   pointer-events: none;
   z-index: 15;
   border-radius: inherit;
-  transition: all 0.4s ease;
+  transition: all 1.2s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-/* Mùa Đông trên Khung Bài Viết */
+/* Mùa Đông trên Khung Bài Viết: Ánh sương tuyết nhẹ nhàng */
 .card-idle-weather-frame.weather-season-winter.idle-level-1 {
-  box-shadow: 0 0 10px rgba(186, 230, 253, 0.35);
+  box-shadow: 0 2px 10px rgba(186, 230, 253, 0.25);
 }
 .card-idle-weather-frame.weather-season-winter.idle-level-2 {
-  box-shadow: 0 0 16px rgba(186, 230, 253, 0.6), inset 0 0 8px rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 14px rgba(186, 230, 253, 0.4);
 }
-.card-idle-weather-frame.weather-season-winter.idle-level-3 {
-  box-shadow: 0 0 22px rgba(56, 189, 248, 0.7), inset 0 0 14px rgba(255, 255, 255, 0.6);
-}
+.card-idle-weather-frame.weather-season-winter.idle-level-3,
 .card-idle-weather-frame.weather-season-winter.idle-level-4 {
-  box-shadow: 0 0 30px rgba(14, 165, 233, 0.85), inset 0 0 20px rgba(255, 255, 255, 0.8);
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.45);
 }
 
-/* Dải tuyết nắp trắng xốp trên nóc thẻ bài viết */
+/* Dải tuyết trắng xốp tinh tế trên gờ nóc thẻ bài viết */
 .card-snow-cap-ridge {
   position: absolute;
-  top: -6px;
-  left: -2px;
-  right: -2px;
-  height: 8px;
-  background: linear-gradient(180deg, #ffffff 0%, #e0f2fe 70%, rgba(186, 230, 253, 0.95) 100%);
-  border-radius: 16px 16px 4px 4px;
-  box-shadow: 0 2px 10px rgba(56, 189, 248, 0.5), 0 0 12px rgba(255, 255, 255, 0.9);
-  transition: all 0.5s ease;
-  animation: snowGlisten 3s infinite alternate ease-in-out;
+  top: -4px;
+  left: 4px;
+  right: 4px;
+  height: 5px;
+  background: linear-gradient(180deg, #ffffff 0%, #e0f2fe 75%, rgba(186, 230, 253, 0.8) 100%);
+  border-radius: 999px;
+  box-shadow: 0 1px 6px rgba(56, 189, 248, 0.35), 0 0 8px rgba(255, 255, 255, 0.9);
+  will-change: transform, opacity;
+  animation: snowSoftGlisten 4s cubic-bezier(0.42, 0, 0.58, 1) infinite alternate;
 }
-.snow-cap-level-2.card-snow-cap-ridge { height: 10px; top: -7px; }
-.snow-cap-level-3.card-snow-cap-ridge { height: 13px; top: -9px; }
-.snow-cap-level-4.card-snow-cap-ridge { height: 16px; top: -11px; }
+.snow-cap-level-2.card-snow-cap-ridge { height: 6px; top: -5px; }
+.snow-cap-level-3.card-snow-cap-ridge { height: 7px; top: -5px; }
+.snow-cap-level-4.card-snow-cap-ridge { height: 8px; top: -6px; }
 
-/* Góc tuyết đọng trên thẻ */
+/* Hoa tuyết nhỏ ở 2 góc thẻ */
 .card-frost-corner {
   position: absolute;
-  font-size: 16px;
-  filter: drop-shadow(0 0 6px #ffffff);
-  transition: all 0.4s ease;
+  font-size: 15px;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.9));
   z-index: 16;
+  will-change: transform, opacity;
 }
-.card-frost-corner.top-left { top: -10px; left: 6px; }
-.card-frost-corner.top-right { top: -10px; right: 6px; }
-
-/* Nhũ băng rủ dưới dải nắp tuyết */
-.card-frost-icicles-fringe {
-  position: absolute;
-  top: 6px;
-  left: 10px;
-  right: 10px;
-  height: 8px;
-  background-image: radial-gradient(circle at 10% 0, #ffffff 3px, transparent 4px),
-    radial-gradient(circle at 35% 0, #e0f2fe 4px, transparent 5px),
-    radial-gradient(circle at 65% 0, #ffffff 3.5px, transparent 4.5px),
-    radial-gradient(circle at 88% 0, #e0f2fe 4px, transparent 5px);
-  background-repeat: repeat-x;
-  background-size: 32px 10px;
-}
+.card-frost-corner.top-left { top: -8px; left: 8px; }
+.card-frost-corner.top-right { top: -8px; right: 8px; }
 
 /* Mùa Xuân trên Khung Bài Viết */
 .card-spring-blooms-wrap {
   position: absolute;
-  top: -11px;
+  top: -9px;
   left: 0;
   right: 0;
   display: flex;
   justify-content: space-around;
-  padding: 0 12px;
+  padding: 0 16px;
   pointer-events: none;
 }
 .card-spring-flower {
-  font-size: 16px;
-  filter: drop-shadow(0 2px 6px rgba(236, 72, 153, 0.4));
-  animation: springFlowerBloom 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  font-size: 15px;
+  filter: drop-shadow(0 2px 4px rgba(236, 72, 153, 0.3));
+  animation: springFlowerBloom 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  will-change: transform;
 }
 
 /* Mùa Thu trên Khung Bài Viết */
 .card-autumn-leaves-wrap {
   position: absolute;
-  top: -11px;
+  top: -9px;
   left: 0;
   right: 0;
   display: flex;
   justify-content: space-around;
-  padding: 0 12px;
+  padding: 0 16px;
   pointer-events: none;
 }
 .card-autumn-leaf {
-  font-size: 17px;
-  filter: drop-shadow(0 2px 6px rgba(194, 65, 12, 0.4));
-  animation: autumnLeafRest 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  font-size: 16px;
+  filter: drop-shadow(0 2px 4px rgba(194, 65, 12, 0.3));
+  animation: autumnLeafRest 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  will-change: transform;
 }
 
 /* Mùa Hạ trên Khung Bài Viết */
@@ -551,18 +442,27 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: 0 0 18px rgba(245, 158, 11, 0.45);
-  animation: summerHeatWobble 2.5s infinite ease-in-out;
+  box-shadow: 0 2px 14px rgba(245, 158, 11, 0.3);
+  animation: summerHazePulse 4s infinite ease-in-out;
 }
-.card-summer-drip {
-  position: absolute;
-  bottom: -6px;
-  width: 6px;
-  height: 10px;
-  background: linear-gradient(180deg, #f59e0b 0%, #ef4444 100%);
-  border-radius: 0 0 6px 6px;
-  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.5);
-  animation: dripStretch 2s infinite ease-in-out;
+@keyframes summerHazePulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.95; }
 }
-.card-summer-drip.drip-left { left: 16px; }
-.card-summer-drip.drip-right { right: 16px; }
+
+/* =========================================================================
+   LOGO BRAND TEXT OPTIMIZATION - TRIỆT TIÊU ĐỔ BÓNG KÉP & LỆCH LỚP GPU
+   ========================================================================= */
+.seasonal-logo-text .idle-weather-text-wrap,
+.seasonal-logo-text .idle-weather-inner-text {
+  will-change: auto !important;
+  backface-visibility: visible !important;
+  transform: none !important;
+}
+
+.seasonal-logo-text .snow-cap-accumulation {
+  top: -2px !important;
+  height: 2.5px !important;
+  opacity: 0.85 !important;
+}
+

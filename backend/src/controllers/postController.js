@@ -436,11 +436,11 @@ export const reactToPost = async (req, res) => {
   try {
     const { id } = req.params;
     const { type } = req.body;
-    const VALID_TYPES = ['sympathy', 'stop', 'love', 'encourage'];
+    const VALID_TYPES = ['sympathy', 'stop', 'love', 'encourage', 'hug', 'tea', 'coffee', 'goodnight'];
 
     if (!VALID_TYPES.includes(type)) {
       return sendError(res, {
-        message: 'Loại cảm xúc không hợp lệ. Hỗ trợ: sympathy, stop, love, encourage',
+        message: 'Loại cảm xúc không hợp lệ. Hỗ trợ: sympathy, stop, love, encourage, hug, tea, coffee, goodnight',
         status: 400,
       });
     }
@@ -463,7 +463,7 @@ export const reactToPost = async (req, res) => {
             post.reactions = [];
           }
           if (!post.reactionCounts) {
-            post.reactionCounts = { sympathy: 0, stop: 0, love: 0, encourage: 0, total: 0 };
+            post.reactionCounts = { sympathy: 0, stop: 0, love: 0, encourage: 0, hug: 0, tea: 0, coffee: 0, goodnight: 0, total: 0 };
           }
 
           // Tìm cảm xúc hiện tại của user
@@ -525,7 +525,7 @@ export const reactToPost = async (req, res) => {
           }
 
           // Tính toán lại reactionCounts
-          const counts = { sympathy: 0, stop: 0, love: 0, encourage: 0, hug: 0, tea: 0, total: 0 };
+          const counts = { sympathy: 0, stop: 0, love: 0, encourage: 0, hug: 0, tea: 0, coffee: 0, goodnight: 0, total: 0 };
           post.reactions.forEach((r) => {
             (r.types || []).forEach((t) => {
               if (counts[t] !== undefined) {
@@ -573,7 +573,7 @@ export const reactToPost = async (req, res) => {
     }
 
     if (!Array.isArray(post.reactions)) post.reactions = [];
-    if (!post.reactionCounts) post.reactionCounts = { sympathy: 0, stop: 0, love: 0, encourage: 0, hug: 0, tea: 0, total: 0 };
+    if (!post.reactionCounts) post.reactionCounts = { sympathy: 0, stop: 0, love: 0, encourage: 0, hug: 0, tea: 0, coffee: 0, goodnight: 0, total: 0 };
 
     const existingIdx = post.reactions.findIndex((r) => r.userName === userName);
     let currentTypes = existingIdx !== -1 ? [...(post.reactions[existingIdx].types || [])] : [];
@@ -612,7 +612,7 @@ export const reactToPost = async (req, res) => {
       }
     }
 
-    const counts = { sympathy: 0, stop: 0, love: 0, encourage: 0, hug: 0, tea: 0, total: 0 };
+    const counts = { sympathy: 0, stop: 0, love: 0, encourage: 0, hug: 0, tea: 0, coffee: 0, goodnight: 0, total: 0 };
     post.reactions.forEach((r) => {
       (r.types || []).forEach((t) => {
         if (counts[t] !== undefined) {

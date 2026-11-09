@@ -611,8 +611,8 @@ class AIVoicePlayer {
     }
 
     try {
-      const cleanEncoded = encodeURIComponent(chunkText.slice(0, 180));
-      const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${cleanEncoded}`;
+      const cleanEncoded = encodeURIComponent(chunkText.slice(0, 300));
+      const audioUrl = `/api/tts?text=${cleanEncoded}&gender=${this.gender || 'female'}`;
 
       this.audioElement.src = audioUrl;
       this.audioElement.playbackRate = voiceParams.rate;
@@ -643,12 +643,24 @@ class AIVoicePlayer {
     const textToSpeak = chunkText || this.chunks[this.currentChunkIndex];
     if (!textToSpeak) return;
 
+    // Kiểm tra xem máy người dùng có voice tiếng Việt thực thụ hay không
+    // Tuyệt đối không để trình duyệt dùng giọng mặc định tiếng Anh/Ấn Độ để đọc tiếng Việt
+    const voices = this.synth.getVoices() || [];
+    const viVoice = nativeVoice || voices.find(v => {
+      const l = (v.lang || '').toLowerCase().replace('_', '-');
+      const n = (v.name || '').toLowerCase();
+      return l.startsWith('vi') || n.includes('vietnam') || n.includes('tiếng việt');
+    });
+
+    if (!viVoice) {
+      console.warn('[aiVoiceEngine] Không tìm thấy giọng tiếng Việt cài sẵn trong trình duyệt, bỏ qua WebSpeech để tránh phát âm sai giọng ngoại quốc.');
+      this._onChunkEnded();
+      return;
+    }
+
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
     utterance.lang = 'vi-VN';
-
-    if (nativeVoice) {
-      utterance.voice = nativeVoice;
-    }
+    utterance.voice = viVoice;
 
     if (voiceParams) {
       utterance.pitch = voiceParams.pitch;

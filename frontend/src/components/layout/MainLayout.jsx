@@ -20,6 +20,7 @@ import { FloatingFestiveMascot } from '../common/FloatingFestiveMascot';
 import { PageTransitionWrapper } from '../common/PageTransitionWrapper';
 import { PwaInstallPrompt } from '../common/PwaInstallPrompt';
 import { IdleWeatherSvgFilters } from '../common/IdleWeatherSvgFilters';
+import { DeskCompanionPet } from '../wellness/DeskCompanionPet';
 import { initIdleWeatherEngine } from '../../utils/idleWeatherEngine';
 import {
   ASMR_PROFILES,
@@ -549,6 +550,9 @@ export const MainLayout = () => {
 
       {/* PWA App Install Banner & Modal (Cho Smartphone, Tablet, PC, Mac) */}
       <PwaInstallPrompt />
+
+      {/* Bé Thú Cưng Bàn Làm Việc (Desk Companion Pet Therapy 🐱) */}
+      <DeskCompanionPet />
 
       {/* SVG Filters cho hiệu ứng Mùa Hè tan chảy & Mùa Đông băng giá */}
       <IdleWeatherSvgFilters />

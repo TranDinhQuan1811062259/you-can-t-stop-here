@@ -14,6 +14,7 @@ import { StoryBar } from '../components/story/StoryBar';
 import { CreateStoryModal } from '../components/story/CreateStoryModal';
 import { StoryViewerModal } from '../components/story/StoryViewerModal';
 import { IdleWeatherText } from '../components/common/IdleWeatherText';
+import { CommunityResilienceTree } from '../components/wellness/CommunityResilienceTree';
 
 export const HomePage = () => {
   const { isAuthenticated, openLoginModal } = useAuth();
@@ -245,6 +246,9 @@ export const HomePage = () => {
         <CommunityMoodWall
           onOpenWellness={() => window.dispatchEvent(new Event('freedom_open_wellness'))}
         />
+
+        {/* 🌳 Cây Hồi Sinh & Tái Tạo Năng Lượng Cộng Đồng (Live Tree of Resilience) */}
+        <CommunityResilienceTree />
 
         {/* Bộ lọc danh mục */}
         <CategoryFilter

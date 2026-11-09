@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { postService } from '../../services/postService';
 import { ShareModal } from './ShareModal';
 
-export const REACTION_CONFIG = [
+const REACTION_CONFIG = [
   {
     id: 'sympathy',
     label: 'Đồng Cảm',
@@ -53,6 +53,22 @@ export const REACTION_CONFIG = [
     bg: '#d1fae5',
     description: 'Mời bạn một tách trà nóng, an yên thở sâu',
   },
+  {
+    id: 'coffee',
+    label: 'Cà Phê',
+    icon: '☕',
+    color: '#b45309', // Warm Amber Coffee
+    bg: '#fef3c7',
+    description: 'Mời bạn một ly cà phê ấm, nạp lại năng lượng',
+  },
+  {
+    id: 'goodnight',
+    label: 'Ngủ Ngon',
+    icon: '🌙',
+    color: '#8b5cf6', // Soft Violet Night
+    bg: '#ede9fe',
+    description: 'Gác lại âu lo, chúc bạn có một giấc ngủ thật ngon',
+  },
 ];
 
 export const PostReactionsBar = ({ post, onPostUpdated }) => {
@@ -60,7 +76,7 @@ export const PostReactionsBar = ({ post, onPostUpdated }) => {
 
   // State cục bộ cho reactions
   const [reactionCounts, setReactionCounts] = useState(
-    post?.reactionCounts || { sympathy: 0, stop: 0, love: 0, encourage: 0, hug: 0, tea: 0, total: post?.cheersCount || 0 }
+    post?.reactionCounts || { sympathy: 0, stop: 0, love: 0, encourage: 0, hug: 0, tea: 0, coffee: 0, goodnight: 0, total: post?.cheersCount || 0 }
   );
   const [showCount, setShowCount] = useState(post?.showReactionCount !== false);
   const [sharesCount, setSharesCount] = useState(post?.sharesCount || 0);

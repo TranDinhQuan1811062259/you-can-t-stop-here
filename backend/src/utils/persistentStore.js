@@ -290,7 +290,7 @@ const initialData = {
         <blockquote>"Nếu bạn đang cảm thấy mệt mỏi đến muốn bỏ cuộc ngay lúc này, hãy nhớ rằng cho phép bản thân nghỉ ngơi không phải là thất bại."</blockquote>
         <p>Viết những dòng này không phải để than vãn, mà để nhắc chính mình và những ai đang cùng cảnh ngộ: Bạn quan trọng hơn bất kỳ bản release nào. Đêm nay, tôi sẽ tắt máy tính và đi ngủ sớm một chút.</p>
       `,
-      coverImage: '/images/sun.jpg',
+      coverImage: '/images/office-night.jpg',
       category: { _id: 'cat_1', name: 'Áp lực & Kiệt sức (Burnout)', slug: 'ap-luc-kiet-suc-burnout' },
       author: 'Trần Đình Quân',
       authorJob: 'System Admin & Lead Dev',
@@ -326,7 +326,7 @@ const initialData = {
         <p>Mỗi khi dự án thành công, tôi cho rằng đó là do may mắn hoặc đồng đội gánh. Nhưng mỗi khi có sự cố nhỏ xảy ra, tôi lại tự dằn vặt rằng đó là lỗi tại sự bất tài của mình.</p>
         <p>Một người đàn anh đã nói với tôi: <em>"Em không cần phải biết tất cả mọi thứ để trở nên có giá trị. Giá trị của em nằm ở việc em chịu học hỏi và không bỏ cuộc."</em></p>
       `,
-      coverImage: '/images/statue.jpg',
+      coverImage: '/images/impostor-calm.jpg',
       category: { _id: 'cat_2', name: 'Khủng hoảng nghề nghiệp (Career Crisis)', slug: 'khung-hoang-nghe-nghiep-career-crisis' },
       author: 'Thành Nam',
       authorJob: 'Product Manager',
@@ -346,7 +346,7 @@ const initialData = {
         <p>Học những cú pháp vòng lặp đầu tiên, tôi đã từng xấu hổ và muốn bỏ cuộc. Nhưng thông điệp của trang web này chính là điều đã giữ tôi ở lại: <strong>You Can't Stop Here</strong>.</p>
         <p>Hôm nay, tròn 1 năm tôi chính thức nhận offer làm Junior Dev. Mức lương chưa bằng ngày xưa, nhưng ánh mắt tôi đã có lại ngọn lửa đam mê.</p>
       `,
-      coverImage: '/images/crop.jpg',
+      coverImage: '/images/restart-coding.jpg',
       category: { _id: 'cat_3', name: 'Chuyển ngành & Bắt đầu lại (Restart)', slug: 'chuyen-nganh-bat-dau-lai-restart' },
       author: 'Đức Huy',
       authorJob: 'Junior Developer (Chuyển ngành)',
@@ -366,7 +366,7 @@ const initialData = {
         <p>Tôi hít một hơi thật sâu và từ chối lịch sự, hẹn sáng thứ Hai xử lý. Trời không sập xuống. Công ty không phá sản. Sếp chỉ phản hồi: "Ok em."</p>
         <p>Chiến thắng lớn nhất của một ngày đi làm đôi khi là bảo vệ được sự bình yên của tâm trí mình.</p>
       `,
-      coverImage: '/images/eagle.jpg',
+      coverImage: '/images/peaceful-boundary.jpg',
       category: { _id: 'cat_4', name: 'Những tia sáng & Động lực (Small Wins)', slug: 'nhung-tia-sang-dong-luc-small-wins' },
       author: 'Hương Ly',
       authorJob: 'UI/UX Designer',

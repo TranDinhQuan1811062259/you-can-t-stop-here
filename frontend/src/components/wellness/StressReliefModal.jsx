@@ -59,7 +59,45 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
   const [smashedTotal, setSmashedTotal] = useState(() => {
     return parseInt(localStorage.getItem('freedom_smashed_count') || '0', 10);
   });
-  const [activeSmashEffect, setActiveSmashEffect] = useState(null);
+  const [activeSmashExplosions, setActiveSmashExplosions] = useState([]);
+  const [isRageShaking, setIsRageShaking] = useState(false);
+  const [rageBgmPlaying, setRageBgmPlaying] = useState(false);
+  const rageYtRef = useRef(null);
+
+  // Gửi lệnh điều khiển YouTube Iframe API (Tohoshinki - Love In The Ice)
+  const sendRageYtCommand = (func, args = []) => {
+    if (rageYtRef.current && rageYtRef.current.contentWindow) {
+      try {
+        rageYtRef.current.contentWindow.postMessage(
+          JSON.stringify({
+            event: 'command',
+            func,
+            args,
+          }),
+          '*'
+        );
+      } catch (_) {}
+    }
+  };
+
+  const handleToggleRageMusic = () => {
+    playClickSound();
+    if (rageBgmPlaying) {
+      sendRageYtCommand('pauseVideo');
+      setRageBgmPlaying(false);
+    } else {
+      sendRageYtCommand('playVideo');
+      setRageBgmPlaying(true);
+    }
+  };
+
+  const handleSeekClimax = () => {
+    playClickSound();
+    // 3:20 = 200 giây: Điểm bắt đầu đoạn nốt cao đỉnh cao xé toạc áp lực của Love In The Ice
+    sendRageYtCommand('seekTo', [200, true]);
+    sendRageYtCommand('playVideo');
+    setRageBgmPlaying(true);
+  };
 
   // State cho Bóng Xốp Vô Tận (Bubble Wrap Popper)
   const [bubbles, setBubbles] = useState(() =>
@@ -82,12 +120,17 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
   const isClockOutTime = currentHour >= 17 && currentHour <= 21;
 
   useEffect(() => {
+    if (!isOpen || activeTab !== 'smash') {
+      sendRageYtCommand('pauseVideo');
+      setRageBgmPlaying(false);
+      setIsRageShaking(false);
+    }
     if (!isOpen) {
       setIsShredding(false);
       setShowShredResult(false);
       stopBreathing();
     }
-  }, [isOpen]);
+  }, [isOpen, activeTab]);
 
   // Chèn Emoji vào ô nội dung áp lực tại vị trí con trỏ
   const handleInsertEmoji = (emoji) => {
@@ -140,8 +183,44 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
     if (item.smashed) return;
     playCeramicShatterSound();
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      navigator.vibrate([40, 25, 60]);
+      navigator.vibrate([60, 40, 100]);
     }
+
+    // 1. Rung chấn toàn phòng đập phá
+    setIsRageShaking(true);
+    setTimeout(() => setIsRageShaking(false), 420);
+
+    // 2. Tự động kích hoạt BGM Love In The Ice nếu đang tắt
+    if (!rageBgmPlaying) {
+      setRageBgmPlaying(true);
+      sendRageYtCommand('playVideo');
+    }
+
+    // 3. Tạo chùm 18 mảnh vỡ sành sứ nổ tung bay tứ tung theo vector lực
+    const explosionId = Date.now() + Math.random();
+    const shardCount = 18;
+    const shards = Array.from({ length: shardCount }, (_, i) => {
+      const angle = (i / shardCount) * 2 * Math.PI + (Math.random() - 0.5) * 0.4;
+      const dist = 75 + Math.random() * 150;
+      return {
+        id: i,
+        x: Math.round(Math.cos(angle) * dist),
+        y: Math.round(Math.sin(angle) * dist),
+        rot: Math.round((Math.random() - 0.5) * 720),
+        size: Math.round(11 + Math.random() * 16),
+        color: i % 3 === 0 ? item.color : (i % 2 === 0 ? '#ffffff' : '#fde047'),
+        shape: i % 4 === 0 ? '💥' : (i % 3 === 0 ? '✨' : (i % 2 === 0 ? '⚡' : '🔺')),
+      };
+    });
+
+    setActiveSmashExplosions((prev) => [
+      ...prev,
+      { id: explosionId, itemId: item.id, shards },
+    ]);
+
+    setTimeout(() => {
+      setActiveSmashExplosions((prev) => prev.filter((ex) => ex.id !== explosionId));
+    }, 850);
 
     setSmashItems((prev) =>
       prev.map((it) => (it.id === item.id ? { ...it, smashed: true } : it))
@@ -150,23 +229,12 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
     const newTotal = smashedTotal + 1;
     setSmashedTotal(newTotal);
     localStorage.setItem('freedom_smashed_count', String(newTotal));
-
-    // Kích hoạt hiệu ứng mảnh vỡ nổ tung
-    setActiveSmashEffect({
-      id: item.id,
-      name: item.name,
-      color: item.color,
-      time: Date.now(),
-    });
-    setTimeout(() => {
-      setActiveSmashEffect((curr) => (curr?.id === item.id ? null : curr));
-    }, 1200);
   };
 
   const handleResetSmash = () => {
     playClickSound();
     setSmashItems(INITIAL_SMASH_ITEMS);
-    setActiveSmashEffect(null);
+    setActiveSmashExplosions([]);
   };
 
   // =========================================================================
@@ -493,6 +561,75 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
               }}
             >
               <i className="fa-solid fa-radio"></i> Radio Đêm Muộn
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound();
+                onClose();
+                window.dispatchEvent(new CustomEvent('freedom_open_sticky_wall'));
+              }}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '8px',
+                background: 'rgba(234, 179, 8, 0.12)',
+                border: '1px solid rgba(234, 179, 8, 0.3)',
+                color: '#a16207',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <span>💌</span> Giấy Nhớ
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound();
+                onClose();
+                window.dispatchEvent(new CustomEvent('freedom_open_cozy_cafe'));
+              }}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '8px',
+                background: 'rgba(217, 119, 6, 0.12)',
+                border: '1px solid rgba(217, 119, 6, 0.3)',
+                color: '#c2410c',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <span>☕</span> Cà Phê Mưa
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound();
+                onClose();
+                window.dispatchEvent(new CustomEvent('freedom_open_sos_calm'));
+              }}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '8px',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                color: '#dc2626',
+                fontSize: '0.76rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <span>🆘</span> Cứu Trợ 5-4-3-2-1
             </button>
           </div>
 
@@ -1133,7 +1270,18 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
 
         {/* TAB 3: PHÒNG ĐẬP PHÁ ẢO (VIRTUAL RAGE ROOM / SMASH THERAPY) */}
         {activeTab === 'smash' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: '4px 2px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div
+            className={`virtual-rage-room-view ${isRageShaking ? 'is-rage-shaking' : ''}`}
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '4px 4px 28px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+            }}
+          >
+            {/* Header phòng đập phá */}
             <div
               style={{
                 background: 'linear-gradient(135deg, rgba(225, 29, 72, 0.08) 0%, rgba(244, 63, 94, 0.03) 100%)',
@@ -1144,27 +1292,154 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: '12px',
+                flexShrink: 0,
               }}
             >
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                  <span style={{ fontSize: '1.1rem' }}>💥</span>
-                  <strong style={{ fontSize: '0.92rem', color: '#be123c' }}>Phòng Đập Phá Ảo • Xả Cơn Uất Ức</strong>
+                  <span style={{ fontSize: '1.2rem' }}>💥</span>
+                  <strong style={{ fontSize: '0.94rem', color: '#be123c' }}>Phòng Đập Phá Ảo • Xả Cơn Uất Ức</strong>
                 </div>
                 <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
-                  Bấm hoặc chạm vào từng món đồ để đập vỡ tan tành cơn bực dọc!
+                  Bấm hoặc chạm vào từng món đồ để đập vỡ tan tành cơn bực dọc cùng nhạc nền bốc lửa!
                 </p>
               </div>
 
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Đã đập vỡ:</span>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#e11d48' }}>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#e11d48' }}>
                   {smashedTotal} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>món</span>
                 </div>
               </div>
             </div>
 
-            {/* Bàn gốm sứ với 6 món đồ áp lực */}
+            {/* Khung Nhạc Nền BGM: 東方神起 (TVXQ) - Love In The Ice (https://www.youtube.com/watch?v=rWxLrOOXXwY) */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)',
+                border: '1.5px solid rgba(165, 180, 252, 0.35)',
+                borderRadius: '16px',
+                padding: '10px 14px',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '10px',
+                boxShadow: '0 6px 20px rgba(49, 46, 129, 0.35)',
+                flexShrink: 0,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Vệt ánh sáng trang trí */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '-30%',
+                  right: '-10%',
+                  width: '120px',
+                  height: '120px',
+                  background: 'radial-gradient(circle, rgba(244, 63, 94, 0.4) 0%, transparent 70%)',
+                  pointerEvents: 'none',
+                }}
+              />
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, zIndex: 1 }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, #f43f5e 25%, #0f172a 30%, #334155 70%, #0f172a 100%)',
+                    border: '2px solid rgba(255, 255, 255, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1rem',
+                    animation: rageBgmPlaying ? 'rageVinylSpin 3s linear infinite' : 'none',
+                    flexShrink: 0,
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.4)',
+                  }}
+                  title="Nhạc đập phá xả stress"
+                >
+                  💿
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '0.64rem', background: '#e11d48', color: '#fff', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, whiteSpace: 'nowrap' }}>
+                      BGM XẢ UẤT ỨC
+                    </span>
+                    <strong style={{ fontSize: '0.84rem', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      東方神起 - Love In The Ice
+                    </strong>
+                  </div>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: '#c7d2fe', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {rageBgmPlaying ? '🔥 Đang phát nốt cao gào thét • Đập đồ cho đã tay!' : '⏸ Nhạc đang tắt • Bấm để bật nốt cao bùng nổ!'}
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, zIndex: 1 }}>
+                {/* Nút tua ngay đến nốt cao nổ tung (3:20) */}
+                <button
+                  type="button"
+                  onClick={handleSeekClimax}
+                  style={{
+                    background: 'linear-gradient(135deg, #f43f5e, #e11d48)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '999px',
+                    padding: '6px 11px',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(225, 29, 72, 0.4)',
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'transform 0.15s ease',
+                  }}
+                  title="Tua ngay tới nốt cao gào thét xé tan áp lực (3:20)!"
+                >
+                  <span>⚡ Nốt Cao (Climax)</span>
+                </button>
+
+                {/* Nút Bật / Tắt BGM */}
+                <button
+                  type="button"
+                  onClick={handleToggleRageMusic}
+                  style={{
+                    background: rageBgmPlaying ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.9)',
+                    color: rageBgmPlaying ? '#ffffff' : '#1e1b4b',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '999px',
+                    padding: '6px 12px',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span>{rageBgmPlaying ? '⏸ Tạm dừng' : '▶️ Bật nhạc'}</span>
+                </button>
+              </div>
+
+              {/* Iframe ẩn phát nhạc qua YouTube API chính thức */}
+              <iframe
+                ref={rageYtRef}
+                style={{ position: 'absolute', width: '1px', height: '1px', opacity: 0.001, pointerEvents: 'none' }}
+                src="https://www.youtube.com/embed/rWxLrOOXXwY?enablejsapi=1&autoplay=0&loop=1&playlist=rWxLrOOXXwY&playsinline=1"
+                title="Love In The Ice BGM"
+                allow="autoplay"
+              />
+            </div>
+
+            {/* Bàn gốm sứ với 6 món đồ áp lực (Có flexShrink: 0 chống co kéo chồng đè) */}
             <div
               style={{
                 display: 'grid',
@@ -1173,70 +1448,252 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
                 background: 'rgba(15, 23, 42, 0.03)',
                 padding: '16px',
                 borderRadius: '18px',
-                border: '1.5px dashed rgba(244, 63, 94, 0.25)',
+                border: '1.5px dashed rgba(244, 63, 94, 0.3)',
                 position: 'relative',
-                minHeight: '200px',
+                flexShrink: 0,
               }}
             >
-              {smashItems.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => handleSmashItem(item)}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '14px 8px',
-                    borderRadius: '14px',
-                    background: item.smashed ? 'rgba(0, 0, 0, 0.03)' : '#ffffff',
-                    border: item.smashed ? '1px dashed #cbd5e1' : `1.5px solid ${item.color}40`,
-                    boxShadow: item.smashed ? 'none' : '0 6px 16px rgba(0,0,0,0.06)',
-                    cursor: item.smashed ? 'default' : 'pointer',
-                    transform: item.smashed ? 'scale(0.92)' : 'scale(1)',
-                    opacity: item.smashed ? 0.45 : 1,
-                    transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                    userSelect: 'none',
-                    position: 'relative',
-                  }}
-                >
-                  <div style={{ fontSize: '2.5rem', marginBottom: '6px', filter: item.smashed ? 'grayscale(1)' : 'none' }}>
-                    {item.smashed ? '💥' : item.icon}
+              {smashItems.map((item) => {
+                const itemExplosion = activeSmashExplosions.find((ex) => ex.itemId === item.id);
+
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => handleSmashItem(item)}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '16px 8px 14px',
+                      borderRadius: '16px',
+                      background: item.smashed
+                        ? 'linear-gradient(145deg, rgba(241, 245, 249, 0.7) 0%, rgba(226, 232, 240, 0.5) 100%)'
+                        : '#ffffff',
+                      border: item.smashed ? '1.5px dashed #cbd5e1' : `2px solid ${item.color}50`,
+                      boxShadow: item.smashed
+                        ? 'inset 0 2px 6px rgba(0,0,0,0.06)'
+                        : '0 8px 20px rgba(0,0,0,0.07), 0 2px 6px rgba(0,0,0,0.04)',
+                      cursor: item.smashed ? 'default' : 'pointer',
+                      transform: item.smashed ? 'scale(0.94)' : 'scale(1)',
+                      transition: 'all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      userSelect: 'none',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      minHeight: '120px',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!item.smashed) {
+                        e.currentTarget.style.transform = 'translateY(-3px) scale(1.03)';
+                        e.currentTarget.style.boxShadow = `0 12px 26px ${item.color}33`;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!item.smashed) {
+                        e.currentTarget.style.transform = 'scale(1)';
+                        e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.07), 0 2px 6px rgba(0,0,0,0.04)';
+                      }
+                    }}
+                  >
+                    {/* Hiệu ứng vết nứt toác spider-web SVG khi đã đập vỡ */}
+                    {item.smashed && (
+                      <svg
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          width: '100%',
+                          height: '100%',
+                          pointerEvents: 'none',
+                          opacity: 0.75,
+                        }}
+                        viewBox="0 0 100 100"
+                      >
+                        <path
+                          d="M 50,50 L 15,10 M 50,50 L 85,15 M 50,50 L 90,75 M 50,50 L 25,85 M 50,50 L 5,50 M 50,50 L 70,95 M 32,28 L 68,32 L 72,68 L 26,62 Z"
+                          stroke="#ef4444"
+                          strokeWidth="1.5"
+                          strokeDasharray="2,2"
+                          fill="none"
+                        />
+                      </svg>
+                    )}
+
+                    {/* Biểu tượng món đồ hoặc mảnh nát */}
+                    <div
+                      style={{
+                        fontSize: '2.8rem',
+                        marginBottom: '6px',
+                        filter: item.smashed ? 'grayscale(0.7) blur(0.5px)' : 'drop-shadow(0 4px 6px rgba(0,0,0,0.12))',
+                        transform: item.smashed ? 'rotate(12deg) scale(0.9)' : 'none',
+                        transition: 'transform 0.2s ease',
+                      }}
+                    >
+                      {item.smashed ? '💥' : item.icon}
+                    </div>
+
+                    <strong
+                      style={{
+                        fontSize: '0.84rem',
+                        color: item.smashed ? '#94a3b8' : '#1e293b',
+                        textAlign: 'center',
+                        lineHeight: '1.25',
+                        fontWeight: 800,
+                        textDecoration: item.smashed ? 'line-through' : 'none',
+                      }}
+                    >
+                      {item.name}
+                    </strong>
+
+                    {/* Dấu ấn trạng thái: ĐÃ ĐẬP TAN TÀNH hoặc BẤM ĐẬP NGAY */}
+                    {item.smashed ? (
+                      <span
+                        style={{
+                          fontSize: '0.66rem',
+                          color: '#dc2626',
+                          background: 'rgba(254, 226, 226, 0.85)',
+                          border: '1.2px solid #f87171',
+                          padding: '2px 7px',
+                          borderRadius: '6px',
+                          fontWeight: 900,
+                          marginTop: '6px',
+                          letterSpacing: '0.4px',
+                          animation: 'rageStampSlam 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        💥 ĐÃ ĐẬP TAN TÀNH!
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: '0.7rem',
+                          color: item.color,
+                          fontWeight: 800,
+                          marginTop: '5px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                        }}
+                      >
+                        <span>🔨 BẤM ĐẬP NGAY</span>
+                      </span>
+                    )}
+
+                    {/* HIỆU ỨNG NỔ TUNG MẢNH VỠ 3D KHI VỪA CLICK (CHÙM SHARDS & SHOCKWAVE) */}
+                    {itemExplosion && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          pointerEvents: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 10,
+                        }}
+                      >
+                        {/* Vòng sóng xung kích lan tỏa cực mạnh */}
+                        <div
+                          style={{
+                            position: 'absolute',
+                            width: '90px',
+                            height: '90px',
+                            borderRadius: '50%',
+                            border: `4px solid ${item.color}`,
+                            boxShadow: `0 0 25px ${item.color}, inset 0 0 15px ${item.color}`,
+                            animation: 'rageShockwave 0.55s ease-out forwards',
+                          }}
+                        />
+
+                        {/* Chớp sáng flash */}
+                        <div
+                          style={{
+                            position: 'absolute',
+                            width: '70px',
+                            height: '70px',
+                            borderRadius: '50%',
+                            background: 'radial-gradient(circle, #ffffff 0%, rgba(254, 240, 138, 0.9) 50%, transparent 80%)',
+                            animation: 'rageFlashBurst 0.4s ease-out forwards',
+                          }}
+                        />
+
+                        {/* Các mảnh vỡ gốm sứ bay tứ tung theo vector lực */}
+                        {itemExplosion.shards.map((sh) => (
+                          <span
+                            key={sh.id}
+                            style={{
+                              position: 'absolute',
+                              fontSize: `${sh.size}px`,
+                              color: sh.color,
+                              filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.4))',
+                              animation: 'rageShardFly 0.75s cubic-bezier(0.12, 0.8, 0.32, 1) forwards',
+                              '--shard-x': `${sh.x}px`,
+                              '--shard-y': `${sh.y}px`,
+                              '--shard-rot': `${sh.rot}deg`,
+                            }}
+                          >
+                            {sh.shape}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <strong style={{ fontSize: '0.8rem', color: item.smashed ? '#94a3b8' : '#1e293b', textAlign: 'center', lineHeight: '1.2' }}>
-                    {item.name}
-                  </strong>
-                  <span style={{ fontSize: '0.68rem', color: item.smashed ? '#cbd5e1' : item.color, fontWeight: 700, marginTop: '3px' }}>
-                    {item.smashed ? 'ĐÃ ĐẬP VỠ' : 'BẤM ĐẬP 🔨'}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* Thông điệp chữa lành & Nút dọn đĩa mới */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-              <span style={{ fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic' }}>
-                🌿 Vỡ tan hết muộn phiền rồi, hít một hơi thật sâu nhé!
-              </span>
+            {/* Thông điệp chữa lành & Nút dọn đĩa mới (Có flexShrink: 0, khoảng cách rộng rãi, 0% bị đè) */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                marginTop: '10px',
+                padding: '12px 16px',
+                background: '#f8fafc',
+                borderRadius: '14px',
+                border: '1px solid #e2e8f0',
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                <span style={{ fontSize: '1.25rem', flexShrink: 0 }}>🌿</span>
+                <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
+                  Vỡ tan hết muộn phiền rồi, hít một hơi thật sâu để nạp lại bình yên nhé!
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={handleResetSmash}
                 style={{
-                  padding: '7px 14px',
-                  borderRadius: '10px',
-                  background: '#f1f5f9',
-                  border: '1px solid #cbd5e1',
-                  color: '#334155',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
+                  padding: '9px 18px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                  border: '1px solid #334155',
+                  color: '#ffffff',
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
+                  gap: '7px',
                   flexShrink: 0,
+                  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.25)',
+                  whiteSpace: 'nowrap',
+                  transition: 'transform 0.15s ease, background 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #1e293b 0%, #334155 100%)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)';
                 }}
               >
-                <span>🧹 Dọn Đĩa Mới</span>
+                <span>🧹</span>
+                <span>Dọn Bàn Gốm Mới</span>
               </button>
             </div>
           </div>

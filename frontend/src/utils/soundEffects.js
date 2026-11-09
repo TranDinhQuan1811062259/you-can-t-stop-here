@@ -1573,7 +1573,8 @@ export const playPageTransitionAtmosphereSound = ({ seasonId = 'winter', eventId
 };
 
 /**
- * Phát âm thanh gốm sứ/đĩa vỡ cực kỳ chân thực và giải tỏa khi đập phá trong Phòng Đập Phá Ảo
+ * Phát âm thanh gốm sứ/đĩa vỡ CỰC KỲ UY LỰC, CHÂN THỰC & ĐÃ TAI khi đập phá trong Phòng Đập Phá Ảo
+ * (Bao gồm: Sóng chấn động đấm đanh Sub-kick + Tiếng sành nổ xé toạc + Mảnh vỡ lanh canh rơi rụng)
  */
 export const playCeramicShatterSound = () => {
   if (!isSoundEnabled()) return;
@@ -1583,53 +1584,86 @@ export const playCeramicShatterSound = () => {
   try {
     const now = ctx.currentTime;
 
-    // 1. Tiếng va chạm đanh (Transient crack)
-    const osc = ctx.createOscillator();
-    const oscGain = ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(1400, now);
-    osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
-    oscGain.gain.setValueAtTime(0.5, now);
-    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-    osc.connect(oscGain);
-    oscGain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.08);
+    // 1. Sóng chấn động Sub-kick trầm cực mạnh (Physical Impact Thump)
+    // Tạo cảm giác rung lồng ngực như thực sự có cú đập búa tạ vào đĩa
+    const subOsc = ctx.createOscillator();
+    const subGain = ctx.createGain();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(110, now);
+    subOsc.frequency.exponentialRampToValueAtTime(28, now + 0.16);
 
-    // 2. Tiếng mảnh vỡ gốm sứ lanh canh (High-pass Noise Burst)
-    const noise = createNoiseBuffer(ctx, 0.4);
+    subGain.gain.setValueAtTime(0.85, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+    subOsc.connect(subGain);
+    subGain.connect(ctx.destination);
+    subOsc.start(now);
+    subOsc.stop(now + 0.19);
+
+    // 2. Cú nứt toác đanh thép ban đầu (Sharp Heavy Fracture Transient)
+    const crackOsc = ctx.createOscillator();
+    const crackFilter = ctx.createBiquadFilter();
+    const crackGain = ctx.createGain();
+
+    crackOsc.type = 'sawtooth';
+    crackOsc.frequency.setValueAtTime(2200, now);
+    crackOsc.frequency.exponentialRampToValueAtTime(160, now + 0.09);
+
+    crackFilter.type = 'bandpass';
+    crackFilter.frequency.setValueAtTime(1800, now);
+    crackFilter.Q.setValueAtTime(4.5, now);
+
+    crackGain.gain.setValueAtTime(0.75, now);
+    crackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+    crackOsc.connect(crackFilter);
+    crackFilter.connect(crackGain);
+    crackGain.connect(ctx.destination);
+    crackOsc.start(now);
+    crackOsc.stop(now + 0.11);
+
+    // 3. Tiếng nổ tung mảnh vỡ gốm sứ xé toạc (High-pass Ceramic Explosion Noise Burst)
+    const noise = createNoiseBuffer(ctx, 0.45);
     const noiseSource = ctx.createBufferSource();
     noiseSource.buffer = noise;
 
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'highpass';
-    filter.frequency.setValueAtTime(2500, now);
-    filter.frequency.linearRampToValueAtTime(1200, now + 0.35);
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'highpass';
+    noiseFilter.frequency.setValueAtTime(3200, now);
+    noiseFilter.frequency.linearRampToValueAtTime(1400, now + 0.42);
 
     const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.7, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+    noiseGain.gain.setValueAtTime(0.9, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
 
-    noiseSource.connect(filter);
-    filter.connect(noiseGain);
+    noiseSource.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
     noiseGain.connect(ctx.destination);
     noiseSource.start(now);
-    noiseSource.stop(now + 0.38);
+    noiseSource.stop(now + 0.46);
 
-    // 3. Tiếng mảnh sành dội nhẹ (Clatter)
-    for (let i = 0; i < 3; i++) {
+    // 4. Mưa mảnh sành rơi rụng lanh canh trên sàn đá (Cascading Ceramic Debris Clatter)
+    const clatterTimes = [0.035, 0.075, 0.12, 0.175, 0.24, 0.31];
+    const clatterFreqs = [3400, 2800, 4100, 2300, 3600, 1950];
+
+    clatterTimes.forEach((delay, idx) => {
+      const pingTime = now + delay;
       const pingOsc = ctx.createOscillator();
       const pingGain = ctx.createGain();
-      const pingTime = now + 0.04 + i * 0.06;
-      pingOsc.type = 'sine';
-      pingOsc.frequency.setValueAtTime(2200 + Math.random() * 800, pingTime);
-      pingGain.gain.setValueAtTime(0.2 / (i + 1), pingTime);
-      pingGain.gain.exponentialRampToValueAtTime(0.001, pingTime + 0.05);
+
+      pingOsc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+      pingOsc.frequency.setValueAtTime(clatterFreqs[idx], pingTime);
+      pingOsc.frequency.exponentialRampToValueAtTime(clatterFreqs[idx] * 0.75, pingTime + 0.06);
+
+      const vol = (0.35 / (idx * 0.6 + 1));
+      pingGain.gain.setValueAtTime(vol, pingTime);
+      pingGain.gain.exponentialRampToValueAtTime(0.001, pingTime + 0.065);
+
       pingOsc.connect(pingGain);
       pingGain.connect(ctx.destination);
       pingOsc.start(pingTime);
-      pingOsc.stop(pingTime + 0.05);
-    }
+      pingOsc.stop(pingTime + 0.07);
+    });
   } catch (_) {}
 };
 
@@ -1659,6 +1693,411 @@ export const playBubblePopSound = (pitchMultiplier = 1.0) => {
     osc.start(now);
     osc.stop(now + 0.06);
   } catch (_) {}
+};
+
+/**
+ * Tiếng mèo kêu "Meo meo~" ngọt ngào, đáng yêu (Feline Meow Synthesis)
+ * Sử dụng Formant sweep + LFO vibrato mô phỏng tiếng mở miệng kêu "me-oo-w" chân thực
+ */
+export const playCatMeowSound = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const lfo = ctx.createOscillator();
+    const lfoGain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+
+    // Triangle mang lại nhiều hài âm mượt mà hơn sine thuần túy
+    osc.type = 'triangle';
+
+    // Đường cong tần số tiếng mèo: Bắt đầu ngậm miệng (360Hz) -> Mở to "Eee-Aa" (820Hz) -> Khép mỏ "Oww" (450Hz)
+    osc.frequency.setValueAtTime(360, now);
+    osc.frequency.exponentialRampToValueAtTime(840, now + 0.18);
+    osc.frequency.exponentialRampToValueAtTime(460, now + 0.52);
+
+    // LFO rung vibrato 5.5Hz tự nhiên của thanh quản mèo
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(5.5, now);
+    lfoGain.gain.setValueAtTime(18, now);
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc.frequency);
+
+    // Filter cộng hưởng mô phỏng vòm họng mèo mở rồi khép
+    filter.type = 'lowpass';
+    filter.Q.setValueAtTime(3.0, now);
+    filter.frequency.setValueAtTime(650, now);
+    filter.frequency.exponentialRampToValueAtTime(2200, now + 0.18);
+    filter.frequency.exponentialRampToValueAtTime(700, now + 0.52);
+
+    // Âm lượng phong bì ADSR
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.42, now + 0.12);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.54);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    lfo.start(now);
+    osc.start(now);
+    lfo.stop(now + 0.55);
+    osc.stop(now + 0.55);
+  } catch (_) {}
+};
+
+/**
+ * Tiếng mèo rung rừ rừ (Cat Purring - 25Hz - 45Hz healing frequencies)
+ */
+export const playCatPurrSound = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const lfo = ctx.createOscillator();
+    const lfoGain = ctx.createGain();
+    const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(48, now);
+
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(26, now); // 26Hz purr flutter
+    lfoGain.gain.setValueAtTime(22, now);
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc.frequency);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.35, now + 0.2);
+    gain.gain.linearRampToValueAtTime(0.001, now + 0.85);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    lfo.start(now);
+    osc.start(now);
+    lfo.stop(now + 0.85);
+    osc.stop(now + 0.85);
+  } catch (_) {}
+};
+
+/**
+ * Tiếng cún Shiba sủa "Gâu! Gâu!" mừng rỡ và rộn rã (Canine Dual-Bark Synthesis)
+ * Sử dụng Formant filter + Pitch drop + Noise crackle mô phỏng tiếng sủa vang của cún cưng
+ */
+export const playDogBarkSound = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+    // Hai tiếng sủa dứt khoát vui tươi "Gâu... Gâu!"
+    [0, 0.16].forEach((delay, barkIdx) => {
+      const t = now + delay;
+      const osc = ctx.createOscillator();
+      const filter = ctx.createBiquadFilter();
+      const gain = ctx.createGain();
+
+      // Sawtooth pha trộn âm hưởng lồng ngực
+      osc.type = 'sawtooth';
+      const baseFreq = barkIdx === 0 ? 460 : 510;
+      osc.frequency.setValueAtTime(baseFreq, t);
+      osc.frequency.exponentialRampToValueAtTime(190, t + 0.12);
+
+      // Filter vòm miệng cún
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(680, t);
+      filter.Q.setValueAtTime(2.6, t);
+
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.linearRampToValueAtTime(0.42, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(t);
+      osc.stop(t + 0.14);
+    });
+  } catch (_) {}
+};
+
+/**
+ * Tiếng nhai măm măm / gặm giòn rụm (Nom Nom & Crunch sound cho bé thú cưng)
+ */
+export const playPetEatingSound = (isDog = false) => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+    // 3 lần nhai nhóp nhép
+    [0, 0.15, 0.3].forEach((delay, idx) => {
+      const t = now + delay;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      if (isDog) {
+        // Cún gặm xương rộp rộp (crunchy bone bite)
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(280 + idx * 40, t);
+        osc.frequency.exponentialRampToValueAtTime(120, t + 0.08);
+
+        gain.gain.setValueAtTime(0.001, t);
+        gain.gain.linearRampToValueAtTime(0.3, t + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+      } else {
+        // Mèo ăn cá nhóp nhép (nom nom squelch)
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520 - idx * 30, t);
+        osc.frequency.exponentialRampToValueAtTime(260, t + 0.09);
+
+        gain.gain.setValueAtTime(0.001, t);
+        gain.gain.linearRampToValueAtTime(0.24, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+      }
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.11);
+    });
+  } catch (_) {}
+};
+
+/**
+ * Tiếng chuông ngôi sao pha lê (Star Chime cho Chiếc Lọ Biết Ơn)
+ */
+export const playStarChimeSound = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+    const freqs = [880, 1318.5, 1760, 2637];
+    freqs.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+
+      gain.gain.setValueAtTime(0.001, now + idx * 0.05);
+      gain.gain.linearRampToValueAtTime(0.18 / (idx + 1), now + idx * 0.05 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.05 + 0.8);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + idx * 0.05);
+      osc.stop(now + idx * 0.05 + 0.8);
+    });
+  } catch (_) {}
+};
+
+/**
+ * Tiếng giọt nước nhỏ tong tong (Water Drop Sound cho Cây Hồi Sinh & Chữa Lành)
+ */
+export const playWaterDropSound = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    // Hiệu ứng giọt nước "tõm": 900Hz nhảy vọt lên 1800Hz rồi rơi xuống
+    osc.frequency.setValueAtTime(900, now);
+    osc.frequency.exponentialRampToValueAtTime(1850, now + 0.06);
+    osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.32, now + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.19);
+  } catch (_) {}
+};
+
+/**
+ * Tiếng chuông chánh niệm kết thúc phiên Pomodoro (Zen Bell Chime)
+ */
+export const playMeditationBellSound = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+    const duration = 4.0;
+    // Chuông đồng thau 528Hz (tần số tái tạo tế bào & bình an) + bồi âm 1056Hz
+    [528, 1056, 1584].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+
+      const vol = idx === 0 ? 0.35 : idx === 1 ? 0.15 : 0.06;
+      gain.gain.setValueAtTime(vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + duration);
+    });
+  } catch (_) {}
+};
+
+/**
+ * Bộ phát tiếng mưa rơi rả rích (Synthesized Ambient Rain Sound Node)
+ */
+export const createRainAmbientNode = (volume = 0.5) => {
+  const ctx = getAudioContext();
+  if (!ctx) return null;
+
+  try {
+    const duration = 5.0; // 5s loopable noise
+    const buffer = createNoiseBuffer(ctx, duration);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+
+    // Filter mưa rơi qua cửa kính (Lowpass + Bandpass)
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1200, ctx.currentTime);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(volume * 0.3, ctx.currentTime);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    source.start(0);
+
+    return {
+      setVolume: (v) => {
+        try {
+          gain.gain.linearRampToValueAtTime(v * 0.3, ctx.currentTime + 0.1);
+        } catch (_) {}
+      },
+      stop: () => {
+        try {
+          source.stop();
+          source.disconnect();
+        } catch (_) {}
+      },
+    };
+  } catch (_) {
+    return null;
+  }
+};
+
+/**
+ * Bộ phát tiếng lò sưởi lách tách (Cozy Fireplace Crackle Node)
+ */
+export const createFireplaceAmbientNode = (volume = 0.5) => {
+  const ctx = getAudioContext();
+  if (!ctx) return null;
+
+  try {
+    const duration = 4.0;
+    const buffer = createNoiseBuffer(ctx, duration);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(800, ctx.currentTime);
+    filter.Q.setValueAtTime(2.5, ctx.currentTime);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(volume * 0.22, ctx.currentTime);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    source.start(0);
+
+    return {
+      setVolume: (v) => {
+        try {
+          gain.gain.linearRampToValueAtTime(v * 0.22, ctx.currentTime + 0.1);
+        } catch (_) {}
+      },
+      stop: () => {
+        try {
+          source.stop();
+          source.disconnect();
+        } catch (_) {}
+      },
+    };
+  } catch (_) {
+    return null;
+  }
+};
+
+/**
+ * Bộ phát tiếng quán cà phê ấm cúng (Cafe Ambience Murmur Node)
+ */
+export const createCafeAmbientNode = (volume = 0.5) => {
+  const ctx = getAudioContext();
+  if (!ctx) return null;
+
+  try {
+    const duration = 4.0;
+    const buffer = createNoiseBuffer(ctx, duration);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(450, ctx.currentTime);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(volume * 0.2, ctx.currentTime);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    source.start(0);
+
+    return {
+      setVolume: (v) => {
+        try {
+          gain.gain.linearRampToValueAtTime(v * 0.2, ctx.currentTime + 0.1);
+        } catch (_) {}
+      },
+      stop: () => {
+        try {
+          source.stop();
+          source.disconnect();
+        } catch (_) {}
+      },
+    };
+  } catch (_) {
+    return null;
+  }
 };
 
 /**

@@ -193,7 +193,7 @@ const seedDatabase = async () => {
           <blockquote>"Nếu bạn đang cảm thấy mệt mỏi đến muốn bỏ cuộc ngay lúc này, hãy nhớ rằng cho phép bản thân nghỉ ngơi không phải là thất bại."</blockquote>
           <p>Viết những dòng này không phải để than vãn, mà để nhắc chính mình và những ai đang cùng cảnh ngộ: Bạn quan trọng hơn bất kỳ bản release nào. Đêm nay, tôi sẽ tắt máy tính và đi ngủ sớm một chút.</p>
         `,
-        coverImage: '/images/sun.jpg',
+        coverImage: '/images/office-night.jpg',
         category: catMap['Áp lực & Kiệt sức (Burnout)'],
         user: userMap['anthonyq012025@gmail.com']._id,
         author: 'Trần Đình Quân',
@@ -242,7 +242,7 @@ const seedDatabase = async () => {
           <p>Nhưng một người đàn anh đã nói với tôi một câu thay đổi suy nghĩ: <em>"Em không cần phải biết tất cả mọi thứ để trở nên có giá trị. Giá trị của em nằm ở việc em chịu học hỏi và không bỏ cuộc."</em></p>
           <p>Nếu bạn cũng đang nghi ngờ năng lực của mình, hãy thở một hơi thật sâu. Bạn đứng được ở vị trí hiện tại là nhờ những nỗ lực có thật của bạn, không phải sự ngẫu nhiên.</p>
         `,
-        coverImage: '/images/statue.jpg',
+        coverImage: '/images/impostor-calm.jpg',
         category: catMap['Khủng hoảng nghề nghiệp (Career Crisis)'],
         user: userMap['nam.pm@cantstophere.com']._id,
         author: userMap['nam.pm@cantstophere.com'].name,
@@ -279,7 +279,7 @@ const seedDatabase = async () => {
           <p>Nhưng thông điệp của trang web này chính là điều đã giữ tôi ở lại: <strong>You Can't Stop Here</strong>. Bạn không thể dừng lại khi mới chỉ bước được nửa chặng đường khó khăn nhất.</p>
           <p>Hôm nay, tròn 1 năm tôi chính thức nhận offer làm Junior Dev. Mức lương chưa bằng ngày xưa, nhưng ánh mắt tôi đã có lại ngọn lửa đam mê.</p>
         `,
-        coverImage: '/images/crop.jpg',
+        coverImage: '/images/restart-coding.jpg',
         category: catMap['Chuyển ngành & Bắt đầu lại (Restart)'],
         user: userMap['duchuy@cantstophere.com']._id,
         author: userMap['duchuy@cantstophere.com'].name,
@@ -311,7 +311,7 @@ const seedDatabase = async () => {
           <p>Trời không sập xuống. Công ty không phá sản. Sếp chỉ phản hồi: <em>"Ok em."</em></p>
           <p>Đôi khi, chiến thắng lớn nhất của một ngày đi làm không phải là hoàn thành thêm một task, mà là bảo vệ được sự bình yên của tâm trí mình.</p>
         `,
-        coverImage: '/images/eagle.jpg',
+        coverImage: '/images/peaceful-boundary.jpg',
         category: catMap['Những tia sáng & Động lực (Small Wins)'],
         user: userMap['huongly@cantstophere.com']._id,
         author: userMap['huongly@cantstophere.com'].name,

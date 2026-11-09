@@ -219,6 +219,8 @@ export const FloatingFestiveMascot = ({ onOpenShowcase }) => {
         position: 'fixed',
         left: `${btnPos.x}px`,
         top: `${btnPos.y}px`,
+        width: '108px',
+        boxSizing: 'border-box',
         right: 'auto',
         bottom: 'auto',
         zIndex: isDragging ? 9999 : 9986,

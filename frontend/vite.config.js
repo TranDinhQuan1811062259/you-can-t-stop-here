@@ -6,22 +6,22 @@ import fs from 'fs';
 // Tự động phân giải đường dẫn thực (realpath) để tương thích 100% với Windows NTFS Junction / Symlink
 const projectRoot = fs.existsSync(__dirname) ? fs.realpathSync(__dirname) : __dirname;
 
+// Đảm bảo cwd luôn khớp 100% với projectRoot để esbuild không bị lệch đường dẫn tương đối giữa Downloads và Desktop
+if (fs.existsSync(projectRoot) && process.cwd() !== projectRoot) {
+  try {
+    process.chdir(projectRoot);
+  } catch (_) {}
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   root: projectRoot,
   plugins: [react()],
   resolve: {
-    dedupe: ['react', 'react-dom', 'react-router-dom', 'three'],
+    dedupe: ['react', 'react-dom'],
     alias: {
       '@': path.resolve(projectRoot, './src'),
-      'react': path.resolve(projectRoot, 'node_modules/react'),
-      'react-dom': path.resolve(projectRoot, 'node_modules/react-dom'),
-      'react-router-dom': path.resolve(projectRoot, 'node_modules/react-router-dom'),
-      'three': path.resolve(projectRoot, 'node_modules/three'),
     },
-  },
-  optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom', 'three'],
   },
   server: {
     port: 3000,

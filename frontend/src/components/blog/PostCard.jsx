@@ -132,10 +132,16 @@ export const PostCard = ({ post }) => {
       <div className="card-img-wrap">
         <Link to={`/post/${post.slug}`} className="card-img-link" title={post.title}>
           <img
-            src={post.coverImage || '/images/sun.jpg'}
+            src={post.coverImage || '/images/office-night.jpg'}
             alt={post.title}
             className="card-img"
             loading="lazy"
+            onError={(e) => {
+              if (!e.target.dataset.triedFallback) {
+                e.target.dataset.triedFallback = '1';
+                e.target.src = '/images/office-night.jpg';
+              }
+            }}
           />
         </Link>
 
@@ -243,9 +249,9 @@ export const PostCard = ({ post }) => {
         </Link>
 
         {post.summary && (
-          <IdleWeatherText as="p" className="card-summary">
+          <p className="card-summary">
             {post.summary}
-          </IdleWeatherText>
+          </p>
         )}
 
         <div className="card-footer">

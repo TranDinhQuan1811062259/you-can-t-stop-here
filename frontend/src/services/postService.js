@@ -1,6 +1,6 @@
 import apiClient from './apiClient';
 
-const POSTS_CACHE_KEY = 'freedom_cached_posts_v2';
+const POSTS_CACHE_KEY = 'freedom_cached_posts_v3';
 const LOCAL_POSTS_KEY = 'freedom_offline_created_posts_v2';
 
 export const removeVietnameseTones = (str) => {

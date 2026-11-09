@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import routes from './routes/index.js';
 import { notFoundHandler, globalErrorHandler } from './middlewares/errorHandler.js';
@@ -9,6 +10,7 @@ import { notFoundHandler, globalErrorHandler } from './middlewares/errorHandler.
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const uploadsDir = path.join(__dirname, '../uploads');
+const imagesDir = path.join(__dirname, '../../frontend/public/images');
 
 const app = express();
 
@@ -38,8 +40,11 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
-// Phục vụ thư mục static cho các file ảnh tải lên cục bộ
+// Phục vụ thư mục static cho các file ảnh tải lên cục bộ và thư viện ảnh
 app.use('/uploads', express.static(uploadsDir));
+if (fs.existsSync(imagesDir)) {
+  app.use('/images', express.static(imagesDir));
+}
 
 // Mount API routes
 app.use('/api', routes);

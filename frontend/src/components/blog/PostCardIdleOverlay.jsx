@@ -41,14 +41,13 @@ export const PostCardIdleOverlay = () => {
       aria-hidden="true"
     >
       {/* =====================================================================
-          1. MÙA ĐÔNG: Dải nắp tuyết phủ trên nóc khung thẻ + góc băng tuyết
+          1. MÙA ĐÔNG: Dải tuyết trắng xốp tinh tế trên gờ nóc thẻ + hoa tuyết góc
          ===================================================================== */}
       {isWinter && (
         <>
           <div className={`card-snow-cap-ridge snow-cap-level-${effectiveLevel}`} />
           <div className="card-frost-corner top-left">❄️</div>
           <div className="card-frost-corner top-right">❅</div>
-          {(effectiveLevel >= 2 || isRecovering) && <div className="card-frost-icicles-fringe" />}
         </>
       )}
 
@@ -78,13 +77,11 @@ export const PostCardIdleOverlay = () => {
       )}
 
       {/* =====================================================================
-          4. MÙA HẠ: Sóng nhiệt gợn sóng & giọt tan chảy rủ xuống góc thẻ bài viết
+          4. MÙA HẠ: Sóng nhiệt gợn nhẹ ấm áp quanh viền thẻ
          ===================================================================== */}
       {isSummer && (
         <div className="card-summer-heat-wrap">
           <div className="card-summer-heat-haze" />
-          <span className="card-summer-drip drip-left" />
-          <span className="card-summer-drip drip-right" />
         </div>
       )}
     </div>

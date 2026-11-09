@@ -326,13 +326,19 @@ export const PwaInstallPrompt = () => {
                 ? '0 16px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(13, 148, 136, 0.65)'
                 : '0 8px 24px rgba(0, 0, 0, 0.45), 0 0 16px rgba(13, 148, 136, 0.35)',
               borderRadius: '999px',
-              padding: '6px 12px 6px 10px',
+              padding: '6px 14px',
+              width: 'max-content',
+              minWidth: '172px',
+              height: '42px',
+              boxSizing: 'border-box',
               display: 'flex',
               alignItems: 'center',
-              gap: '7px',
+              justifyContent: 'center',
+              gap: '8px',
               color: '#ffffff',
               fontWeight: 800,
               fontSize: '0.8rem',
+              whiteSpace: 'nowrap',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
               userSelect: 'none',
@@ -344,24 +350,26 @@ export const PwaInstallPrompt = () => {
             }}
             title="📲 Cài Đặt Freedom App (Bấm để mở rộng, hoặc giữ & kéo để di dời)"
           >
-            <span style={{ fontSize: '0.75rem', opacity: 0.6, cursor: 'grab', pointerEvents: 'none' }}>⠿</span>
+            <span style={{ fontSize: '0.75rem', opacity: 0.6, cursor: 'grab', pointerEvents: 'none', userSelect: 'none', flexShrink: 0 }}>⠿</span>
             <img
               src="/icons/icon-192.png"
               alt="App"
               draggable={false}
               onDragStart={(e) => e.preventDefault()}
-              style={{ width: '22px', height: '22px', borderRadius: '6px', boxShadow: '0 2px 6px rgba(0,0,0,0.3)', pointerEvents: 'none', WebkitUserDrag: 'none' }}
+              style={{ width: '22px', height: '22px', borderRadius: '6px', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.3)', pointerEvents: 'none', WebkitUserDrag: 'none' }}
             />
-            <span style={{ letterSpacing: '0.2px', pointerEvents: 'none' }}>Cài App</span>
+            <span style={{ letterSpacing: '0.2px', whiteSpace: 'nowrap', pointerEvents: 'none', flexShrink: 0, fontSize: '0.82rem' }}>Cài App</span>
             <span
               style={{
-                fontSize: '0.6rem',
+                fontSize: '0.62rem',
                 background: 'linear-gradient(135deg, #f59e0b, #d97706)',
                 color: '#ffffff',
-                padding: '1px 5px',
+                padding: '2px 6px',
                 borderRadius: '6px',
                 fontWeight: 800,
+                whiteSpace: 'nowrap',
                 pointerEvents: 'none',
+                flexShrink: 0,
               }}
             >
               FREE
@@ -377,9 +385,10 @@ export const PwaInstallPrompt = () => {
                 border: 'none',
                 color: '#94a3b8',
                 cursor: 'pointer',
-                padding: '0 2px',
+                padding: '0 4px',
                 fontSize: '0.75rem',
                 lineHeight: 1,
+                flexShrink: 0,
               }}
               title="Đóng hoàn toàn"
             >

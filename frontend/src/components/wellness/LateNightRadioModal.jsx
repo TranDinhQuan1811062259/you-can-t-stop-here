@@ -12,7 +12,7 @@ import {
 // =============================================================================
 // DANH SÁCH 8 BÀI NHẠC CHỮA LÀNH ĐA DẠNG CỦA TRẠM RADIO ĐÊM MUỘN
 // =============================================================================
-export const RADIO_TRACKS = [
+const RADIO_TRACKS = [
   {
     id: 'track_1',
     title: 'Giai Điệu Đêm Mưa Hà Nội',
@@ -780,7 +780,8 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
   // Tính năng Voice đọc lời nhắn chuẩn tiếng Việt (Dual-Engine TTS)
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(() => {
     try {
-      return localStorage.getItem('freedom_radio_voice_enabled') === 'true';
+      const val = localStorage.getItem('freedom_radio_voice_enabled');
+      return val === null ? true : val === 'true';
     } catch (e) {
       return true;
     }
@@ -806,6 +807,13 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
 
   const ttsAudioRef = useRef(null);
   const activeUtteranceRef = useRef(null);
+  const voiceGenderRef = useRef(voiceGender);
+  voiceGenderRef.current = voiceGender;
+  const voiceRegionRef = useRef(voiceRegion);
+  voiceRegionRef.current = voiceRegion;
+  const speechSessionIdRef = useRef(0);
+  const speakTimerRef = useRef(null);
+  const autoRotateIntervalRef = useRef(null);
   const [availableVoices, setAvailableVoices] = useState([]);
 
   // Tải danh sách giọng đọc tiếng Việt của trình duyệt (hỗ trợ Chrome/Edge/Windows/Android/iOS)
@@ -863,9 +871,34 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
   const [listenerCount, setListenerCount] = useState(getListenersCount());
 
   // =========================================================================
-  // DỪNG GIỌNG ĐỌC VÀ KHÔI PHỤC ÂM LƯỢNG NHẠC
+  // DỪNG GIỌNG ĐỌC VÀ KHÔI PHỤC ÂM LƯỢNG NHẠC (CHỐNG HOÀN TOÀN ĐÈ 2-3 GIỌNG)
   // =========================================================================
   const stopSpeaking = () => {
+    // 1. Huỷ ngay lập tức bất kỳ bộ hẹn giờ nào đang chờ đọc
+    if (speakTimerRef.current) {
+      clearTimeout(speakTimerRef.current);
+      speakTimerRef.current = null;
+    }
+
+    // 2. Tăng Session ID để mọi Audio đang tải/đang chờ phát từ trước bị vô hiệu hóa ngay
+    speechSessionIdRef.current += 1;
+
+    // 3. Huỷ triệt để Audio HTML5 đang phát
+    if (ttsAudioRef.current) {
+      const a = ttsAudioRef.current;
+      ttsAudioRef.current = null;
+      try {
+        a.onended = null;
+        a.onerror = null;
+        a.oncanplaythrough = null;
+        a.pause();
+        a.currentTime = 0;
+        a.removeAttribute('src');
+        a.load();
+      } catch (_) {}
+    }
+
+    // 4. Huỷ Web Speech API nếu có
     if (activeUtteranceRef.current) {
       try {
         activeUtteranceRef.current.onend = null;
@@ -878,14 +911,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
         window.speechSynthesis.cancel();
       } catch (_) {}
     }
-    if (ttsAudioRef.current) {
-      try {
-        ttsAudioRef.current.pause();
-        ttsAudioRef.current.removeAttribute('src');
-        ttsAudioRef.current.load();
-      } catch (_) {}
-      ttsAudioRef.current = null;
-    }
+
     setIsSpeaking(false);
     if (masterGainNode && radioAudioCtx) {
       try {
@@ -896,30 +922,46 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
 
   const handleToggleVoiceGender = (newGender) => {
     playClickSound();
+    voiceGenderRef.current = newGender;
     setVoiceGender(newGender);
     try {
       localStorage.setItem('freedom_radio_voice_gender', newGender);
     } catch (_) {}
     stopSpeaking();
+    if (isVoiceEnabled) {
+      speakTimerRef.current = setTimeout(() => {
+        speakCurrentThought(null, newGender, voiceRegionRef.current);
+      }, 50);
+    }
   };
 
   const handleToggleVoiceRegion = (newRegion) => {
     playClickSound();
+    voiceRegionRef.current = newRegion;
     setVoiceRegion(newRegion);
     try {
       localStorage.setItem('freedom_radio_voice_region', newRegion);
     } catch (_) {}
     stopSpeaking();
+    if (isVoiceEnabled) {
+      speakTimerRef.current = setTimeout(() => {
+        speakCurrentThought(null, voiceGenderRef.current, newRegion);
+      }, 50);
+    }
   };
 
   // =========================================================================
   // VOICE ĐỌC LỜI NHẮN ĐỘNG VIÊN CHUẨN TIẾNG VIỆT 100% (TTS WITH AUDIO DUCKING)
   // =========================================================================
-  const speakCurrentThought = (textToRead) => {
+  const speakCurrentThought = (textToRead, explicitGender = null, explicitRegion = null) => {
     stopSpeaking();
 
+    const currentSessionId = speechSessionIdRef.current;
+    const targetGender = explicitGender || voiceGenderRef.current || 'female';
+    const targetRegion = explicitRegion || voiceRegionRef.current || 'north';
+
     const rawText = textToRead || thoughts[activeThoughtIndex] || DEFAULT_THOUGHTS[0];
-    const cleanText = rawText.replace(/^[✨🌙☕🌿🌧️💡🍂🕯️🌊🌌\s]+/, '').trim();
+    const cleanText = rawText.replace(/^[✨🌙☕🌿🌧️💡🍂🕯️🌊🌌❤️🩹\s]+/, '').replace(/[✨🌙☕🌿🌧️💡🍂🕯️🌊🌌❤️🩹]+$/g, '').trim();
     if (!cleanText) return;
 
     // Audio Ducking: Khi phát thanh viên đọc, hạ nhẹ âm lượng nhạc xuống 30%
@@ -931,6 +973,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     setIsSpeaking(true);
 
     const onSpeechFinished = () => {
+      if (speechSessionIdRef.current !== currentSessionId) return;
       setIsSpeaking(false);
       if (masterGainNode && radioAudioCtx) {
         try {
@@ -939,64 +982,40 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
       }
     };
 
-    const playOnlineTtsFallback = (text) => {
-      try {
-        const encoded = encodeURIComponent(text.slice(0, 300));
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encoded}`;
-        const audio = new Audio(url);
-        audio.volume = 1.0;
-        ttsAudioRef.current = audio;
-        audio.onended = () => {
-          ttsAudioRef.current = null;
-          onSpeechFinished();
-        };
-        audio.onerror = () => {
-          ttsAudioRef.current = null;
-          onSpeechFinished();
-        };
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            ttsAudioRef.current = null;
-            onSpeechFinished();
+    const playBrowserSpeechFallback = (text) => {
+      if (speechSessionIdRef.current !== currentSessionId) return;
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = 'vi-VN';
+          activeUtteranceRef.current = utterance;
+
+          const allVoices = (window.speechSynthesis.getVoices && window.speechSynthesis.getVoices().length > 0)
+            ? window.speechSynthesis.getVoices()
+            : availableVoices;
+
+          const viVoices = allVoices.filter((v) => {
+            const lang = (v.lang || '').toLowerCase().replace('_', '-');
+            const name = (v.name || '').toLowerCase();
+            return (
+              lang.startsWith('vi') ||
+              name.includes('vietnam') ||
+              name.includes('tiếng việt') ||
+              name.includes('hoaimy') ||
+              name.includes('namminh')
+            );
           });
-        }
-      } catch (_) {
-        onSpeechFinished();
-      }
-    };
 
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-        if (window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
-        }
+          // Nếu trình duyệt không cài voice tiếng Việt cục bộ:
+          // TUYỆT ĐỐI KHÔNG DÙNG GIỌNG TIẾNG ANH / ẤN ĐỘ ĐỂ ĐỌC TIẾNG VIỆT
+          if (viVoices.length === 0) {
+            onSpeechFinished();
+            return;
+          }
 
-        const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.lang = 'vi-VN';
-        activeUtteranceRef.current = utterance;
-
-        // Lấy danh sách voice hiện có trong trình duyệt
-        const allVoices = (window.speechSynthesis.getVoices && window.speechSynthesis.getVoices().length > 0)
-          ? window.speechSynthesis.getVoices()
-          : availableVoices;
-
-        const viVoices = allVoices.filter((v) => {
-          const lang = (v.lang || '').toLowerCase().replace('_', '-');
-          const name = (v.name || '').toLowerCase();
-          return (
-            lang.startsWith('vi') ||
-            name.includes('vietnam') ||
-            name.includes('tiếng việt') ||
-            name.includes('hoaimy') ||
-            name.includes('namminh')
-          );
-        });
-
-        let selectedVoice = null;
-        if (viVoices.length > 0) {
-          if (voiceGender === 'male') {
+          let selectedVoice = null;
+          if (targetGender === 'male') {
             selectedVoice =
               viVoices.find((v) => {
                 const n = v.name.toLowerCase();
@@ -1009,69 +1028,102 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                 return n.includes('hoaimy') || n.includes('mai') || n.includes('female') || n.includes('gái') || n.includes('nữ');
               }) || viVoices[0];
           }
-        }
 
-        // Nếu máy người dùng không có sẵn gói giọng đọc tiếng Việt offline -> Dùng ngay Fallback Audio online
-        if (!selectedVoice) {
-          playOnlineTtsFallback(cleanText);
-          return;
-        }
+          utterance.voice = selectedVoice;
+          utterance.pitch = targetGender === 'male' ? 0.85 : 1.05;
+          utterance.rate = targetRegion === 'south' ? 0.90 : 0.96;
 
-        utterance.voice = selectedVoice;
-
-        // Tinh chỉnh cao độ & tốc độ truyền cảm theo phong cách phát thanh viên radio
-        if (voiceGender === 'male') {
-          utterance.pitch = voiceRegion === 'north' ? 0.84 : 0.78;
-          utterance.rate = voiceRegion === 'north' ? 0.9 : 0.93;
-        } else {
-          utterance.pitch = voiceRegion === 'north' ? 1.06 : 1.12;
-          utterance.rate = voiceRegion === 'north' ? 0.88 : 0.92;
-        }
-
-        utterance.onend = () => {
-          activeUtteranceRef.current = null;
-          onSpeechFinished();
-        };
-        utterance.onerror = () => {
-          activeUtteranceRef.current = null;
-          playOnlineTtsFallback(cleanText);
-        };
-
-        // Tránh lỗi cancel và speak cùng 1 tick của Chromium
-        setTimeout(() => {
-          try {
-            window.speechSynthesis.speak(utterance);
-            if (window.speechSynthesis.paused) {
-              window.speechSynthesis.resume();
+          utterance.onend = () => {
+            if (speechSessionIdRef.current === currentSessionId) {
+              activeUtteranceRef.current = null;
+              onSpeechFinished();
             }
-          } catch (_) {
-            playOnlineTtsFallback(cleanText);
-          }
-        }, 30);
-        return;
-      } catch (err) {
-        console.warn('Lỗi đọc voice:', err);
-        playOnlineTtsFallback(cleanText);
+          };
+          utterance.onerror = () => {
+            if (speechSessionIdRef.current === currentSessionId) {
+              activeUtteranceRef.current = null;
+              onSpeechFinished();
+            }
+          };
+
+          window.speechSynthesis.speak(utterance);
+          return;
+        } catch (err) {
+          onSpeechFinished();
+        }
+      } else {
+        onSpeechFinished();
       }
-    } else {
-      playOnlineTtsFallback(cleanText);
+    };
+
+    // Ưu tiên số 1: Phát Audio chuẩn từ API TTS của Backend (Microsoft Edge Neural Voice: Hoài My Nữ / Nam Minh Nam)
+    try {
+      const encoded = encodeURIComponent(cleanText.slice(0, 350));
+      const url = `/api/tts?text=${encoded}&gender=${targetGender}`;
+      const audio = new Audio(url);
+      audio.volume = 1.0;
+      audio.playbackRate = targetRegion === 'south' ? 0.92 : 1.0;
+
+      ttsAudioRef.current = audio;
+
+      audio.onended = () => {
+        if (speechSessionIdRef.current === currentSessionId) {
+          ttsAudioRef.current = null;
+          onSpeechFinished();
+        }
+      };
+
+      audio.onerror = (e) => {
+        if (speechSessionIdRef.current === currentSessionId) {
+          console.warn('[Radio TTS] Lỗi phát âm thanh /api/tts, fallback sang SpeechSynthesis:', e);
+          ttsAudioRef.current = null;
+          playBrowserSpeechFallback(cleanText);
+        }
+      };
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          if (speechSessionIdRef.current === currentSessionId) {
+            console.warn('[Radio TTS] Trình duyệt chặn autoplay, fallback sang SpeechSynthesis:', err);
+            ttsAudioRef.current = null;
+            playBrowserSpeechFallback(cleanText);
+          }
+        });
+      }
+    } catch (_) {
+      if (speechSessionIdRef.current === currentSessionId) {
+        playBrowserSpeechFallback(cleanText);
+      }
     }
   };
 
-  // Tự động xoay tua lời nhắn mỗi 8s, nếu bật voice thì tự động đọc
+  // Tự động xoay tua lời nhắn mỗi 12s, CHỈ ĐỌC nếu hiện tại không có giọng nào đang phát (tránh đè giọng)
   useEffect(() => {
-    const timer = setInterval(() => {
+    if (autoRotateIntervalRef.current) {
+      clearInterval(autoRotateIntervalRef.current);
+    }
+    autoRotateIntervalRef.current = setInterval(() => {
       setListenerCount(getListenersCount());
       setActiveThoughtIndex((prev) => {
         const nextIdx = (prev + 1) % thoughts.length;
-        if (isVoiceEnabled && isPlaying) {
-          setTimeout(() => speakCurrentThought(thoughts[nextIdx]), 600);
+        if (isVoiceEnabled && isPlaying && !ttsAudioRef.current && !isSpeaking) {
+          if (speakTimerRef.current) {
+            clearTimeout(speakTimerRef.current);
+          }
+          speakTimerRef.current = setTimeout(() => {
+            speakCurrentThought(thoughts[nextIdx]);
+          }, 800);
         }
         return nextIdx;
       });
-    }, 8500);
-    return () => clearInterval(timer);
-  }, [thoughts.length, isVoiceEnabled, isPlaying]);
+    }, 12000);
+    return () => {
+      if (autoRotateIntervalRef.current) {
+        clearInterval(autoRotateIntervalRef.current);
+      }
+    };
+  }, [thoughts.length, isVoiceEnabled, isPlaying, isSpeaking]);
 
   // Giữ mini pill trong màn hình khi thay đổi kích thước cửa sổ (có chống bão sự kiện Debounce)
   useEffect(() => {
@@ -1132,10 +1184,14 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     } else {
       startRadioEngine(activeTrack.engine, volume);
       setIsPlaying(true);
+      if (isVoiceEnabled) {
+        if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
+        speakTimerRef.current = setTimeout(() => speakCurrentThought(), 800);
+      }
     }
   };
 
-  // Chọn bài hát bất kỳ từ danh sách
+  // Chọn bài hát bất kỳ từ danh sách (dừng triệt để giọng đọc cũ, chống đè giọng)
   const handleSelectTrack = (index) => {
     playClickSound();
     stopSpeaking();
@@ -1147,9 +1203,17 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     const track = RADIO_TRACKS[index] || RADIO_TRACKS[0];
     if (isPlaying) {
       switchTrackEngine(track.engine);
+      if (isVoiceEnabled) {
+        if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
+        speakTimerRef.current = setTimeout(() => speakCurrentThought(), 1200);
+      }
     } else {
       startRadioEngine(track.engine, volume);
       setIsPlaying(true);
+      if (isVoiceEnabled) {
+        if (speakTimerRef.current) clearTimeout(speakTimerRef.current);
+        speakTimerRef.current = setTimeout(() => speakCurrentThought(), 1200);
+      }
     }
   };
 
@@ -2114,9 +2178,9 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                 flexWrap: 'wrap',
               }}
             >
-              {/* Giới tính: Nữ / Nam */}
+              {/* Giọng đọc phát thanh viên: Nữ (Hoài My) / Nam (Nam Minh) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>Giới tính:</span>
+                <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>Phát thanh viên:</span>
                 <div style={{ display: 'inline-flex', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '6px', padding: '2px' }}>
                   <button
                     type="button"
@@ -2126,17 +2190,18 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                       border: `1px solid ${voiceGender === 'female' ? activeTrack.themeColor : 'transparent'}`,
                       color: voiceGender === 'female' ? activeTrack.themeColor : '#94a3b8',
                       borderRadius: '5px',
-                      padding: '2px 7px',
+                      padding: '2px 8px',
                       fontSize: '0.7rem',
                       fontWeight: voiceGender === 'female' ? 800 : 500,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '3px',
+                      gap: '4px',
                       transition: 'all 0.2s',
                     }}
+                    title="Phát thanh viên Hoài My (Giọng nữ ấm áp, truyền cảm)"
                   >
-                    👩 Nữ
+                    👩 Hoài My (Nữ)
                   </button>
                   <button
                     type="button"
@@ -2146,24 +2211,25 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                       border: `1px solid ${voiceGender === 'male' ? activeTrack.themeColor : 'transparent'}`,
                       color: voiceGender === 'male' ? activeTrack.themeColor : '#94a3b8',
                       borderRadius: '5px',
-                      padding: '2px 7px',
+                      padding: '2px 8px',
                       fontSize: '0.7rem',
                       fontWeight: voiceGender === 'male' ? 800 : 500,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '3px',
+                      gap: '4px',
                       transition: 'all 0.2s',
                     }}
+                    title="Phát thanh viên Nam Minh (Giọng nam trầm ấm, điềm đạm)"
                   >
-                    👨 Nam
+                    👨 Nam Minh (Nam)
                   </button>
                 </div>
               </div>
 
-              {/* Ngữ điệu: Bắc / Nam */}
+              {/* Nhịp điệu đọc: Thư thái (chậm rãi) / Tiêu chuẩn */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>Ngữ điệu:</span>
+                <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>Nhịp điệu:</span>
                 <div style={{ display: 'inline-flex', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '6px', padding: '2px' }}>
                   <button
                     type="button"
@@ -2182,8 +2248,9 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                       gap: '3px',
                       transition: 'all 0.2s',
                     }}
+                    title="Nhịp điệu phát thanh tiêu chuẩn (1.0x)"
                   >
-                    🏛️ Giọng Bắc
+                    📻 Chuẩn (1.0x)
                   </button>
                   <button
                     type="button"
@@ -2202,8 +2269,9 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                       gap: '3px',
                       transition: 'all 0.2s',
                     }}
+                    title="Nhịp điệu đọc chậm rãi, sâu lắng (0.92x) giúp dễ ngủ"
                   >
-                    🌴 Giọng Nam
+                    🕊️ Thư thái (0.9x)
                   </button>
                 </div>
               </div>

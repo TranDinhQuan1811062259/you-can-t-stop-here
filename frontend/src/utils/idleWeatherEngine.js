@@ -17,7 +17,7 @@ let isRecovering = false;
 let recoveryTimeout = null;
 const listeners = new Set();
 
-const LEVEL_THRESHOLDS = [4, 9, 16, 25]; // Mốc giây chuyển cấp độ tích trữ nhanh nhạy
+const LEVEL_THRESHOLDS = [5, 12, 22, 35]; // Mốc giây chuyển cấp độ tích trữ tự nhiên, thư thả
 
 const notifyListeners = () => {
   const activeSeason = getActiveSeason();
@@ -25,7 +25,7 @@ const notifyListeners = () => {
     idleSeconds: currentIdleSeconds,
     idleLevel: currentIdleLevel,
     lastIdleLevel: lastNonZeroIdleLevel,
-    idleRatio: Math.min(1, currentIdleSeconds / 25),
+    idleRatio: Math.min(1, currentIdleSeconds / 35),
     isRecovering,
     seasonId: activeSeason?.id || 'winter',
   };
@@ -58,7 +58,7 @@ const handleUserActivity = () => {
     recoveryTimeout = setTimeout(() => {
       isRecovering = false;
       notifyListeners();
-    }, 950); // 950ms để chạy trọn vẹn animation tuyết vỡ rơi rụng / hoa lá rơi xào xạc
+    }, 3200); // 3.2 giây để animation hất tuyết / phủi bụi tuyết / cánh hoa bay / tan chảy tua ngược diễn ra thư thái, êm đềm
     return;
   }
 
@@ -82,7 +82,7 @@ const tick = () => {
     lastNonZeroIdleLevel = level;
   }
 
-  if (level !== currentIdleLevel || currentIdleSeconds % 2 === 0) {
+  if (level !== currentIdleLevel) {
     currentIdleLevel = level;
     notifyListeners();
   }

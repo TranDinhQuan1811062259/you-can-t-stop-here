@@ -482,6 +482,8 @@ export const TimeCapsuleMusicPlayer = ({
                   color: theme.textColor,
                   border: `1px solid ${theme.borderColor}`,
                   whiteSpace: 'nowrap',
+                  wordBreak: 'keep-all',
+                  width: 'max-content',
                   flexShrink: 0,
                 }}
               >
@@ -501,6 +503,8 @@ export const TimeCapsuleMusicPlayer = ({
                   borderRadius: '6px',
                   border: '1px solid rgba(52, 211, 153, 0.3)',
                   whiteSpace: 'nowrap',
+                  wordBreak: 'keep-all',
+                  width: 'max-content',
                   flexShrink: 0,
                 }}
               >

@@ -11,7 +11,7 @@
         "name": "Tâm sự",
         "slug": "tam-su"
       },
-      "coverImage": "/images/sun.jpg",
+      "coverImage": "/images/office-night.jpg",
       "tags": [
         "Test",
         "Persistent"
@@ -71,7 +71,7 @@
       "slug": "2-gio-sang-o-van-phong-va-cau-hoi-minh-dang-chay-dua-vi-dieu-gi",
       "summary": "Nhìn dòng xe thưa thớt ngoài cửa sổ kính tầng 18, tôi tự hỏi liệu những đêm thức trắng triền miên này có thực sự đáng giá?",
       "content": "\n        <p>Đêm nay lại là một đêm deadline trước ngày ra mắt tính năng mới. Màn hình vẫn sáng quắc những dòng lỗi đỏ lòm, ly cà phê thứ tư đã nguội ngắt từ bao giờ.</p>\n        <p>Tôi nhìn quanh phòng làm việc, chỉ còn vài đồng nghiệp đang gõ phím cành cạch. Đôi mắt ai cũng trũng sâu. Chúng tôi lao vào guồng quay này từ lúc nào chẳng hay, từ những đứa trẻ đầy nhiệt huyết bước chân vào ngành, đến bây giờ mỗi sáng thức dậy chỉ thấy nỗi sợ hãi kéo dài.</p>\n        <h2>Khi công việc nuốt chửng cuộc sống</h2>\n        <p>Có những ngày cuối tuần chỉ nằm bẹp trên giường, không buồn nấu một bữa ăn tử tế, không buồn trả lời tin nhắn của người thân. Tôi từng nghĩ đó là cái giá của sự thành công. Nhưng tối nay, khi nhìn hình ảnh phản chiếu của mình qua lớp kính mờ, tôi nhận ra mình đang kiệt sức hoàn toàn.</p>\n        <blockquote>\"Nếu bạn đang cảm thấy mệt mỏi đến muốn bỏ cuộc ngay lúc này, hãy nhớ rằng cho phép bản thân nghỉ ngơi không phải là thất bại.\"</blockquote>\n        <p>Viết những dòng này không phải để than vãn, mà để nhắc chính mình và những ai đang cùng cảnh ngộ: Bạn quan trọng hơn bất kỳ bản release nào. Đêm nay, tôi sẽ tắt máy tính và đi ngủ sớm một chút.</p>\n      ",
-      "coverImage": "/images/sun.jpg",
+      "coverImage": "/images/office-night.jpg",
       "category": {
         "_id": "cat_1",
         "name": "Áp lực & Kiệt sức (Burnout)",
@@ -184,7 +184,7 @@
       "slug": "hoi-chung-ke-gia-mao-impostor-syndrome-khi-ban-luon-so-bi-phat-hien-minh-kem-coi",
       "summary": "Dù được khen ngợi hay thăng chức, trong sâu thẳm tôi vẫn run rẩy lo sợ một ngày nào đó mọi người sẽ nhận ra tôi chẳng tài giỏi như họ nghĩ.",
       "content": "\n        <p>Đã bao giờ bạn bước vào phòng họp và cảm thấy mình là người thiếu hiểu biết nhất ở đó? Đó là cảm giác ám ảnh tôi suốt hai năm qua kể từ khi nhận vị trí Product Manager.</p>\n        <h2>Tiếng nói chỉ trích bên trong đầu</h2>\n        <p>Mỗi khi dự án thành công, tôi cho rằng đó là do may mắn hoặc đồng đội gánh. Nhưng mỗi khi có sự cố nhỏ xảy ra, tôi lại tự dằn vặt rằng đó là lỗi tại sự bất tài của mình.</p>\n        <p>Một người đàn anh đã nói với tôi: <em>\"Em không cần phải biết tất cả mọi thứ để trở nên có giá trị. Giá trị của em nằm ở việc em chịu học hỏi và không bỏ cuộc.\"</em></p>\n      ",
-      "coverImage": "/images/statue.jpg",
+      "coverImage": "/images/impostor-calm.jpg",
       "category": {
         "_id": "cat_2",
         "name": "Khủng hoảng nghề nghiệp (Career Crisis)",
@@ -273,7 +273,7 @@
       "slug": "tu-bo-cong-viec-van-phong-6-nam-de-hoc-lap-trinh-o-tuoi-27-can-dam-bat-dau-lai",
       "summary": "Bạn bè bảo tôi điên rồ khi từ bỏ mức lương ổn định để trở thành thực tập sinh nhận lương hỗ trợ. Nhưng nếu không đi, làm sao biết con đường phía trước đẹp thế nào?",
       "content": "\n        <p>Năm 27 tuổi, tôi nhận ra mình không thể tiếp tục công việc hiện tại thêm 30 năm nữa. Cảm giác trống rỗng mỗi sáng thứ Hai lặp đi lặp lại như một bản án vô hình.</p>\n        <h2>Những ngày đầu tiên chông chênh</h2>\n        <p>Học những cú pháp vòng lặp đầu tiên, tôi đã từng xấu hổ và muốn bỏ cuộc. Nhưng thông điệp của trang web này chính là điều đã giữ tôi ở lại: <strong>You Can't Stop Here</strong>.</p>\n        <p>Hôm nay, tròn 1 năm tôi chính thức nhận offer làm Junior Dev. Mức lương chưa bằng ngày xưa, nhưng ánh mắt tôi đã có lại ngọn lửa đam mê.</p>\n      ",
-      "coverImage": "/images/crop.jpg",
+      "coverImage": "/images/restart-coding.jpg",
       "category": {
         "_id": "cat_3",
         "name": "Chuyển ngành & Bắt đầu lại (Restart)",
@@ -361,7 +361,7 @@
       "slug": "hom-nay-minh-da-dung-cam-tu-choi-mot-yeu-cau-vo-ly-va-cam-giac-that-nhe-nhom",
       "summary": "Lần đầu tiên sau nhiều năm làm việc kiểu \"People Pleaser\", tôi đã dám nói chữ KHÔNG với sếp vào 10 giờ tối thứ Bảy.",
       "content": "\n        <p>10h15 tối thứ Bảy, chuông Slack vang lên yêu cầu chỉnh gấp layout. Cả tuần đã làm việc 60 tiếng, mắt đã mờ đi vì mỏi.</p>\n        <h2>Học cách thiết lập ranh giới (Boundaries)</h2>\n        <p>Tôi hít một hơi thật sâu và từ chối lịch sự, hẹn sáng thứ Hai xử lý. Trời không sập xuống. Công ty không phá sản. Sếp chỉ phản hồi: \"Ok em.\"</p>\n        <p>Chiến thắng lớn nhất của một ngày đi làm đôi khi là bảo vệ được sự bình yên của tâm trí mình.</p>\n      ",
-      "coverImage": "/images/eagle.jpg",
+      "coverImage": "/images/peaceful-boundary.jpg",
       "category": {
         "_id": "cat_4",
         "name": "Những tia sáng & Động lực (Small Wins)",
@@ -1161,7 +1161,7 @@
       "isBuiltin": true
     }
   ],
-  "adminPreviewEventId": "quoc_khanh_2_9",
+  "adminPreviewEventId": null,
   "stories": [
     {
       "_id": "story_1794083881804_xfi0",

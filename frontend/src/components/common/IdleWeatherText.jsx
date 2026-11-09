@@ -22,54 +22,55 @@ export const IdleWeatherText = ({
     if (effectiveLevel === 0 && !isRecovering) return [];
 
     if (isWinter) {
-      const counts = [0, 3, 6, 9, 14];
+      const counts = [0, 1, 3, 5, 7];
       const count = counts[effectiveLevel] || 0;
       return Array.from({ length: count }).map((_, i) => ({
         id: i,
-        char: ['❄️', '❅', '✻', '•', '🌨️'][i % 5],
-        left: `${(i * 19 + 7) % 92}%`,
-        top: `${-10 - (i % 3) * 6}px`,
-        size: 11 + (i % 3) * 4,
-        delay: `${(i * 0.12).toFixed(2)}s`,
+        char: ['❄️', '❅', '✨', '✻'][i % 4],
+        left: `${(i * 22 + 8) % 88}%`,
+        top: `${-10 - (i % 2) * 4}px`,
+        size: 11 + (i % 2) * 3,
+        delay: `${(i * 0.16).toFixed(2)}s`,
       }));
     }
 
     if (isSpring) {
-      const counts = [0, 3, 6, 10, 16];
+      const counts = [0, 1, 3, 5, 7];
       const count = counts[effectiveLevel] || 0;
       return Array.from({ length: count }).map((_, i) => ({
         id: i,
-        char: ['🌸', '💮', '🌱', '🌷', '🌿'][i % 5],
-        left: `${(i * 18 + 5) % 94}%`,
-        top: `${(i % 2 === 0 ? -12 : 12) + (i % 3) * 3}px`,
-        size: 12 + (i % 3) * 4,
-        delay: `${(i * 0.15).toFixed(2)}s`,
+        char: ['🌸', '💮', '🌱', '🌷'][i % 4],
+        left: `${(i * 22 + 6) % 88}%`,
+        top: `${-11 - (i % 2) * 4}px`,
+        size: 12 + (i % 2) * 3,
+        delay: `${(i * 0.18).toFixed(2)}s`,
       }));
     }
 
     if (isAutumn) {
-      const counts = [0, 3, 6, 9, 15];
+      const counts = [0, 1, 3, 5, 7];
       const count = counts[effectiveLevel] || 0;
       return Array.from({ length: count }).map((_, i) => ({
         id: i,
-        char: ['🍂', '🍁', '🍃', '🌾'][i % 4],
-        left: `${(i * 21 + 8) % 93}%`,
-        top: `${-11 - (i % 3) * 5}px`,
-        size: 13 + (i % 3) * 4,
-        delay: `${(i * 0.14).toFixed(2)}s`,
+        char: ['🍂', '🍁', '🍃'][i % 3],
+        left: `${(i * 24 + 8) % 88}%`,
+        top: `${-11 - (i % 2) * 4}px`,
+        size: 12 + (i % 2) * 3,
+        delay: `${(i * 0.16).toFixed(2)}s`,
       }));
     }
 
     if (isSummer) {
-      // Mùa hạ: Các giọt tan chảy ròng ròng từ chân chữ
-      const counts = [0, 2, 5, 8, 12];
+      // Mùa hạ: Các tia nắng ấm & đốm sáng lung linh nhẹ nhàng trên chữ
+      const counts = [0, 1, 2, 3, 4];
       const count = counts[effectiveLevel] || 0;
       return Array.from({ length: count }).map((_, i) => ({
         id: i,
-        char: '💧',
-        left: `${(i * 17 + 9) % 90}%`,
-        height: 6 + effectiveLevel * 5 + (i % 3) * 4,
-        delay: `${(i * 0.2).toFixed(2)}s`,
+        char: ['✨', '☀️', '🌻', '✨'][i % 4],
+        left: `${(i * 24 + 10) % 86}%`,
+        top: `${-10 - (i % 2) * 3}px`,
+        size: 11 + (i % 2) * 2,
+        delay: `${(i * 0.18).toFixed(2)}s`,
       }));
     }
 
@@ -107,18 +108,10 @@ export const IdleWeatherText = ({
       }}
       {...props}
     >
-      {/* Lớp tuyết nắp phủ trên đỉnh chữ (Mùa đông tuyết tích trữ dày) */}
+      {/* Lớp viền sương tuyết mỏng manh tinh khôi trên đỉnh chữ (Mùa đông) */}
       {isWinter && (effectiveLevel > 0 || isRecovering) && (
         <span
           className={`snow-cap-accumulation snow-cap-level-${effectiveLevel}`}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Lớp băng tuyết màng nhũ (Icicles rủ xuống) */}
-      {isWinter && (effectiveLevel >= 2 || isRecovering) && (
-        <span
-          className={`snow-icicles-accumulation icicles-level-${effectiveLevel}`}
           aria-hidden="true"
         />
       )}
@@ -138,24 +131,14 @@ export const IdleWeatherText = ({
               style={{
                 position: 'absolute',
                 left: item.left,
-                top: item.top !== undefined ? item.top : 'auto',
-                bottom: isSummer ? `-${item.height + 2}px` : 'auto',
-                fontSize: item.size ? `${item.size}px` : undefined,
+                top: item.top !== undefined ? item.top : '-10px',
+                fontSize: `${item.size || 12}px`,
                 animationDelay: item.delay,
                 pointerEvents: 'none',
                 userSelect: 'none',
               }}
             >
-              {isSummer ? (
-                <span
-                  className="summer-dripping-droplet"
-                  style={{
-                    height: `${item.height}px`,
-                  }}
-                />
-              ) : (
-                item.char
-              )}
+              {item.char}
             </span>
           ))}
         </span>

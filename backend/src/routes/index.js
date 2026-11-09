@@ -10,6 +10,7 @@ import musicRoutes from './musicRoutes.js';
 import eventRoutes from './eventRoutes.js';
 import storyRoutes from './storyRoutes.js';
 import timeCapsuleRoutes from './timeCapsuleRoutes.js';
+import ttsRoutes from './ttsRoutes.js';
 
 const router = express.Router();
 
@@ -24,6 +25,7 @@ router.use('/music', musicRoutes);
 router.use('/events', eventRoutes);
 router.use('/stories', storyRoutes);
 router.use('/time-capsules', timeCapsuleRoutes);
+router.use('/tts', ttsRoutes);
 
 // Health check endpoint
 router.get('/health', (req, res) => {

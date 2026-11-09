@@ -615,6 +615,12 @@ export const PostDetailPage = () => {
                   src={post.coverImage}
                   alt={post.title}
                   className="post-featured-image"
+                  onError={(e) => {
+                    if (!e.target.dataset.triedFallback) {
+                      e.target.dataset.triedFallback = '1';
+                      e.target.src = '/images/office-night.jpg';
+                    }
+                  }}
                 />
               )}
 
