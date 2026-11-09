@@ -173,6 +173,8 @@ export const TimeCapsuleMusicPlayer = ({
       postToPlayer('pauseVideo');
       setIsPlaying(false);
     } else {
+      postToPlayer('unMute');
+      postToPlayer('setVolume', [volume]);
       postToPlayer('playVideo');
       setIsPlaying(true);
     }
@@ -663,7 +665,7 @@ export const TimeCapsuleMusicPlayer = ({
         </div>
       )}
 
-      {/* Khung nhúng YouTube Video IFrame (Giữ iframe luôn active với kích thước thực để tránh trình duyệt tạm dừng audio) */}
+      {/* Khung nhúng YouTube Video IFrame (Giữ iframe luôn nằm trong viewport để trình duyệt/Electron không tạm dừng âm thanh) */}
       <div
         style={
           showVideo
@@ -679,12 +681,13 @@ export const TimeCapsuleMusicPlayer = ({
               }
             : {
                 position: 'absolute',
-                top: '-9999px',
-                left: '-9999px',
-                width: '240px',
-                height: '180px',
+                bottom: 0,
+                right: 0,
+                width: '200px',
+                height: '120px',
                 opacity: 0.001,
                 pointerEvents: 'none',
+                zIndex: -1,
               }
         }
       >
@@ -695,17 +698,19 @@ export const TimeCapsuleMusicPlayer = ({
           title="Hộp Thời Gian - Nhạc Chữa Lành Lặp Vô Tận"
           width="100%"
           height="100%"
-          src={`https://www.youtube.com/embed/${activeVideoId}?enablejsapi=1&autoplay=1&loop=1&playlist=${activeVideoId}&playsinline=1&controls=1&rel=0&modestbranding=1`}
+          src={`https://www.youtube.com/embed/${activeVideoId}?enablejsapi=1&autoplay=1&loop=1&playlist=${activeVideoId}&playsinline=1&controls=1&rel=0&modestbranding=1${typeof window !== 'undefined' && window.location.origin ? `&origin=${encodeURIComponent(window.location.origin)}` : ''}`}
           frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
           onLoad={() => {
             setIsReady(true);
-            postToPlayer('unMute');
-            postToPlayer('setVolume', [volume]);
-            if (autoPlay) {
-              postToPlayer('playVideo');
-            }
+            setTimeout(() => {
+              postToPlayer('unMute');
+              postToPlayer('setVolume', [volume]);
+              if (autoPlay) {
+                postToPlayer('playVideo');
+              }
+            }, 600);
           }}
           style={{
             display: 'block',
