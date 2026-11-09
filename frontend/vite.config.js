@@ -11,9 +11,16 @@ export default defineConfig({
   root: projectRoot,
   plugins: [react()],
   resolve: {
+    dedupe: ['react', 'react-dom', 'react-router-dom', 'three'],
     alias: {
       '@': path.resolve(projectRoot, './src'),
+      'react': path.resolve(projectRoot, 'node_modules/react'),
+      'react-dom': path.resolve(projectRoot, 'node_modules/react-dom'),
+      'three': path.resolve(projectRoot, 'node_modules/three'),
     },
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom', 'three'],
   },
   server: {
     port: 3000,
