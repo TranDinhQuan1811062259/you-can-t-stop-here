@@ -14,7 +14,7 @@ const PRESET_DURATIONS = [
 ];
 
 const MOODS = [
-  { id: 'heartbreak_love', label: 'Tâm Sự Tình Trường (Cô đơn, đơn phương, mất ai đó 🎶)', icon: '💔', color: '#f43f5e' },
+  { id: 'heartbreak_love', label: 'Sự Tiếc Nuối (Hoài niệm & Ký ức xưa 🎶)', icon: '🥀', color: '#f43f5e' },
   { id: 'hopeful', label: 'Tia Sáng Hy Vọng (Đầy năng lượng & Niềm tin 🎶)', icon: '✨', color: '#f59e0b' },
   { id: 'anxious', label: 'Đang Lo Âu & Áp Lực', icon: '🌧️', color: '#0ea5e9' },
   { id: 'tired', label: 'Mệt Mỏi Cần Ôm Ấp', icon: '🫂', color: '#ec4899' },
@@ -357,18 +357,20 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
           </div>
         )}
 
+        {/* Nhạc nền Hộp Thời Gian: Luôn duy trì phát nhạc liên tục khi chuyển đổi giữa Viết Thư và Kho Hộp */}
+        <div style={{ padding: '12px 24px 0', flexShrink: 0 }}>
+          <TimeCapsuleMusicPlayer
+            autoPlay={true}
+            currentMood={selectedMood}
+            onMoodChange={setSelectedMood}
+          />
+        </div>
+
         {/* Body Content */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px 20px' }}>
           {/* TAB 1: VIẾT THƯ MỚI */}
           {activeTab === 'write' && (
             <form onSubmit={handleCreateCapsule} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Nhạc nền Tia Sáng Hy Vọng: Lightning Moment (Harp Version) - TypeD */}
-              <TimeCapsuleMusicPlayer
-                autoPlay={true}
-                currentMood={selectedMood}
-                onMoodChange={setSelectedMood}
-              />
-
               <div>
                 <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>
                   Tiêu đề bức thư *
@@ -513,8 +515,8 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
                   </select>
                   {selectedMood === 'heartbreak_love' && (
                     <div style={{ marginTop: '5px', fontSize: '0.72rem', color: '#fca5a5', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>💔</span>
-                      <span>Đang hòa cùng giai điệu vỗ về nỗi đau tình trường & cô đơn (lặp vô tận ♾️)</span>
+                      <span>🥀</span>
+                      <span>Đang hòa cùng giai điệu vỗ về sự tiếc nuối & hoài niệm (lặp vô tận ♾️)</span>
                     </div>
                   )}
                   {selectedMood === 'hopeful' && (

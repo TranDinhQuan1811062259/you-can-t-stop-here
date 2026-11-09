@@ -805,6 +805,32 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
   });
 
   const ttsAudioRef = useRef(null);
+  const activeUtteranceRef = useRef(null);
+  const [availableVoices, setAvailableVoices] = useState([]);
+
+  // Tải danh sách giọng đọc tiếng Việt của trình duyệt (hỗ trợ Chrome/Edge/Windows/Android/iOS)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    const loadVoices = () => {
+      try {
+        const v = window.speechSynthesis.getVoices() || [];
+        if (v && v.length > 0) {
+          setAvailableVoices(v);
+        }
+      } catch (_) {}
+    };
+    loadVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+    return () => {
+      try {
+        if (window.speechSynthesis) {
+          window.speechSynthesis.onvoiceschanged = null;
+        }
+      } catch (_) {}
+    };
+  }, []);
 
   const [thoughts, setThoughts] = useState(() => {
     try {
@@ -840,6 +866,13 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
   // DỪNG GIỌNG ĐỌC VÀ KHÔI PHỤC ÂM LƯỢNG NHẠC
   // =========================================================================
   const stopSpeaking = () => {
+    if (activeUtteranceRef.current) {
+      try {
+        activeUtteranceRef.current.onend = null;
+        activeUtteranceRef.current.onerror = null;
+      } catch (_) {}
+      activeUtteranceRef.current = null;
+    }
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
@@ -889,10 +922,10 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     const cleanText = rawText.replace(/^[✨🌙☕🌿🌧️💡🍂🕯️🌊🌌\s]+/, '').trim();
     if (!cleanText) return;
 
-    // Audio Ducking: Khi phát thanh viên đọc, hạ nhẹ âm lượng nhạc xuống 25%
+    // Audio Ducking: Khi phát thanh viên đọc, hạ nhẹ âm lượng nhạc xuống 30%
     if (masterGainNode && radioAudioCtx) {
       try {
-        masterGainNode.gain.setValueAtTime(volume * 0.25, radioAudioCtx.currentTime);
+        masterGainNode.gain.setValueAtTime(volume * 0.3, radioAudioCtx.currentTime);
       } catch (_) {}
     }
     setIsSpeaking(true);
@@ -906,92 +939,89 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
       }
     };
 
-    // 1. Kiểm tra xem thiết bị có giọng tiếng Việt thực sự hay không
-    let nativeViVoice = null;
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      const voices = window.speechSynthesis.getVoices() || [];
-      const viVoices = voices.filter(
-        (v) =>
-          v.lang.toLowerCase().startsWith('vi') ||
-          v.lang.toLowerCase().includes('vi-vn') ||
-          v.name.toLowerCase().includes('vietnam') ||
-          v.name.toLowerCase().includes('tiếng việt')
-      );
-
-      if (viVoices.length > 0) {
-        if (voiceGender === 'male') {
-          nativeViVoice =
-            viVoices.find(
-              (v) =>
-                v.name.toLowerCase().includes('nam') ||
-                v.name.toLowerCase().includes('minh') ||
-                v.name.toLowerCase().includes('male')
-            ) || viVoices[0];
-        } else {
-          nativeViVoice =
-            viVoices.find(
-              (v) =>
-                v.name.toLowerCase().includes('hoaimy') ||
-                v.name.toLowerCase().includes('mai') ||
-                v.name.toLowerCase().includes('female')
-            ) || viVoices[0];
-        }
-      }
-    }
-
-    if (nativeViVoice && 'speechSynthesis' in window) {
-      // Thiết bị CÓ giọng đọc tiếng Việt bản địa: Dùng Web Speech API với tinh chỉnh chuẩn
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.voice = nativeViVoice;
-      utterance.lang = 'vi-VN';
-
-      if (voiceGender === 'male') {
-        utterance.pitch = voiceRegion === 'north' ? 0.82 : 0.76;
-        utterance.rate = voiceRegion === 'north' ? 0.88 : 0.94;
-      } else {
-        utterance.pitch = voiceRegion === 'north' ? 1.08 : 1.15;
-        utterance.rate = voiceRegion === 'north' ? 0.88 : 0.92;
-      }
-
-      utterance.onend = onSpeechFinished;
-      utterance.onerror = onSpeechFinished;
-
       try {
-        window.speechSynthesis.speak(utterance);
-      } catch (_) {
-        onSpeechFinished();
-      }
-    } else {
-      // Thiết bị KHÔNG CÓ giọng tiếng Việt (Windows mặc định tiếng Anh David/Zira):
-      // Tuyệt đối KHÔNG gọi Web Speech vì sẽ phát âm lơ lớ kiểu Tây rất khó chịu!
-      // Sử dụng Google Natural Vietnamese Stream phát âm 100% chuẩn tiếng Việt!
-      try {
-        const encoded = encodeURIComponent(cleanText.slice(0, 180));
-        const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encoded}`;
-        const audio = new Audio(audioUrl);
-        ttsAudioRef.current = audio;
-
-        if (voiceGender === 'male') {
-          // Nam: cho phép hạ cao độ (preservesPitch = false) để tạo chất giọng nam trầm ấm
-          audio.preservesPitch = false;
-          audio.playbackRate = voiceRegion === 'north' ? 0.88 : 0.92;
-        } else {
-          // Nữ: giữ cao độ tự nhiên trong trẻo, thanh lịch
-          audio.preservesPitch = true;
-          audio.playbackRate = voiceRegion === 'north' ? 0.95 : 1.0;
+        window.speechSynthesis.cancel();
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
         }
 
-        audio.onended = onSpeechFinished;
-        audio.onerror = () => {
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = 'vi-VN';
+        activeUtteranceRef.current = utterance;
+
+        // Lấy danh sách voice hiện có trong trình duyệt
+        const allVoices = (window.speechSynthesis.getVoices && window.speechSynthesis.getVoices().length > 0)
+          ? window.speechSynthesis.getVoices()
+          : availableVoices;
+
+        const viVoices = allVoices.filter((v) => {
+          const lang = (v.lang || '').toLowerCase().replace('_', '-');
+          const name = (v.name || '').toLowerCase();
+          return (
+            lang.startsWith('vi') ||
+            name.includes('vietnam') ||
+            name.includes('tiếng việt') ||
+            name.includes('hoaimy') ||
+            name.includes('namminh')
+          );
+        });
+
+        let selectedVoice = null;
+        if (viVoices.length > 0) {
+          if (voiceGender === 'male') {
+            selectedVoice =
+              viVoices.find((v) => {
+                const n = v.name.toLowerCase();
+                return n.includes('nam') || n.includes('minh') || n.includes('male') || n.includes('trai');
+              }) || viVoices[0];
+          } else {
+            selectedVoice =
+              viVoices.find((v) => {
+                const n = v.name.toLowerCase();
+                return n.includes('hoaimy') || n.includes('mai') || n.includes('female') || n.includes('gái') || n.includes('nữ');
+              }) || viVoices[0];
+          }
+        }
+
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+        }
+
+        // Tinh chỉnh cao độ & tốc độ truyền cảm theo phong cách phát thanh viên radio
+        if (voiceGender === 'male') {
+          utterance.pitch = voiceRegion === 'north' ? 0.84 : 0.78;
+          utterance.rate = voiceRegion === 'north' ? 0.9 : 0.93;
+        } else {
+          utterance.pitch = voiceRegion === 'north' ? 1.06 : 1.12;
+          utterance.rate = voiceRegion === 'north' ? 0.88 : 0.92;
+        }
+
+        utterance.onend = () => {
+          activeUtteranceRef.current = null;
+          onSpeechFinished();
+        };
+        utterance.onerror = () => {
+          activeUtteranceRef.current = null;
           onSpeechFinished();
         };
 
-        audio.play().catch(() => {
-          onSpeechFinished();
-        });
-      } catch (_) {
+        // Tránh lỗi cancel và speak cùng 1 tick của Chromium
+        setTimeout(() => {
+          try {
+            window.speechSynthesis.speak(utterance);
+            if (window.speechSynthesis.paused) {
+              window.speechSynthesis.resume();
+            }
+          } catch (_) {}
+        }, 30);
+        return;
+      } catch (err) {
+        console.warn('Lỗi đọc voice:', err);
         onSpeechFinished();
       }
+    } else {
+      onSpeechFinished();
     }
   };
 
@@ -1130,8 +1160,9 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
       } catch (_) {}
       if (!next) {
         stopSpeaking();
-      } else if (next && isPlaying) {
-        speakCurrentThought();
+      } else {
+        // Tự động phát âm thanh ngay lập tức khi bật giọng đọc
+        setTimeout(() => speakCurrentThought(), 100);
       }
       return next;
     });
@@ -1535,7 +1566,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             {/* Nút Bật/Tắt Voice Đọc Tâm Sự */}
             <button
               type="button"
@@ -1546,17 +1577,19 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                 border: `1px solid ${isVoiceEnabled ? activeTrack.themeColor : 'rgba(255, 255, 255, 0.15)'}`,
                 borderRadius: '9px',
                 color: isVoiceEnabled ? activeTrack.themeColor : '#cbd5e1',
-                padding: '5px 9px',
+                padding: '6px 10px',
                 fontSize: '0.74rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '5px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 transition: 'all 0.2s',
               }}
             >
-              <span>{isVoiceEnabled ? '🎙️ Giọng đọc: BẬT' : '🔇 Giọng đọc: TẮT'}</span>
+              <span style={{ whiteSpace: 'nowrap' }}>{isVoiceEnabled ? '🎙️ Giọng đọc: BẬT' : '🔇 Giọng đọc: TẮT'}</span>
             </button>
 
             {/* Nút Thu Nhỏ */}
@@ -1569,17 +1602,20 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                 border: '1px solid rgba(255, 255, 255, 0.15)',
                 borderRadius: '9px',
                 color: '#cbd5e1',
-                padding: '5px 10px',
+                padding: '6px 10px',
                 fontSize: '0.74rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: '5px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 transition: 'all 0.2s',
               }}
             >
-              <i className="fa-regular fa-window-minimize"></i> Thu Nhỏ
+              <i className="fa-regular fa-window-minimize" style={{ flexShrink: 0 }}></i>
+              <span style={{ whiteSpace: 'nowrap' }}>Thu Nhỏ</span>
             </button>
 
             {/* Nút Đóng / Tắt hẳn Modal */}
@@ -1599,6 +1635,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '0.9rem',
+                flexShrink: 0,
                 transition: 'background 0.2s, color 0.2s',
               }}
               aria-label="Tắt hẳn"

@@ -22,17 +22,17 @@ const extractYouTubeId = (url) => {
 const MUSIC_THEMES = {
   heartbreak_love: {
     id: 'heartbreak_love',
-    badge: '💔 TÂM SỰ TÌNH TRƯỜNG • VỖ VỀ NỖI ĐAU',
-    moodName: 'Tình Trường & Cô Đơn',
-    tagline: 'Hạc cầm Lightning Moment vỗ về nỗi cô đơn, tình đơn phương và khoảng trống khi mất đi một người...',
+    badge: '🥀 SỰ TIẾC NUỐI • VỖ VỀ KÝ ỨC',
+    moodName: 'Sự Tiếc Nuối',
+    tagline: 'Giai điệu da diết của I Think It’s Love vỗ về những tiếc nuối, ký ức xưa và khoảng lặng trong tim...',
     accentColor: '#f43f5e',
     glowColor: 'rgba(244, 63, 94, 0.25)',
     cardBg: 'linear-gradient(135deg, rgba(225, 29, 72, 0.18) 0%, rgba(76, 29, 149, 0.35) 50%, rgba(15, 23, 42, 0.85) 100%)',
     borderColor: 'rgba(244, 63, 94, 0.45)',
     textColor: '#ffe4e6',
-    songTitle: 'Lightning Moment (Harp Version) • TypeD',
-    songSubtitle: 'Sáng tác: Ngô Hạo (吴浩) • Giai điệu hạc cầm da diết chia sẻ nỗi niềm tình cảm',
-    defaultVideoId: 'KVremu955Qk',
+    songTitle: '사랑인 것 같아 (I Think It’s Love) • TAEMIN',
+    songSubtitle: 'Trình bày: TAEMIN (태민) • Giai điệu ballad sâu lắng vỗ về sự tiếc nuối và hoài niệm',
+    defaultVideoId: 'G7NW70kOURQ',
   },
   hopeful: {
     id: 'hopeful',
@@ -75,8 +75,11 @@ export const TimeCapsuleMusicPlayer = ({
   const [isReady, setIsReady] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
 
-  // Video ID hiện tại (mặc định là KVremu955Qk)
-  const [activeVideoId, setActiveVideoId] = useState('KVremu955Qk');
+  // Video ID hiện tại (mặc định lấy theo mood: Sự Tiếc Nuối -> G7NW70kOURQ)
+  const [activeVideoId, setActiveVideoId] = useState(() => {
+    const defaultTheme = MUSIC_THEMES[currentMood] || MUSIC_THEMES.heartbreak_love;
+    return defaultTheme.defaultVideoId || 'G7NW70kOURQ';
+  });
 
   // Input dán URL YouTube tùy chỉnh
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -216,13 +219,25 @@ export const TimeCapsuleMusicPlayer = ({
     setIsPlaying(true);
   };
 
+  // Đồng bộ Video ID khi đổi tâm trạng từ bên ngoài
+  useEffect(() => {
+    if (currentMood && MUSIC_THEMES[currentMood]) {
+      const themeConfig = MUSIC_THEMES[currentMood];
+      if (themeConfig.defaultVideoId) {
+        setActiveVideoId(themeConfig.defaultVideoId);
+        setCustomSongName('');
+      }
+    }
+  }, [currentMood]);
+
   // Chọn chủ đề nhanh
   const handleSelectTheme = (moodId) => {
     playClickSound();
     if (onMoodChange) {
       onMoodChange(moodId);
     }
-    setActiveVideoId('KVremu955Qk');
+    const targetTheme = MUSIC_THEMES[moodId] || MUSIC_THEMES.heartbreak_love;
+    setActiveVideoId(targetTheme.defaultVideoId || 'G7NW70kOURQ');
     setCustomSongName('');
     setShowCustomInput(false);
     setIsPlaying(true);
@@ -297,8 +312,8 @@ export const TimeCapsuleMusicPlayer = ({
               transition: 'all 0.2s ease',
             }}
           >
-            <span>💔</span>
-            <span>Tình Trường & Cô Đơn</span>
+            <span>🥀</span>
+            <span>Sự Tiếc Nuối</span>
           </button>
 
           <button
@@ -639,7 +654,11 @@ export const TimeCapsuleMusicPlayer = ({
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ color: '#10b981' }}>🛡️</span>
-            <span>Bản quyền ℗ 2025 海纳音子 / TypeD / 吴浩 • Phát an toàn qua YouTube Embed</span>
+            <span>
+              {theme.id === 'heartbreak_love'
+                ? 'Bản quyền ℗ SM Entertainment / TAEMIN (태민) • Phát an toàn qua YouTube Embed'
+                : 'Bản quyền ℗ 2025 海纳音子 / TypeD / 吴浩 • Phát an toàn qua YouTube Embed'}
+            </span>
           </div>
         </div>
       )}
