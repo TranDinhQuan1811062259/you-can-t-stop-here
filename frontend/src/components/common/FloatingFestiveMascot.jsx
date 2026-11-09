@@ -45,18 +45,25 @@ export const FloatingFestiveMascot = ({ onOpenShowcase }) => {
     return () => window.removeEventListener('freedom_festive_event_changed', fetchActiveEvent);
   }, []);
 
-  // Giữ vị trí trong màn hình khi thay đổi kích thước cửa sổ
+  // Giữ vị trí trong màn hình khi thay đổi kích thước cửa sổ (có chống bão sự kiện Debounce)
   useEffect(() => {
+    let resizeTimer = null;
     const handleResize = () => {
-      setBtnPos((prev) => {
-        const bounded = ensureInBounds('mascot', prev);
-        const resolved = resolveAntiCollision('mascot', bounded, true);
-        saveFabPos('mascot', resolved);
-        return resolved;
-      });
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        setBtnPos((prev) => {
+          const bounded = ensureInBounds('mascot', prev);
+          const resolved = resolveAntiCollision('mascot', bounded, true);
+          saveFabPos('mascot', resolved, false);
+          return resolved;
+        });
+      }, 150);
     };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(resizeTimer);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   // Lắng nghe khi nút khác di dời để tự né tránh va chạm (CHỈ né dọc Y, giữ nguyên cột mép X)
@@ -66,7 +73,7 @@ export const FloatingFestiveMascot = ({ onOpenShowcase }) => {
       setBtnPos((curr) => {
         const safe = resolveAntiCollision('mascot', curr, true);
         if (safe.x !== curr.x || safe.y !== curr.y) {
-          saveFabPos('mascot', safe);
+          saveFabPos('mascot', safe, false);
           return safe;
         }
         return curr;
@@ -135,7 +142,7 @@ export const FloatingFestiveMascot = ({ onOpenShowcase }) => {
       setBtnPos((current) => {
         // Tự động khép góc dạt về mép gần nhất (khóa cột mép X, né dọc Y nếu chạm)
         const snapped = snapToNearestEdge('mascot', current);
-        saveFabPos('mascot', snapped);
+        saveFabPos('mascot', snapped, true);
         return snapped;
       });
     }
@@ -157,7 +164,7 @@ export const FloatingFestiveMascot = ({ onOpenShowcase }) => {
       if (hasMovedRef.current) {
         setBtnPos((current) => {
           const snapped = snapToNearestEdge('mascot', current);
-          saveFabPos('mascot', snapped);
+          saveFabPos('mascot', snapped, true);
           return snapped;
         });
       }

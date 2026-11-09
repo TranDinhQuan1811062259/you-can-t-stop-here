@@ -76,18 +76,25 @@ export const MainLayout = () => {
     } catch (e) {}
   };
 
-  // Giữ vị trí Cụm tiện ích trong màn hình khi thay đổi kích thước cửa sổ
+  // Giữ vị trí Cụm tiện ích trong màn hình khi thay đổi kích thước cửa sổ (có chống bão sự kiện Debounce)
   useEffect(() => {
+    let resizeTimer = null;
     const handleResize = () => {
-      setPrefPos((prev) => {
-        const bounded = ensureInBounds('pref', prev);
-        const resolved = resolveAntiCollision('pref', bounded, true);
-        saveFabPos('pref', resolved);
-        return resolved;
-      });
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        setPrefPos((prev) => {
+          const bounded = ensureInBounds('pref', prev);
+          const resolved = resolveAntiCollision('pref', bounded, true);
+          saveFabPos('pref', resolved, false);
+          return resolved;
+        });
+      }, 150);
     };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(resizeTimer);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   // Lắng nghe khi nút khác di dời để tự né tránh va chạm
@@ -97,7 +104,7 @@ export const MainLayout = () => {
       setPrefPos((curr) => {
         const safe = resolveAntiCollision('pref', curr, true);
         if (safe.x !== curr.x || safe.y !== curr.y) {
-          saveFabPos('pref', safe);
+          saveFabPos('pref', safe, false);
           return safe;
         }
         return curr;
@@ -160,7 +167,7 @@ export const MainLayout = () => {
     if (hasMovedRef.current) {
       setPrefPos((current) => {
         const snapped = snapToNearestEdge('pref', current);
-        saveFabPos('pref', snapped);
+        saveFabPos('pref', snapped, true);
         return snapped;
       });
     } else {

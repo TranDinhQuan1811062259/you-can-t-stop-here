@@ -41,18 +41,25 @@ export const PwaInstallPrompt = () => {
   const pillRef = useRef(null);
   const activePointerIdRef = useRef(null);
 
-  // Giữ vị trí trong màn hình khi thay đổi kích thước cửa sổ (chống tràn thanh cuộn)
+  // Giữ vị trí trong màn hình khi thay đổi kích thước cửa sổ (có chống bão sự kiện Debounce)
   useEffect(() => {
+    let resizeTimer = null;
     const handleResize = () => {
-      setBtnPos((prev) => {
-        const bounded = ensureInBounds('pwa', prev);
-        const resolved = resolveAntiCollision('pwa', bounded, true);
-        saveFabPos('pwa', resolved);
-        return resolved;
-      });
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        setBtnPos((prev) => {
+          const bounded = ensureInBounds('pwa', prev);
+          const resolved = resolveAntiCollision('pwa', bounded, true);
+          saveFabPos('pwa', resolved, false);
+          return resolved;
+        });
+      }, 150);
     };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(resizeTimer);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   // Lắng nghe khi nút khác di dời để tự né tránh va chạm (giữ nguyên cột mép X)
@@ -62,7 +69,7 @@ export const PwaInstallPrompt = () => {
       setBtnPos((curr) => {
         const safe = resolveAntiCollision('pwa', curr, true);
         if (safe.x !== curr.x || safe.y !== curr.y) {
-          saveFabPos('pwa', safe);
+          saveFabPos('pwa', safe, false);
           return safe;
         }
         return curr;
@@ -127,7 +134,7 @@ export const PwaInstallPrompt = () => {
     if (hasMovedRef.current) {
       setBtnPos((current) => {
         const snapped = snapToNearestEdge('pwa', current);
-        saveFabPos('pwa', snapped);
+        saveFabPos('pwa', snapped, true);
         return snapped;
       });
     }
@@ -149,7 +156,7 @@ export const PwaInstallPrompt = () => {
       if (hasMovedRef.current) {
         setBtnPos((current) => {
           const snapped = snapToNearestEdge('pwa', current);
-          saveFabPos('pwa', snapped);
+          saveFabPos('pwa', snapped, true);
           return snapped;
         });
       }

@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { playPaperShredSound, playSingingBowlSound, playClickSound } from '../../utils/soundEffects';
+import {
+  playPaperShredSound,
+  playSingingBowlSound,
+  playClickSound,
+  playCeramicShatterSound,
+  playBubblePopSound,
+} from '../../utils/soundEffects';
 import { AsmrKeyboardToggle } from '../common/AsmrKeyboardToggle';
 
 const MOOD_LIST = [
@@ -25,8 +31,17 @@ const PRESET_STRESS_TAGS = [
   '👥 Áp lực đồng nghiệp & so sánh',
 ];
 
+const INITIAL_SMASH_ITEMS = [
+  { id: 1, name: 'KPI Vô Lý', type: 'plate', icon: '🍽️', color: '#f43f5e', smashed: false },
+  { id: 2, name: 'Họp Lúc 17h55', type: 'mug', icon: '☕', color: '#f59e0b', smashed: false },
+  { id: 3, name: 'Sửa Lần Thứ 18', type: 'vase', icon: '🏺', color: '#8b5cf6', smashed: false },
+  { id: 4, name: 'Deadline 23h59', type: 'plate', icon: '🍽️', color: '#ef4444', smashed: false },
+  { id: 5, name: 'OT Không Lương', type: 'mug', icon: '☕', color: '#06b6d4', smashed: false },
+  { id: 6, name: 'Bug Không Rõ Nguồn', type: 'vase', icon: '🏺', color: '#10b981', smashed: false },
+];
+
 export const StressReliefModal = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState('shredder'); // 'shredder' | 'breathing'
+  const [activeTab, setActiveTab] = useState('shredder'); // 'shredder' | 'smash' | 'bubble' | 'breathing'
 
   // State cho Máy Xé Giấy (Stress Shredder)
   const [stressText, setStressText] = useState('');
@@ -38,6 +53,21 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
   });
   const [showShredResult, setShowShredResult] = useState(false);
   const textareaRef = useRef(null);
+
+  // State cho Phòng Đập Phá Ảo (Virtual Rage Room)
+  const [smashItems, setSmashItems] = useState(INITIAL_SMASH_ITEMS);
+  const [smashedTotal, setSmashedTotal] = useState(() => {
+    return parseInt(localStorage.getItem('freedom_smashed_count') || '0', 10);
+  });
+  const [activeSmashEffect, setActiveSmashEffect] = useState(null);
+
+  // State cho Bóng Xốp Vô Tận (Bubble Wrap Popper)
+  const [bubbles, setBubbles] = useState(() =>
+    Array.from({ length: 32 }, (_, i) => ({ id: i, popped: false }))
+  );
+  const [poppedTotal, setPoppedTotal] = useState(() => {
+    return parseInt(localStorage.getItem('freedom_popped_bubbles') || '0', 10);
+  });
 
   // State cho Bài Tập Thở 4-7-8 & Tan Ca
   const [isBreathingActive, setIsBreathingActive] = useState(false);
@@ -104,6 +134,68 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
   };
 
   // =========================================================================
+  // XỬ LÝ PHÒNG ĐẬP PHÁ ẢO (VIRTUAL RAGE ROOM / SMASH THERAPY)
+  // =========================================================================
+  const handleSmashItem = (item) => {
+    if (item.smashed) return;
+    playCeramicShatterSound();
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([40, 25, 60]);
+    }
+
+    setSmashItems((prev) =>
+      prev.map((it) => (it.id === item.id ? { ...it, smashed: true } : it))
+    );
+
+    const newTotal = smashedTotal + 1;
+    setSmashedTotal(newTotal);
+    localStorage.setItem('freedom_smashed_count', String(newTotal));
+
+    // Kích hoạt hiệu ứng mảnh vỡ nổ tung
+    setActiveSmashEffect({
+      id: item.id,
+      name: item.name,
+      color: item.color,
+      time: Date.now(),
+    });
+    setTimeout(() => {
+      setActiveSmashEffect((curr) => (curr?.id === item.id ? null : curr));
+    }, 1200);
+  };
+
+  const handleResetSmash = () => {
+    playClickSound();
+    setSmashItems(INITIAL_SMASH_ITEMS);
+    setActiveSmashEffect(null);
+  };
+
+  // =========================================================================
+  // XỬ LÝ BÓNG XỐP VÔ TẬN (BUBBLE WRAP POPPER)
+  // =========================================================================
+  const handlePopBubble = (id) => {
+    const target = bubbles.find((b) => b.id === id);
+    if (!target || target.popped) return;
+
+    playBubblePopSound(0.85 + (id % 8) * 0.05);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(20);
+    }
+
+    setBubbles((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, popped: true } : b))
+    );
+
+    const newTotal = poppedTotal + 1;
+    setPoppedTotal(newTotal);
+    localStorage.setItem('freedom_popped_bubbles', String(newTotal));
+  };
+
+  const handleResetBubbles = () => {
+    playClickSound();
+    setBubbles(Array.from({ length: 32 }, (_, i) => ({ id: i, popped: false })));
+  };
+
+  // =========================================================================
   // XỬ LÝ BÀI TẬP THỞ 4-7-8 (BOX BREATHING)
   // =========================================================================
   const startBreathing = () => {
@@ -163,9 +255,9 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
       <div
         className="modal-box stress-relief-modal-box"
         style={{
-          maxWidth: '560px',
+          maxWidth: '680px',
           width: '94%',
-          maxHeight: 'min(86vh, 650px)',
+          maxHeight: 'min(92vh, 720px)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -204,7 +296,7 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
         </button>
 
         {/* Tiêu đề Modal */}
-        <div style={{ textAlign: 'center', marginBottom: '14px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '12px' }}>
           <span
             style={{
               display: 'inline-flex',
@@ -231,15 +323,16 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
           </p>
         </div>
 
-        {/* Tab Chuyển đổi giữa Máy Xé Giấy và Bài Tập Thở */}
+        {/* Tab Chuyển đổi giữa 4 liệu pháp xả stress */}
         <div
           style={{
-            display: 'flex',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
             background: '#f1f5f9',
-            padding: '3px',
-            borderRadius: '12px',
-            marginBottom: '14px',
-            gap: '6px',
+            padding: '4px',
+            borderRadius: '14px',
+            marginBottom: '12px',
+            gap: '4px',
           }}
         >
           <button
@@ -249,11 +342,10 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
               setActiveTab('shredder');
             }}
             style={{
-              flex: 1,
-              padding: '8px 12px',
+              padding: '8px 6px',
               border: 'none',
-              borderRadius: '9px',
-              fontSize: '0.84rem',
+              borderRadius: '10px',
+              fontSize: '0.8rem',
               fontWeight: 700,
               cursor: 'pointer',
               background: activeTab === 'shredder' ? '#ffffff' : 'transparent',
@@ -263,11 +355,66 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px',
+              gap: '5px',
+              whiteSpace: 'nowrap',
             }}
           >
             <i className="fa-regular fa-file-lines"></i>
-            <span>Máy Xé Giấy Deadline</span>
+            <span>Xé Giấy</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              playClickSound();
+              setActiveTab('smash');
+            }}
+            style={{
+              padding: '8px 6px',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: activeTab === 'smash' ? '#ffffff' : 'transparent',
+              color: activeTab === 'smash' ? '#e11d48' : '#64748b',
+              boxShadow: activeTab === 'smash' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '5px',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <i className="fa-solid fa-burst"></i>
+            <span>Đập Đĩa Ảo</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              playClickSound();
+              setActiveTab('bubble');
+            }}
+            style={{
+              padding: '8px 6px',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: activeTab === 'bubble' ? '#ffffff' : 'transparent',
+              color: activeTab === 'bubble' ? '#2563eb' : '#64748b',
+              boxShadow: activeTab === 'bubble' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '5px',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <i className="fa-solid fa-circle-dot"></i>
+            <span>Bóng Xốp</span>
           </button>
           <button
             type="button"
@@ -276,11 +423,10 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
               setActiveTab('breathing');
             }}
             style={{
-              flex: 1,
-              padding: '8px 12px',
+              padding: '8px 6px',
               border: 'none',
-              borderRadius: '9px',
-              fontSize: '0.84rem',
+              borderRadius: '10px',
+              fontSize: '0.8rem',
               fontWeight: 700,
               cursor: 'pointer',
               background: activeTab === 'breathing' ? '#ffffff' : 'transparent',
@@ -290,11 +436,12 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px',
+              gap: '5px',
+              whiteSpace: 'nowrap',
             }}
           >
             <i className="fa-solid fa-person-praying"></i>
-            <span>Nghi Thức Tan Ca & Thở 4-7-8</span>
+            <span>Thở 4-7-8</span>
           </button>
         </div>
 
@@ -980,6 +1127,230 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
                   ⏹ Dừng Lại (Đã hoàn thành {breathCycles} vòng)
                 </button>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: PHÒNG ĐẬP PHÁ ẢO (VIRTUAL RAGE ROOM / SMASH THERAPY) */}
+        {activeTab === 'smash' && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '4px 2px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div
+              style={{
+                background: 'linear-gradient(135deg, rgba(225, 29, 72, 0.08) 0%, rgba(244, 63, 94, 0.03) 100%)',
+                border: '1px solid rgba(244, 63, 94, 0.25)',
+                borderRadius: '16px',
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                  <span style={{ fontSize: '1.1rem' }}>💥</span>
+                  <strong style={{ fontSize: '0.92rem', color: '#be123c' }}>Phòng Đập Phá Ảo • Xả Cơn Uất Ức</strong>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
+                  Bấm hoặc chạm vào từng món đồ để đập vỡ tan tành cơn bực dọc!
+                </p>
+              </div>
+
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Đã đập vỡ:</span>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#e11d48' }}>
+                  {smashedTotal} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>món</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bàn gốm sứ với 6 món đồ áp lực */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '12px',
+                background: 'rgba(15, 23, 42, 0.03)',
+                padding: '16px',
+                borderRadius: '18px',
+                border: '1.5px dashed rgba(244, 63, 94, 0.25)',
+                position: 'relative',
+                minHeight: '200px',
+              }}
+            >
+              {smashItems.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => handleSmashItem(item)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '14px 8px',
+                    borderRadius: '14px',
+                    background: item.smashed ? 'rgba(0, 0, 0, 0.03)' : '#ffffff',
+                    border: item.smashed ? '1px dashed #cbd5e1' : `1.5px solid ${item.color}40`,
+                    boxShadow: item.smashed ? 'none' : '0 6px 16px rgba(0,0,0,0.06)',
+                    cursor: item.smashed ? 'default' : 'pointer',
+                    transform: item.smashed ? 'scale(0.92)' : 'scale(1)',
+                    opacity: item.smashed ? 0.45 : 1,
+                    transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    userSelect: 'none',
+                    position: 'relative',
+                  }}
+                >
+                  <div style={{ fontSize: '2.5rem', marginBottom: '6px', filter: item.smashed ? 'grayscale(1)' : 'none' }}>
+                    {item.smashed ? '💥' : item.icon}
+                  </div>
+                  <strong style={{ fontSize: '0.8rem', color: item.smashed ? '#94a3b8' : '#1e293b', textAlign: 'center', lineHeight: '1.2' }}>
+                    {item.name}
+                  </strong>
+                  <span style={{ fontSize: '0.68rem', color: item.smashed ? '#cbd5e1' : item.color, fontWeight: 700, marginTop: '3px' }}>
+                    {item.smashed ? 'ĐÃ ĐẬP VỠ' : 'BẤM ĐẬP 🔨'}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Thông điệp chữa lành & Nút dọn đĩa mới */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+              <span style={{ fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic' }}>
+                🌿 Vỡ tan hết muộn phiền rồi, hít một hơi thật sâu nhé!
+              </span>
+              <button
+                type="button"
+                onClick={handleResetSmash}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '10px',
+                  background: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  color: '#334155',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  flexShrink: 0,
+                }}
+              >
+                <span>🧹 Dọn Đĩa Mới</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: BẤM BÓNG XỐP VÔ TẬN (BUBBLE WRAP POPPER) */}
+        {activeTab === 'bubble' && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '4px 2px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div
+              style={{
+                background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%)',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+                borderRadius: '16px',
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                  <span style={{ fontSize: '1.1rem' }}>🫧</span>
+                  <strong style={{ fontSize: '0.92rem', color: '#1d4ed8' }}>Bóng Xốp Vô Tận • Bóp Nổ Tanh Tách</strong>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
+                  Cảm giác bóp nổ bong bóng xốp gây nghiện, kích thích dopamine xua tan stress!
+                </p>
+              </div>
+
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Đã bóp nổ:</span>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#2563eb' }}>
+                  {poppedTotal} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>bóng</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tấm xốp bong bóng 32 ô */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(8, 1fr)',
+                gap: '10px',
+                background: 'linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%)',
+                padding: '16px',
+                borderRadius: '18px',
+                border: '1px solid #93c5fd',
+                boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.05)',
+              }}
+            >
+              {bubbles.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => handlePopBubble(b.id)}
+                  style={{
+                    aspectRatio: '1/1',
+                    borderRadius: '50%',
+                    border: b.popped ? '1.5px dashed #93c5fd' : '2px solid #38bdf8',
+                    background: b.popped
+                      ? 'rgba(147, 197, 253, 0.2)'
+                      : 'radial-gradient(circle at 35% 35%, #ffffff 0%, #bae6fd 60%, #38bdf8 100%)',
+                    boxShadow: b.popped
+                      ? 'inset 0 2px 4px rgba(0,0,0,0.1)'
+                      : '0 4px 8px rgba(14, 165, 233, 0.35), inset 0 2px 4px rgba(255,255,255,0.8)',
+                    cursor: b.popped ? 'default' : 'pointer',
+                    transform: b.popped ? 'scale(0.85)' : 'scale(1)',
+                    transition: 'all 0.12s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0,
+                    outline: 'none',
+                  }}
+                  title={b.popped ? 'Đã nổ' : 'Bấm để bóp nổ!'}
+                >
+                  {b.popped ? (
+                    <span style={{ fontSize: '0.62rem', color: '#60a5fa', fontWeight: 700 }}>•</span>
+                  ) : (
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ffffff', opacity: 0.8, transform: 'translate(-3px, -3px)' }} />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Thông điệp & Nút lấy tấm mới */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+              <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                {bubbles.every((b) => b.popped)
+                  ? '🎉 Bạn đã làm sạch toàn bộ tấm xốp! Hãy lấy tấm mới nào!'
+                  : '💡 Mẹo: Bấm liên tục theo nhịp điệu để nghe âm thanh giòn tan thư giãn.'}
+              </span>
+              <button
+                type="button"
+                onClick={handleResetBubbles}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '10px',
+                  background: '#2563eb',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  flexShrink: 0,
+                  boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+                }}
+              >
+                <span>✨ Trải Tấm Mới</span>
+              </button>
             </div>
           </div>
         )}

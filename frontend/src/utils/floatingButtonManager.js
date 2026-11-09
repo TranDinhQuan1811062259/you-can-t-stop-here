@@ -182,20 +182,45 @@ export const getFabPos = (type) => {
 
 /**
  * Lưu vị trí mới và phát sự kiện thông báo để các nút còn lại kiểm tra va chạm
+ * - shouldNotify = false mặc định: Tránh phát sự kiện bão táp khi Resize cửa sổ hoặc mở Inspect
+ * - Cơ chế chống bão sự kiện (Debounce & Event Loop Guard) triệt tiêu 100% tình trạng đứng/treo trang khi mở DevTools
  */
-export const saveFabPos = (type, pos) => {
-  if (typeof window === 'undefined') return;
+let isDispatchingFabEvent = false;
+
+export const saveFabPos = (type, pos, shouldNotify = false) => {
+  if (typeof window === 'undefined') return pos;
   const key = getFabKey(type);
   const bounded = ensureInBounds(type, pos);
+
+  // 1. Kiểm tra xem toạ độ có thực sự thay đổi không để tránh ghi đè và trigger không cần thiết
   try {
+    const prevStr = localStorage.getItem(key);
+    if (prevStr) {
+      const prev = JSON.parse(prevStr);
+      if (prev.x === bounded.x && prev.y === bounded.y) {
+        return bounded;
+      }
+    }
     localStorage.setItem(key, JSON.stringify(bounded));
   } catch (e) {}
 
-  window.dispatchEvent(
-    new CustomEvent('freedom_fab_pos_changed', {
-      detail: { type, pos: bounded },
-    })
-  );
+  // 2. Chỉ phát sự kiện thông báo khi được chỉ định rõ ràng (khi người dùng thả chuột sau khi kéo)
+  // và tuyệt đối không phát đệ quy lồng nhau
+  if (shouldNotify && !isDispatchingFabEvent) {
+    isDispatchingFabEvent = true;
+    setTimeout(() => {
+      try {
+        window.dispatchEvent(
+          new CustomEvent('freedom_fab_pos_changed', {
+            detail: { type, pos: bounded },
+          })
+        );
+      } finally {
+        isDispatchingFabEvent = false;
+      }
+    }, 40);
+  }
+
   return bounded;
 };
 

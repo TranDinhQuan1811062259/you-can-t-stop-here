@@ -1,0 +1,103 @@
+{
+  "hash": "e31446d3",
+  "configHash": "37b7e756",
+  "lockfileHash": "3edfa363",
+  "browserHash": "daef6772",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "e6eccea7",
+      "needsInterop": true
+    },
+    "react-dom": {
+      "src": "../../node_modules/react-dom/index.js",
+      "file": "react-dom.js",
+      "fileHash": "28d1a480",
+      "needsInterop": true
+    },
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "1d72f9bf",
+      "needsInterop": true
+    },
+    "react/jsx-runtime": {
+      "src": "../../node_modules/react/jsx-runtime.js",
+      "file": "react_jsx-runtime.js",
+      "fileHash": "a27a2ed7",
+      "needsInterop": true
+    },
+    "axios": {
+      "src": "../../node_modules/axios/index.js",
+      "file": "axios.js",
+      "fileHash": "3a3c7879",
+      "needsInterop": false
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "8385c4d1",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.js",
+      "file": "react-router-dom.js",
+      "fileHash": "8732c10c",
+      "needsInterop": false
+    },
+    "three": {
+      "src": "../../node_modules/three/build/three.module.js",
+      "file": "three.js",
+      "fileHash": "7e8eb257",
+      "needsInterop": false
+    },
+    "three/examples/jsm/loaders/GLTFLoader.js": {
+      "src": "../../node_modules/three/examples/jsm/loaders/GLTFLoader.js",
+      "file": "three_examples_jsm_loaders_GLTFLoader__js.js",
+      "fileHash": "fd294c48",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "..\\..\\..\\..\\..\\..\\Downloads\\freedom-web\\frontend\\.vite\\deps_temp_b225102a\\three": {
+      "file": "____/____/____/____/____/____/Downloads/freedom-web/frontend/__vite/deps_temp_b225102a/three.js"
+    },
+    "..\\..\\..\\..\\..\\..\\Downloads\\freedom-web\\frontend\\.vite\\deps_temp_b225102a\\react": {
+      "file": "____/____/____/____/____/____/Downloads/freedom-web/frontend/__vite/deps_temp_b225102a/react.js"
+    },
+    "..\\..\\..\\..\\..\\..\\Downloads\\freedom-web\\frontend\\.vite\\deps_temp_b225102a\\react-dom": {
+      "file": "____/____/____/____/____/____/Downloads/freedom-web/frontend/__vite/deps_temp_b225102a/react-dom.js"
+    },
+    "..\\..\\..\\..\\..\\..\\Downloads\\freedom-web\\frontend\\.vite\\deps_temp_b225102a\\react_jsx-dev-runtime": {
+      "file": "____/____/____/____/____/____/Downloads/freedom-web/frontend/__vite/deps_temp_b225102a/react_jsx-dev-runtime.js"
+    },
+    "..\\..\\..\\..\\..\\..\\Downloads\\freedom-web\\frontend\\.vite\\deps_temp_b225102a\\react_jsx-runtime": {
+      "file": "____/____/____/____/____/____/Downloads/freedom-web/frontend/__vite/deps_temp_b225102a/react_jsx-runtime.js"
+    },
+    "..\\..\\..\\..\\..\\..\\Downloads\\freedom-web\\frontend\\.vite\\deps_temp_b225102a\\three_examples_jsm_loaders_GLTFLoader__js": {
+      "file": "____/____/____/____/____/____/Downloads/freedom-web/frontend/__vite/deps_temp_b225102a/three_examples_jsm_loaders_GLTFLoader__js.js"
+    },
+    "..\\..\\..\\..\\..\\..\\Downloads\\freedom-web\\frontend\\.vite\\deps_temp_b225102a\\chunk-CQYHHTIV": {
+      "file": "____/____/____/____/____/____/Downloads/freedom-web/frontend/__vite/deps_temp_b225102a/chunk-CQYHHTIV.js"
+    },
+    "..\\..\\..\\..\\..\\..\\Downloads\\freedom-web\\frontend\\.vite\\deps_temp_b225102a\\react-dom_client": {
+      "file": "____/____/____/____/____/____/Downloads/freedom-web/frontend/__vite/deps_temp_b225102a/react-dom_client.js"
+    },
+    "..\\..\\..\\..\\..\\..\\Downloads\\freedom-web\\frontend\\.vite\\deps_temp_b225102a\\axios": {
+      "file": "____/____/____/____/____/____/Downloads/freedom-web/frontend/__vite/deps_temp_b225102a/axios.js"
+    },
+    "..\\..\\..\\..\\..\\..\\Downloads\\freedom-web\\frontend\\.vite\\deps_temp_b225102a\\react-router-dom": {
+      "file": "____/____/____/____/____/____/Downloads/freedom-web/frontend/__vite/deps_temp_b225102a/react-router-dom.js"
+    },
+    "..\\..\\..\\..\\..\\..\\Downloads\\freedom-web\\frontend\\.vite\\deps_temp_b225102a\\chunk-XHU36PYF": {
+      "file": "____/____/____/____/____/____/Downloads/freedom-web/frontend/__vite/deps_temp_b225102a/chunk-XHU36PYF.js"
+    },
+    "..\\..\\..\\..\\..\\..\\Downloads\\freedom-web\\frontend\\.vite\\deps_temp_b225102a\\chunk-32E4H3EV": {
+      "file": "____/____/____/____/____/____/Downloads/freedom-web/frontend/__vite/deps_temp_b225102a/chunk-32E4H3EV.js"
+    },
+    "..\\..\\..\\..\\..\\..\\Downloads\\freedom-web\\frontend\\.vite\\deps_temp_b225102a\\chunk-G3PMV62Z": {
+      "file": "____/____/____/____/____/____/Downloads/freedom-web/frontend/__vite/deps_temp_b225102a/chunk-G3PMV62Z.js"
+    }
+  }
+}

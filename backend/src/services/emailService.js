@@ -271,4 +271,154 @@ export const sendOtpEmail = async (toEmail, otpCode, type = 'login') => {
   }
 };
 
+/**
+ * Gửi email thông báo đã niêm phong Hộp Thời Gian thành công
+ */
+export const sendTimeCapsuleConfirmationEmail = async ({ toEmail, title, unlockDate, creatorName }) => {
+  try {
+    const transporter = await getTransporter();
+    const formattedDate = new Date(unlockDate).toLocaleDateString('vi-VN', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    const senderName = process.env.MAIL_FROM_NAME || "You Can't Stop Here";
+    const senderEmail = (DIRECT_GMAIL_USER || process.env.EMAIL_USER || 'no-reply@youcantstophere.vn').trim();
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="vi">
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #f8fafc; }
+          .wrapper { width: 100%; max-width: 600px; margin: 30px auto; background: linear-gradient(165deg, #1e1b4b 0%, #0f172a 100%); border-radius: 20px; overflow: hidden; border: 1.5px solid rgba(251, 191, 36, 0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+          .header { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); padding: 32px 24px; text-align: center; color: #ffffff; }
+          .badge { display: inline-block; background: rgba(0,0,0,0.3); padding: 5px 14px; border-radius: 999px; font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; color: #fef3c7; }
+          .content { padding: 32px 28px; line-height: 1.7; font-size: 15px; color: #e2e8f0; }
+          .card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 14px; padding: 20px; margin: 20px 0; text-align: center; }
+          .cta-btn { display: inline-block; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000000 !important; font-weight: 800; text-decoration: none; padding: 12px 28px; border-radius: 10px; margin-top: 15px; }
+          .footer { background: rgba(0,0,0,0.4); padding: 20px; text-align: center; font-size: 12px; color: #94a3b8; }
+        </style>
+      </head>
+      <body>
+        <div class="wrapper">
+          <div class="header">
+            <span class="badge">⏳ CHIẾC HỘP THỜI GIAN</span>
+            <h1 style="margin: 10px 0 0; font-size: 24px; color: #fffbeb;">Lá Thư Đã Được Niêm Phong An Toàn!</h1>
+          </div>
+          <div class="content">
+            <p>Chào <strong>${creatorName || 'bạn'}</strong>,</p>
+            <p>Lá thư chứa đựng những tâm tư quý giá của bạn vừa được niêm phong vào <strong>Chiếc Hộp Thời Gian</strong> trên hệ thống Freedom.</p>
+            <div class="card">
+              <span style="font-size: 2.2rem;">💌</span>
+              <h3 style="margin: 8px 0; color: #fef08a; font-size: 18px;">${title}</h3>
+              <p style="margin: 0; color: #cbd5e1; font-size: 14px;">Thời điểm mở khóa dự kiến:</p>
+              <p style="margin: 6px 0 0; color: #f59e0b; font-weight: 800; font-size: 16px;">⏰ ${formattedDate}</p>
+            </div>
+            <p>Vào đúng thời điểm mở khóa, Freedom sẽ tự động gửi email thông báo kèm lá thư này để bạn đọc lại những gì mình đã gửi gắm từ ngày hôm nay nhé!</p>
+            <div style="text-align: center;">
+              <a href="${clientUrl}" class="cta-btn">Ghé Thăm Freedom Ngay 🌿</a>
+            </div>
+          </div>
+          <div class="footer">
+            Freedom • Không gian sẻ chia & chữa lành tinh thần người đi làm
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await transporter.sendMail({
+      from: `"${senderName}" <${senderEmail}>`,
+      to: toEmail,
+      subject: `[Chiếc Hộp Thời Gian] 💌 Lá thư "${title}" đã được niêm phong an toàn!`,
+      html: htmlContent,
+    });
+    console.log(`[EMAIL SERVICE] ✅ Đã gửi email xác nhận niêm phong hộp thời gian tới: ${toEmail}`);
+    return true;
+  } catch (err) {
+    console.warn(`[EMAIL SERVICE] Không thể gửi email xác nhận hộp thời gian:`, err.message);
+    return false;
+  }
+};
+
+/**
+ * Gửi email khi Hộp Thời Gian đến ngày mở khóa (Gửi trả tâm tư từ quá khứ)
+ */
+export const sendTimeCapsuleUnlockedEmail = async ({ toEmail, title, content, creatorName, unlockDate }) => {
+  try {
+    const transporter = await getTransporter();
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    const senderName = process.env.MAIL_FROM_NAME || "You Can't Stop Here";
+    const senderEmail = (DIRECT_GMAIL_USER || process.env.EMAIL_USER || 'no-reply@youcantstophere.vn').trim();
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="vi">
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #f8fafc; }
+          .wrapper { width: 100%; max-width: 620px; margin: 30px auto; background: linear-gradient(165deg, #1e1b4b 0%, #0f172a 100%); border-radius: 20px; overflow: hidden; border: 2px solid #f59e0b; box-shadow: 0 15px 40px rgba(245, 158, 11, 0.25); }
+          .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 34px 24px; text-align: center; color: #ffffff; }
+          .badge { display: inline-block; background: rgba(0,0,0,0.3); padding: 5px 14px; border-radius: 999px; font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; color: #fef3c7; }
+          .content { padding: 34px 30px; line-height: 1.8; font-size: 15px; color: #e2e8f0; }
+          .letter-box { background: rgba(255, 255, 255, 0.06); border: 1.5px solid rgba(245, 158, 11, 0.4); border-radius: 16px; padding: 24px; margin: 24px 0; font-family: Georgia, serif; color: #fffbeb; font-size: 16px; white-space: pre-wrap; line-height: 1.8; }
+          .cta-btn { display: inline-block; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000000 !important; font-weight: 800; text-decoration: none; padding: 13px 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); }
+          .footer { background: rgba(0,0,0,0.4); padding: 22px; text-align: center; font-size: 12px; color: #94a3b8; }
+        </style>
+      </head>
+      <body>
+        <div class="wrapper">
+          <div class="header">
+            <span class="badge">✨ THỜI ĐIỂM ĐÃ ĐẾN</span>
+            <h1 style="margin: 10px 0 0; font-size: 26px; color: #ffffff;">Chiếc Hộp Thời Gian Đã Mở Khóa!</h1>
+          </div>
+          <div class="content">
+            <p>Chào bạn,</p>
+            <p>Hôm nay là thời khắc đặc biệt! Một lá thư được gửi từ <strong>${creatorName || 'bạn trong quá khứ'}</strong> đã chính thức sẵn sàng để bạn đọc lại:</p>
+            
+            <div style="text-align: center; margin: 15px 0;">
+              <span style="font-size: 13px; color: #fcd34d; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Tiêu đề bức thư:</span>
+              <h2 style="margin: 4px 0; color: #fef08a; font-size: 20px;">${title}</h2>
+            </div>
+
+            <div class="letter-box">${content}</div>
+
+            <p style="text-align: center; font-style: italic; color: #94a3b8; font-size: 14px;">
+              "Dù hiện tại bạn đang ở đâu, hãy mỉm cười và cảm ơn chính mình vì đã không ngừng nỗ lực bước tiếp!"
+            </p>
+
+            <div style="text-align: center; margin: 28px 0 10px;">
+              <a href="${clientUrl}" class="cta-btn">Mở Hộp Thời Gian Trên Freedom 🌿</a>
+            </div>
+          </div>
+          <div class="footer">
+            Freedom • Không gian sẻ chia & chữa lành tinh thần người đi làm
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await transporter.sendMail({
+      from: `"${senderName}" <${senderEmail}>`,
+      to: toEmail,
+      subject: `[Chiếc Hộp Thời Gian] 💌 Lá thư từ quá khứ "${title}" đã sẵn sàng mở khóa!`,
+      html: htmlContent,
+    });
+    console.log(`[EMAIL SERVICE] 🚀 ĐÃ GỬI THƯ MỞ KHÓA HỘP THỜI GIAN TỚI: ${toEmail}`);
+    return true;
+  } catch (err) {
+    console.warn(`[EMAIL SERVICE] Không thể gửi thư mở khóa hộp thời gian:`, err.message);
+    return false;
+  }
+};
+
 

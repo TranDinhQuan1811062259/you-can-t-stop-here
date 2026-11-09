@@ -2,6 +2,10 @@ import TimeCapsule from '../models/TimeCapsule.js';
 import { loadStore, saveStore } from '../utils/persistentStore.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { checkDbReady } from '../config/db.js';
+import {
+  sendTimeCapsuleConfirmationEmail,
+  sendTimeCapsuleUnlockedEmail,
+} from '../services/emailService.js';
 
 // Gợi ý demo ban đầu nếu chưa có thư
 const DEFAULT_CAPSULES = [
@@ -66,9 +70,31 @@ export const timeCapsuleController = {
 
       // Ẩn nội dung nếu chiếc hộp chưa đến ngày mở khóa (giữ bí mật)
       const now = new Date();
+      let hasLocalStoreUpdate = false;
       const sanitized = capsules.map((cap) => {
         const unlock = new Date(cap.unlockDate);
         const canOpen = now >= unlock;
+
+        // Tự động gửi email thông báo khi chiếc hộp tới hạn mở khóa
+        if (canOpen && cap.notifyEmail && !cap.isEmailSent) {
+          sendTimeCapsuleUnlockedEmail({
+            toEmail: cap.notifyEmail,
+            title: cap.title,
+            content: cap.content,
+            creatorName: cap.creatorName,
+            unlockDate: cap.unlockDate,
+          }).catch((e) => console.warn('[TimeCapsule] Lỗi gửi email mở khóa:', e.message));
+
+          cap.isEmailSent = true;
+          cap.emailSentAt = now;
+
+          if (isMongo && cap._id && cap._id !== 'capsule_welcome_demo') {
+            TimeCapsule.updateOne({ _id: cap._id }, { $set: { isEmailSent: true, emailSentAt: now } }).catch(() => {});
+          } else {
+            hasLocalStoreUpdate = true;
+          }
+        }
+
         return {
           ...cap,
           canOpen,
@@ -76,6 +102,10 @@ export const timeCapsuleController = {
           isLocked: !canOpen && !cap.isOpened,
         };
       });
+
+      if (hasLocalStoreUpdate) {
+        saveStoreCapsules(capsules);
+      }
 
       return sendSuccess(res, {
         data: sanitized,
@@ -90,7 +120,7 @@ export const timeCapsuleController = {
   // Tạo chiếc hộp thời gian mới
   createCapsule: async (req, res) => {
     try {
-      const { title, content, unlockDate, mood, envelopeColor, musicTheme, creatorName } = req.body;
+      const { title, content, unlockDate, mood, envelopeColor, musicTheme, creatorName, notifyEmail } = req.body;
       const userId = req.user?._id;
       const guestId = req.headers['x-guest-id'] || req.body.guestId || `guest_${Date.now()}`;
 
@@ -102,6 +132,8 @@ export const timeCapsuleController = {
       if (isNaN(unlockTime.getTime())) {
         return sendError(res, { message: 'Thời gian mở khóa không hợp lệ', status: 400 });
       }
+
+      const cleanEmail = (notifyEmail || req.user?.email || '').trim().toLowerCase();
 
       const capsuleData = {
         title: title.trim(),
@@ -116,6 +148,9 @@ export const timeCapsuleController = {
         guestId: guestId,
         isOpened: false,
         openedAt: null,
+        notifyEmail: cleanEmail,
+        isEmailSent: false,
+        emailSentAt: null,
       };
 
       const isMongo = checkDbReady();
@@ -136,6 +171,16 @@ export const timeCapsuleController = {
       };
       local.unshift(localRecord);
       saveStoreCapsules(local);
+
+      // Gửi email xác nhận niêm phong nếu người dùng nhập email hợp lệ
+      if (cleanEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        sendTimeCapsuleConfirmationEmail({
+          toEmail: cleanEmail,
+          title: capsuleData.title,
+          unlockDate: unlockTime,
+          creatorName: capsuleData.creatorName,
+        }).catch((err) => console.warn('[TimeCapsule] Gửi email xác nhận thất bại:', err.message));
+      }
 
       return sendSuccess(res, {
         data: created || localRecord,
@@ -184,7 +229,22 @@ export const timeCapsuleController = {
       if (isMongo && target.save) {
         target.isOpened = true;
         target.openedAt = now;
+        if (target.notifyEmail && !target.isEmailSent) {
+          target.isEmailSent = true;
+          target.emailSentAt = now;
+        }
         await target.save();
+      }
+
+      // Gửi email nội dung thư nếu chưa gửi
+      if (target.notifyEmail && !target.isEmailSent) {
+        sendTimeCapsuleUnlockedEmail({
+          toEmail: target.notifyEmail,
+          title: target.title,
+          content: target.content,
+          creatorName: target.creatorName,
+          unlockDate: target.unlockDate,
+        }).catch((e) => console.warn('[TimeCapsule] Lỗi gửi email mở khóa:', e.message));
       }
 
       const local = getStoreCapsules();
@@ -192,6 +252,10 @@ export const timeCapsuleController = {
       if (idx !== -1) {
         local[idx].isOpened = true;
         local[idx].openedAt = now.toISOString();
+        if (local[idx].notifyEmail && !local[idx].isEmailSent) {
+          local[idx].isEmailSent = true;
+          local[idx].emailSentAt = now.toISOString();
+        }
         saveStoreCapsules(local);
       }
 

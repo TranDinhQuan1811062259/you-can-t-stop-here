@@ -77,18 +77,25 @@ export const AssistiveChatWidget = () => {
   const dragStartRef = useRef({ mouseX: 0, mouseY: 0, btnX: 0, btnY: 0 });
   const hasMovedRef = useRef(false);
 
-  // Giữ vị trí trong màn hình khi thay đổi kích thước cửa sổ
+  // Giữ vị trí trong màn hình khi thay đổi kích thước cửa sổ (có chống bão sự kiện Debounce)
   useEffect(() => {
+    let resizeTimer = null;
     const handleResize = () => {
-      setBtnPos((prev) => {
-        const bounded = ensureInBounds('chat', prev);
-        const resolved = resolveAntiCollision('chat', bounded, true);
-        saveFabPos('chat', resolved);
-        return resolved;
-      });
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        setBtnPos((prev) => {
+          const bounded = ensureInBounds('chat', prev);
+          const resolved = resolveAntiCollision('chat', bounded, true);
+          saveFabPos('chat', resolved, false);
+          return resolved;
+        });
+      }, 150);
     };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(resizeTimer);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   // Lắng nghe sự kiện khi các nút khác (Viết tâm sự, Mascot lễ hội, Thanh Cài đặt App) di chuyển để tự động né tránh nếu bị đè
@@ -98,7 +105,7 @@ export const AssistiveChatWidget = () => {
         setBtnPos((curr) => {
           const safe = resolveAntiCollision('chat', curr, true);
           if (safe.x !== curr.x || safe.y !== curr.y) {
-            saveFabPos('chat', safe);
+            saveFabPos('chat', safe, false);
             return safe;
           }
           return curr;
@@ -170,7 +177,7 @@ export const AssistiveChatWidget = () => {
         // Tự động hít (snap) về góc mép gần nhất & kiểm tra chống va chạm với nút Viết tâm sự
         setBtnPos((current) => {
           const snapped = snapToNearestEdge('chat', current);
-          saveFabPos('chat', snapped);
+          saveFabPos('chat', snapped, true);
           return snapped;
         });
       }

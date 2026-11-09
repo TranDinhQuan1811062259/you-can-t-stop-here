@@ -19,28 +19,36 @@ export const DraggableWritePostButton = ({ onClick }) => {
   const hasMovedRef = useRef(false);
   const btnRef = useRef(null);
 
-  // Giữ nút luôn trong khung nhìn khi thay đổi kích thước cửa sổ
+  // Giữ nút luôn trong khung nhìn khi thay đổi kích thước cửa sổ (có chống bão sự kiện Debounce)
   useEffect(() => {
+    let resizeTimer = null;
     const handleResize = () => {
-      setBtnPos((prev) => {
-        const bounded = ensureInBounds('write', prev);
-        const resolved = resolveAntiCollision('write', bounded, true);
-        saveFabPos('write', resolved);
-        return resolved;
-      });
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        setBtnPos((prev) => {
+          const bounded = ensureInBounds('write', prev);
+          const resolved = resolveAntiCollision('write', bounded, true);
+          saveFabPos('write', resolved, false);
+          return resolved;
+        });
+      }, 150);
     };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(resizeTimer);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   // Lắng nghe khi nút Tin Nhắn (Chat) di dời hoặc Linh vật sự kiện lễ hội xuất hiện:
   // Tự động né tránh thông minh, KHÔNG BAO GIỜ đè lên sự kiện hoặc nút Chat!
   useEffect(() => {
-    const handleRecheckCollision = () => {
+    const handleRecheckCollision = (e) => {
+      if (e?.detail?.type === 'write') return;
       setBtnPos((curr) => {
         const safe = resolveAntiCollision('write', curr, true);
         if (safe.x !== curr.x || safe.y !== curr.y) {
-          saveFabPos('write', safe);
+          saveFabPos('write', safe, false);
           return safe;
         }
         return curr;
@@ -121,7 +129,7 @@ export const DraggableWritePostButton = ({ onClick }) => {
         setBtnPos((current) => {
           // Tự động hít dạt về mép gần nhất (trái hoặc phải) theo bên nghiêng:
           const snapped = snapToNearestEdge('write', current);
-          saveFabPos('write', snapped);
+          saveFabPos('write', snapped, true);
           return snapped;
         });
       }

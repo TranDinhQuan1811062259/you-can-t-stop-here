@@ -466,7 +466,7 @@ export const TimeCapsuleMusicPlayer = ({
 
           {/* Thông tin bài hát & huy hiệu */}
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
               <span
                 style={{
                   display: 'inline-flex',
@@ -481,6 +481,8 @@ export const TimeCapsuleMusicPlayer = ({
                   background: 'rgba(0, 0, 0, 0.35)',
                   color: theme.textColor,
                   border: `1px solid ${theme.borderColor}`,
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                 }}
               >
                 {theme.badge}
@@ -495,9 +497,11 @@ export const TimeCapsuleMusicPlayer = ({
                   fontWeight: 700,
                   color: '#a7f3d0',
                   background: 'rgba(16, 185, 129, 0.2)',
-                  padding: '2px 6px',
+                  padding: '2px 8px',
                   borderRadius: '6px',
                   border: '1px solid rgba(52, 211, 153, 0.3)',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                 }}
               >
                 <span>♾️</span> Lặp vô tận

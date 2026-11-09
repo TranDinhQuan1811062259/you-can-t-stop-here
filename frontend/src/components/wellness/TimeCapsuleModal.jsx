@@ -5,6 +5,7 @@ import { AsmrKeyboardToggle } from '../common/AsmrKeyboardToggle';
 import { triggerAsmrKeySound } from '../../utils/keyboardSoundEngine';
 import { TimeCapsuleMusicPlayer } from './TimeCapsuleMusicPlayer';
 import { TimeCapsuleGardenView } from './TimeCapsuleGardenView';
+import { useAuth } from '../../context/AuthContext';
 
 const PRESET_DURATIONS = [
   { label: '1 Tháng (30 ngày)', days: 30, icon: '🌱' },
@@ -32,6 +33,7 @@ const ENVELOPES = [
 ];
 
 export const TimeCapsuleModal = ({ isOpen, onClose }) => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('write'); // 'write' | 'vault'
   const [capsules, setCapsules] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,12 +42,23 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
   // Form State
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [creatorName, setCreatorName] = useState('');
+  const [creatorName, setCreatorName] = useState(() => user?.name || '');
+  const [notifyEmail, setNotifyEmail] = useState(() => user?.email || '');
   const [selectedDurationDays, setSelectedDurationDays] = useState(90);
   const [customDate, setCustomDate] = useState('');
   const [selectedMood, setSelectedMood] = useState('heartbreak_love');
   const [selectedEnvelope, setSelectedEnvelope] = useState('rose');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Tự động đồng bộ email & tên khi người dùng đăng nhập
+  useEffect(() => {
+    if (user?.email && !notifyEmail) {
+      setNotifyEmail(user.email);
+    }
+    if (user?.name && !creatorName) {
+      setCreatorName(user.name);
+    }
+  }, [user]);
 
   // Chế độ xem Kho Hộp: 'garden' (Khu vườn hạt mầm sinh động) | 'list' (Danh sách cổ điển)
   const [vaultViewMode, setVaultViewMode] = useState('garden');
@@ -107,17 +120,23 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
     try {
       setIsSubmitting(true);
       const unlockDate = calculateUnlockDate();
+      const emailToNotify = notifyEmail.trim();
       const createdRes = await timeCapsuleService.createCapsule({
         title: title.trim(),
         content: content.trim(),
-        creatorName: creatorName.trim() || 'Tôi của ngày hôm nay',
+        creatorName: creatorName.trim() || user?.name || 'Tôi của ngày hôm nay',
+        notifyEmail: emailToNotify,
         unlockDate,
         mood: selectedMood,
         envelopeColor: selectedEnvelope,
       });
 
       playSingingBowlSound();
-      setAlertMsg('✨ Chiếc hộp thời gian đã được niêm phong và cất giữ an toàn!');
+      if (emailToNotify) {
+        setAlertMsg('✨ Chiếc hộp đã được niêm phong! Freedom đã gửi email xác nhận và sẽ gửi lại bức thư vào ngày mở khóa.');
+      } else {
+        setAlertMsg('✨ Chiếc hộp thời gian đã được niêm phong và cất giữ an toàn!');
+      }
       setTitle('');
       setContent('');
 
@@ -205,9 +224,9 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
       <div
         className="time-capsule-card"
         style={{
-          width: '100%',
-          maxWidth: '680px',
-          maxHeight: '90vh',
+          width: '95%',
+          maxWidth: '920px',
+          maxHeight: '92vh',
           background: 'linear-gradient(165deg, #0f172a 0%, #1e1b4b 100%)',
           border: '1.5px solid rgba(251, 191, 36, 0.3)',
           borderRadius: '24px',
@@ -366,18 +385,27 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
           />
         </div>
 
-        {/* Body Content */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px 20px' }}>
+        {/* Body Content - Không gian rộng rãi, thanh cuộn mượt mà */}
+        <div
+          className="custom-capsule-scroll"
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '18px 28px 24px',
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(245, 158, 11, 0.45) rgba(15, 23, 42, 0.4)',
+          }}
+        >
           {/* TAB 1: VIẾT THƯ MỚI */}
           {activeTab === 'write' && (
-            <form onSubmit={handleCreateCapsule} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form onSubmit={handleCreateCapsule} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, color: '#fcd34d', marginBottom: '8px' }}>
                   Tiêu đề bức thư *
                 </label>
                 <input
                   type="text"
-                  placeholder="Ví dụ: Gửi tôi của ngày 30 tuổi, khi đã vượt qua kỳ thi..."
+                  placeholder="Ví dụ: Gửi tôi của ngày 30 tuổi, khi đã vượt qua kỳ thi và vững bước hơn..."
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   onKeyDown={triggerAsmrKeySound}
@@ -385,27 +413,31 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
                   required
                   style={{
                     width: '100%',
-                    padding: '12px 14px',
-                    borderRadius: '12px',
+                    padding: '13px 16px',
+                    borderRadius: '14px',
                     background: 'rgba(255, 255, 255, 0.05)',
                     border: '1px solid rgba(255, 255, 255, 0.15)',
                     color: '#f8fafc',
-                    fontSize: '0.92rem',
+                    fontSize: '0.96rem',
                     outline: 'none',
                     boxSizing: 'border-box',
+                    transition: 'border-color 0.2s',
                   }}
                 />
               </div>
 
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '0.84rem', fontWeight: 600, color: '#cbd5e1' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fcd34d' }}>
                     Tâm tư gửi gắm vào tương lai *
                   </label>
-                  <span style={{ fontSize: '0.74rem', color: '#64748b' }}>Bật ASMR để gõ êm tai</span>
+                  <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                    <i className="fa-solid fa-keyboard" style={{ marginRight: '5px', color: '#f59e0b' }}></i>
+                    Bật ASMR để gõ phím êm tai
+                  </span>
                 </div>
                 <textarea
-                  rows={6}
+                  rows={8}
                   placeholder="Hôm nay bạn đang cảm thấy thế nào? Bạn muốn nhắn nhủ điều gì cho bạn của tương lai? Những khó khăn hiện tại là gì? Hãy viết thật chân thật..."
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
@@ -413,13 +445,14 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
                   required
                   style={{
                     width: '100%',
-                    padding: '14px',
-                    borderRadius: '14px',
+                    minHeight: '190px',
+                    padding: '16px 18px',
+                    borderRadius: '16px',
                     background: 'rgba(255, 255, 255, 0.04)',
                     border: '1px solid rgba(255, 255, 255, 0.15)',
                     color: '#f1f5f9',
-                    fontSize: '0.94rem',
-                    lineHeight: '1.6',
+                    fontSize: '0.98rem',
+                    lineHeight: '1.7',
                     outline: 'none',
                     resize: 'vertical',
                     fontFamily: 'inherit',
@@ -554,6 +587,104 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
                       />
                     ))}
                   </div>
+                </div>
+              </div>
+
+              {/* Nhận thư & thông báo qua Email khi đến hạn mở khóa */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(15, 23, 42, 0.4) 100%)',
+                  border: '1.5px solid rgba(245, 158, 11, 0.3)',
+                  borderRadius: '16px',
+                  padding: '16px 20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                  <label
+                    style={{
+                      fontSize: '0.88rem',
+                      fontWeight: 700,
+                      color: '#fcd34d',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      margin: 0,
+                    }}
+                  >
+                    <i className="fa-solid fa-envelope" style={{ color: '#f59e0b', fontSize: '1rem' }}></i>
+                    Gửi thư qua Email nhắc nhở khi đến ngày mở khóa
+                  </label>
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      color: '#34d399',
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      border: '1px solid rgba(52, 211, 153, 0.3)',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      fontWeight: 700,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <i className="fa-solid fa-bell" style={{ marginRight: '4px' }}></i>
+                    Nhắc nhở tự động
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+                  <div>
+                    <span style={{ display: 'block', fontSize: '0.78rem', color: '#cbd5e1', marginBottom: '5px' }}>
+                      Địa chỉ Email nhận thư:
+                    </span>
+                    <input
+                      type="email"
+                      placeholder="Nhập email của bạn (ví dụ: ban@gmail.com)..."
+                      value={notifyEmail}
+                      onChange={(e) => setNotifyEmail(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '11px 14px',
+                        borderRadius: '10px',
+                        background: 'rgba(0, 0, 0, 0.35)',
+                        border: '1px solid rgba(255, 255, 255, 0.18)',
+                        color: '#f8fafc',
+                        fontSize: '0.9rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <span style={{ display: 'block', fontSize: '0.78rem', color: '#cbd5e1', marginBottom: '5px' }}>
+                      Ký tên dưới lá thư (Tùy chọn):
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Ví dụ: Tôi của ngày hôm nay, Tuổi 23..."
+                      value={creatorName}
+                      onChange={(e) => setCreatorName(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '11px 14px',
+                        borderRadius: '10px',
+                        background: 'rgba(0, 0, 0, 0.35)',
+                        border: '1px solid rgba(255, 255, 255, 0.18)',
+                        color: '#f8fafc',
+                        fontSize: '0.9rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '0.76rem', color: '#94a3b8', lineHeight: '1.5', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="fa-solid fa-sparkles" style={{ color: '#f59e0b' }}></i>
+                  <span>Freedom sẽ gửi email xác nhận ngay khi bạn khóa thư, và tự động gửi lại toàn bộ bức thư này về hòm thư của bạn khi đến ngày mở khóa!</span>
                 </div>
               </div>
 

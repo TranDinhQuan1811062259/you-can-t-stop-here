@@ -939,6 +939,33 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
       }
     };
 
+    const playOnlineTtsFallback = (text) => {
+      try {
+        const encoded = encodeURIComponent(text.slice(0, 300));
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encoded}`;
+        const audio = new Audio(url);
+        audio.volume = 1.0;
+        ttsAudioRef.current = audio;
+        audio.onended = () => {
+          ttsAudioRef.current = null;
+          onSpeechFinished();
+        };
+        audio.onerror = () => {
+          ttsAudioRef.current = null;
+          onSpeechFinished();
+        };
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            ttsAudioRef.current = null;
+            onSpeechFinished();
+          });
+        }
+      } catch (_) {
+        onSpeechFinished();
+      }
+    };
+
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
@@ -984,9 +1011,13 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
           }
         }
 
-        if (selectedVoice) {
-          utterance.voice = selectedVoice;
+        // Nếu máy người dùng không có sẵn gói giọng đọc tiếng Việt offline -> Dùng ngay Fallback Audio online
+        if (!selectedVoice) {
+          playOnlineTtsFallback(cleanText);
+          return;
         }
+
+        utterance.voice = selectedVoice;
 
         // Tinh chỉnh cao độ & tốc độ truyền cảm theo phong cách phát thanh viên radio
         if (voiceGender === 'male') {
@@ -1003,7 +1034,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
         };
         utterance.onerror = () => {
           activeUtteranceRef.current = null;
-          onSpeechFinished();
+          playOnlineTtsFallback(cleanText);
         };
 
         // Tránh lỗi cancel và speak cùng 1 tick của Chromium
@@ -1013,15 +1044,17 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
             if (window.speechSynthesis.paused) {
               window.speechSynthesis.resume();
             }
-          } catch (_) {}
+          } catch (_) {
+            playOnlineTtsFallback(cleanText);
+          }
         }, 30);
         return;
       } catch (err) {
         console.warn('Lỗi đọc voice:', err);
-        onSpeechFinished();
+        playOnlineTtsFallback(cleanText);
       }
     } else {
-      onSpeechFinished();
+      playOnlineTtsFallback(cleanText);
     }
   };
 
@@ -1040,18 +1073,25 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     return () => clearInterval(timer);
   }, [thoughts.length, isVoiceEnabled, isPlaying]);
 
-  // Giữ mini pill trong màn hình khi thay đổi kích thước cửa sổ
+  // Giữ mini pill trong màn hình khi thay đổi kích thước cửa sổ (có chống bão sự kiện Debounce)
   useEffect(() => {
+    let resizeTimer = null;
     const handleResize = () => {
-      setBtnPos((prev) => {
-        const bounded = ensureInBounds('radio', prev);
-        const resolved = resolveAntiCollision('radio', bounded, true);
-        saveFabPos('radio', resolved);
-        return resolved;
-      });
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        setBtnPos((prev) => {
+          const bounded = ensureInBounds('radio', prev);
+          const resolved = resolveAntiCollision('radio', bounded, true);
+          saveFabPos('radio', resolved, false);
+          return resolved;
+        });
+      }, 150);
     };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(resizeTimer);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   // Chống va chạm với các nút khác
@@ -1061,7 +1101,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
       setBtnPos((curr) => {
         const safe = resolveAntiCollision('radio', curr, true);
         if (safe.x !== curr.x || safe.y !== curr.y) {
-          saveFabPos('radio', safe);
+          saveFabPos('radio', safe, false);
           return safe;
         }
         return curr;
@@ -1290,7 +1330,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
       if (hasMovedRef.current) {
         setBtnPos((current) => {
           const snapped = snapToNearestEdge('radio', current);
-          saveFabPos('radio', snapped);
+          saveFabPos('radio', snapped, true);
           return snapped;
         });
         setTimeout(() => {

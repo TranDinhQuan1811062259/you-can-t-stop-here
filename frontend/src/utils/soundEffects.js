@@ -1573,6 +1573,95 @@ export const playPageTransitionAtmosphereSound = ({ seasonId = 'winter', eventId
 };
 
 /**
+ * Phát âm thanh gốm sứ/đĩa vỡ cực kỳ chân thực và giải tỏa khi đập phá trong Phòng Đập Phá Ảo
+ */
+export const playCeramicShatterSound = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+
+    // 1. Tiếng va chạm đanh (Transient crack)
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1400, now);
+    osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
+    oscGain.gain.setValueAtTime(0.5, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.08);
+
+    // 2. Tiếng mảnh vỡ gốm sứ lanh canh (High-pass Noise Burst)
+    const noise = createNoiseBuffer(ctx, 0.4);
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noise;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.setValueAtTime(2500, now);
+    filter.frequency.linearRampToValueAtTime(1200, now + 0.35);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.7, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+
+    noiseSource.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noiseSource.start(now);
+    noiseSource.stop(now + 0.38);
+
+    // 3. Tiếng mảnh sành dội nhẹ (Clatter)
+    for (let i = 0; i < 3; i++) {
+      const pingOsc = ctx.createOscillator();
+      const pingGain = ctx.createGain();
+      const pingTime = now + 0.04 + i * 0.06;
+      pingOsc.type = 'sine';
+      pingOsc.frequency.setValueAtTime(2200 + Math.random() * 800, pingTime);
+      pingGain.gain.setValueAtTime(0.2 / (i + 1), pingTime);
+      pingGain.gain.exponentialRampToValueAtTime(0.001, pingTime + 0.05);
+      pingOsc.connect(pingGain);
+      pingGain.connect(ctx.destination);
+      pingOsc.start(pingTime);
+      pingOsc.stop(pingTime + 0.05);
+    }
+  } catch (_) {}
+};
+
+/**
+ * Phát âm thanh bóp nổ bong bóng xốp cực tanh tách & thỏa mãn (Bubble Wrap Pop)
+ */
+export const playBubblePopSound = (pitchMultiplier = 1.0) => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    const baseFreq = (750 + Math.random() * 250) * pitchMultiplier;
+    osc.frequency.setValueAtTime(baseFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(120, now + 0.055);
+
+    gain.gain.setValueAtTime(0.65, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.06);
+  } catch (_) {}
+};
+
+/**
  * Khởi tạo listener toàn cục bắt sự kiện click và rê chuột trên các phần tử tương tác
  */
 let isInitialized = false;
