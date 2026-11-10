@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { playClickSound } from '../../utils/soundEffects';
 import { formatPostContent } from '../../utils/contentFormatter';
 
@@ -87,7 +88,7 @@ export const CinemaReadingOverlay = ({ post, atmosphere = {}, onClose }) => {
 
   const currentTheme = THEME_STYLES[readingTheme] || THEME_STYLES.midnight;
 
-  return (
+  const overlayContent = (
     <div
       className="cinema-reading-overlay"
       style={{
@@ -387,4 +388,8 @@ export const CinemaReadingOverlay = ({ post, atmosphere = {}, onClose }) => {
       `}</style>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(overlayContent, document.body)
+    : overlayContent;
 };

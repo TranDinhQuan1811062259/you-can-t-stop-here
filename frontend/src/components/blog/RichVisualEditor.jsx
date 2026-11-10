@@ -264,7 +264,12 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
   // ===============================================
   // HỆ THỐNG GỢI Ý # (HASHTAG) VÀ @ (MENTION BẠN BÈ)
   // ===============================================
-  const checkAutoSuggest = () => {
+  const checkAutoSuggest = (e) => {
+    // Không làm gián đoạn khi người dùng đang bấm phím điều hướng trong popover
+    if (e && (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Enter' || e.key === 'Tab' || e.key === 'Escape')) {
+      return;
+    }
+
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) {
       setSuggestionMode(null);
@@ -287,20 +292,21 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
       if (hashtagMatch) {
         const query = hashtagMatch[1];
         setSuggestionMode('hashtag');
-        setSuggestionQuery(query);
-        setSelectedSuggestIndex(0);
+        if (suggestionQuery !== query) {
+          setSuggestionQuery(query);
+          setSelectedSuggestIndex(0);
+        }
         savedRangeRef.current = range.cloneRange();
-
-        // Tính vị trí tương đối so với container
         calculatePopoverPosition(range);
         return;
       } else if (mentionMatch) {
         const query = mentionMatch[1];
         setSuggestionMode('mention');
-        setSuggestionQuery(query);
-        setSelectedSuggestIndex(0);
+        if (suggestionQuery !== query) {
+          setSuggestionQuery(query);
+          setSelectedSuggestIndex(0);
+        }
         savedRangeRef.current = range.cloneRange();
-
         calculatePopoverPosition(range);
         return;
       }
@@ -329,25 +335,51 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
     }
   };
 
-  // Chèn hashtag được chọn
+  // Chèn hashtag được chọn (tự động phân biệt thay thế từ gõ dở hoặc chèn mới tại con trỏ)
   const handleSelectHashtag = (tag) => {
     const cleanTag = tag.replace(/^#/, '').trim();
     if (!cleanTag) return;
 
-    if (savedRangeRef.current) {
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(savedRangeRef.current);
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
 
-      const node = savedRangeRef.current.startContainer;
+    const sel = window.getSelection();
+    let range = null;
+
+    if (savedRangeRef.current) {
+      try {
+        sel?.removeAllRanges();
+        sel?.addRange(savedRangeRef.current);
+        range = savedRangeRef.current;
+      } catch (_) {}
+    }
+
+    if (!range && sel && sel.rangeCount > 0) {
+      range = sel.getRangeAt(0);
+    }
+
+    // Nếu không có selection hợp lệ trong editor, đặt con trỏ ở cuối editor
+    if (!range || !editorRef.current?.contains(range.commonAncestorContainer)) {
+      if (editorRef.current) {
+        range = document.createRange();
+        range.selectNodeContents(editorRef.current);
+        range.collapse(false);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      }
+    }
+
+    let replaced = false;
+    if (range) {
+      const node = range.startContainer;
       if (node && node.nodeType === Node.TEXT_NODE) {
-        const text = node.textContent;
-        const caretPos = savedRangeRef.current.startOffset;
+        const text = node.textContent || '';
+        const caretPos = range.startOffset;
         const textBefore = text.slice(0, caretPos);
         const match = textBefore.match(/(?:^|[\s\u00A0])#([a-zA-Z0-9_\u00C0-\u024F\u1E00-\u1EFF]*)$/);
 
         if (match) {
-          const matchedFull = match[0];
           const queryPart = '#' + match[1];
           const startIdx = textBefore.lastIndexOf(queryPart);
 
@@ -370,10 +402,33 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
             const newRange = document.createRange();
             newRange.setStartAfter(space);
             newRange.setEndAfter(space);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
+            sel?.removeAllRanges();
+            sel?.addRange(newRange);
+            savedRangeRef.current = newRange.cloneRange();
+            replaced = true;
           }
         }
+      }
+
+      // Nếu không có # gõ dở phía trước, chèn trực tiếp vào vị trí con trỏ
+      if (!replaced) {
+        const span = document.createElement('span');
+        span.className = 'editor-hashtag-pill';
+        span.textContent = `#${cleanTag}`;
+        span.contentEditable = 'false';
+
+        range.deleteContents();
+        range.insertNode(span);
+
+        const space = document.createTextNode('\u00A0');
+        span.after(space);
+
+        const newRange = document.createRange();
+        newRange.setStartAfter(space);
+        newRange.setEndAfter(space);
+        sel?.removeAllRanges();
+        sel?.addRange(newRange);
+        savedRangeRef.current = newRange.cloneRange();
       }
     }
 
@@ -387,20 +442,46 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
     setSuggestionMode(null);
   };
 
-  // Chèn mention bạn bè
+  // Chèn mention bạn bè (tự động phân biệt thay thế từ gõ dở hoặc chèn mới tại con trỏ)
   const handleSelectFriend = (friend) => {
     if (!friend) return;
     const friendName = friend.name || 'Bạn bè';
 
-    if (savedRangeRef.current) {
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(savedRangeRef.current);
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
 
-      const node = savedRangeRef.current.startContainer;
+    const sel = window.getSelection();
+    let range = null;
+
+    if (savedRangeRef.current) {
+      try {
+        sel?.removeAllRanges();
+        sel?.addRange(savedRangeRef.current);
+        range = savedRangeRef.current;
+      } catch (_) {}
+    }
+
+    if (!range && sel && sel.rangeCount > 0) {
+      range = sel.getRangeAt(0);
+    }
+
+    if (!range || !editorRef.current?.contains(range.commonAncestorContainer)) {
+      if (editorRef.current) {
+        range = document.createRange();
+        range.selectNodeContents(editorRef.current);
+        range.collapse(false);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      }
+    }
+
+    let replaced = false;
+    if (range) {
+      const node = range.startContainer;
       if (node && node.nodeType === Node.TEXT_NODE) {
-        const text = node.textContent;
-        const caretPos = savedRangeRef.current.startOffset;
+        const text = node.textContent || '';
+        const caretPos = range.startOffset;
         const textBefore = text.slice(0, caretPos);
         const match = textBefore.match(/(?:^|[\s\u00A0])@([a-zA-Z0-9_\u00C0-\u024F\u1E00-\u1EFF]*)$/);
 
@@ -414,7 +495,6 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
             replaceRange.setEnd(node, caretPos);
             replaceRange.deleteContents();
 
-            // Chèn pill mention có class và metadata user
             const span = document.createElement('span');
             span.className = 'editor-mention-pill';
             span.setAttribute('data-user-id', friend._id || '');
@@ -428,10 +508,33 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
             const newRange = document.createRange();
             newRange.setStartAfter(space);
             newRange.setEndAfter(space);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
+            sel?.removeAllRanges();
+            sel?.addRange(newRange);
+            savedRangeRef.current = newRange.cloneRange();
+            replaced = true;
           }
         }
+      }
+
+      if (!replaced) {
+        const span = document.createElement('span');
+        span.className = 'editor-mention-pill';
+        span.setAttribute('data-user-id', friend._id || '');
+        span.textContent = `@${friendName}`;
+        span.contentEditable = 'false';
+
+        range.deleteContents();
+        range.insertNode(span);
+
+        const space = document.createTextNode('\u00A0');
+        span.after(space);
+
+        const newRange = document.createRange();
+        newRange.setStartAfter(space);
+        newRange.setEndAfter(space);
+        sel?.removeAllRanges();
+        sel?.addRange(newRange);
+        savedRangeRef.current = newRange.cloneRange();
       }
     }
 
@@ -439,7 +542,7 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
     setSuggestionMode(null);
   };
 
-  // Điều hướng bằng bàn phím trong danh sách gợi ý
+  // Điều hướng bằng bàn phím trong danh sách gợi ý (Phím Up / Down / Enter / Tab / Esc)
   const handleKeyDown = (e) => {
     if (!suggestionMode) return;
 
@@ -449,35 +552,71 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
       return;
     }
 
-    // Nếu ấn Enter hoặc Tab và danh sách đang hiển thị
-    if (e.key === 'Enter' || e.key === 'Tab') {
-      if (suggestionMode === 'hashtag') {
-        const filtered = availableHashtags.filter((t) =>
-          t.toLowerCase().includes(suggestionQuery.toLowerCase())
-        );
-        const targetTag = filtered[selectedSuggestIndex] || suggestionQuery.trim();
-        if (targetTag) {
-          e.preventDefault();
-          handleSelectHashtag(targetTag);
+    if (suggestionMode === 'hashtag') {
+      const filtered = availableHashtags.filter((t) =>
+        t.toLowerCase().includes(suggestionQuery.toLowerCase())
+      );
+      const hasCreateNew =
+        suggestionQuery.trim() &&
+        !availableHashtags.some((t) => t.toLowerCase() === suggestionQuery.trim().toLowerCase());
+      const totalCount = filtered.length + (hasCreateNew ? 1 : 0);
+
+      if (totalCount === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedSuggestIndex((prev) => (prev + 1) % totalCount);
+        return;
+      }
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedSuggestIndex((prev) => (prev - 1 + totalCount) % totalCount);
+        return;
+      }
+
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (selectedSuggestIndex < filtered.length) {
+          handleSelectHashtag(filtered[selectedSuggestIndex]);
+        } else if (hasCreateNew) {
+          handleSelectHashtag(suggestionQuery.trim());
         }
-      } else if (suggestionMode === 'mention') {
-        const filtered = friendsList.filter((f) =>
-          (f.name || '').toLowerCase().includes(suggestionQuery.toLowerCase())
-        );
+        return;
+      }
+    } else if (suggestionMode === 'mention') {
+      const filtered = friendsList.filter((f) =>
+        (f.name || '').toLowerCase().includes(suggestionQuery.toLowerCase())
+      );
+      const totalCount = filtered.length;
+
+      if (totalCount === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedSuggestIndex((prev) => (prev + 1) % totalCount);
+        return;
+      }
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedSuggestIndex((prev) => (prev - 1 + totalCount) % totalCount);
+        return;
+      }
+
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        e.stopPropagation();
         if (filtered[selectedSuggestIndex]) {
-          e.preventDefault();
           handleSelectFriend(filtered[selectedSuggestIndex]);
         }
+        return;
       }
-    }
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedSuggestIndex((prev) => prev + 1);
-    }
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedSuggestIndex((prev) => Math.max(0, prev - 1));
     }
   };
 
@@ -698,7 +837,14 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
                 key={tag}
                 type="button"
                 className={`suggestion-item ${idx === selectedSuggestIndex ? 'active' : ''}`}
-                onClick={() => handleSelectHashtag(tag)}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleSelectHashtag(tag);
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSelectHashtag(tag);
+                }}
               >
                 <span className="suggestion-hash">#</span>
                 <span className="suggestion-name">{tag}</span>
@@ -710,8 +856,15 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
               !availableHashtags.some((t) => t.toLowerCase() === suggestionQuery.trim().toLowerCase()) && (
                 <button
                   type="button"
-                  className="suggestion-item suggestion-item-create"
-                  onClick={() => handleSelectHashtag(suggestionQuery.trim())}
+                  className={`suggestion-item suggestion-item-create ${selectedSuggestIndex === filteredHashtags.length ? 'active' : ''}`}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    handleSelectHashtag(suggestionQuery.trim());
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleSelectHashtag(suggestionQuery.trim());
+                  }}
                 >
                   <span className="suggestion-plus">✨</span>
                   <span className="suggestion-name">
@@ -743,7 +896,14 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
                   key={friend._id}
                   type="button"
                   className={`suggestion-item friend-item ${idx === selectedSuggestIndex ? 'active' : ''}`}
-                  onClick={() => handleSelectFriend(friend)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    handleSelectFriend(friend);
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleSelectFriend(friend);
+                  }}
                 >
                   <img
                     src={friend.avatar || '/images/man.jpg'}
@@ -793,16 +953,10 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
                 title={`Chèn hashtag #${tag} vào bài`}
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  // Focus lại editor trước khi chèn
-                  if (editorRef.current) {
-                    editorRef.current.focus();
-                    // Nếu savedRange còn hiệu lực, dùng nó; nếu không, chèn ở cuối
-                    if (savedRangeRef.current) {
-                      const sel = window.getSelection();
-                      sel.removeAllRanges();
-                      sel.addRange(savedRangeRef.current);
-                    }
-                  }
+                  handleSelectHashtag(tag);
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
                   handleSelectHashtag(tag);
                 }}
               >
@@ -824,14 +978,10 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
                   title={`Tag @${friend.name || 'bạn bè'} vào bài`}
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    if (editorRef.current) {
-                      editorRef.current.focus();
-                      if (savedRangeRef.current) {
-                        const sel = window.getSelection();
-                        sel.removeAllRanges();
-                        sel.addRange(savedRangeRef.current);
-                      }
-                    }
+                    handleSelectFriend(friend);
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
                     handleSelectFriend(friend);
                   }}
                 >

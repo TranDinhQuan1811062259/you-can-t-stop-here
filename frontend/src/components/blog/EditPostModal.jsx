@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { postService } from '../../services/postService';
 import { categoryService } from '../../services/categoryService';
 import { uploadService } from '../../services/uploadService';
@@ -87,6 +88,26 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
       }
     }
   }, [isOpen, post]);
+
+  // Khóa cuộn trang nền và hỗ trợ đóng modal bằng phím Escape
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen || !post) return null;
 
@@ -222,14 +243,49 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
     }
   };
 
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
+  const modalContent = (
+    <div
+      className="modal-backdrop edit-post-modal-backdrop"
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        background: 'rgba(15, 23, 42, 0.78)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        zIndex: 100000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        boxSizing: 'border-box',
+        overflowY: 'auto',
+      }}
+    >
       <div
-        className="modal-box"
-        style={{ maxWidth: '820px', width: '95%' }}
+        className="modal-box edit-post-modal-box"
+        style={{
+          maxWidth: '860px',
+          width: '95%',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          position: 'relative',
+          zIndex: 100001,
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.65)',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <button className="modal-close-btn" onClick={onClose}>
+        <button
+          className="modal-close-btn"
+          onClick={onClose}
+          type="button"
+          title="Đóng cửa sổ chỉnh sửa (Esc hoặc click ra ngoài)"
+        >
           <i className="fa-solid fa-xmark"></i>
         </button>
 
@@ -796,4 +852,8 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
       />
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };

@@ -177,8 +177,11 @@ export const timeCapsuleController = {
         sendTimeCapsuleConfirmationEmail({
           toEmail: cleanEmail,
           title: capsuleData.title,
+          content: capsuleData.content,
           unlockDate: unlockTime,
           creatorName: capsuleData.creatorName,
+          mood: capsuleData.mood,
+          envelopeColor: capsuleData.envelopeColor,
         }).catch((err) => console.warn('[TimeCapsule] Gửi email xác nhận thất bại:', err.message));
       }
 

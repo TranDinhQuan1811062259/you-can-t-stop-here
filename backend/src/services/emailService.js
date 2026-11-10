@@ -272,9 +272,30 @@ export const sendOtpEmail = async (toEmail, otpCode, type = 'login') => {
 };
 
 /**
- * Gửi email thông báo đã niêm phong Hộp Thời Gian thành công
+ * Hàm escape các ký tự đặc biệt của HTML để bảo vệ nội dung email và hiển thị chuẩn xác
  */
-export const sendTimeCapsuleConfirmationEmail = async ({ toEmail, title, unlockDate, creatorName }) => {
+const escapeHtml = (unsafe) => {
+  if (!unsafe) return '';
+  return String(unsafe)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
+/**
+ * Gửi email thông báo đã niêm phong Hộp Thời Gian thành công (Kèm đầy đủ nội dung bức thư để xem lại)
+ */
+export const sendTimeCapsuleConfirmationEmail = async ({
+  toEmail,
+  title,
+  content,
+  unlockDate,
+  creatorName,
+  mood,
+  envelopeColor,
+}) => {
   try {
     const transporter = await getTransporter();
     const formattedDate = new Date(unlockDate).toLocaleDateString('vi-VN', {
@@ -285,6 +306,12 @@ export const sendTimeCapsuleConfirmationEmail = async ({ toEmail, title, unlockD
       hour: '2-digit',
       minute: '2-digit',
     });
+
+    const MOOD_META = {
+      heartbreak_love: { label: 'Sự Tiếc Nuối (Hoài niệm & Ký ức xưa)', icon: '🥀', color: '#fca5a5' },
+      hopeful: { label: 'Tia Sáng Hy Vọng (Đầy năng lượng & Niềm tin)', icon: '✨', color: '#fde68a' },
+    };
+    const moodInfo = MOOD_META[mood] || { label: 'Bình Yên & Tĩnh Lặng', icon: '🌿', color: '#a7f3d0' };
 
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
     const senderName = process.env.MAIL_FROM_NAME || "You Can't Stop Here";
@@ -313,15 +340,39 @@ export const sendTimeCapsuleConfirmationEmail = async ({ toEmail, title, unlockD
             <h1 style="margin: 10px 0 0; font-size: 24px; color: #fffbeb;">Lá Thư Đã Được Niêm Phong An Toàn!</h1>
           </div>
           <div class="content">
-            <p>Chào <strong>${creatorName || 'bạn'}</strong>,</p>
+            <p>Chào <strong>${escapeHtml(creatorName || 'bạn')}</strong>,</p>
             <p>Lá thư chứa đựng những tâm tư quý giá của bạn vừa được niêm phong vào <strong>Chiếc Hộp Thời Gian</strong> trên hệ thống Freedom.</p>
+            
             <div class="card">
               <span style="font-size: 2.2rem;">💌</span>
-              <h3 style="margin: 8px 0; color: #fef08a; font-size: 18px;">${title}</h3>
+              <h3 style="margin: 8px 0; color: #fef08a; font-size: 19px;">${escapeHtml(title)}</h3>
               <p style="margin: 0; color: #cbd5e1; font-size: 14px;">Thời điểm mở khóa dự kiến:</p>
               <p style="margin: 6px 0 0; color: #f59e0b; font-weight: 800; font-size: 16px;">⏰ ${formattedDate}</p>
             </div>
-            <p>Vào đúng thời điểm mở khóa, Freedom sẽ tự động gửi email thông báo kèm lá thư này để bạn đọc lại những gì mình đã gửi gắm từ ngày hôm nay nhé!</p>
+
+            <!-- Khung Xem Lại Đầy Đủ Nội Dung Bức Thư Người Dùng Đã Nhập -->
+            <div style="margin: 24px 0 16px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <span style="font-size: 13px; color: #fcd34d; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
+                  📜 Bản Lưu Xem Lại Lời Nhắn Gửi Tương Lai:
+                </span>
+                <span style="font-size: 11px; color: #6ee7b7; background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); padding: 2px 8px; border-radius: 999px;">
+                  🔒 Đã Niêm Phong
+                </span>
+              </div>
+              <div style="background: rgba(255, 255, 255, 0.06); border: 1.5px solid rgba(245, 158, 11, 0.45); border-radius: 14px; padding: 22px; font-family: Georgia, 'Times New Roman', serif; color: #fffbeb; font-size: 15.5px; white-space: pre-wrap; line-height: 1.85; box-shadow: inset 0 2px 10px rgba(0,0,0,0.35); word-break: break-word;">${escapeHtml(content || '(Không có nội dung văn bản)')}</div>
+            </div>
+
+            <!-- Thông tin bổ trợ tâm trạng & người gửi -->
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #94a3b8; margin: 14px 4px 22px; flex-wrap: wrap; gap: 8px;">
+              <span>✍️ Người viết: <strong style="color: #ffffff;">${escapeHtml(creatorName || 'Tôi của ngày hôm nay')}</strong></span>
+              <span>${moodInfo.icon} Tâm trạng: <strong style="color: ${moodInfo.color};">${moodInfo.label}</strong></span>
+            </div>
+
+            <p style="font-size: 13.5px; color: #cbd5e1; font-style: italic; line-height: 1.6; text-align: center; margin: 18px 0 24px;">
+              "Vào đúng thời điểm mở khóa (<strong>${formattedDate}</strong>), Freedom sẽ tự động gửi email nhắc nhở kèm lời chúc để bạn mở hộp và đối chiếu với chặng đường phát triển của mình nhé!"
+            </p>
+
             <div style="text-align: center;">
               <a href="${clientUrl}" class="cta-btn">Ghé Thăm Freedom Ngay 🌿</a>
             </div>
@@ -340,7 +391,7 @@ export const sendTimeCapsuleConfirmationEmail = async ({ toEmail, title, unlockD
       subject: `[Chiếc Hộp Thời Gian] 💌 Lá thư "${title}" đã được niêm phong an toàn!`,
       html: htmlContent,
     });
-    console.log(`[EMAIL SERVICE] ✅ Đã gửi email xác nhận niêm phong hộp thời gian tới: ${toEmail}`);
+    console.log(`[EMAIL SERVICE] ✅ Đã gửi email xác nhận niêm phong hộp thời gian (kèm nội dung xem lại) tới: ${toEmail}`);
     return true;
   } catch (err) {
     console.warn(`[EMAIL SERVICE] Không thể gửi email xác nhận hộp thời gian:`, err.message);
@@ -386,10 +437,10 @@ export const sendTimeCapsuleUnlockedEmail = async ({ toEmail, title, content, cr
             
             <div style="text-align: center; margin: 15px 0;">
               <span style="font-size: 13px; color: #fcd34d; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Tiêu đề bức thư:</span>
-              <h2 style="margin: 4px 0; color: #fef08a; font-size: 20px;">${title}</h2>
+              <h2 style="margin: 4px 0; color: #fef08a; font-size: 20px;">${escapeHtml(title)}</h2>
             </div>
 
-            <div class="letter-box">${content}</div>
+            <div class="letter-box">${escapeHtml(content || '')}</div>
 
             <p style="text-align: center; font-style: italic; color: #94a3b8; font-size: 14px;">
               "Dù hiện tại bạn đang ở đâu, hãy mỉm cười và cảm ơn chính mình vì đã không ngừng nỗ lực bước tiếp!"

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { postService } from '../../services/postService';
 import { useAuth } from '../../context/AuthContext';
 import { playClickSound } from '../../utils/soundEffects';
@@ -11,6 +12,21 @@ export const SharePostModal = ({ isOpen, onClose, post, onShareSuccess }) => {
   const [errorMsg, setErrorMsg] = useState('');
 
   if (!isOpen || !post) return null;
+
+  // Khóa cuộn trang và lắng nghe Escape để đóng modal chia sẻ
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    const orig = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = orig;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   const currentUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/post/${post.slug}`
@@ -88,9 +104,37 @@ export const SharePostModal = ({ isOpen, onClose, post, onShareSuccess }) => {
     openShareWindow(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`);
   };
 
-  return (
-    <div className="sub-modal-overlay" onClick={onClose}>
-      <div className="sub-modal-box share-modal-box" onClick={(e) => e.stopPropagation()}>
+  const modalContent = (
+    <div
+      className="sub-modal-overlay share-modal-overlay"
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100000,
+        background: 'rgba(15, 23, 42, 0.75)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        boxSizing: 'border-box',
+      }}
+    >
+      <div
+        className="sub-modal-box share-modal-box"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'relative',
+          zIndex: 100001,
+          maxWidth: '540px',
+          width: '95%',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+        }}
+      >
         <div className="share-modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '1.4rem' }}>💌</span>
@@ -212,4 +256,8 @@ export const SharePostModal = ({ isOpen, onClose, post, onShareSuccess }) => {
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { postService } from '../../services/postService';
 import { formatDate } from '../../utils/formatDate';
@@ -70,12 +71,44 @@ export const AdminModerationModal = ({ isOpen, onClose, onPostDeleted }) => {
     }
   };
 
-  return (
-    <div className="modal-backdrop" onClick={onClose} style={{ zIndex: 10005 }}>
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    const orig = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = orig;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  const modalContent = (
+    <div
+      className="modal-backdrop admin-moderation-modal-backdrop"
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100000,
+        background: 'rgba(15, 23, 42, 0.75)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        boxSizing: 'border-box',
+      }}
+    >
       <div
         className="modal-container admin-moderation-modal-dialog"
         onClick={(e) => e.stopPropagation()}
         style={{
+          position: 'relative',
+          zIndex: 100001,
           maxWidth: '780px',
           width: '92%',
           maxHeight: '90vh',
@@ -83,7 +116,7 @@ export const AdminModerationModal = ({ isOpen, onClose, onPostDeleted }) => {
           flexDirection: 'column',
           borderRadius: '18px',
           overflow: 'hidden',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
         }}
       >
         {/* Header Modal */}
@@ -367,5 +400,9 @@ export const AdminModerationModal = ({ isOpen, onClose, onPostDeleted }) => {
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };
 

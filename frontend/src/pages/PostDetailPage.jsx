@@ -245,6 +245,30 @@ export const PostDetailPage = () => {
   const themeMeta = ATMOSPHERE_THEMES[postAtmosphere.theme] || ATMOSPHERE_THEMES.default;
   const bgPresetMeta = BACKGROUND_PRESETS.find((p) => p.id === postAtmosphere.bgPreset) || BACKGROUND_PRESETS[0];
 
+  // Ánh xạ danh mục chuẩn để không bao giờ bị hiển thị thô ID dạng cat_work_life
+  const FALLBACK_CATEGORIES_LOOKUP = {
+    cat_work_life: { name: 'Công Sở & Sự Nghiệp', icon: '💼', slug: 'cong-so' },
+    cat_emotion: { name: 'Tâm Sự & Cảm Xúc', icon: '🌧️', slug: 'tam-su' },
+    cat_healing: { name: 'Chữa Lành & Bình Yên', icon: '🌿', slug: 'chua-lanh' },
+    cat_life: { name: 'Cuộc Sống Thường Nhật', icon: '☕', slug: 'cuoc-song' },
+  };
+
+  const categoryData = (() => {
+    const cat = post.category;
+    if (cat && typeof cat === 'object' && cat.name && !String(cat.name).startsWith('cat_')) {
+      return {
+        name: cat.name,
+        icon: cat.icon || '🌍',
+        slug: cat.slug || '',
+      };
+    }
+    const catId = typeof cat === 'string' ? cat : (cat?._id || cat?.name);
+    if (catId && FALLBACK_CATEGORIES_LOOKUP[catId]) {
+      return FALLBACK_CATEGORIES_LOOKUP[catId];
+    }
+    return { name: 'Tâm Sự & Cảm Xúc', icon: '🌿', slug: 'tam-su' };
+  })();
+
   let customArticleStyle = {};
   const isCustomBg = postAtmosphere.bgPreset !== 'default' || postAtmosphere.customColor || postAtmosphere.customBgGradient;
   if (postAtmosphere.bgPreset === 'custom') {
@@ -272,10 +296,11 @@ export const PostDetailPage = () => {
             <Link to="/" style={{ color: 'var(--primary-color)' }}>Trang chủ</Link>
             <span style={{ margin: '0 8px' }}>/</span>
             <Link
-              to={post.category?.slug ? `/?category=${post.category.slug}` : '/'}
-              style={{ color: 'var(--primary-color)', fontWeight: 600 }}
+              to={categoryData.slug ? `/?category=${categoryData.slug}` : '/'}
+              style={{ color: 'var(--primary-color)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '5px' }}
             >
-              {post.category?.name || 'Tâm sự'}
+              <span>{categoryData.icon}</span>
+              <span>{categoryData.name}</span>
             </Link>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -394,27 +419,62 @@ export const PostDetailPage = () => {
                 </div>
               )}
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
                 <Link
-                  to={post.category?.slug ? `/?category=${post.category.slug}` : '/'}
+                  to={categoryData.slug ? `/?category=${categoryData.slug}` : '/'}
                   className="post-header-badge"
-                  style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-                  title={`Thể loại: ${post.category?.name || 'Tâm sự'} (Xem các bài viết liên quan)`}
+                  style={{
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: isCustomBg ? 'rgba(255, 255, 255, 0.22)' : 'rgba(13, 148, 136, 0.12)',
+                    color: isCustomBg ? '#ffffff' : 'var(--primary-hover)',
+                    border: isCustomBg ? '1.5px solid rgba(255, 255, 255, 0.4)' : '1px solid rgba(13, 148, 136, 0.25)',
+                    padding: '4px 14px',
+                    borderRadius: '999px',
+                    fontWeight: 800,
+                    fontSize: '0.82rem',
+                    textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+                    boxShadow: isCustomBg ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
+                    backdropFilter: isCustomBg ? 'blur(8px)' : 'none',
+                  }}
+                  title={`Thể loại: ${categoryData.name} (Xem các bài viết liên quan)`}
                 >
-                  <span>{post.category?.icon || '🌍'}</span>
-                  <span>{post.category?.name || 'Tâm sự'}</span>
+                  <span style={{ fontSize: '1rem' }}>{categoryData.icon}</span>
+                  <span>{categoryData.name}</span>
                 </Link>
                 <span
-                  className={`card-visibility-pill ${post.visibility === 'friends' ? 'is-friends' : 'is-public'}`}
+                  className={`card-visibility-pill ${post.visibility === 'friends' ? 'is-friends' : 'is-public'} ${isCustomBg ? 'custom-atm-visibility-pill' : ''}`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: isCustomBg
+                      ? (post.visibility === 'friends' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.22)')
+                      : undefined,
+                    color: isCustomBg
+                      ? (post.visibility === 'friends' ? '#fef08a' : '#ffffff')
+                      : undefined,
+                    border: isCustomBg
+                      ? (post.visibility === 'friends' ? '1.5px solid rgba(245, 158, 11, 0.5)' : '1.5px solid rgba(255, 255, 255, 0.4)')
+                      : undefined,
+                    padding: '4px 14px',
+                    borderRadius: '999px',
+                    fontWeight: 800,
+                    fontSize: '0.8rem',
+                    textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+                    backdropFilter: isCustomBg ? 'blur(8px)' : 'none',
+                  }}
                   title={post.visibility === 'friends' ? 'Chế độ: Chỉ bạn bè mới xem được' : 'Chế độ: Công khai cho tất cả'}
                 >
                   {post.visibility === 'friends' ? (
                     <>
-                      <i className="fa-solid fa-user-group" style={{ marginRight: '5px' }}></i> Chỉ bạn bè
+                      <i className="fa-solid fa-user-group"></i> Chỉ bạn bè
                     </>
                   ) : (
                     <>
-                      <i className="fa-solid fa-globe" style={{ marginRight: '5px' }}></i> Công khai
+                      <i className="fa-solid fa-globe"></i> Công khai
                     </>
                   )}
                 </span>
@@ -424,14 +484,16 @@ export const PostDetailPage = () => {
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '5px',
-                      padding: '3px 10px',
-                      borderRadius: '20px',
+                      gap: '6px',
+                      padding: '4px 14px',
+                      borderRadius: '999px',
                       fontSize: '0.8rem',
-                      fontWeight: 700,
-                      background: `${themeMeta.accentColor}25`,
-                      color: themeMeta.accentColor,
-                      border: `1px solid ${themeMeta.accentColor}60`,
+                      fontWeight: 800,
+                      background: isCustomBg ? 'rgba(255, 255, 255, 0.22)' : `${themeMeta.accentColor}25`,
+                      color: isCustomBg ? '#ffffff' : themeMeta.accentColor,
+                      border: isCustomBg ? '1.5px solid rgba(255, 255, 255, 0.4)' : `1px solid ${themeMeta.accentColor}60`,
+                      textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+                      backdropFilter: isCustomBg ? 'blur(8px)' : 'none',
                     }}
                   >
                     <span>{themeMeta.icon}</span>
@@ -440,7 +502,13 @@ export const PostDetailPage = () => {
                 )}
               </div>
 
-              <h1 className="post-full-title">
+              <h1
+                className="post-full-title"
+                style={{
+                  color: isCustomBg ? '#ffffff' : undefined,
+                  textShadow: isCustomBg ? '0 2px 10px rgba(0,0,0,0.55)' : undefined,
+                }}
+              >
                 <IdleWeatherText>{post.title}</IdleWeatherText>
               </h1>
 
@@ -460,12 +528,27 @@ export const PostDetailPage = () => {
                   <div className="post-author-details">
                     <div className="post-author-name-row">
                       <Link to={authorProfileUrl} className="post-author-name-link" title={`Xem trang cá nhân của ${authorName}`}>
-                        <h4 className="post-author-name">{authorName}</h4>
+                        <h4
+                          className="post-author-name"
+                          style={{
+                            color: isCustomBg ? '#ffffff' : undefined,
+                            textShadow: isCustomBg ? '0 1px 4px rgba(0,0,0,0.5)' : undefined,
+                          }}
+                        >
+                          {authorName}
+                        </h4>
                       </Link>
                       {isCurrentUserAuthor && <span className="author-self-badge">Tác giả</span>}
                     </div>
                     <div className="post-author-sub-row">
-                      <span className="post-author-job">{authorJob}</span>
+                      <span
+                        className="post-author-job"
+                        style={{
+                          color: isCustomBg ? 'rgba(255, 255, 255, 0.9)' : undefined,
+                        }}
+                      >
+                        {authorJob}
+                      </span>
                       {authorSocial && (authorSocial.facebook || authorSocial.instagram || authorSocial.tiktok || authorSocial.x || authorSocial.linkedin || authorSocial.github || authorSocial.website) && (
                         <div className="author-bar-social-mini">
                           {authorSocial.facebook && (
@@ -509,12 +592,33 @@ export const PostDetailPage = () => {
                   </div>
                 </div>
 
-                <div className="post-stats-pill">
-                  <span className="post-stat-item">
+                <div
+                  className="post-stats-pill"
+                  style={{
+                    background: isCustomBg ? 'rgba(0, 0, 0, 0.32)' : undefined,
+                    border: isCustomBg ? '1px solid rgba(255, 255, 255, 0.28)' : undefined,
+                    backdropFilter: isCustomBg ? 'blur(8px)' : undefined,
+                  }}
+                >
+                  <span
+                    className="post-stat-item"
+                    style={{
+                      color: isCustomBg ? '#ffffff' : undefined,
+                      fontWeight: isCustomBg ? 700 : undefined,
+                      textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
+                    }}
+                  >
                     <span>🗓️</span>
                     <span>{formatDate(post.createdAt)}</span>
                   </span>
-                  <span className="post-stat-item">
+                  <span
+                    className="post-stat-item"
+                    style={{
+                      color: isCustomBg ? '#ffffff' : undefined,
+                      fontWeight: isCustomBg ? 700 : undefined,
+                      textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
+                    }}
+                  >
                     <span>👁️</span>
                     <span>{post.views || 1} lượt đọc</span>
                   </span>
@@ -526,12 +630,12 @@ export const PostDetailPage = () => {
                     onClick={() => setIsShareOpen(true)}
                     title="Chia sẻ bài viết lên trang cá nhân hoặc mạng xã hội"
                     style={{
-                      background: 'rgba(13, 148, 136, 0.15)',
-                      border: '1px solid #0d9488',
-                      color: '#0d9488',
+                      background: isCustomBg ? 'rgba(255, 255, 255, 0.22)' : 'rgba(13, 148, 136, 0.15)',
+                      border: isCustomBg ? '1.5px solid rgba(255, 255, 255, 0.45)' : '1px solid #0d9488',
+                      color: isCustomBg ? '#ffffff' : '#0d9488',
                       padding: '5px 12px',
                       borderRadius: '6px',
-                      fontWeight: 700,
+                      fontWeight: 800,
                       fontSize: '0.8rem',
                       cursor: 'pointer',
                       display: 'inline-flex',
@@ -539,6 +643,8 @@ export const PostDetailPage = () => {
                       gap: '5px',
                       whiteSpace: 'nowrap',
                       flexShrink: 0,
+                      textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
+                      backdropFilter: isCustomBg ? 'blur(6px)' : undefined,
                     }}
                   >
                     💌 Chia sẻ

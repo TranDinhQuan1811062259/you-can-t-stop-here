@@ -1,6 +1,83 @@
 {
   "posts": [
     {
+      "_id": "post_1794297041933",
+      "title": "TÂM SỰ",
+      "slug": "tam-su",
+      "summary": "“Bao ngày Mẹ ngóng, bao ngày Mẹ trông, bao ngày Mẹ mong con chào đời.",
+      "content": "<p>TÂM SỰ</p><p>“Bao ngày Mẹ ngóng, bao ngày Mẹ trông, bao ngày Mẹ mong con chào đời.</p><p>Ấp trong đáy lòng, có chăng tiếng cười của một hài nhi đang lớn dần?</p><p>Mẹ chợt tỉnh giấc, và Mẹ nhìn thấy hình hài nhỏ bé như thiên thần.</p><p>Tiếng con khóc oà, mắt Mẹ lệ nhòa, cám ơn vì con đến bên Mẹ…”</p><p>Trích “Nhật ký của mẹ”</p><p>Tôi mượn lời bài hát “Nhật ký của mẹ” của nhạc sĩ Nguyễn Văn Chung để nói nói lên</p><p>suy nghĩ của mình.</p><p>Với tôi ngành Y là một ngành rất đặc biệt, ngành mà phải chịu trách</p><p>nhiệm về sức khỏe của con người từ lúc sinh ra cho tới khi mất đi.</p><p>Với vai trò là một bác sĩ Sản khoa, đồng hành cùng những bà mẹ từ</p><p>khi mang thai đến khi được nhìn đứa con của mình chào đời. Tôi</p><p>hiểu được cảm giác trông chờ, cảm giác từng cơn đau đẻ, cùng</p><p>những giọt nước mắt của người mẹ rơi khi một đứa trẻ vừa chào đời,</p><p>và nở nụ cười hân hoan cùng gia đình sản phụ khi mẹ tròn con</p><p>vuông. Để sau đó, tôi tiếp tục quay lại với công việc thầm lặng của</p><p>mình, đưa những đứa trẻ đến với cuộc đời một cách bình an. Thế</p><p>nhưng trong công tác chăm sóc người bệnh, với tôi người bệnh luôn</p><p>là trung tâm. Để khi thấy được niềm vui và hạnh phúc của họ. Tôi</p><p>cảm thấy được ấm lòng khi âm thầm, lặng lẽ trong màu áo trắng</p><p>chăm sóc sức khỏe cho sản phụ và thai nhi. Đối với tôi và bao đồng</p><p>nghiệp khác, sức khỏe, sự hồi phục, và niềm hạnh phúc khi mẹ tròn</p><p>con vuông là món quà quý giá nhất</p><p>”Khi em cất tiếng khóc chào đời</p><p>Anh đại diện đời chào em bằng nụ cười</p><p>Lớn lên nhớ đừng hỏi tại sao có kẻ cười người khóc</p><p>Trong cùng một cảnh ngộ nghe em!</p><p>Anh nhỏ vào mắt em thứ thuốc màu nâu</p><p>Nói là để ngừa đau mắt</p><p>Ngay lúc đó em đã không nhìn đời qua mắt thực</p><p>Nhớ đừng hỏi vì sao đời tối đen!</p><p>Khi anh cắt rún cho em</p><p>Anh đã xin lỗi chân thành rồi đó nhé</p><p>Vì từ nay em đã phải cô đơn</p><p>Em đã phải xa địa đàng lòng mẹ…</p><p>TÂM SỰ</p><p>Em là gái là trai anh chẳng quan tâm</p><p>Nhưng khi em biết thẹn thùng</p><p>Sẽ biết thế nào là nước mắt trong đêm</p><p>Khi tình yêu tìm đến!”</p><p>Trích “Thư cho bé sơ sinh”</p><p>NGUYỄN TRUNG TÍN</p><p><span class=\"editor-hashtag-pill\" contenteditable=\"false\">#chualanh</span>&nbsp;</p>",
+      "category": {
+        "_id": "cat_1794297130886",
+        "name": "Tâm Sự & Cảm Xúc",
+        "slug": "tam-su",
+        "description": "Tâm sự, cảm xúc và những câu chuyện chữa lành",
+        "icon": "🌧️",
+        "createdAt": "2026-11-10T07:52:10.886Z"
+      },
+      "coverImage": "/uploads/1794297126811-900836251_122217987692799788_783355098197046454_n.jpg",
+      "tags": [],
+      "user": {
+        "_id": "6aec5b46ee112662b33c0e32",
+        "name": "Đơn Thân Mẹ",
+        "avatar": "/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg",
+        "jobTitle": "System Admin & Lead Dev",
+        "bio": "Tài khoản Google Đơn Thân Mẹ đồng bộ từ Chrome. #Google #JanMammy"
+      },
+      "author": "Đơn Thân Mẹ",
+      "authorJob": "System Admin & Lead Dev",
+      "authorAvatar": "/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg",
+      "authorSocialLinks": {
+        "facebook": "https://www.facebook.com/anthony.qill/",
+        "instagram": "https://www.instagram.com/hotcandy.134/",
+        "tiktok": "https://www.tiktok.com/@whatwasthat2000?is_from_webapp=1&sender_device=pc",
+        "x": "https://x.com/anthony_quan",
+        "linkedin": "https://linkedin.com/in/anthonyquan",
+        "github": "",
+        "website": "https://cantstophere.com"
+      },
+      "views": 9,
+      "cheersCount": 0,
+      "showReactionCount": true,
+      "allowComments": true,
+      "reactions": [],
+      "reactionCounts": {
+        "sympathy": 0,
+        "stop": 0,
+        "love": 0,
+        "encourage": 0,
+        "total": 0
+      },
+      "sharesCount": 0,
+      "repostCount": 0,
+      "repostedBy": [],
+      "visibility": "public",
+      "isPublished": true,
+      "audioMood": "auto",
+      "voiceGender": "male",
+      "voiceRegion": "central",
+      "customVoiceProfile": {
+        "enabled": false,
+        "pitch": 1,
+        "rate": 1,
+        "sampleAudioUrl": "",
+        "timbre": "authentic",
+        "voiceName": "Giọng đọc chính chủ của tôi"
+      },
+      "atmosphere": {
+        "theme": "healing",
+        "soundEnabled": true,
+        "bgPreset": "healing_emerald",
+        "customColor": "",
+        "customBgGradient": "",
+        "particleEffect": "fireflies"
+      },
+      "isFlagged": false,
+      "flagReason": "",
+      "moderationStatus": "approved",
+      "createdAt": "2026-11-10T07:50:41.933Z",
+      "updatedAt": "2026-11-10T07:52:10.896Z"
+    },
+    {
       "_id": "post_1793879396154",
       "title": "Bài viết thử nghiệm lưu trữ",
       "slug": "bai-viet-thu-nghiem-luu-tru",
