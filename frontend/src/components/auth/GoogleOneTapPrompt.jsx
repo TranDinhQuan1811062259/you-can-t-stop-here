@@ -2,42 +2,53 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { playClickSound } from '../../utils/soundEffects';
 
-const GOOGLE_ACCOUNTS = [
-  {
-    name: 'Đơn Thân Mẹ',
-    email: 'anthonyq012025@gmail.com',
-    avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
-    jobTitle: 'System Admin & Lead Dev',
-    role: 'admin',
-    bio: 'Tài khoản Google Đơn Thân Mẹ đồng bộ từ Chrome. #Google #JanMammy',
-  },
-  {
-    name: 'Ảnh 2 Hình',
-    email: 'hinhanh2081200@gmail.com',
-    avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
-    jobTitle: 'Dance & Art Creator',
-    role: 'member',
-    bio: 'Tài khoản Google Ảnh 2 Hình kết nối nhanh từ trình duyệt.',
-  },
-  {
-    name: 'Ảnh 6 Hình',
-    email: 'hinhanh6hinh@gmail.com',
-    avatar: '/uploads/1793877428223-888947577_122129675793464276_5782383970566541736_n.jpg',
-    jobTitle: 'Nhiếp ảnh & Content Creator',
-    role: 'member',
-    bio: 'Tài khoản Google Ảnh 6 Hình kết nối nhanh từ trình duyệt.',
-  },
-];
+// Helper lấy danh sách tài khoản Google đã từng lưu trên MÁY NÀY
+// Máy mới / trình duyệt mới sẽ là mảng rỗng [] -> Hệ thống hoàn toàn trống trơn không đề xuất!
+const getSavedGoogleAccounts = () => {
+  try {
+    const raw = localStorage.getItem('saved_google_accounts');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    // 🛡️ BẢO MẬT: Tuyệt đối không bao giờ hiển thị hoặc đề xuất tài khoản Admin công khai!
+    return parsed.filter(
+      (acc) =>
+        acc &&
+        acc.email &&
+        acc.email.toLowerCase().trim() !== 'anthonyq012025@gmail.com' &&
+        acc.role !== 'admin' &&
+        !acc.isAdmin
+    );
+  } catch (_) {
+    return [];
+  }
+};
 
 export const GoogleOneTapPrompt = () => {
-  const { isAuthenticated, socialLogin, openLoginModal } = useAuth();
+  const { isAuthenticated, openLoginModal } = useAuth();
+  const [savedAccounts, setSavedAccounts] = useState(() => getSavedGoogleAccounts());
   const [isVisible, setIsVisible] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState(null);
   const [toastMsg, setToastMsg] = useState('');
 
-  // Tự động gợi ý Google One Tap sau khi người dùng bấm vào trang (khoảng 800ms) nếu chưa đăng nhập
+  // Cập nhật lại danh sách tài khoản đã lưu khi có thay đổi storage
   useEffect(() => {
-    if (isAuthenticated) {
+    const updateAccounts = () => {
+      setSavedAccounts(getSavedGoogleAccounts());
+    };
+    window.addEventListener('storage', updateAccounts);
+    window.addEventListener('saved_accounts_updated', updateAccounts);
+    return () => {
+      window.removeEventListener('storage', updateAccounts);
+      window.removeEventListener('saved_accounts_updated', updateAccounts);
+    };
+  }, []);
+
+  // Chỉ hiển thị One Tap NẾU trên máy này thực sự có tài khoản Google đã lưu trước đó!
+  // Với máy khác / người lạ: savedAccounts.length === 0 -> Hoàn toàn trống trơn, không đề xuất!
+  useEffect(() => {
+    if (isAuthenticated || savedAccounts.length === 0) {
       setIsVisible(false);
       return;
     }
@@ -49,18 +60,26 @@ export const GoogleOneTapPrompt = () => {
       }, 750);
       return () => clearTimeout(timer);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, savedAccounts]);
 
   // Hỗ trợ sự kiện mở One Tap từ bên ngoài (khi bấm nút Google ở bất kỳ đâu)
   useEffect(() => {
     const handleOpen = () => {
-      setIsVisible(true);
+      const current = getSavedGoogleAccounts();
+      setSavedAccounts(current);
+      if (current.length > 0) {
+        setIsVisible(true);
+      } else {
+        // Nếu máy này chưa có tài khoản lưu -> Mở thẳng modal đăng nhập Google OTP
+        window.dispatchEvent(new CustomEvent('open_google_otp_flow', { detail: {} }));
+      }
     };
     window.addEventListener('open_google_onetap', handleOpen);
     return () => window.removeEventListener('open_google_onetap', handleOpen);
   }, []);
 
-  if (!isVisible || isAuthenticated) return null;
+  // Nếu người dùng đã đăng nhập hoặc máy này chưa có tài khoản nào được lưu -> Không hiển thị
+  if (!isVisible || isAuthenticated || savedAccounts.length === 0) return null;
 
   const handleDismiss = () => {
     playClickSound();
@@ -70,55 +89,41 @@ export const GoogleOneTapPrompt = () => {
     } catch (e) {}
   };
 
-  const handleSelectAccount = async (account) => {
+  /**
+   * BẤM VÀO TÀI KHOẢN GOOGLE:
+   * 🛡️ Theo yêu cầu bảo mật: KHÔNG ĐƯỢC VÀO TRỰC TIẾP!
+   * Bắt buộc gửi mã xác thực 6 số (OTP) tới Gmail và yêu cầu nhập đúng mới cho vào!
+   */
+  const handleSelectAccount = (account) => {
     playClickSound();
     setLoadingEmail(account.email);
-    setToastMsg(`Đang đăng nhập bằng ${account.name}...`);
+    setToastMsg(`Đang gửi mã xác thực Google tới ${account.email}...`);
 
-    try {
-      await socialLogin({
-        provider: 'google',
-        providerId: `google_${account.email}`,
-        name: account.name,
-        email: account.email,
-        avatar: account.avatar,
-        jobTitle: account.jobTitle,
-        bio: account.bio,
-        socialUrl: 'https://google.com',
-      });
+    if (openLoginModal) openLoginModal();
+    setTimeout(() => {
+      setIsVisible(false);
+      setLoadingEmail(null);
+      setToastMsg('');
 
-      setToastMsg(`✓ Đã đăng nhập thành công với tài khoản ${account.name}!`);
-
-      // Bắn chuông thông báo bảo mật Google
+      // Kích hoạt luồng xác thực Google OTP trên AuthModal
       window.dispatchEvent(
-        new CustomEvent('freedom_security_bell_alert', {
+        new CustomEvent('open_google_otp_flow', {
           detail: {
-            platform: 'google',
-            platformName: 'Google Security',
-            brandColor: '#4285F4',
-            userName: account.name,
-            accountIdentifier: account.email,
-            code: 'SECURED',
-            message: `[Google Security] Đăng nhập Google One Tap an toàn: ${account.name} (${account.email}).`,
-            time: 'Vừa xong',
+            email: account.email,
+            name: account.name,
+            avatar: account.avatar,
           },
         })
       );
-
-      setTimeout(() => {
-        setIsVisible(false);
-      }, 450);
-    } catch (err) {
-      console.warn('Google One Tap Sign-in error:', err);
-      setToastMsg('Không thể đăng nhập tự động. Vui lòng thử lại!');
-      setLoadingEmail(null);
-    }
+    }, 250);
   };
 
   const handleUseOtherAccount = () => {
     playClickSound();
     setIsVisible(false);
-    openLoginModal();
+    if (openLoginModal) openLoginModal();
+    // Mở luồng đăng nhập Google mới bằng cách nhập email nhận OTP
+    window.dispatchEvent(new CustomEvent('open_google_otp_flow', { detail: {} }));
   };
 
   return (
@@ -147,7 +152,7 @@ export const GoogleOneTapPrompt = () => {
               />
             </svg>
             <span className="google-one-tap-title">
-              Sign in to <strong>cantstophere.com</strong> with google.com
+              Đăng nhập bằng <strong>Google</strong> (Bảo mật OTP)
             </span>
           </div>
 
@@ -169,9 +174,9 @@ export const GoogleOneTapPrompt = () => {
           </div>
         )}
 
-        {/* Danh sách các tài khoản Google phát hiện trên trình duyệt */}
+        {/* Danh sách các tài khoản Google đã lưu trên máy này */}
         <div className="google-one-tap-list">
-          {GOOGLE_ACCOUNTS.map((acc) => {
+          {savedAccounts.map((acc) => {
             const isLoading = loadingEmail === acc.email;
 
             return (
@@ -179,15 +184,15 @@ export const GoogleOneTapPrompt = () => {
                 key={acc.email}
                 className={`google-one-tap-item ${isLoading ? 'is-loading' : ''}`}
                 onClick={() => !isLoading && handleSelectAccount(acc)}
-                title={`Bấm để đăng nhập ngay với tài khoản ${acc.name}`}
+                title={`Bấm để gửi mã xác thực OTP đăng nhập vào hòm thư ${acc.email}`}
               >
                 <div className="google-one-tap-avatar-wrap">
                   <img
-                    src={acc.avatar}
+                    src={acc.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80'}
                     alt={acc.name}
                     className="google-one-tap-avatar"
                     onError={(e) => {
-                      e.target.src = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
+                      e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80';
                     }}
                   />
                   {isLoading && <span className="google-one-tap-spinner" />}
@@ -214,18 +219,17 @@ export const GoogleOneTapPrompt = () => {
             onClick={handleUseOtherAccount}
           >
             <span className="google-one-tap-other-icon">👤+</span>
-            <span>Sử dụng một tài khoản khác</span>
+            <span>Sử dụng một tài khoản Gmail khác</span>
           </button>
         </div>
 
-        {/* Dòng điều khoản & quyền riêng tư của Google */}
+        {/* Dòng thông báo bảo mật */}
         <div className="google-one-tap-footer">
           <span>
-            Để tiếp tục, Google sẽ chia sẻ tên, địa chỉ email và ảnh hồ sơ của bạn với <strong>You Can't Stop Here</strong>.
+            🔒 Mã xác nhận bảo mật OTP 6 số sẽ được gửi tới hòm thư Gmail của bạn để xác thực an toàn.
           </span>
         </div>
       </div>
     </div>
   );
 };
-

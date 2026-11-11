@@ -84,12 +84,11 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
   const [previewPlayingId, setPreviewPlayingId] = useState(null);
   const previewAudioRef = useRef(null);
 
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+
   const handleLogout = () => {
-    const isConfirmed = window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi tài khoản không?');
-    if (isConfirmed) {
-      if (onClose) onClose();
-      if (logout) logout();
-    }
+    playClickSound();
+    setIsLogoutConfirmOpen(true);
   };
 
   const [themeMode, setThemeMode] = useState(() => getActiveTheme());
@@ -1921,6 +1920,151 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
           isOpen={isVoiceCloningOpen}
           onClose={() => setIsVoiceCloningOpen(false)}
         />
+
+        {/* ========================================================
+            HỘP THOẠI XÁC NHẬN ĐĂNG XUẤT HIỆN ĐẠI (THAY THẾ WINDOW.CONFIRM)
+           ======================================================== */}
+        {isLogoutConfirmOpen && (
+          <div
+            className="modal-backdrop logout-confirm-backdrop"
+            onClick={() => setIsLogoutConfirmOpen(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 100010,
+              background: 'rgba(15, 23, 42, 0.78)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px',
+              animation: 'fadeIn 0.2s ease',
+            }}
+          >
+            <div
+              className="logout-confirm-box"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '100%',
+                maxWidth: '420px',
+                background: 'linear-gradient(160deg, #ffffff 0%, #f8fafc 100%)',
+                borderRadius: '24px',
+                padding: '30px 24px',
+                border: '1.5px solid rgba(226, 232, 240, 0.9)',
+                boxShadow: '0 25px 60px rgba(0, 0, 0, 0.3), 0 0 35px rgba(239, 68, 68, 0.15)',
+                textAlign: 'center',
+                boxSizing: 'border-box',
+                animation: 'scaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+              }}
+            >
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px',
+                  fontSize: '2rem',
+                  boxShadow: '0 8px 20px rgba(239, 68, 68, 0.22)',
+                }}
+              >
+                🚪
+              </div>
+
+              <h3
+                style={{
+                  margin: '0 0 10px',
+                  fontSize: '1.28rem',
+                  fontWeight: 800,
+                  color: '#0f172a',
+                  fontFamily: 'Be Vietnam Pro, sans-serif',
+                }}
+              >
+                Xác Nhận Đăng Xuất?
+              </h3>
+
+              <p
+                style={{
+                  margin: '0 0 24px',
+                  fontSize: '0.88rem',
+                  color: '#64748b',
+                  lineHeight: 1.55,
+                }}
+              >
+                Bạn có chắc chắn muốn đăng xuất khỏi tài khoản <strong style={{ color: '#0f172a' }}>"{user?.name || user?.email}"</strong> trên thiết bị này không? Mọi dữ liệu và bài viết của bạn vẫn được lưu giữ an toàn.
+              </p>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    playClickSound();
+                    setIsLogoutConfirmOpen(false);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '11px 18px',
+                    borderRadius: '12px',
+                    border: '1.5px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#475569',
+                    fontWeight: 700,
+                    fontSize: '0.88rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.18s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#f1f5f9';
+                    e.currentTarget.style.borderColor = '#94a3b8';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#ffffff';
+                    e.currentTarget.style.borderColor = '#cbd5e1';
+                  }}
+                >
+                  Hủy bỏ
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    playClickSound();
+                    setIsLogoutConfirmOpen(false);
+                    if (onClose) onClose();
+                    if (logout) logout();
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '11px 18px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    color: '#ffffff',
+                    fontWeight: 800,
+                    fontSize: '0.88rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(239, 68, 68, 0.35)',
+                    transition: 'all 0.18s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 6px 18px rgba(239, 68, 68, 0.45)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 14px rgba(239, 68, 68, 0.35)';
+                  }}
+                >
+                  🚪 Đăng xuất ngay
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -293,6 +293,87 @@ export const socialLogin = async (req, res) => {
     const assignedRole =
       cleanEmail === 'anthonyq012025@gmail.com' || cleanEmail.startsWith('admin@') ? 'admin' : 'user';
 
+    // 🛡️ BẢO MẬT GOOGLE VÀ TÀI KHOẢN ADMIN: Bắt buộc xác thực mã OTP gửi về Email chính chủ
+    const submittedOtp = req.body.otpCode ? String(req.body.otpCode).trim() : '';
+    const requiresOtpCheck = cleanProvider === 'google' || assignedRole === 'admin';
+
+    if (requiresOtpCheck) {
+      if (!submittedOtp) {
+        // Chưa có mã OTP -> Sinh mã OTP 6 số và gửi qua Gmail chính chủ
+        const generatedCode = generateOtp();
+        const expiresAt = Date.now() + 5 * 60 * 1000;
+        otpStore.set(cleanEmail, { code: generatedCode, expiresAt, type: 'email' });
+
+        if (isDbConnected) {
+          try {
+            const dbU = await User.findOne({ email: cleanEmail });
+            if (dbU) {
+              dbU.otpCode = generatedCode;
+              dbU.otpExpires = new Date(expiresAt);
+              await dbU.save();
+            }
+          } catch (_) {}
+        }
+
+        let mailPreview = null;
+        try {
+          const mRes = await sendRegistrationOtp(cleanEmail, generatedCode);
+          mailPreview = mRes?.previewUrl || null;
+        } catch (mailErr) {
+          try {
+            const mRes2 = await sendOtpEmail(cleanEmail, generatedCode, 'đăng nhập Google an toàn');
+            mailPreview = mRes2?.previewUrl || null;
+          } catch (_) {}
+        }
+
+        console.log(`[AUTH SECURITY] ✉️ Đã gửi mã xác thực Google OTP [${generatedCode}] tới: ${cleanEmail}`);
+
+        return sendSuccess(res, {
+          message: `Mã xác thực 6 số đã được gửi tới Gmail: ${cleanEmail}. Vui lòng nhập mã để hoàn tất đăng nhập!`,
+          data: {
+            requiresOtp: true,
+            email: cleanEmail,
+            provider: cleanProvider,
+            expiresAt,
+            previewUrl: mailPreview,
+            debugOtp: process.env.NODE_ENV !== 'production' ? generatedCode : undefined,
+          },
+        });
+      }
+
+      // Đã có mã OTP -> Xác thực với cache bộ nhớ & MongoDB
+      const cachedOtp = otpStore.get(cleanEmail);
+      let isValidOtp = false;
+
+      if (cachedOtp && String(cachedOtp.code).trim() === submittedOtp) {
+        if (Date.now() <= cachedOtp.expiresAt) {
+          isValidOtp = true;
+          otpStore.delete(cleanEmail);
+        }
+      }
+
+      if (!isValidOtp && isDbConnected) {
+        try {
+          const dbU = await User.findOne({ email: cleanEmail });
+          if (dbU && dbU.otpCode && String(dbU.otpCode).trim() === submittedOtp) {
+            if (dbU.otpExpires && new Date(dbU.otpExpires).getTime() >= Date.now()) {
+              isValidOtp = true;
+              dbU.otpCode = undefined;
+              dbU.otpExpires = undefined;
+              await dbU.save();
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (!isValidOtp) {
+        return sendError(res, {
+          message: 'Mã xác thực OTP không chính xác hoặc đã hết hạn (5 phút). Vui lòng kiểm tra lại Gmail!',
+          status: 400,
+        });
+      }
+    }
+
     // Ảnh đại diện chất lượng cao đặc trưng theo từng nền tảng
     const defaultAvatarsByProvider = {
       google: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80',

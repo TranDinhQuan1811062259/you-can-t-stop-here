@@ -43,14 +43,7 @@ const SOCIAL_PROVIDERS = [
         <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
       </svg>
     ),
-    detectedAccount: {
-      name: 'Đơn Thân Mẹ',
-      email: 'anthonyq012025@gmail.com',
-      avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
-      jobTitle: 'System Admin & Lead Dev',
-      bio: 'Tài khoản Google kết nối trực tiếp qua OAuth API. #Google',
-      socialUrl: 'https://google.com',
-    },
+    defaultJobTitle: 'Chuyên gia Công nghệ & Đổi mới',
   },
   {
     id: 'facebook',
@@ -62,14 +55,7 @@ const SOCIAL_PROVIDERS = [
         <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
       </svg>
     ),
-    detectedAccount: {
-      name: 'Anthony Quân (Trần Đình Quân)',
-      email: 'anthonyq012025@gmail.com',
-      avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
-      jobTitle: 'System Admin & Lead Dev',
-      bio: 'Tài khoản Facebook cá nhân kết nối trực tiếp qua OAuth API. #Facebook',
-      socialUrl: 'https://www.facebook.com/anthony.qill/',
-    },
+    defaultJobTitle: 'Người sáng tạo nội dung & Kết nối',
   },
   {
     id: 'tiktok',
@@ -81,14 +67,7 @@ const SOCIAL_PROVIDERS = [
         <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.97v7.59c0 1.57-.35 3.16-1.17 4.53-1.07 1.77-2.83 3.09-4.85 3.59-1.28.32-2.62.33-3.92.05-1.9-.41-3.59-1.58-4.64-3.23-.97-1.52-1.37-3.37-1.13-5.18.23-1.74 1.12-3.36 2.47-4.47 1.35-1.11 3.09-1.68 4.83-1.58v4.07c-.77-.07-1.57.12-2.22.52-.77.47-1.27 1.3-1.33 2.21-.07.97.33 1.95 1.05 2.59.72.64 1.71.88 2.65.64.91-.23 1.64-.93 1.88-1.84.14-.53.18-1.09.18-1.64V.02z"/>
       </svg>
     ),
-    detectedAccount: {
-      name: 'whatwasthat2000',
-      email: 'anthonyq012025@gmail.com',
-      avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
-      jobTitle: 'Video Creator',
-      bio: 'Tài khoản TikTok kết nối trực tiếp qua OAuth API. #TikTok',
-      socialUrl: 'https://www.tiktok.com/@whatwasthat2000',
-    },
+    defaultJobTitle: 'Nhiếp ảnh & Video Creator',
   },
   {
     id: 'github',
@@ -100,14 +79,7 @@ const SOCIAL_PROVIDERS = [
         <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
       </svg>
     ),
-    detectedAccount: {
-      name: 'TranDinhQuan',
-      email: 'anthonyq012025@gmail.com',
-      avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
-      jobTitle: 'Open Source Developer',
-      bio: 'Tài khoản GitHub lập trình viên kết nối trực tiếp qua OAuth API. #GitHub',
-      socialUrl: 'https://github.com/TranDinhQuan',
-    },
+    defaultJobTitle: 'Lập trình viên & Kỹ sư phần mềm',
   },
   {
     id: 'x',
@@ -119,14 +91,7 @@ const SOCIAL_PROVIDERS = [
         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
       </svg>
     ),
-    detectedAccount: {
-      name: 'Anthony Quân (@anthony_quan)',
-      email: 'anthonyq012025@gmail.com',
-      avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
-      jobTitle: 'Tech Builder',
-      bio: 'Building things in public. Chasing freedom and peace of mind. #BuildInPublic #𝕏',
-      socialUrl: 'https://x.com/anthony_quan',
-    },
+    defaultJobTitle: 'Nhà phân tích & Xu hướng công nghệ',
   },
   {
     id: 'linkedin',
@@ -138,14 +103,7 @@ const SOCIAL_PROVIDERS = [
         <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
       </svg>
     ),
-    detectedAccount: {
-      name: 'Anthony Quân',
-      email: 'anthonyq012025@gmail.com',
-      avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
-      jobTitle: 'Senior Software Architect & Mentor',
-      bio: 'Đồng bộ từ tài khoản LinkedIn qua OAuth API. #LinkedIn',
-      socialUrl: 'https://linkedin.com/in/anthonyquan',
-    },
+    defaultJobTitle: 'Chuyên viên Phát triển Sự nghiệp',
   },
 ];
 
@@ -154,6 +112,7 @@ export const AuthModal = () => {
     isAuthModalOpen,
     authModalMode,
     setAuthModalMode,
+    openLoginModal,
     closeAuthModal,
     login,
     loginWithOtp,
@@ -198,23 +157,44 @@ export const AuthModal = () => {
   // State cho luồng ĐĂNG KÝ BẰNG MẠNG XÃ HỘI (Lấy dữ liệu thực từ Google, Facebook, Twitter, v.v.)
   const [socialRegData, setSocialRegData] = useState(null);
 
+  // Helper lưu tài khoản Google đã đăng nhập thành công vào bộ nhớ máy này (trừ Admin)
+  const saveGoogleAccountLocally = (email, name, avatar) => {
+    try {
+      const clean = (email || '').toLowerCase().trim();
+      if (!clean || clean === 'anthonyq012025@gmail.com') return;
+      const raw = localStorage.getItem('saved_google_accounts');
+      const list = raw ? JSON.parse(raw) : [];
+      const filtered = list.filter((a) => a && a.email && a.email.toLowerCase().trim() !== clean);
+      filtered.unshift({
+        name: name || clean.split('@')[0],
+        email: clean,
+        avatar: avatar || getEffectiveAvatar(),
+      });
+      localStorage.setItem('saved_google_accounts', JSON.stringify(filtered.slice(0, 5)));
+      window.dispatchEvent(new Event('saved_accounts_updated'));
+    } catch (e) {
+      console.warn('Error saving google account locally:', e);
+    }
+  };
+
   const handleOpenSocialRegister = (providerId) => {
     const provider = SOCIAL_PROVIDERS.find((p) => p.id === providerId) || SOCIAL_PROVIDERS[0];
-    const acc = provider.detectedAccount;
+    const defaultName = registerForm.name.trim() || '';
+    const defaultEmail = registerForm.identifier.trim() || '';
     setSocialRegData({
       providerId: provider.id,
       providerName: provider.name,
       buttonLabel: provider.buttonLabel,
       brandColor: provider.brandColor,
-      name: acc.name,
-      email: acc.email,
-      avatar: acc.avatar || '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
-      jobTitle: acc.jobTitle || 'System Admin & Lead Dev',
-      bio: acc.bio || `Tài khoản ${provider.name} kết nối trực tiếp qua OAuth API.`,
-      socialUrl: acc.socialUrl || '',
+      name: defaultName,
+      email: defaultEmail,
+      avatar: getEffectiveAvatar(),
+      jobTitle: registerForm.jobTitle.trim() || provider.defaultJobTitle || 'Thành viên cộng đồng',
+      bio: `Tài khoản kết nối qua ${provider.name}.`,
+      socialUrl: '',
     });
     setErrorMsg('');
-    setSuccessMsg(`✓ Đã nạp thành công thông tin thực tế từ tài khoản ${provider.name}!`);
+    setSuccessMsg(`✓ Đăng ký tài khoản qua ${provider.name}. Vui lòng xác nhận thông tin của bạn!`);
   };
 
   const handleConfirmSocialRegister = async (e) => {
@@ -223,11 +203,46 @@ export const AuthModal = () => {
     setLoading(true);
     setErrorMsg('');
     try {
+      const cleanEmail = socialRegData.email.trim();
+      if (!cleanEmail) {
+        setErrorMsg('Vui lòng nhập địa chỉ email!');
+        setLoading(false);
+        return;
+      }
+
+      // Nếu đăng ký bằng Google: Bắt buộc gửi mã xác thực 6 số OTP về Email!
+      if (socialRegData.providerId === 'google') {
+        setPendingRegisterData({
+          provider: 'google',
+          name: socialRegData.name.trim(),
+          email: cleanEmail,
+          avatar: socialRegData.avatar,
+          jobTitle: socialRegData.jobTitle.trim(),
+          bio: socialRegData.bio.trim(),
+          socialUrl: socialRegData.socialUrl,
+          coverImage: getEffectiveCover(),
+        });
+        setOtpType('email');
+        setSuccessMsg(`Đang gửi mã xác thực Google 6 số tới ${cleanEmail}...`);
+
+        const res = await authService.sendOtp({
+          email: cleanEmail,
+          identifier: cleanEmail,
+          purpose: 'register',
+        });
+        const previewUrl = res?.data?.data?.previewUrl || null;
+        setSocialPreviewUrl(previewUrl);
+        setSuccessMsg(`✓ Đã gửi mã xác thực Google 6 số đến email: ${cleanEmail}`);
+        setEmailOtpStep(true);
+        setOtpCountdown(60);
+        return;
+      }
+
       const payload = {
         provider: socialRegData.providerId,
         providerId: `${socialRegData.providerId}_${socialRegData.email || Date.now()}`,
         name: socialRegData.name.trim(),
-        email: socialRegData.email.trim(),
+        email: cleanEmail,
         avatar: socialRegData.avatar,
         jobTitle: socialRegData.jobTitle.trim(),
         bio: socialRegData.bio.trim(),
@@ -375,13 +390,52 @@ export const AuthModal = () => {
     return () => clearInterval(timer);
   }, [emailOtpStep, otpCountdown]);
 
+  // Lắng nghe sự kiện yêu cầu đăng nhập bằng Google One Tap hoặc chọn tài khoản Google
+  useEffect(() => {
+    const handleGoogleOtpFlow = async (e) => {
+      const email = e?.detail?.email?.trim();
+      if (openLoginModal) openLoginModal();
+      setAuthModalMode('login');
+      setLoginMethod('email-otp');
+      setOtpType('email');
+      setErrorMsg('');
+
+      if (email) {
+        setLoginForm((prev) => ({ ...prev, identifier: email }));
+        setSuccessMsg(`Đang gửi mã xác thực Google 6 số tới ${email}...`);
+        setEmailOtpStep(true);
+        setSendingOtp(true);
+        try {
+          const res = await authService.sendOtp({
+            email,
+            identifier: email,
+            purpose: 'login',
+          });
+          const previewUrl = res?.data?.data?.previewUrl || null;
+          setSocialPreviewUrl(previewUrl);
+          setOtpCountdown(60);
+          setSuccessMsg(`✓ Đã gửi mã xác thực 6 số đến tài khoản Google: ${email}. Vui lòng nhập mã để đăng nhập.`);
+        } catch (err) {
+          console.error('Lỗi gửi OTP Google:', err);
+          setErrorMsg(err.message || 'Không thể gửi mã xác nhận đến email này. Vui lòng thử lại!');
+        } finally {
+          setSendingOtp(false);
+        }
+      } else {
+        setEmailOtpStep(false);
+        setErrorMsg('Vui lòng nhập địa chỉ Gmail / Google của bạn để nhận mã xác thực bảo mật 6 số!');
+      }
+    };
+
+    window.addEventListener('open_google_otp_flow', handleGoogleOtpFlow);
+    return () => window.removeEventListener('open_google_otp_flow', handleGoogleOtpFlow);
+  }, [openLoginModal, setAuthModalMode]);
+
   if (!isAuthModalOpen) return null;
 
   // =========================================================================
   // 🚀 LUỒNG 1: SOCIAL LOGIN (GOOGLE, FACEBOOK, TIKTOK, GITHUB, X, LINKEDIN)
-  // 👉 Xác thực trực tiếp qua API OAuth của nền tảng, 1 chạm vào tài khoản ngay.
-  // ❌ TUYỆT ĐỐI KHÔNG BẮT NHẬP MÃ OTP 6 SỐ THỦ CÔNG.
-  // ❌ TUYỆT ĐỐI KHÔNG BẮT MỞ GMAIL ĐỐI VỚI FACEBOOK/TIKTOK/MẠNG XÃ HỘI.
+  // 👉 Đăng nhập Google BẮT BUỘC gửi và nhập mã OTP 6 số theo chính sách bảo mật.
   // =========================================================================
   const handleSocialOAuth = async (providerId) => {
     setLoading(true);
@@ -389,23 +443,54 @@ export const AuthModal = () => {
     setSuccessMsg('');
 
     const targetProvider = SOCIAL_PROVIDERS.find((p) => p.id === providerId) || SOCIAL_PROVIDERS[0];
-    const acc = targetProvider.detectedAccount;
 
-    // Chuẩn bị payload thông tin OAuth của nền tảng
+    // 🛡️ NẾU ĐĂNG NHẬP BẰNG GOOGLE: Bắt buộc gửi mã xác thực OTP 6 số về Gmail và nhập đúng mới cho vào!
+    if (providerId === 'google') {
+      const cleanEmail = loginForm.identifier.trim();
+      if (!cleanEmail || !cleanEmail.includes('@')) {
+        setLoginMethod('email-otp');
+        setErrorMsg('Vui lòng nhập địa chỉ Gmail / Google của bạn ở ô bên dưới để nhận mã xác thực OTP bảo mật 6 số!');
+        setLoading(false);
+        return;
+      }
+
+      setSuccessMsg(`Đang gửi mã xác thực Google 6 số tới ${cleanEmail}...`);
+      try {
+        const res = await authService.sendOtp({
+          email: cleanEmail,
+          identifier: cleanEmail,
+          purpose: 'login',
+        });
+        const previewUrl = res?.data?.data?.previewUrl || null;
+        setSocialPreviewUrl(previewUrl);
+        setOtpType('email');
+        setEmailOtpStep(true);
+        setOtpCountdown(60);
+        setSuccessMsg(`✓ Đã gửi mã xác thực 6 số đến tài khoản Google: ${cleanEmail}. Vui lòng nhập mã để đăng nhập.`);
+      } catch (err) {
+        setErrorMsg(err.message || 'Không thể gửi mã xác thực đến Email Google này. Vui lòng thử lại!');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Các mạng xã hội khác (Facebook, TikTok, GitHub, X, LinkedIn)
+    const userEmail = loginForm.identifier.trim() || `${providerId}_user_${Date.now()}@freedom.community`;
+    const userName = loginForm.identifier.trim() ? loginForm.identifier.split('@')[0] : `${targetProvider.name} User`;
     const oauthPayload = {
       provider: providerId,
-      providerId: `${providerId}_${acc.email || Date.now()}`,
-      name: acc.name,
-      email: acc.email,
-      avatar: (providerId === 'google' && acc.avatar) ? acc.avatar : getEffectiveAvatar(),
+      providerId: `${providerId}_${Date.now()}`,
+      name: userName,
+      email: userEmail,
+      avatar: getEffectiveAvatar(),
       coverImage: getEffectiveCover(),
-      jobTitle: acc.jobTitle || 'System Admin & Lead Dev',
-      bio: acc.bio || `Tài khoản ${targetProvider.name} kết nối trực tiếp qua OAuth API.`,
-      socialUrl: acc.socialUrl,
+      jobTitle: targetProvider.defaultJobTitle || 'Thành viên cộng đồng',
+      bio: `Tài khoản kết nối qua ${targetProvider.name}.`,
+      socialUrl: '',
     };
 
     try {
-      // Mở popup OAuth chuẩn nếu có endpoint backend OAuth
       try {
         const width = 520;
         const height = 640;
@@ -416,15 +501,11 @@ export const AuthModal = () => {
           `oauth_${providerId}`,
           `width=${width},height=${height},top=${top},left=${left},status=no,toolbar=no,menubar=no`
         );
-      } catch (popupErr) {
-        // Trình duyệt chặn popup thì tiếp tục xử lý mượt mà
-      }
+      } catch (_) {}
 
-      // Xác thực trực tiếp qua Social Login API
       await socialLogin(oauthPayload);
       setSuccessMsg(`✓ Đăng nhập thành công bằng tài khoản ${targetProvider.name}!`);
 
-      // Tự động đóng modal ngay sau 350ms & cập nhật Header
       setTimeout(() => {
         closeAuthModal();
         window.dispatchEvent(new Event('profile_updated'));
@@ -602,7 +683,14 @@ export const AuthModal = () => {
           console.warn('Backend verifyOtp warning:', otpErr);
         }
 
-        await register(pendingRegisterData);
+        if (pendingRegisterData.provider === 'google') {
+          await socialLogin({ ...pendingRegisterData, otpCode: cleanOtp });
+        } else {
+          await register(pendingRegisterData);
+        }
+
+        saveGoogleAccountLocally(pendingRegisterData.email, pendingRegisterData.name, pendingRegisterData.avatar);
+
         setSuccessMsg('✓ Đã xác thực thành công! Hoàn tất tạo tài khoản.');
         setEmailOtpStep(false);
         setSmsNotification(null);
@@ -618,13 +706,19 @@ export const AuthModal = () => {
           ? (phoneDataForOtp.phone || phoneInput.replace(/\D/g, ''))
           : loginForm.identifier.trim();
 
-        await loginWithOtp({
+        const loginRes = await loginWithOtp({
           email: !isPhone ? target : undefined,
           phone: isPhone ? target : undefined,
           identifier: target,
           otpCode: cleanOtp,
           remember: loginForm.remember,
         });
+
+        if (!isPhone && loginForm.remember) {
+          const userObj = loginRes?.user || JSON.parse(localStorage.getItem('user') || '{}');
+          saveGoogleAccountLocally(target, userObj?.name, userObj?.avatar);
+        }
+
         setSuccessMsg('✓ Đăng nhập thành công!');
         setEmailOtpStep(false);
         setSmsNotification(null);

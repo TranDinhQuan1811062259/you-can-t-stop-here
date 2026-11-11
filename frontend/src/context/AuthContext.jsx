@@ -11,27 +11,20 @@ const ADMIN_AVATAR = '/uploads/1793903034671-886587470_122145020103357128_373548
 export const ensureAdminPrivileges = (userData) => {
   if (!userData) return userData;
   const email = (userData.email || '').toLowerCase().trim();
-  const name = (userData.name || '').trim();
-  const id = String(userData._id || '');
 
+  // Chỉ trao quyền Admin tối cao nếu email trùng khớp với Quản trị viên chính thức
   const isAdmin =
     userData.role === 'admin' ||
     userData.isAdmin === true ||
     email === 'anthonyq012025@gmail.com' ||
-    email.startsWith('admin@') ||
-    email.includes('admin') ||
-    id === '6aec5b46ee112662b33c0e32' ||
-    name.includes('Trần Đình Quân') ||
-    name.includes('Anthony Quân') ||
-    name.includes('Đơn Thân Mẹ');
+    email === 'admin@cantstophere.com';
 
   if (isAdmin) {
     const rawAvatar = userData.avatar;
     const isBadAvatar =
       !rawAvatar ||
       rawAvatar.includes('/images/man.jpg') ||
-      rawAvatar.includes('google_avatar') ||
-      rawAvatar.includes('anthonyq012025');
+      rawAvatar.includes('google_avatar');
 
     return {
       ...userData,
@@ -388,6 +381,12 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await authService.socialLogin(socialData);
       const rawData = res?.data?.data || res?.data || {};
+
+      // Nếu backend yêu cầu xác thực OTP bảo mật (đặc biệt khi đăng nhập bằng Google hoặc tài khoản Admin)
+      if (rawData.requiresOtp) {
+        return { requiresOtp: true, ...rawData };
+      }
+
       const receivedToken = rawData.token || res?.token || `token_${Date.now()}_social`;
       const { token: _t, ...extractedUser } = rawData;
       const safeUser = ensureAdminPrivileges(extractedUser);
@@ -401,23 +400,32 @@ export const AuthProvider = ({ children }) => {
       window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
       return { data: { token: receivedToken, ...safeUser } };
     } catch (err) {
-      console.warn('[Auth] Lỗi socialLogin backend, kích hoạt dự phòng:', err);
-      const isAnthony =
-        (socialData.email && socialData.email.includes('anthony')) ||
-        (socialData.email && socialData.email.includes('anthonyq012025@gmail.com')) ||
-        (socialData.name && (socialData.name.includes('Quân') || socialData.name.includes('Đơn Thân Mẹ'))) ||
-        (socialData.providerId && String(socialData.providerId).includes('anthony'));
+      console.warn('[Auth] Lỗi socialLogin backend:', err);
+
+      // Nếu có mã lỗi hoặc yêu cầu OTP từ phía backend
+      if (err?.response?.data?.data?.requiresOtp || err?.requiresOtp) {
+        return { requiresOtp: true, ...(err?.response?.data?.data || {}) };
+      }
+
+      // Tuyệt đối không tự động cấp quyền Admin hoặc bỏ qua mã OTP ở fallback
+      const cleanEmail = (socialData.email || '').toLowerCase().trim();
+      const isAdminAccount = cleanEmail === 'anthonyq012025@gmail.com';
+
+      // Nếu là đăng nhập Google hoặc tài khoản Admin nhưng chưa có mã OTP xác thực thì chặn lại
+      if ((socialData.provider === 'google' || isAdminAccount) && !socialData.otpCode) {
+        throw new Error('Đăng nhập bằng Google bắt buộc phải xác thực mã OTP 6 số gửi về Email trước khi được phép vào hệ thống!');
+      }
 
       const fallbackUser = {
-        _id: isAnthony ? '6aec5b46ee112662b33c0e32' : `user_${socialData.provider || 'social'}_${Date.now()}`,
-        name: socialData.name || (isAnthony ? 'Đơn Thân Mẹ' : 'Thành viên'),
-        email: socialData.email || 'anthonyq012025@gmail.com',
-        role: isAnthony ? 'admin' : 'user',
-        isAdmin: isAnthony,
-        avatar: isAnthony ? ADMIN_AVATAR : (socialData.avatar || '/images/man.jpg'),
-        jobTitle: socialData.jobTitle || 'System Admin & Lead Dev',
+        _id: `user_${socialData.provider || 'social'}_${Date.now()}`,
+        name: socialData.name || (cleanEmail ? cleanEmail.split('@')[0] : 'Thành viên'),
+        email: cleanEmail || `user_${Date.now()}@social.cantstophere.com`,
+        role: isAdminAccount && socialData.otpCode ? 'admin' : 'user',
+        isAdmin: isAdminAccount && Boolean(socialData.otpCode),
+        avatar: (isAdminAccount && socialData.otpCode) ? ADMIN_AVATAR : (socialData.avatar || '/images/man.jpg'),
+        jobTitle: socialData.jobTitle || 'Thành viên cộng đồng',
         coverImage: socialData.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
-        bio: socialData.bio || `Tài khoản ${socialData.provider || 'xã hội'} đồng bộ từ trình duyệt.`,
+        bio: socialData.bio || `Tài khoản kết nối qua ${socialData.provider || 'mạng xã hội'}.`,
         socialLinks: { [socialData.provider]: socialData.socialUrl || '' },
         provider: socialData.provider,
       };
