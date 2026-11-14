@@ -14,6 +14,50 @@ const PRESET_DURATIONS = [
   { label: '1 Năm (365 ngày)', days: 365, icon: '🌟' },
 ];
 
+export const PAPERS = [
+  {
+    id: 'kraft',
+    name: 'Giấy Kraft Nâu Cổ Điển',
+    desc: 'Thô mộc, ấm áp & chân phương',
+    bg: '#d2b48c',
+    textColor: '#3b220c',
+    borderColor: '#b8905b',
+    texture: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.06) 100%)',
+  },
+  {
+    id: 'parchment',
+    name: 'Giấy Da Bò Ngả Vàng',
+    desc: 'Cổ kính & hoài niệm thời gian',
+    bg: '#fef3c7',
+    textColor: '#1e293b',
+    borderColor: '#fde68a',
+    texture: 'radial-gradient(circle at 20% 20%, rgba(217,119,6,0.06) 0%, rgba(0,0,0,0.04) 100%)',
+  },
+  {
+    id: 'grid',
+    name: 'Ô Ly Tập Vở Học Trò',
+    desc: 'Trang giấy ngây ngô thời đi học',
+    bg: '#f8fafc',
+    textColor: '#0f172a',
+    borderColor: '#cbd5e1',
+    gridPattern: 'linear-gradient(rgba(147, 197, 253, 0.35) 1px, transparent 1px), linear-gradient(90deg, rgba(147, 197, 253, 0.35) 1px, transparent 1px)',
+  },
+];
+
+export const STAMPS = [
+  { id: 'dandelion', icon: '🌼', name: 'Bồ Công Anh', quote: 'Bay theo gió ước mơ', color: '#f59e0b' },
+  { id: 'coffee', icon: '☕', name: 'Cà Phê Sáng', quote: 'Góc quán chiều mưa', color: '#b45309' },
+  { id: 'maple', icon: '🍁', name: 'Lá Phong Thu', quote: 'Ký ức hoài niệm', color: '#e11d48' },
+  { id: 'train', icon: '🚂', name: 'Chuyến Tàu Đêm', quote: 'Hành trình trưởng thành', color: '#6366f1' },
+];
+
+export const WAX_SEALS = [
+  { id: 'royal_red', name: 'Đỏ Hoàng Gia', color: '#dc2626', border: '#991b1b', glow: 'rgba(220, 38, 38, 0.5)' },
+  { id: 'antique_gold', name: 'Vàng Đồng Cổ', color: '#d97706', border: '#92400e', glow: 'rgba(217, 119, 6, 0.5)' },
+  { id: 'forest_emerald', name: 'Xanh Lục Bảo', color: '#059669', border: '#065f46', glow: 'rgba(5, 150, 105, 0.5)' },
+  { id: 'midnight_navy', name: 'Xanh Chàm Đêm', color: '#4338ca', border: '#312e81', glow: 'rgba(67, 56, 202, 0.5)' },
+];
+
 const MOODS = [
   { id: 'heartbreak_love', label: 'Sự Tiếc Nuối (Hoài niệm & Ký ức xưa 🎶)', icon: '🥀', color: '#f43f5e' },
   { id: 'hopeful', label: 'Tia Sáng Hy Vọng (Đầy năng lượng & Niềm tin 🎶)', icon: '✨', color: '#f59e0b' },
@@ -48,7 +92,11 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
   const [customDate, setCustomDate] = useState('');
   const [selectedMood, setSelectedMood] = useState('heartbreak_love');
   const [selectedEnvelope, setSelectedEnvelope] = useState('rose');
+  const [selectedPaper, setSelectedPaper] = useState('kraft');
+  const [selectedStamp, setSelectedStamp] = useState('dandelion');
+  const [selectedWax, setSelectedWax] = useState('royal_red');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isWaxMelting, setIsWaxMelting] = useState(false);
 
   // Tự động đồng bộ email & tên khi người dùng đăng nhập
   useEffect(() => {
@@ -119,6 +167,12 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
 
     try {
       setIsSubmitting(true);
+      setIsWaxMelting(true);
+      playSingingBowlSound();
+
+      // Hiệu ứng nung sáp và dập con dấu 3D trong 1.3 giây
+      await new Promise((r) => setTimeout(r, 1300));
+
       const unlockDate = calculateUnlockDate();
       const emailToNotify = notifyEmail.trim();
       const createdRes = await timeCapsuleService.createCapsule({
@@ -129,13 +183,15 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
         unlockDate,
         mood: selectedMood,
         envelopeColor: selectedEnvelope,
+        paperType: selectedPaper,
+        stampType: selectedStamp,
+        waxColor: selectedWax,
       });
 
-      playSingingBowlSound();
       if (emailToNotify) {
-        setAlertMsg('✨ Chiếc hộp đã được niêm phong! Freedom đã gửi email xác nhận và sẽ gửi lại bức thư vào ngày mở khóa.');
+        setAlertMsg('✨ Con dấu sáp đã được đóng chặt! Freedom đã gửi email xác nhận và sẽ gửi lại bức thư vào ngày mở khóa.');
       } else {
-        setAlertMsg('✨ Chiếc hộp thời gian đã được niêm phong và cất giữ an toàn!');
+        setAlertMsg('✨ Con dấu sáp đã được dập niêm phong và cất giữ an toàn vào dòng thời gian!');
       }
       setTitle('');
       setContent('');
@@ -146,10 +202,12 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
 
       await fetchCapsules();
       setTimeout(() => {
+        setIsWaxMelting(false);
         setActiveTab('vault');
         setAlertMsg('');
-      }, 1200);
+      }, 700);
     } catch (err) {
+      setIsWaxMelting(false);
       setAlertMsg(err.message || 'Không thể tạo hộp thời gian lúc này');
     } finally {
       setIsSubmitting(false);
@@ -426,6 +484,60 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
                 />
               </div>
 
+              {/* Bộ Chọn Chất Liệu Giấy Thư Hoài Niệm (Craft Paper) */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 700, color: '#fcd34d', marginBottom: '8px' }}>
+                  📜 Chọn chất liệu giấy thư thủ công:
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+                  {PAPERS.map((paper) => {
+                    const isSelected = selectedPaper === paper.id;
+                    return (
+                      <button
+                        key={paper.id}
+                        type="button"
+                        onClick={() => {
+                          playClickSound();
+                          setSelectedPaper(paper.id);
+                        }}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: '12px',
+                          background: isSelected ? 'rgba(245, 158, 11, 0.22)' : 'rgba(255, 255, 255, 0.05)',
+                          border: isSelected ? '2px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.12)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          textAlign: 'left',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '32px',
+                            height: '38px',
+                            borderRadius: '4px',
+                            background: paper.bg,
+                            border: `1.5px solid ${paper.borderColor}`,
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                            flexShrink: 0,
+                            backgroundImage: paper.gridPattern || paper.texture || 'none',
+                            backgroundSize: paper.gridPattern ? '8px 8px' : 'auto',
+                          }}
+                        />
+                        <div>
+                          <div style={{ fontSize: '0.86rem', fontWeight: 700, color: isSelected ? '#fef3c7' : '#e2e8f0' }}>
+                            {paper.name}
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{paper.desc}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <label style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fcd34d' }}>
@@ -436,29 +548,165 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
                     Bật ASMR để gõ phím êm tai
                   </span>
                 </div>
-                <textarea
-                  rows={8}
-                  placeholder="Hôm nay bạn đang cảm thấy thế nào? Bạn muốn nhắn nhủ điều gì cho bạn của tương lai? Những khó khăn hiện tại là gì? Hãy viết thật chân thật..."
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  onKeyDown={triggerAsmrKeySound}
-                  required
+                {/* Khung Soạn Thảo Giả Lập Giấy Thật */}
+                {(() => {
+                  const currentPaper = PAPERS.find((p) => p.id === selectedPaper) || PAPERS[0];
+                  return (
+                    <div
+                      style={{
+                        borderRadius: '16px',
+                        padding: '6px',
+                        background: currentPaper.bg,
+                        border: `2px solid ${currentPaper.borderColor}`,
+                        boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.3)',
+                        transition: 'all 0.3s ease',
+                      }}
+                    >
+                      <textarea
+                        rows={8}
+                        placeholder="Hôm nay bạn đang cảm thấy thế nào? Bạn muốn nhắn nhủ điều gì cho bạn của tương lai? Những khó khăn hiện tại là gì? Hãy viết thật chân thật..."
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        onKeyDown={triggerAsmrKeySound}
+                        required
+                        style={{
+                          width: '100%',
+                          minHeight: '200px',
+                          padding: '16px 18px',
+                          borderRadius: '12px',
+                          background: currentPaper.bg,
+                          backgroundImage: currentPaper.gridPattern || currentPaper.texture || 'none',
+                          backgroundSize: currentPaper.gridPattern ? '16px 16px' : 'auto',
+                          border: 'none',
+                          color: currentPaper.textColor,
+                          fontSize: '1rem',
+                          lineHeight: '1.8',
+                          outline: 'none',
+                          resize: 'vertical',
+                          fontFamily: selectedPaper === 'grid' ? 'var(--font-sans, sans-serif)' : 'Georgia, "Times New Roman", serif',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Tem Bưu Chính & Con Dấu Sáp Niêm Phong */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                {/* Bộ Chọn Con Tem Bưu Chính */}
+                <div
                   style={{
-                    width: '100%',
-                    minHeight: '190px',
-                    padding: '16px 18px',
-                    borderRadius: '16px',
                     background: 'rgba(255, 255, 255, 0.04)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#f1f5f9',
-                    fontSize: '0.98rem',
-                    lineHeight: '1.7',
-                    outline: 'none',
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                    boxSizing: 'border-box',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '14px',
+                    padding: '14px',
                   }}
-                />
+                >
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#fcd34d', marginBottom: '8px' }}>
+                    📬 Dán con tem bưu chính hoài niệm:
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    {STAMPS.map((stamp) => {
+                      const isSelected = selectedStamp === stamp.id;
+                      return (
+                        <button
+                          key={stamp.id}
+                          type="button"
+                          onClick={() => {
+                            playClickSound();
+                            setSelectedStamp(stamp.id);
+                          }}
+                          style={{
+                            padding: '8px 10px',
+                            borderRadius: '10px',
+                            background: isSelected ? 'rgba(245, 158, 11, 0.25)' : 'rgba(0, 0, 0, 0.25)',
+                            border: isSelected ? `2px dashed ${stamp.color}` : '1.5px dashed rgba(255, 255, 255, 0.2)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            textAlign: 'left',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <span style={{ fontSize: '1.3rem' }}>{stamp.icon}</span>
+                          <div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: isSelected ? '#fef3c7' : '#cbd5e1' }}>
+                              {stamp.name}
+                            </div>
+                            <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>{stamp.quote}</div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Bộ Chọn Màu Sáp Niêm Phong */}
+                <div
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '14px',
+                    padding: '14px',
+                  }}
+                >
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#fcd34d', marginBottom: '8px' }}>
+                    🕯️ Màu con dấu sáp niêm phong:
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    {WAX_SEALS.map((wax) => {
+                      const isSelected = selectedWax === wax.id;
+                      return (
+                        <button
+                          key={wax.id}
+                          type="button"
+                          onClick={() => {
+                            playClickSound();
+                            setSelectedWax(wax.id);
+                          }}
+                          style={{
+                            padding: '8px 10px',
+                            borderRadius: '10px',
+                            background: isSelected ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.25)',
+                            border: isSelected ? `2px solid ${wax.color}` : '1px solid rgba(255, 255, 255, 0.1)',
+                            boxShadow: isSelected ? `0 0 12px ${wax.glow}` : 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            textAlign: 'left',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              background: wax.color,
+                              border: `2px solid ${wax.border}`,
+                              boxShadow: `0 2px 6px ${wax.glow}`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '0.65rem',
+                              color: '#fff',
+                              fontWeight: 900,
+                              flexShrink: 0,
+                            }}
+                          >
+                            ⚜️
+                          </div>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: isSelected ? '#fef3c7' : '#cbd5e1' }}>
+                            {wax.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               {/* Hẹn ngày mở khóa */}
@@ -720,67 +968,185 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
           {activeTab === 'vault' && (
             <div>
               {/* Đang đọc 1 bức thư đã mở */}
-              {readingCapsule ? (
-                <div
-                  style={{
-                    background: 'linear-gradient(180deg, rgba(254, 243, 199, 0.08), rgba(254, 243, 199, 0.02))',
-                    border: '1.5px solid rgba(251, 191, 36, 0.4)',
-                    borderRadius: '18px',
-                    padding: '24px',
-                    position: 'relative',
-                    animation: 'fadeInUp 0.3s ease',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#f59e0b', fontWeight: 700 }}>
-                      ✨ BỨC THƯ TỪ QUÁ KHỨ ĐÃ MỞ KHÓA
-                    </span>
+              {readingCapsule ? (() => {
+                const readPaper = PAPERS.find((p) => p.id === (readingCapsule.paperType || 'kraft')) || PAPERS[0];
+                const readStamp = STAMPS.find((s) => s.id === (readingCapsule.stampType || 'dandelion')) || STAMPS[0];
+                const readWax = WAX_SEALS.find((w) => w.id === (readingCapsule.waxColor || 'royal_red')) || WAX_SEALS[0];
+
+                return (
+                  <div
+                    style={{
+                      background: readPaper.bg,
+                      backgroundImage: readPaper.gridPattern || readPaper.texture || 'none',
+                      backgroundSize: readPaper.gridPattern ? '16px 16px' : 'auto',
+                      border: `3px solid ${readPaper.borderColor}`,
+                      borderRadius: '20px',
+                      padding: '28px 24px',
+                      position: 'relative',
+                      boxShadow: '0 20px 50px rgba(0,0,0,0.5), inset 0 2px 10px rgba(0,0,0,0.1)',
+                      color: readPaper.textColor,
+                      animation: 'fadeInUp 0.3s ease',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {/* Tem bưu chính & Dấu nhật ấn bưu điện ở góc trên bên phải */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '20px',
+                        right: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                      }}
+                    >
+                      {/* Dấu Mộc Tròn Bưu Điện Cổ Điển */}
+                      <div
+                        style={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '50%',
+                          border: '2px solid rgba(180, 83, 9, 0.55)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transform: 'rotate(-15deg)',
+                          color: 'rgba(180, 83, 9, 0.7)',
+                          fontSize: '0.55rem',
+                          fontWeight: 800,
+                          textAlign: 'center',
+                          lineHeight: '1.2',
+                          textTransform: 'uppercase',
+                          userSelect: 'none',
+                        }}
+                      >
+                        <span>FREEDOM</span>
+                        <span>POST</span>
+                        <span style={{ fontSize: '0.5rem', fontWeight: 600 }}>
+                          {new Date(readingCapsule.createdAt || Date.now()).toLocaleDateString('vi-VN')}
+                        </span>
+                      </div>
+
+                      {/* Tem Bưu Chính Hoài Niệm */}
+                      <div
+                        style={{
+                          width: '58px',
+                          height: '72px',
+                          background: '#fff',
+                          border: `2px dashed ${readStamp.color}`,
+                          borderRadius: '4px',
+                          boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '4px',
+                          textAlign: 'center',
+                        }}
+                      >
+                        <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>{readStamp.icon}</span>
+                        <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
+                          {readStamp.name}
+                        </span>
+                        <span style={{ fontSize: '0.5rem', color: '#64748b' }}>VIETNAM</span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', maxWidth: 'calc(100% - 150px)' }}>
+                      <span style={{ fontSize: '0.8rem', color: '#b45309', fontWeight: 800 }}>
+                        ✨ BỨC THƯ TỪ QUÁ KHỨ ĐÃ MỞ NIÊM PHONG
+                      </span>
+                    </div>
+
                     <button
                       type="button"
                       onClick={() => setReadingCapsule(null)}
                       style={{
-                        background: 'transparent',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        marginBottom: '16px',
+                        background: 'rgba(0, 0, 0, 0.08)',
+                        border: '1px solid rgba(0, 0, 0, 0.15)',
                         borderRadius: '8px',
-                        color: '#cbd5e1',
-                        padding: '4px 10px',
+                        color: readPaper.textColor,
+                        padding: '6px 12px',
                         fontSize: '0.78rem',
+                        fontWeight: 700,
                         cursor: 'pointer',
                       }}
                     >
                       ← Quay lại danh sách
                     </button>
-                  </div>
 
-                  <h3 style={{ margin: '0 0 10px', fontSize: '1.3rem', color: '#fef3c7', fontWeight: 800 }}>
-                    {readingCapsule.title}
-                  </h3>
+                    <h3 style={{ margin: '0 0 10px', fontSize: '1.4rem', color: readPaper.textColor, fontWeight: 900 }}>
+                      {readingCapsule.title}
+                    </h3>
 
-                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '16px' }}>
-                    Viết bởi: <strong>{readingCapsule.creatorName || 'Tôi của ngày trước'}</strong> • Mở khóa lúc:{' '}
-                    {new Date(readingCapsule.unlockDate).toLocaleDateString('vi-VN')}
-                  </div>
+                    <div style={{ fontSize: '0.82rem', color: 'rgba(0,0,0,0.6)', marginBottom: '20px' }}>
+                      Ký tên: <strong>{readingCapsule.creatorName || 'Tôi của ngày trước'}</strong> • Niêm phong lúc:{' '}
+                      {new Date(readingCapsule.createdAt || Date.now()).toLocaleDateString('vi-VN')}
+                    </div>
 
-                  <div
-                    style={{
-                      background: 'rgba(0, 0, 0, 0.25)',
-                      padding: '18px',
-                      borderRadius: '12px',
-                      color: '#f8fafc',
-                      fontSize: '0.98rem',
-                      lineHeight: '1.8',
-                      whiteSpace: 'pre-wrap',
-                      borderLeft: '4px solid #f59e0b',
-                    }}
-                  >
-                    {readingCapsule.content}
-                  </div>
+                    <div
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.65)',
+                        padding: '22px',
+                        borderRadius: '12px',
+                        color: readPaper.textColor,
+                        fontSize: '1.02rem',
+                        lineHeight: '1.85',
+                        whiteSpace: 'pre-wrap',
+                        fontFamily: readingCapsule.paperType === 'grid' ? 'var(--font-sans, sans-serif)' : 'Georgia, "Times New Roman", serif',
+                        borderLeft: `4px solid ${readWax.color}`,
+                        boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.06)',
+                      }}
+                    >
+                      {readingCapsule.content}
+                    </div>
 
-                  <div style={{ marginTop: '20px', textAlign: 'center', color: '#fcd34d', fontSize: '0.88rem', fontStyle: 'italic' }}>
-                    "Hôm nay, bạn đã đi xa hơn ngày hôm qua một đoạn rất dài rồi đấy! Chúc mừng bạn đã luôn kiên trì 🌿✨"
+                    {/* Vết Sáp Niêm Phong Đã Mở & Lời Chúc */}
+                    <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+                      <div style={{ color: '#92400e', fontSize: '0.88rem', fontStyle: 'italic', maxWidth: '420px' }}>
+                        "Hôm nay, bạn đã đi xa hơn ngày hôm qua một đoạn rất dài rồi đấy! Chúc mừng bạn đã luôn kiên trì 🌿✨"
+                      </div>
+
+                      {/* Huy hiệu dấu sáp 3D */}
+                      <div
+                        title={`Con dấu sáp niêm phong màu ${readWax.name}`}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: 'rgba(0, 0, 0, 0.06)',
+                          padding: '6px 14px',
+                          borderRadius: '999px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: readWax.color,
+                            border: `2.5px solid ${readWax.border}`,
+                            boxShadow: `0 3px 8px ${readWax.glow}`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff',
+                            fontSize: '0.85rem',
+                            fontWeight: 900,
+                          }}
+                        >
+                          ⚜️
+                        </div>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: readPaper.textColor }}>
+                          Niêm phong sáp: {readWax.name}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ) : capsules.length === 0 ? (
+                );
+              })() : capsules.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px 10px', color: '#94a3b8' }}>
                   <div style={{ fontSize: '3rem', marginBottom: '10px' }}>📦</div>
                   <h4 style={{ margin: '0 0 6px', color: '#f1f5f9' }}>Bạn chưa có chiếc hộp thời gian nào</h4>
@@ -1009,6 +1375,83 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
             </div>
           )}
         </div>
+
+        {/* ========================================================
+            HOẠT HỌA NUNG CHẢY SÁP & DẬP CON DẤU 3D (WAX SEAL STAMP ANIMATION)
+           ======================================================== */}
+        {isWaxMelting && (() => {
+          const currentWax = WAX_SEALS.find((w) => w.id === selectedWax) || WAX_SEALS[0];
+          return (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'rgba(15, 23, 42, 0.88)',
+                backdropFilter: 'blur(10px)',
+                zIndex: 100,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                animation: 'fadeIn 0.2s ease',
+              }}
+            >
+              <div
+                style={{
+                  position: 'relative',
+                  width: '120px',
+                  height: '120px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {/* Giọt sáp nóng chảy lan rộng */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    width: '90px',
+                    height: '90px',
+                    borderRadius: '45% 55% 52% 48% / 48% 46% 54% 52%',
+                    background: currentWax.color,
+                    boxShadow: `0 0 35px ${currentWax.glow}, inset 0 2px 6px rgba(255,255,255,0.4)`,
+                    animation: 'waxSpread 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                  }}
+                />
+
+                {/* Con dấu đồng dập sầm xuống */}
+                <div
+                  style={{
+                    position: 'relative',
+                    zIndex: 2,
+                    fontSize: '2.8rem',
+                    color: '#fff',
+                    animation: 'stampPress 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
+                    filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))',
+                  }}
+                >
+                  ⚜️
+                </div>
+              </div>
+
+              <div
+                style={{
+                  marginTop: '20px',
+                  fontSize: '1.05rem',
+                  fontWeight: 800,
+                  color: '#fef3c7',
+                  textAlign: 'center',
+                  letterSpacing: '0.3px',
+                }}
+              >
+                Đang nung sáp &amp; dập ấn niêm phong...
+              </div>
+              <div style={{ marginTop: '6px', fontSize: '0.8rem', color: '#cbd5e1' }}>
+                Khóa chặt tâm tư gửi vào dòng thời gian tương lai 💌
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

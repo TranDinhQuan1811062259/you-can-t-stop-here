@@ -429,6 +429,11 @@ export const AssistiveChatWidget = () => {
     }
   }
 
+  const screenWidth = typeof document !== 'undefined' && document.documentElement.clientWidth
+    ? document.documentElement.clientWidth
+    : (typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const isRightSide = btnPos.x > screenWidth / 2;
+
   return (
     <>
       {/* ======================================================== */}
@@ -439,15 +444,21 @@ export const AssistiveChatWidget = () => {
         className={`assistive-chat-touch-btn ${isWidgetOpen ? 'active' : ''} ${isDragging ? 'is-dragging' : ''}`}
         style={{
           position: 'fixed',
-          left: `${btnPos.x}px`,
+          left: isDragging ? `${btnPos.x}px` : (!isRightSide ? '24px' : 'auto'),
+          right: isDragging ? 'auto' : (isRightSide ? '32px' : 'auto'),
           top: `${btnPos.y}px`,
-          right: 'auto',
           bottom: 'auto',
           cursor: isDragging ? 'grabbing' : 'grab',
           transition: isDragging
             ? 'none'
             : 'left 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.2s, box-shadow 0.2s',
           touchAction: 'none',
+          background: isWidgetOpen
+            ? 'linear-gradient(135deg, #0f766e 0%, #047857 100%)'
+            : 'linear-gradient(135deg, #0284c7 0%, #0d9488 100%)',
+          color: '#ffffff',
+          border: '2.5px solid #ffffff',
+          boxShadow: '0 10px 26px rgba(2, 132, 199, 0.42), 0 0 0 2px rgba(255, 255, 255, 0.2)',
         }}
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
@@ -455,7 +466,7 @@ export const AssistiveChatWidget = () => {
         title={isWidgetOpen ? "Đóng cửa sổ chat" : "Freedom Chat - Nhắn tin & Bạn bè (Giữ và kéo thả để di chuyển góc tùy thích)"}
       >
         <div className="assistive-touch-inner">
-          <span className="assistive-touch-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span className="assistive-touch-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontSize: '1.5rem', filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))' }}>
             {isWidgetOpen ? <i className="fa-solid fa-xmark"></i> : <i className="fa-solid fa-comment-dots"></i>}
           </span>
 

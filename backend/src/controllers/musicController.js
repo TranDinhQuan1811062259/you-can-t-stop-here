@@ -1,6 +1,62 @@
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 
 /**
+ * Danh sách bản nhạc nền thư giãn mặc định
+ */
+export const getMusicPresets = async (req, res) => {
+  return sendSuccess(res, {
+    message: 'Danh sách bài hát thư giãn mặc định',
+    data: [
+      {
+        id: 'lofi_night',
+        title: 'Lofi Chill - Đêm muộn ở văn phòng',
+        artist: 'Freedom Chill Beat',
+        genre: 'Lofi Chill / Hip Hop',
+        icon: '🌙',
+        url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
+        description: 'Âm hưởng lofi ấm áp, êm đềm cho những buổi làm việc khuya.',
+      },
+      {
+        id: 'healing_piano',
+        title: 'Healing Piano - Khoảng lặng tâm hồn',
+        artist: 'Peaceful Mind',
+        genre: 'Piano / Acoustic',
+        icon: '🎹',
+        url: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=ambient-piano-amp-strings-10711.mp3',
+        description: 'Giai điệu dương cầm nhẹ nhàng chữa lành những tổn thương và áp lực.',
+      },
+      {
+        id: 'rain_coffee',
+        title: 'Rain & Coffee - Tiếng mưa bên ô cửa sổ',
+        artist: 'Acoustic Rain Project',
+        genre: 'Rain & Lofi Guitar',
+        icon: '☕',
+        url: 'https://cdn.pixabay.com/download/audio/2021/09/06/audio_731a104051.mp3?filename=rain-and-nostalgia-chill-lofi-song-8493.mp3',
+        description: 'Âm thanh mưa rơi lách tách hòa cùng tiếng guitar mộc mạc.',
+      },
+      {
+        id: 'deep_focus',
+        title: 'Deep Focus - Nhịp điệu tập trung',
+        artist: 'Ambient Flow',
+        genre: 'Synth Ambient / Focus',
+        icon: '🎧',
+        url: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=lofi-orchestra-16230.mp3',
+        description: 'Nhịp điệu đều đặn giúp bạn lấy lại sự tĩnh tâm và tập trung cao độ.',
+      },
+      {
+        id: 'acoustic_sunset',
+        title: 'Acoustic Sunset - Bình yên sau tan ca',
+        artist: 'Acoustic Soul',
+        genre: 'Warm Acoustic Guitar',
+        icon: '🌅',
+        url: 'https://cdn.pixabay.com/download/audio/2022/11/06/audio_c93e43d61f.mp3?filename=warm-acoustic-guitar-124928.mp3',
+        description: 'Cảm giác thở phào nhẹ nhõm sau một ngày dài làm việc căng thẳng.',
+      },
+    ],
+  });
+};
+
+/**
  * Làm sạch tiêu đề video loại bỏ các hậu tố MV, Official Music Video, v.v.
  */
 const cleanSongTitle = (rawTitle) => {

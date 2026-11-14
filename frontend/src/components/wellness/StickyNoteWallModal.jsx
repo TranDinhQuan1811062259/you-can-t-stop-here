@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { playClickSound, playStarChimeSound, playWarmthSound } from '../../utils/soundEffects';
 
 const INITIAL_STICKY_NOTES = [
@@ -90,6 +90,12 @@ export const StickyNoteWallModal = ({ isOpen, onClose }) => {
     return [];
   });
 
+  // State quản lý Nhạc nền YouTube Shorts (MuPk2I50ras - 100% Chính chủ user)
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [showShortsVideo, setShowShortsVideo] = useState(false);
+  const [musicVolume, setMusicVolume] = useState(80);
+  const musicIframeRef = useRef(null);
+
   // Lưu notes vào localStorage
   const saveNotes = (updated) => {
     setNotes(updated);
@@ -97,6 +103,47 @@ export const StickyNoteWallModal = ({ isOpen, onClose }) => {
       localStorage.setItem('freedom_sticky_notes', JSON.stringify(updated));
     } catch (_) {}
   };
+
+  // Điều khiển nhạc YouTube qua postMessage
+  const sendYoutubeCommand = (func, args = []) => {
+    if (musicIframeRef.current && musicIframeRef.current.contentWindow) {
+      try {
+        musicIframeRef.current.contentWindow.postMessage(
+          JSON.stringify({ event: 'command', func, args }),
+          '*'
+        );
+      } catch (_) {}
+    }
+  };
+
+  // Toggle bật/tắt nhạc nền
+  const togglePlayMusic = () => {
+    playClickSound();
+    if (isMusicPlaying) {
+      sendYoutubeCommand('pauseVideo');
+      setIsMusicPlaying(false);
+    } else {
+      sendYoutubeCommand('playVideo');
+      setIsMusicPlaying(true);
+    }
+  };
+
+  // Đổi âm lượng
+  const handleMusicVolume = (vol) => {
+    setMusicVolume(vol);
+    sendYoutubeCommand('setVolume', [vol]);
+  };
+
+  // Dọn dẹp / Tắt nhạc khi modal đóng
+  useEffect(() => {
+    if (!isOpen) {
+      if (isMusicPlaying) {
+        sendYoutubeCommand('pauseVideo');
+        setIsMusicPlaying(false);
+      }
+      setShowShortsVideo(false);
+    }
+  }, [isOpen]);
 
   // Thả tim cho một lời nhắn
   const handleLikeNote = (noteId) => {
@@ -168,8 +215,8 @@ export const StickyNoteWallModal = ({ isOpen, onClose }) => {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '16px',
-        background: 'rgba(15, 23, 42, 0.75)',
-        backdropFilter: 'blur(8px)',
+        background: 'rgba(15, 23, 42, 0.78)',
+        backdropFilter: 'blur(10px)',
       }}
     >
       <div
@@ -177,22 +224,23 @@ export const StickyNoteWallModal = ({ isOpen, onClose }) => {
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '95%',
-          maxWidth: '860px',
-          maxHeight: '90vh',
+          maxWidth: '880px',
+          maxHeight: '92vh',
           borderRadius: '24px',
           background: '#ffffff',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.45)',
           border: '1.5px solid #e2e8f0',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
           padding: 0,
+          position: 'relative',
         }}
       >
         {/* Header Bức tường giấy nhớ */}
         <div
           style={{
-            padding: '18px 24px 14px',
+            padding: '16px 24px 12px',
             borderBottom: '1.5px solid #f1f5f9',
             display: 'flex',
             alignItems: 'center',
@@ -232,6 +280,200 @@ export const StickyNoteWallModal = ({ isOpen, onClose }) => {
             ✕
           </button>
         </div>
+
+        {/* THANH PHÁT NHẠC NỀN YÊU THƯƠNG CHÍNH CHỦ (YouTube Shorts: MuPk2I50ras) */}
+        <div
+          style={{
+            padding: '10px 20px',
+            background: 'linear-gradient(90deg, #fffbeb 0%, #fef3c7 50%, #fff7ed 100%)',
+            borderBottom: '1.5px solid #fde68a',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '10px',
+          }}
+        >
+          {/* Thông tin bài nhạc */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span
+              style={{
+                fontSize: '1.4rem',
+                display: 'inline-block',
+                animation: isMusicPlaying ? 'spinSlow 4s linear infinite' : 'none',
+              }}
+            >
+              🎵
+            </span>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <strong style={{ fontSize: '0.84rem', color: '#92400e' }}>
+                  Giai Điệu Gửi Yêu Thương
+                </strong>
+                <span
+                  style={{
+                    fontSize: '0.66rem',
+                    background: '#10b981',
+                    color: '#ffffff',
+                    padding: '1px 6px',
+                    borderRadius: '999px',
+                    fontWeight: 800,
+                  }}
+                >
+                  Nhạc của Bạn ✨
+                </span>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.72rem', color: '#b45309' }}>
+                Bản quyền 100% chính chủ • Thư giãn & chữa lành tâm hồn
+              </p>
+            </div>
+          </div>
+
+          {/* Cụm điều khiển Play/Pause & Sóng âm & Video */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {/* Nút Play / Pause */}
+            <button
+              type="button"
+              onClick={togglePlayMusic}
+              style={{
+                background: isMusicPlaying
+                  ? 'linear-gradient(135deg, #ef4444, #dc2626)'
+                  : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '999px',
+                padding: '6px 14px',
+                fontSize: '0.76rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: isMusicPlaying
+                  ? '0 3px 10px rgba(239, 68, 68, 0.35)'
+                  : '0 3px 10px rgba(245, 158, 11, 0.35)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span>{isMusicPlaying ? '⏸ Tạm Dừng' : '▶ Bật Nhạc Yêu Thương'}</span>
+            </button>
+
+            {/* Sóng âm mini khi đang phát */}
+            {isMusicPlaying && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '2px',
+                  height: '14px',
+                  padding: '0 4px',
+                }}
+              >
+                <span className="sticky-eq-bar sticky-eq-1"></span>
+                <span className="sticky-eq-bar sticky-eq-2"></span>
+                <span className="sticky-eq-bar sticky-eq-3"></span>
+                <span className="sticky-eq-bar sticky-eq-4"></span>
+              </div>
+            )}
+
+            {/* Nút Xem / Ẩn Video Shorts */}
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound();
+                setShowShortsVideo((prev) => !prev);
+              }}
+              style={{
+                background: showShortsVideo ? '#e2e8f0' : 'rgba(255, 255, 255, 0.9)',
+                border: '1px solid #fde68a',
+                color: '#92400e',
+                borderRadius: '8px',
+                padding: '5px 10px',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <span>{showShortsVideo ? '✕ Ẩn Video' : '🎬 Xem Shorts'}</span>
+            </button>
+
+            {/* Slider Âm Lượng Nhạc */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '0.8rem', color: '#b45309' }}>🔊</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={musicVolume}
+                onChange={(e) => handleMusicVolume(Number(e.target.value))}
+                style={{ width: '65px', accentColor: '#f59e0b', cursor: 'pointer' }}
+                title={`Âm lượng: ${musicVolume}%`}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Khung nhúng YouTube Shorts (Ẩn hoặc hiện theo ý người dùng) */}
+        <div
+          style={{
+            display: showShortsVideo ? 'flex' : 'none',
+            justifyContent: 'center',
+            alignItems: 'center',
+            background: 'rgba(15, 23, 42, 0.92)',
+            padding: '12px',
+            borderBottom: '2px solid #fde68a',
+            position: 'relative',
+          }}
+        >
+          <div style={{ position: 'relative', width: '220px', height: '390px', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+            <iframe
+              ref={musicIframeRef}
+              src="https://www.youtube.com/embed/MuPk2I50ras?enablejsapi=1&origin=*&loop=1&playlist=MuPk2I50ras&playsinline=1"
+              title="Nhạc Gửi Gắm Yêu Thương Ẩn Danh"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+              }}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowShortsVideo(false)}
+            style={{
+              position: 'absolute',
+              top: '12px',
+              right: '16px',
+              background: 'rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              color: '#ffffff',
+              borderRadius: '50%',
+              width: '28px',
+              height: '28px',
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Iframe ẩn khi người dùng chỉ nghe nhạc ngầm mà không xem Shorts */}
+        {!showShortsVideo && (
+          <div style={{ position: 'absolute', width: '1px', height: '1px', opacity: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+            <iframe
+              ref={musicIframeRef}
+              src="https://www.youtube.com/embed/MuPk2I50ras?enablejsapi=1&origin=*&loop=1&playlist=MuPk2I50ras&playsinline=1"
+              title="Nhạc Gửi Gắm Yêu Thương Ẩn Danh (Ngầm)"
+              allow="autoplay; encrypted-media"
+              style={{ width: '1px', height: '1px', border: 'none' }}
+            />
+          </div>
+        )}
 
         {/* Thanh công cụ: Tabs bộ lọc & Nút hành động */}
         <div
@@ -609,6 +851,29 @@ export const StickyNoteWallModal = ({ isOpen, onClose }) => {
             );
           })}
         </div>
+
+        {/* Styles Animation sóng âm & xoay đĩa nhạc */}
+        <style>{`
+          @keyframes spinSlow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          .sticky-eq-bar {
+            display: inline-block;
+            width: 3px;
+            background: #d97706;
+            border-radius: 2px;
+            animation: stickyEqBounce 0.7s ease-in-out infinite alternate;
+          }
+          .sticky-eq-1 { height: 6px; animation-delay: 0s; }
+          .sticky-eq-2 { height: 12px; animation-delay: 0.2s; }
+          .sticky-eq-3 { height: 8px; animation-delay: 0.35s; }
+          .sticky-eq-4 { height: 13px; animation-delay: 0.15s; }
+          @keyframes stickyEqBounce {
+            0% { transform: scaleY(0.4); }
+            100% { transform: scaleY(1.25); }
+          }
+        `}</style>
       </div>
     </div>
   );

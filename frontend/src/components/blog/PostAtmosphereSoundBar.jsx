@@ -82,11 +82,11 @@ export const PostAtmosphereSoundBar = ({ atmosphere, postTitle }) => {
       style={{
         margin: '18px 0',
         padding: '12px 18px',
-        borderRadius: '12px',
-        border: `1.5px solid ${themeMeta.accentColor}50`,
-        background: `linear-gradient(135deg, ${themeMeta.accentColor}15 0%, rgba(255, 255, 255, 0.95) 100%)`,
-        backdropFilter: 'blur(8px)',
-        boxShadow: `0 4px 18px ${themeMeta.accentColor}18`,
+        borderRadius: '14px',
+        border: `1.5px solid ${themeMeta.accentColor}80`,
+        background: 'rgba(255, 255, 255, 0.96)',
+        backdropFilter: 'blur(16px)',
+        boxShadow: `0 6px 20px rgba(0, 0, 0, 0.12), 0 0 16px ${themeMeta.accentColor}25`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -108,14 +108,15 @@ export const PostAtmosphereSoundBar = ({ atmosphere, postTitle }) => {
             background: isPlaying
               ? `linear-gradient(135deg, ${themeMeta.accentColor} 0%, #0d9488 100%)`
               : '#e2e8f0',
-            color: isPlaying ? '#ffffff' : '#475569',
+            color: isPlaying ? '#ffffff' : '#0f172a',
             fontSize: '1.2rem',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: isPlaying ? `0 4px 12px ${themeMeta.accentColor}40` : 'none',
+            boxShadow: isPlaying ? `0 4px 12px ${themeMeta.accentColor}50` : 'none',
             transition: 'all 0.2s ease',
+            flexShrink: 0,
           }}
           title={isPlaying ? 'Tạm dừng âm thanh không gian' : 'Bật âm thanh không gian cảm xúc'}
         >
@@ -125,7 +126,7 @@ export const PostAtmosphereSoundBar = ({ atmosphere, postTitle }) => {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '1.15rem' }}>{themeMeta.icon}</span>
-            <strong style={{ fontSize: '0.92rem', color: '#1e293b' }}>
+            <strong style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a' }}>
               Không Gian: {themeMeta.name}
             </strong>
             {isPlaying && (
@@ -134,8 +135,9 @@ export const PostAtmosphereSoundBar = ({ atmosphere, postTitle }) => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
-                  background: `${themeMeta.accentColor}20`,
-                  color: themeMeta.accentColor,
+                  background: '#dcfce7',
+                  color: '#15803d',
+                  border: '1px solid #86efac',
                   padding: '2px 8px',
                   borderRadius: '12px',
                   fontSize: '0.72rem',
@@ -147,10 +149,10 @@ export const PostAtmosphereSoundBar = ({ atmosphere, postTitle }) => {
               </span>
             )}
           </div>
-          <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+          <p style={{ margin: '3px 0 0 0', fontSize: '0.82rem', fontWeight: 600, color: '#334155' }}>
             {themeMeta.soundLabel}
             {isDucked && (
-              <span style={{ color: '#0d9488', fontWeight: 600, marginLeft: '6px' }}>
+              <span style={{ color: '#0d9488', fontWeight: 700, marginLeft: '6px' }}>
                 • (Đang chìm nhẹ vì phát nhạc cá nhân)
               </span>
             )}
@@ -159,7 +161,7 @@ export const PostAtmosphereSoundBar = ({ atmosphere, postTitle }) => {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span style={{ fontSize: '0.8rem', color: '#475569' }}>Âm lượng:</span>
+        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a' }}>Âm lượng:</span>
         <input
           type="range"
           min="0"
@@ -174,7 +176,7 @@ export const PostAtmosphereSoundBar = ({ atmosphere, postTitle }) => {
           }}
           title={`Âm lượng: ${Math.round(volume * 100)}%`}
         />
-        <span style={{ fontSize: '0.78rem', color: '#64748b', minWidth: '32px' }}>
+        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', minWidth: '34px' }}>
           {Math.round(volume * 100)}%
         </span>
       </div>

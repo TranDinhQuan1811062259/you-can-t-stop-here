@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
+  SUPPORTED_LANGUAGES,
   MOOD_VOICE_PRESETS,
   VIETNAMESE_VOICE_GENDERS,
   VIETNAMESE_VOICE_REGIONS,
@@ -20,6 +21,7 @@ export const PostAudioPlayer = ({ post }) => {
   const [currentSeconds, setCurrentSeconds] = useState(0);
   const [totalDurationSeconds, setTotalDurationSeconds] = useState(0);
   const [currentSentence, setCurrentSentence] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('vi'); // 'vi' | 'en' | 'zh' | 'ja' | 'ko'
   const [selectedMood, setSelectedMood] = useState(() => post?.audioMood || 'auto');
   const [selectedGender, setSelectedGender] = useState(() => post?.voiceGender || 'female');
   const [selectedRegion, setSelectedRegion] = useState(() => post?.voiceRegion || 'north');
@@ -89,9 +91,10 @@ export const PostAudioPlayer = ({ post }) => {
       return;
     }
 
-    // Bắt đầu đọc với đầy đủ cấu hình Giới tính (Nam/Nữ) & Vùng miền (Bắc/Trung/Nam)
+    // Bắt đầu đọc với đầy đủ cấu hình Ngôn ngữ, Giới tính (Nam/Nữ) & Vùng miền
     aiVoicePlayer.play({
       text: fullText,
+      lang: selectedLanguage,
       moodId: selectedMood,
       gender: selectedGender,
       region: selectedRegion,
@@ -120,6 +123,12 @@ export const PostAudioPlayer = ({ post }) => {
     setProgress(0);
     setCurrentSeconds(0);
     setCurrentSentence('');
+  };
+
+  const handleChangeLanguage = (newLang) => {
+    playClickSound();
+    setSelectedLanguage(newLang);
+    aiVoicePlayer.setLanguage(newLang);
   };
 
   const handleChangeGender = (newGender) => {
@@ -292,48 +301,117 @@ export const PostAudioPlayer = ({ post }) => {
           </div>
         )}
 
-        {/* HÀNG 1: TÙY BIẾN GIỚI TÍNH GIỌNG (NAM/NỮ) & NGÔN NGỮ VÙNG MIỀN (BẮC/TRUNG/NAM) */}
+        {/* HÀNG 1: TÙY BIẾN NGÔN NGỮ (VIỆT / ANH / TRUNG / NHẬT / HÀN), GIỚI TÍNH & VÙNG MIỀN */}
         <div className="audio-voice-selection-row">
-          {/* Lựa chọn Giới tính Nam / Nữ */}
-          <div className="audio-gender-picker">
+          {/* Lựa chọn Ngôn ngữ Đa Quốc Gia */}
+          <div className="audio-lang-picker">
             <label className="audio-ctrl-label">
-              <span>👤</span>
-              <span>Giới tính giọng:</span>
-            </label>
-            <div className="audio-gender-btn-group">
-              {VIETNAMESE_VOICE_GENDERS.map((g) => (
-                <button
-                  key={g.id}
-                  type="button"
-                  className={`audio-gender-btn ${selectedGender === g.id ? 'active' : ''}`}
-                  onClick={() => handleChangeGender(g.id)}
-                  title={g.desc}
-                >
-                  <span className="audio-gender-icon">{g.icon}</span>
-                  <span className="audio-gender-text">{g.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Lựa chọn Ngôn ngữ Vùng miền Việt Nam */}
-          <div className="audio-region-picker">
-            <label className="audio-ctrl-label">
-              <span>📍</span>
-              <span>Vùng miền:</span>
+              <span>🌐</span>
+              <span>Ngôn ngữ:</span>
             </label>
             <select
-              value={selectedRegion}
-              onChange={(e) => handleChangeRegion(e.target.value)}
-              className="audio-region-select"
+              value={selectedLanguage}
+              onChange={(e) => handleChangeLanguage(e.target.value)}
+              className="audio-lang-select"
+              title="Chọn ngôn ngữ đọc bài viết"
             >
-              {VIETNAMESE_VOICE_REGIONS.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.icon} {r.name}
+              {SUPPORTED_LANGUAGES.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.flag} {l.name}
                 </option>
               ))}
             </select>
           </div>
+
+          {/* Lựa chọn Giới tính Nam / Nữ (Chữ luôn đậm rõ, không bao giờ bị mờ) */}
+          <div className="audio-gender-picker">
+            <label className="audio-ctrl-label">
+              <span>👤</span>
+              <span>Giới tính:</span>
+            </label>
+            <div className="audio-gender-btn-group">
+              {VIETNAMESE_VOICE_GENDERS.map((g) => {
+                const isActive = selectedGender === g.id;
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    className={`audio-gender-btn ${isActive ? 'active' : ''}`}
+                    onClick={() => handleChangeGender(g.id)}
+                    title={g.desc}
+                    style={{
+                      background: isActive ? 'linear-gradient(135deg, #0d9488, #059669)' : '#ffffff',
+                      color: isActive ? '#ffffff' : '#0f172a',
+                      border: isActive ? '1.5px solid #0d9488' : '1.5px solid #cbd5e1',
+                      fontWeight: 800,
+                      padding: '5px 12px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      boxShadow: isActive ? '0 3px 10px rgba(13, 148, 136, 0.35)' : 'none',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <span className="audio-gender-icon" style={{ fontSize: '1rem' }}>{g.icon}</span>
+                    <span
+                      className="audio-gender-text"
+                      style={{
+                        color: isActive ? '#ffffff' : '#0f172a',
+                        fontWeight: 800,
+                        fontSize: '0.8rem',
+                      }}
+                    >
+                      {g.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Lựa chọn Ngôn ngữ Vùng miền (Chỉ hiển thị khi chọn Tiếng Việt) */}
+          {selectedLanguage === 'vi' ? (
+            <div className="audio-region-picker">
+              <label className="audio-ctrl-label">
+                <span>📍</span>
+                <span>Vùng miền:</span>
+              </label>
+              <select
+                value={selectedRegion}
+                onChange={(e) => handleChangeRegion(e.target.value)}
+                className="audio-region-select"
+                title="Thay đổi ngữ điệu theo vùng miền Việt Nam (Bắc, Trung, Nam)"
+              >
+                {VIETNAMESE_VOICE_REGIONS.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.icon} {r.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="audio-region-picker">
+              <label className="audio-ctrl-label">
+                <span>✨</span>
+                <span>Ngữ điệu:</span>
+              </label>
+              <div
+                style={{
+                  background: 'rgba(13, 148, 136, 0.1)',
+                  color: '#0d9488',
+                  border: '1px solid rgba(13, 148, 136, 0.3)',
+                  borderRadius: '8px',
+                  padding: '5px 10px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                }}
+              >
+                Bản xứ Neural 100% ({selectedGender === 'male' ? 'Nam' : 'Nữ'})
+              </div>
+            </div>
+          )}
         </div>
 
         {/* HÀNG 2: TÙY BIẾN TÂM TRẠNG & TỐC ĐỘ */}
@@ -388,10 +466,10 @@ export const PostAudioPlayer = ({ post }) => {
           </div>
         </div>
 
-        {/* Chú thích đặc trưng của chất giọng & vùng miền đang chọn */}
+        {/* Chú thích đặc trưng của chất giọng, ngôn ngữ & vùng miền đang chọn */}
         <div className="audio-voice-feature-badge">
           <span>
-            ✨ <strong>Âm sắc A.I:</strong> {currentGender.name} • {currentRegion.name} ({selectedGender === 'male' ? currentRegion.maleDesc : currentRegion.femaleDesc})
+            ✨ <strong>Âm sắc A.I:</strong> {SUPPORTED_LANGUAGES.find((l) => l.id === selectedLanguage)?.flag} {currentGender.name} • {selectedLanguage === 'vi' ? `${currentRegion.name} (${selectedGender === 'male' ? currentRegion.maleDesc : currentRegion.femaleDesc})` : `${SUPPORTED_LANGUAGES.find((l) => l.id === selectedLanguage)?.name} bản xứ chuẩn Neural`}
           </span>
           <span className="audio-desc-sep">•</span>
           <span>

@@ -20,49 +20,49 @@
 .theme-dark,
 .mode-dark {
   /* Surfaces & Backgrounds (Dark Mode - Midnight Slate) */
-  --bg-page: #0a0f1d;
-  --bg-header: rgba(13, 19, 33, 0.85);
-  --bg-surface: #111827;
-  --bg-surface-hover: #172136;
-  --bg-card: #131c2e;
-  --bg-card-hover: #1a253c;
+  --bg-page: #0d1217;
+  --bg-header: rgba(13, 18, 23, 0.92);
+  --bg-surface: #131a22;
+  --bg-surface-hover: #19232f;
+  --bg-card: #151e27;
+  --bg-card-hover: #1a2633;
   --bg-elevated: #1e293b;
   --bg-input: rgba(255, 255, 255, 0.05);
-  --bg-glass: rgba(17, 24, 39, 0.78);
+  --bg-glass: rgba(19, 26, 34, 0.85);
 
   /* Borders & Dividers */
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-card: rgba(255, 255, 255, 0.12);
-  --border-hover: rgba(255, 255, 255, 0.24);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-card: rgba(255, 255, 255, 0.09);
+  --border-hover: rgba(255, 255, 255, 0.18);
   --border-focus: rgba(110, 231, 183, 0.45);
 
   /* Typography */
-  --text-main: #f1f5f9;
-  --text-heading: #ffffff;
+  --text-main: #e2e8f0;
+  --text-heading: #f8fafc;
   --text-muted: #94a3b8;
   --text-faint: #64748b;
 
-  /* 3 Healing Pastel Accents (Dark Mode) */
-  --pastel-sage: #6ee7b7;
-  --pastel-sage-bg: rgba(110, 231, 183, 0.12);
-  --pastel-sage-border: rgba(110, 231, 183, 0.28);
-  --pastel-sage-glow: 0 4px 18px rgba(110, 231, 183, 0.16);
+  /* 3 Healing Pastel Accents (Dark Mode - Subdued & Organic) */
+  --pastel-sage: #34d399;
+  --pastel-sage-bg: rgba(52, 211, 153, 0.1);
+  --pastel-sage-border: rgba(52, 211, 153, 0.22);
+  --pastel-sage-glow: 0 2px 10px rgba(52, 211, 153, 0.1);
 
   --pastel-rose: #f472b6;
-  --pastel-rose-bg: rgba(244, 114, 182, 0.12);
-  --pastel-rose-border: rgba(244, 114, 182, 0.28);
-  --pastel-rose-glow: 0 4px 18px rgba(244, 114, 182, 0.16);
+  --pastel-rose-bg: rgba(244, 114, 182, 0.1);
+  --pastel-rose-border: rgba(244, 114, 182, 0.22);
+  --pastel-rose-glow: 0 2px 10px rgba(244, 114, 182, 0.1);
 
   --pastel-amber: #fbbf24;
-  --pastel-amber-bg: rgba(251, 191, 36, 0.12);
-  --pastel-amber-border: rgba(251, 191, 36, 0.28);
-  --pastel-amber-glow: 0 4px 18px rgba(251, 191, 36, 0.16);
+  --pastel-amber-bg: rgba(251, 191, 36, 0.1);
+  --pastel-amber-border: rgba(251, 191, 36, 0.22);
+  --pastel-amber-glow: 0 2px 10px rgba(251, 191, 36, 0.1);
 
   /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 8px 24px -4px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 16px 40px -8px rgba(0, 0, 0, 0.65);
-  --shadow-card: 0 8px 26px -4px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 6px 18px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 14px 32px -4px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 4px 18px -2px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.06);
 
   /* Backward Compatibility Variables */
   --primary-color: var(--pastel-sage);
@@ -70,7 +70,7 @@
   --accent-color: var(--pastel-amber);
   --bg-dark: #0f172a;
   --bg-darker: #090d16;
-  --bg-light: #0a0f1d;
+  --bg-light: #0d1217;
   --card-bg: var(--bg-card);
   --border-color: var(--border-card);
   --font-sans: 'Plus Jakarta Sans', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -84,66 +84,66 @@
 }
 
 /* --------------------------------------------------------
-   LIGHT MODE (Sáng Ấm Áp - Warm Daylight & Soft Cream)
+   LIGHT MODE (Sáng Ấm Áp - Warm Linen & Soft Cream)
    -------------------------------------------------------- */
 [data-theme="light"],
 .theme-light,
 .mode-light,
 body.theme-light {
-  /* Surfaces & Backgrounds */
-  --bg-page: #f8fafc;
-  --bg-header: rgba(255, 255, 255, 0.92);
+  /* Surfaces & Backgrounds - Warm Linen & Soft Cream */
+  --bg-page: #faf8f5;
+  --bg-header: rgba(250, 248, 245, 0.94);
   --bg-surface: #ffffff;
-  --bg-surface-hover: #f1f5f9;
+  --bg-surface-hover: #f5f2eb;
   --bg-card: #ffffff;
-  --bg-card-hover: #fcfdfe;
+  --bg-card-hover: #fdfcfb;
   --bg-elevated: #ffffff;
-  --bg-input: #f1f5f9;
-  --bg-glass: rgba(255, 255, 255, 0.88);
+  --bg-input: #f3f0e8;
+  --bg-glass: rgba(255, 255, 255, 0.9);
 
   /* Borders & Dividers */
-  --border-subtle: rgba(15, 23, 42, 0.08);
-  --border-card: rgba(15, 23, 42, 0.1);
-  --border-hover: rgba(15, 23, 42, 0.2);
-  --border-focus: rgba(5, 150, 105, 0.35);
+  --border-subtle: rgba(44, 39, 32, 0.06);
+  --border-card: rgba(44, 39, 32, 0.08);
+  --border-hover: rgba(44, 39, 32, 0.16);
+  --border-focus: rgba(13, 148, 136, 0.4);
 
   /* Typography */
-  --text-main: #1e293b;
-  --text-heading: #0f172a;
-  --text-muted: #64748b;
-  --text-faint: #94a3b8;
+  --text-main: #1f2937;
+  --text-heading: #111827;
+  --text-muted: #57606a;
+  --text-faint: #8c959f;
 
   /* 3 Healing Pastel Accents (Light Mode) */
-  --pastel-sage: #059669;
-  --pastel-sage-bg: rgba(16, 185, 129, 0.08);
-  --pastel-sage-border: rgba(16, 185, 129, 0.22);
-  --pastel-sage-glow: 0 4px 16px rgba(16, 185, 129, 0.12);
+  --pastel-sage: #0d9488;
+  --pastel-sage-bg: rgba(13, 148, 136, 0.08);
+  --pastel-sage-border: rgba(13, 148, 136, 0.2);
+  --pastel-sage-glow: 0 2px 8px rgba(13, 148, 136, 0.08);
 
   --pastel-rose: #db2777;
   --pastel-rose-bg: rgba(219, 39, 119, 0.08);
-  --pastel-rose-border: rgba(219, 39, 119, 0.22);
-  --pastel-rose-glow: 0 4px 16px rgba(219, 39, 119, 0.12);
+  --pastel-rose-border: rgba(219, 39, 119, 0.2);
+  --pastel-rose-glow: 0 2px 8px rgba(219, 39, 119, 0.08);
 
-  --pastel-amber: #d97706;
-  --pastel-amber-bg: rgba(217, 119, 6, 0.08);
-  --pastel-amber-border: rgba(217, 119, 6, 0.22);
-  --pastel-amber-glow: 0 4px 16px rgba(217, 119, 6, 0.12);
+  --pastel-amber: #b45309;
+  --pastel-amber-bg: rgba(180, 83, 9, 0.08);
+  --pastel-amber-border: rgba(180, 83, 9, 0.2);
+  --pastel-amber-glow: 0 2px 8px rgba(180, 83, 9, 0.08);
 
   /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 6px 18px -2px rgba(15, 23, 42, 0.06);
-  --shadow-lg: 0 14px 32px -4px rgba(15, 23, 42, 0.09);
-  --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 0 0 1px rgba(15, 23, 42, 0.06);
+  --shadow-sm: 0 1px 3px rgba(44, 39, 32, 0.04);
+  --shadow-md: 0 4px 14px -2px rgba(44, 39, 32, 0.06);
+  --shadow-lg: 0 10px 28px -4px rgba(44, 39, 32, 0.08);
+  --shadow-card: 0 2px 10px rgba(44, 39, 32, 0.04), 0 0 0 1px rgba(44, 39, 32, 0.06);
 
   /* Backward Compatibility Variables */
   --primary-color: var(--pastel-sage);
   --primary-hover: #047857;
   --accent-color: var(--pastel-amber);
-  --bg-dark: #f8fafc;
+  --bg-dark: #faf8f5;
   --bg-darker: #ffffff;
-  --bg-light: #f8fafc;
+  --bg-light: #faf8f5;
   --card-bg: #ffffff;
-  --border-color: #e2e8f0;
+  --border-color: #e8e5de;
 }
 
 /* --------------------------------------------------------
@@ -216,12 +216,35 @@ body,
               box-shadow 0.4s ease;
 }
 
+html {
+  overflow-x: clip;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  width: 100%;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--bg-page);
   color: var(--text-main);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+  overflow-y: visible !important;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#root,
+.app,
+.App,
+.main-layout,
+.app-root-layout {
+  width: 100%;
+  max-width: 100%;
+  overflow: visible !important;
+  box-sizing: border-box;
 }
 
 a {
@@ -247,9 +270,10 @@ img {
 .site-header {
   background-color: var(--bg-dark);
   border-bottom: 2px solid rgba(26, 188, 156, 0.25);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
+  position: -webkit-sticky !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 9999 !important;
   box-shadow: var(--shadow-md);
   overflow: visible !important;
 }
@@ -258,7 +282,7 @@ img {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 20px !important;
+  padding: 8px 32px !important;
   max-width: 100% !important;
   width: 100%;
   gap: 8px;
@@ -500,17 +524,19 @@ img {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  flex: 1 1 auto;
+  gap: 12px;
+  flex: 1 1 280px;
+  min-width: 260px;
   max-width: 700px;
   margin: 0 auto;
-  padding: 0 12px;
+  padding: 0 8px;
 }
 
 .header-search-wrapper {
   position: relative;
-  flex: 1;
-  max-width: 440px;
+  flex: 1 1 280px !important;
+  min-width: 250px !important;
+  max-width: 460px;
   width: 100%;
 }
 
@@ -764,22 +790,30 @@ img {
   text-decoration: underline;
 }
 
-/* Khẩu hiệu truyền cảm hứng nhẹ nhàng bên cạnh tìm kiếm */
+/* Khẩu hiệu truyền cảm hứng nhẹ nhàng bên cạnh tìm kiếm (Chống chèn ép thanh tìm kiếm) */
 .header-daily-quote-pill {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   white-space: nowrap;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: #a5f3fc;
   font-weight: 600;
   user-select: none;
   transition: all 0.2s ease;
+  flex-shrink: 1;
+  max-width: 210px;
+}
+
+.header-daily-quote-pill .quote-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-daily-quote-pill:hover {
@@ -791,11 +825,12 @@ img {
 .header-daily-quote-pill .quote-sparkle {
   color: #facc15;
   font-size: 0.9rem;
+  flex-shrink: 0;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1320px) {
   .header-daily-quote-pill {
-    display: none;
+    display: none !important;
   }
 }
 
@@ -1049,8 +1084,8 @@ body.theme-light .header-daily-quote-pill,
   top: calc(100% + 12px);
   left: 50%;
   transform: translateX(-50%);
-  width: 580px;
-  max-width: calc(100vw - 32px);
+  width: 680px;
+  max-width: calc(100vw - 28px);
   max-height: calc(100vh - 120px);
   overflow-y: auto;
   scrollbar-width: thin;
@@ -1115,6 +1150,82 @@ body.theme-light .header-daily-quote-pill,
   line-height: 1.35;
 }
 
+/* ========================================================
+   THANH TAB PHÂN LOẠI MỤC TRẠM CHỮA LÀNH (WELLNESS CATEGORY TABS)
+   ======================================================== */
+.wellness-hub-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.18);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.wellness-hub-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.wellness-tab-pill {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.wellness-tab-pill:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.wellness-tab-pill.active {
+  background: rgba(20, 184, 166, 0.22);
+  border-color: rgba(45, 212, 191, 0.7);
+  color: #2dd4bf;
+  box-shadow: 0 2px 10px rgba(13, 148, 136, 0.3);
+}
+
+body.theme-light .wellness-hub-tabs,
+[data-theme="light"] .wellness-hub-tabs {
+  background: rgba(0, 0, 0, 0.03);
+  border-bottom-color: rgba(0, 0, 0, 0.07);
+}
+
+body.theme-light .wellness-tab-pill,
+[data-theme="light"] .wellness-tab-pill {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #64748b;
+}
+
+body.theme-light .wellness-tab-pill:hover,
+[data-theme="light"] .wellness-tab-pill:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #0f172a;
+}
+
+body.theme-light .wellness-tab-pill.active,
+[data-theme="light"] .wellness-tab-pill.active {
+  background: rgba(13, 148, 136, 0.12);
+  border-color: #0d9488;
+  color: #0f766e;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.2);
+}
+
 .wellness-hub-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1170,18 +1281,16 @@ body.theme-light .header-daily-quote-pill,
 }
 
 .hub-card-title {
-  font-size: 0.85rem;
-  font-weight: 700;
+  font-size: 0.88rem;
+  font-weight: 800;
   color: #f8fafc;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 .hub-card-desc {
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   color: #94a3b8;
-  line-height: 1.3;
+  line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -1189,26 +1298,28 @@ body.theme-light .header-daily-quote-pill,
 }
 
 .hub-card-tag {
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: 0.64rem;
+  font-weight: 800;
   padding: 2px 6px;
   border-radius: 6px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
   flex-shrink: 0;
   align-self: flex-start;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
 }
 
 .hub-card-tag.hot {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.18);
+  color: #ef4444;
+  border: 1.5px solid #ef4444;
 }
 
 .hub-card-tag.sos {
   background: rgba(220, 38, 38, 0.22);
   color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  border: 1.5px solid #ef4444;
   animation: pulseSosTag 1.5s infinite alternate;
 }
 
@@ -1219,38 +1330,78 @@ body.theme-light .header-daily-quote-pill,
 
 .hub-card-tag.focus {
   background: rgba(217, 119, 6, 0.18);
-  color: #fbbf24;
-  border: 1px solid rgba(217, 119, 6, 0.3);
+  color: #d97706;
+  border: 1.5px solid #d97706;
 }
 
 .hub-card-tag.radio {
   background: rgba(244, 63, 94, 0.18);
-  color: #fb7185;
-  border: 1px solid rgba(244, 63, 94, 0.3);
+  color: #e11d48;
+  border: 1.5px solid #e11d48;
 }
 
+/* 5. Bảng Giấy Nhớ (Chia sẻ) - Rõ nét nổi bật, tương phản cao */
 .hub-card-tag.note {
-  background: rgba(234, 179, 8, 0.18);
-  color: #fde047;
-  border: 1px solid rgba(234, 179, 8, 0.3);
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border: 1.5px solid #f59e0b !important;
+  font-weight: 800 !important;
 }
 
+body.theme-dark .hub-card-tag.note,
+[data-theme="dark"] .hub-card-tag.note,
+.mode-dark .hub-card-tag.note {
+  background: rgba(245, 158, 11, 0.28) !important;
+  color: #fde047 !important;
+  border: 1.5px solid #f59e0b !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* 6. Chiếc Hộp Thời Gian (Tương lai) - Rõ nét nổi bật, tương phản cao */
 .hub-card-tag.capsule {
-  background: rgba(245, 158, 11, 0.18);
-  color: #fcd34d;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: #ffedd5 !important;
+  color: #9a3412 !important;
+  border: 1.5px solid #ea580c !important;
+  font-weight: 800 !important;
 }
 
+body.theme-dark .hub-card-tag.capsule,
+[data-theme="dark"] .hub-card-tag.capsule,
+.mode-dark .hub-card-tag.capsule {
+  background: rgba(234, 88, 12, 0.28) !important;
+  color: #fdba74 !important;
+  border: 1.5px solid #ea580c !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* 7. Chiếc Lọ Biết Ơn (Tích cực) - Rõ nét nổi bật, tương phản cao */
 .hub-card-tag.star {
-  background: rgba(234, 179, 8, 0.18);
-  color: #facc15;
-  border: 1px solid rgba(234, 179, 8, 0.3);
+  background: #ecfdf5 !important;
+  color: #065f46 !important;
+  border: 1.5px solid #10b981 !important;
+  font-weight: 800 !important;
+}
+
+body.theme-dark .hub-card-tag.star,
+[data-theme="dark"] .hub-card-tag.star,
+.mode-dark .hub-card-tag.star {
+  background: rgba(16, 185, 129, 0.28) !important;
+  color: #6ee7b7 !important;
+  border: 1.5px solid #10b981 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .hub-card-tag.mood {
   background: rgba(99, 102, 241, 0.18);
-  color: #a5b4fc;
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #4f46e5;
+  border: 1.5px solid #6366f1;
+}
+
+body.theme-dark .hub-card-tag.mood,
+[data-theme="dark"] .hub-card-tag.mood,
+.mode-dark .hub-card-tag.mood {
+  background: rgba(99, 102, 241, 0.28) !important;
+  color: #c7d2fe !important;
 }
 
 .wellness-hub-footer {
@@ -1806,12 +1957,13 @@ body.theme-light .dashboard-3d-item:hover,
 
 /* ================= HERO BANNER & 3-TIER CENTERED LAYOUT ================= */
 .hero-banner {
-  background: linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
-  color: #ffffff;
-  padding: 60px 0 54px;
+  background: linear-gradient(180deg, #11171f 0%, #0d1217 100%);
+  color: #f8fafc;
+  padding: 56px 0 50px;
   text-align: center;
   position: relative;
   overflow: hidden;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .hero-banner .container,
@@ -1823,7 +1975,7 @@ body.theme-light .dashboard-3d-item:hover,
   text-align: center !important;
 }
 
-/* Thẻ pill chữ xanh: Luôn luôn ở dòng riêng trên cùng, căn giữa */
+/* Thẻ pill chủ đề: Nhẹ nhàng, chánh niệm, thanh lịch */
 .hero-tag-pill-wrap {
   display: flex !important;
   justify-content: center !important;
@@ -1837,15 +1989,16 @@ body.theme-light .dashboard-3d-item:hover,
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  background: rgba(26, 188, 156, 0.15);
-  color: var(--primary-color);
-  font-size: 0.85rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  padding: 6px 18px;
-  border-radius: 30px;
-  margin: 0 auto 16px auto !important;
-  letter-spacing: 1px;
+  gap: 6px;
+  background: rgba(52, 211, 153, 0.12);
+  color: #6ee7b7;
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 5px 16px;
+  border-radius: 999px;
+  margin: 0 auto 14px auto !important;
+  letter-spacing: 0.3px;
   box-sizing: border-box !important;
   white-space: nowrap !important;
 }
@@ -1856,13 +2009,13 @@ body.theme-light .dashboard-3d-item:hover,
   align-items: center;
   gap: 6px;
   color: #94a3b8;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 600;
   text-decoration: none;
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: all 0.22s ease;
+  transition: all 0.2s ease;
   padding: 5px 14px;
   border-radius: 999px;
   margin-top: 6px;
@@ -1871,36 +2024,30 @@ body.theme-light .dashboard-3d-item:hover,
 .hero-back-link:hover {
   color: #38bdf8;
   transform: translateX(-3px);
-  background: rgba(56, 189, 248, 0.12);
-  text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.08);
 }
 
 body.theme-light .hero-back-link,
 [data-theme="light"] .hero-back-link,
 .mode-light .hero-back-link {
   color: #1e293b !important;
-  font-weight: 700 !important;
+  font-weight: 600 !important;
 }
 
 body.theme-light .hero-back-link:hover,
 [data-theme="light"] .hero-back-link:hover,
 .mode-light .hero-back-link:hover {
   color: #0d9488 !important;
-  background: rgba(13, 148, 136, 0.1) !important;
-}
-
-body.theme-light .hero-back-link:hover,
-[data-theme="light"] .hero-back-link:hover,
-.mode-light .hero-back-link:hover {
-  color: #0284c7;
-  background: rgba(2, 132, 199, 0.08);
+  background: rgba(13, 148, 136, 0.08) !important;
 }
 
 .hero-title {
   font-family: var(--font-serif);
-  font-size: 3rem;
-  font-weight: 700;
-  margin-bottom: 16px;
+  font-size: 2.85rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  margin-bottom: 14px;
   color: #ffffff;
 }
 
@@ -1909,11 +2056,11 @@ body.theme-light .hero-back-link:hover,
 }
 
 .hero-subtitle {
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   color: #cbd5e1;
-  max-width: 680px;
-  margin: 0 auto 30px;
-  line-height: 1.7;
+  max-width: 660px;
+  margin: 0 auto 28px;
+  line-height: 1.68;
 }
 
 .hero-cta-group {
@@ -1923,16 +2070,16 @@ body.theme-light .hero-back-link:hover,
 }
 
 .hero-btn-primary {
-  background: var(--primary-color);
+  background: linear-gradient(135deg, #0d9488, #059669);
   color: #ffffff;
-  padding: 12px 28px;
-  border-radius: 30px;
-  font-size: 0.95rem;
+  padding: 11px 26px;
+  border-radius: 999px;
+  font-size: 0.94rem;
   font-weight: 700;
   border: none;
   cursor: pointer;
-  transition: var(--transition);
-  box-shadow: 0 4px 15px rgba(26, 188, 156, 0.4);
+  transition: all 0.22s ease;
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.28);
 }
 
 .hero-btn-primary:hover {
@@ -1950,6 +2097,215 @@ body.theme-light .hero-back-link:hover,
   border: 1px solid rgba(255, 255, 255, 0.25);
   cursor: pointer;
   transition: var(--transition);
+}
+
+/* ========================================================
+   HERO RANT & BURN SHORTCUT PILL (Phím Tắt Lò Đốt Muộn Phiền)
+   ======================================================== */
+.hero-rant-burn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 18px 7px 8px;
+  border-radius: 999px;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, #ffffff 0%, #fff7ed 50%, #ffedd5 100%);
+  border: 1.5px solid rgba(249, 115, 22, 0.45);
+  color: #7c2d12;
+  box-shadow: 0 4px 18px rgba(234, 88, 12, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  user-select: none;
+  text-decoration: none;
+  outline: none;
+}
+
+/* Light Mode: Sắc cam hổ phách ấm áp & cao cấp */
+body.theme-light .hero-rant-burn-pill,
+[data-theme="light"] .hero-rant-burn-pill,
+.mode-light .hero-rant-burn-pill {
+  background: linear-gradient(135deg, #ffffff 0%, #fff7ed 50%, #ffedd5 100%) !important;
+  border: 1.5px solid rgba(249, 115, 22, 0.42) !important;
+  color: #7c2d12 !important;
+  box-shadow: 0 4px 18px rgba(234, 88, 12, 0.12), 0 1px 3px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+body.theme-light .hero-rant-burn-pill:hover,
+[data-theme="light"] .hero-rant-burn-pill:hover {
+  background: linear-gradient(135deg, #ffffff 0%, #ffedd5 60%, #fed7aa 100%) !important;
+  border-color: #ea580c !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(234, 88, 12, 0.22), 0 2px 6px rgba(0, 0, 0, 0.06), inset 0 1px 0 #ffffff !important;
+}
+
+body.theme-light .hero-rant-burn-pill:active,
+[data-theme="light"] .hero-rant-burn-pill:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Dark Mode: Ánh lửa dung nham huyền ảo trong đêm */
+body.theme-dark .hero-rant-burn-pill,
+[data-theme="dark"] .hero-rant-burn-pill,
+.mode-dark .hero-rant-burn-pill {
+  background: linear-gradient(135deg, rgba(28, 19, 15, 0.94) 0%, rgba(42, 24, 18, 0.96) 100%) !important;
+  border: 1.5px solid rgba(249, 115, 22, 0.45) !important;
+  color: #ffedd5 !important;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45), 0 0 16px rgba(234, 88, 12, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+body.theme-dark .hero-rant-burn-pill:hover,
+[data-theme="dark"] .hero-rant-burn-pill:hover {
+  background: linear-gradient(135deg, rgba(38, 24, 19, 0.96) 0%, rgba(55, 30, 22, 0.98) 100%) !important;
+  border-color: #f97316 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6), 0 0 24px rgba(249, 115, 22, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+}
+
+body.theme-dark .hero-rant-burn-pill:active,
+[data-theme="dark"] .hero-rant-burn-pill:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Đĩa tròn phát sáng chứa ngọn lửa */
+.rant-pill-flame-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+body.theme-light .rant-pill-flame-wrap {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  border: 1px solid rgba(249, 115, 22, 0.25);
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.2);
+}
+
+body.theme-dark .rant-pill-flame-wrap {
+  background: linear-gradient(135deg, rgba(234, 88, 12, 0.3) 0%, rgba(194, 65, 12, 0.45) 100%);
+  border: 1px solid rgba(249, 115, 22, 0.4);
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.35);
+}
+
+.hero-rant-burn-pill:hover .rant-pill-flame-wrap {
+  transform: scale(1.12) rotate(6deg);
+}
+
+.rant-pill-flame {
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-block;
+  animation: flameFlicker 1.8s infinite ease-in-out alternate;
+}
+
+@keyframes flameFlicker {
+  0% { transform: scale(0.92) rotate(-4deg); }
+  50% { transform: scale(1.06) rotate(2deg); }
+  100% { transform: scale(1.15) rotate(5deg); }
+}
+
+/* Khối văn bản */
+.rant-pill-text-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rant-pill-text {
+  letter-spacing: 0.15px;
+  line-height: 1.3;
+}
+
+/* Từ khóa nhấn mạnh "Lò Đốt Muộn Phiền" */
+.rant-pill-highlight {
+  font-weight: 800 !important;
+  transition: all 0.2s ease;
+}
+
+body.theme-light .rant-pill-highlight {
+  color: #c2410c !important;
+  text-decoration: underline;
+  text-decoration-color: rgba(249, 115, 22, 0.45);
+  text-underline-offset: 3px;
+}
+
+body.theme-dark .rant-pill-highlight {
+  color: #fb923c !important;
+  text-decoration: underline;
+  text-decoration-color: rgba(251, 146, 60, 0.45);
+  text-underline-offset: 3px;
+}
+
+.hero-rant-burn-pill:hover .rant-pill-highlight {
+  text-decoration-color: #ea580c;
+}
+
+/* Mũi tên tương tác */
+.rant-pill-arrow {
+  font-size: 0.92rem;
+  font-weight: 800;
+  display: inline-block;
+  color: #ea580c;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  margin-left: 2px;
+}
+
+body.theme-dark .rant-pill-arrow {
+  color: #fb923c;
+}
+
+.hero-rant-burn-pill:hover .rant-pill-arrow {
+  transform: translateX(4px);
+  color: #c2410c;
+}
+
+body.theme-dark .hero-rant-burn-pill:hover .rant-pill-arrow {
+  color: #f97316;
+}
+
+/* Huy hiệu MỚI */
+.rant-pill-badge {
+  font-size: 0.62rem;
+  background: linear-gradient(135deg, #ef4444 0%, #ea580c 100%);
+  color: #ffffff;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
+  text-transform: uppercase;
+  flex-shrink: 0;
+  animation: badgePulse 2.4s infinite ease-in-out;
+}
+
+/* Các phím tắt nhanh 4 tính năng mới dưới Hero */
+.hero-quick-feat-pill:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.hero-quick-feat-pill:active {
+  transform: translateY(0) scale(0.96);
+}
+
+body.theme-dark .hero-quick-feat-pill,
+[data-theme="dark"] .hero-quick-feat-pill {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  color: #f1f5f9 !important;
+}
+
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35); }
+  50% { transform: scale(1.06); box-shadow: 0 2px 10px rgba(239, 68, 68, 0.65); }
 }
 
 .hero-btn-secondary:hover {
@@ -2374,21 +2730,37 @@ body.theme-light .hero-back-link:hover,
   transform: translateY(-1px);
 }
 
+.post-author-right-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-left: auto;
+  max-width: 100%;
+}
+
 .post-stats-pill {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
-  flex-wrap: wrap;
   background: #f8fafc;
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: 999px;
   border: 1px solid #e2e8f0;
-  margin-left: auto;
 }
 
 .post-stats-pill * {
   white-space: nowrap;
+}
+
+.post-action-buttons-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .post-stat-item {
@@ -6329,11 +6701,11 @@ body.theme-light .post-body h4 {
   width: 58px;
   height: 58px;
   border-radius: 50%;
-  background: rgba(15, 23, 42, 0.88);
+  background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%) !important;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  border: 2.5px solid #ffffff !important;
+  box-shadow: 0 10px 25px rgba(2, 132, 199, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.08) !important;
   cursor: pointer;
   z-index: 9999;
   display: flex;
@@ -6341,18 +6713,19 @@ body.theme-light .post-body h4 {
   justify-content: center;
   transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease;
   user-select: none;
+  color: #ffffff !important;
 }
 
 .assistive-chat-touch-btn:hover {
   transform: scale(1.08) translateY(-2px);
-  box-shadow: 0 14px 30px rgba(16, 185, 129, 0.35), 0 0 0 2px rgba(16, 185, 129, 0.4);
-  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 0 14px 30px rgba(2, 132, 199, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.4) !important;
+  background: linear-gradient(135deg, #0369a1 0%, #0f766e 100%) !important;
 }
 
 .assistive-chat-touch-btn.active {
-  background: var(--primary-color);
-  border-color: #ffffff;
-  box-shadow: 0 12px 28px rgba(16, 185, 129, 0.45);
+  background: linear-gradient(135deg, #0f766e 0%, #047857 100%) !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 12px 28px rgba(16, 185, 129, 0.45) !important;
 }
 
 .assistive-chat-touch-btn.is-dragging {
@@ -6374,7 +6747,48 @@ body.theme-light .post-body h4 {
 .assistive-touch-icon {
   font-size: 1.6rem;
   line-height: 1;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+  color: #ffffff !important;
+}
+
+/* Nút Tin Nhắn AssistiveTouch - Chế độ Ngày (Light Mode) */
+body.theme-light .assistive-chat-touch-btn,
+[data-theme="light"] .assistive-chat-touch-btn,
+.mode-light .assistive-chat-touch-btn {
+  background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%) !important;
+  border: 2.5px solid #ffffff !important;
+  box-shadow: 0 10px 24px rgba(2, 132, 199, 0.38), 0 0 0 1px rgba(2, 132, 199, 0.2) !important;
+  color: #ffffff !important;
+}
+
+body.theme-light .assistive-chat-touch-btn:hover,
+[data-theme="light"] .assistive-chat-touch-btn:hover,
+.mode-light .assistive-chat-touch-btn:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #0f766e 100%) !important;
+  box-shadow: 0 14px 30px rgba(2, 132, 199, 0.48), 0 0 0 2px rgba(2, 132, 199, 0.4) !important;
+  color: #ffffff !important;
+}
+
+body.theme-light .assistive-touch-icon,
+[data-theme="light"] .assistive-touch-icon,
+.mode-light .assistive-touch-icon {
+  color: #ffffff !important;
+}
+
+/* Nút Tin Nhắn AssistiveTouch - Chế độ Đêm (Dark Mode) */
+body.theme-dark .assistive-chat-touch-btn,
+[data-theme="dark"] .assistive-chat-touch-btn,
+.mode-dark .assistive-chat-touch-btn {
+  background: linear-gradient(135deg, #0284c7 0%, #059669 100%) !important;
+  border: 2px solid rgba(255, 255, 255, 0.85) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 18px rgba(2, 132, 199, 0.4) !important;
+  color: #ffffff !important;
+}
+
+body.theme-dark .assistive-touch-icon,
+[data-theme="dark"] .assistive-touch-icon,
+.mode-dark .assistive-touch-icon {
+  color: #ffffff !important;
 }
 
 .assistive-my-status-dot {
@@ -8379,262 +8793,133 @@ body.theme-dark .ambient-orb.orb-4,
 
 /* 1. Mùa Xuân (Spring): Logo hoa đào & Sắc hồng tươi mới */
 .seasonal-logo-icon.season-spring {
-  filter: drop-shadow(0 0 10px rgba(244, 114, 182, 0.7));
-  animation: springIconBloom 3s infinite ease-in-out;
-}
-
-@keyframes springIconBloom {
-  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(244, 114, 182, 0.6)); }
-  50% { transform: scale(1.14) rotate(8deg); filter: drop-shadow(0 0 14px rgba(236, 72, 153, 0.9)); }
+  color: #ec4899;
 }
 
 .seasonal-logo-text.season-spring {
-  background: linear-gradient(135deg, #f472b6 0%, #ec4899 50%, #f43f5e 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 8px rgba(244, 114, 182, 0.35));
+  color: #db2777 !important;
 }
 
 /* 2. Mùa Hạ (Summer): Logo mặt trời & Sắc vàng nắng rực rỡ */
 .seasonal-logo-icon.season-summer {
-  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.8));
-  animation: summerSunSpin 10s linear infinite;
-}
-
-@keyframes summerSunSpin {
-  0% { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(180deg) scale(1.12); }
-  100% { transform: rotate(360deg) scale(1); }
+  color: #f59e0b;
 }
 
 .seasonal-logo-text.season-summer {
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #ea580c 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 8px rgba(245, 158, 11, 0.45));
+  color: #d97706 !important;
 }
 
 /* 3. Mùa Thu (Autumn): Logo lá phong & Sắc hổ phách dịu êm */
 .seasonal-logo-icon.season-autumn {
-  filter: drop-shadow(0 0 10px rgba(234, 88, 12, 0.7));
-  animation: autumnLeafWiggle 3.2s infinite ease-in-out;
-}
-
-@keyframes autumnLeafWiggle {
-  0%, 100% { transform: rotate(-8deg); }
-  50% { transform: rotate(12deg) scale(1.1); }
+  color: #ea580c;
 }
 
 .seasonal-logo-text.season-autumn {
-  background: linear-gradient(135deg, #fb923c 0%, #ea580c 50%, #c2410c 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 8px rgba(234, 88, 12, 0.4));
+  color: #c2410c !important;
 }
 
 /* 4. Mùa Đông (Winter): Logo bông tuyết & Sắc băng tuyết lung linh */
 .seasonal-logo-icon.season-winter {
-  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.8));
-  animation: winterSnowTwinkle 3s infinite ease-in-out;
-}
-
-@keyframes winterSnowTwinkle {
-  0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.9; }
-  50% { transform: scale(1.18) rotate(25deg); opacity: 1; }
+  color: #0284c7;
 }
 
 .seasonal-logo-text.season-winter {
-  background: linear-gradient(135deg, #e0f2fe 0%, #38bdf8 50%, #0284c7 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 10px rgba(56, 189, 248, 0.5));
+  color: #0284c7 !important;
 }
 
 /* ========================================================
-   SEASONAL HERO TITLE & BANNER EFFECTS (Font chữ & Hiệu ứng Title theo Mùa)
+   SEASONAL HERO TITLE & BANNER EFFECTS (Font chữ & Màu sắc Tinh Tế theo Mùa)
    ======================================================== */
 .hero-title {
   position: relative;
   display: block !important;
   width: 100% !important;
   text-align: center !important;
+  font-family: var(--font-serif);
+  font-size: 2.85rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  margin-bottom: 14px;
+  color: var(--text-heading);
   transition: all 0.35s ease;
   clear: both !important;
 }
 
-/* --- MÙA XUÂN (SPRING): Hoa Đào Tươi Mới, Chữ Phấn Hồng --- */
+/* --- MÙA XUÂN (SPRING): Dịu mát, Thấu cảm --- */
 .season-spring .hero-banner {
-  border-bottom: 2px solid rgba(236, 72, 153, 0.45) !important;
+  border-bottom: 1px solid rgba(244, 114, 182, 0.2) !important;
 }
 
 .season-spring .hero-title {
-  font-family: var(--font-heading);
-  background: linear-gradient(135deg, #f472b6 0%, #ec4899 50%, #db2777 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 14px rgba(244, 114, 182, 0.4));
-  letter-spacing: 0.5px;
+  color: var(--text-heading);
 }
 
 .season-spring .hero-title span {
-  background: linear-gradient(135deg, #fb7185 0%, #e11d48 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.season-spring .hero-title::after {
-  content: ' 🌸';
-  font-size: 1.8rem;
-  display: inline-block;
-  vertical-align: middle;
-  margin-left: 8px;
-  animation: springPetalSway 3s infinite ease-in-out;
-  -webkit-text-fill-color: initial;
-  pointer-events: none !important;
-  user-select: none !important;
-}
-
-@keyframes springPetalSway {
-  0%, 100% { transform: translateY(0) rotate(-10deg) scale(1); }
-  50% { transform: translateY(-6px) rotate(15deg) scale(1.15); }
+  color: #db2777;
 }
 
 .season-spring .hero-tag-pill {
-  background: rgba(236, 72, 153, 0.16) !important;
+  background: rgba(244, 114, 182, 0.12) !important;
   color: #db2777 !important;
-  border: 1px solid rgba(236, 72, 153, 0.38) !important;
+  border: 1px solid rgba(244, 114, 182, 0.28) !important;
 }
 
-/* --- MÙA HẠ (SUMMER): Nắng Vàng Rực Rỡ, Năng Lượng Căng Tràn --- */
+/* --- MÙA HẠ (SUMMER): Ấm áp, Đầy năng lượng --- */
 .season-summer .hero-banner {
-  border-bottom: 2px solid rgba(245, 158, 11, 0.5) !important;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.2) !important;
 }
 
 .season-summer .hero-title {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 16px rgba(245, 158, 11, 0.5));
-  letter-spacing: 0.8px;
+  color: var(--text-heading);
 }
 
 .season-summer .hero-title span {
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.season-summer .hero-title::after {
-  content: ' ☀️';
-  font-size: 1.8rem;
-  display: inline-block;
-  vertical-align: middle;
-  margin-left: 8px;
-  animation: summerSunPulse 2.8s infinite ease-in-out;
-  -webkit-text-fill-color: initial;
-  pointer-events: none !important;
-  user-select: none !important;
-}
-
-@keyframes summerSunPulse {
-  0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6)); }
-  50% { transform: scale(1.2) rotate(45deg); filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.9)); }
+  color: #d97706;
 }
 
 .season-summer .hero-tag-pill {
-  background: rgba(245, 158, 11, 0.18) !important;
-  color: #d97706 !important;
-  border: 1px solid rgba(245, 158, 11, 0.42) !important;
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #b45309 !important;
+  border: 1px solid rgba(245, 158, 11, 0.28) !important;
 }
 
-/* --- MÙA THU (AUTUMN): Lá Phong Hổ Phách, Trầm Lắng Thi Vị --- */
+/* --- MÙA THU (AUTUMN): Lá phong, Bình yên --- */
 .season-autumn .hero-banner {
-  border-bottom: 2px solid rgba(234, 88, 12, 0.48) !important;
+  border-bottom: 1px solid rgba(234, 88, 12, 0.2) !important;
 }
 
 .season-autumn .hero-title {
-  font-family: var(--font-heading);
-  font-style: normal;
-  background: linear-gradient(135deg, #fb923c 0%, #ea580c 50%, #c2410c 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 14px rgba(234, 88, 12, 0.4));
-  letter-spacing: 0.3px;
+  color: var(--text-heading);
 }
 
 .season-autumn .hero-title span {
-  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.season-autumn .hero-title::after {
-  content: ' 🍁';
-  font-size: 1.8rem;
-  display: inline-block;
-  vertical-align: middle;
-  margin-left: 8px;
-  animation: autumnLeafFloat 3.5s infinite ease-in-out;
-  -webkit-text-fill-color: initial;
-  pointer-events: none !important;
-  user-select: none !important;
-}
-
-@keyframes autumnLeafFloat {
-  0%, 100% { transform: translateY(0) rotate(-15deg); }
-  50% { transform: translateY(-8px) rotate(15deg) scale(1.1); }
+  color: #c2410c;
 }
 
 .season-autumn .hero-tag-pill {
-  background: rgba(234, 88, 12, 0.16) !important;
+  background: rgba(234, 88, 12, 0.12) !important;
   color: #c2410c !important;
-  border: 1px solid rgba(234, 88, 12, 0.4) !important;
+  border: 1px solid rgba(234, 88, 12, 0.28) !important;
 }
 
-/* --- MÙA ĐÔNG (WINTER): Bông Tuyết Băng Giá, Tinh Khôi Huyền Ảo --- */
+/* --- MÙA ĐÔNG (WINTER): Tĩnh lặng, Chữa lành --- */
 .season-winter .hero-banner {
-  border-bottom: 2px solid rgba(6, 182, 212, 0.45) !important;
+  border-bottom: 1px solid rgba(13, 148, 136, 0.2) !important;
 }
 
 .season-winter .hero-title {
-  font-family: var(--font-heading);
-  background: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 50%, #0284c7 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 16px rgba(56, 189, 248, 0.55));
-  letter-spacing: 0.6px;
+  color: var(--text-heading);
 }
 
 .season-winter .hero-title span {
-  background: linear-gradient(135deg, #a5f3fc 0%, #06b6d4 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.season-winter .hero-title::after {
-  content: ' ❄️';
-  font-size: 1.8rem;
-  display: inline-block;
-  vertical-align: middle;
-  margin-left: 8px;
-  animation: winterSnowSpin 6s linear infinite;
-  -webkit-text-fill-color: initial;
-  pointer-events: none !important;
-  user-select: none !important;
-}
-
-@keyframes winterSnowSpin {
-  0% { transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.6)); }
-  50% { transform: rotate(180deg) scale(1.15); filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.9)); }
-  100% { transform: rotate(360deg) scale(1); filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.6)); }
+  color: #0d9488;
 }
 
 .season-winter .hero-tag-pill {
-  background: rgba(6, 182, 212, 0.16) !important;
-  color: #0284c7 !important;
-  border: 1px solid rgba(6, 182, 212, 0.38) !important;
+  background: rgba(13, 148, 136, 0.12) !important;
+  color: #0d9488 !important;
+  border: 1px solid rgba(13, 148, 136, 0.28) !important;
 }
 
 .seasonal-particles-wrap {
@@ -9109,44 +9394,44 @@ body.theme-light .header-festive-event-pill .festive-pill-name,
 body.theme-light .hero-banner,
 [data-theme="light"] .hero-banner,
 .mode-light .hero-banner {
-  background: linear-gradient(135deg, #ffffff 0%, #fffcf2 40%, #fef3c7 100%) !important;
-  border-top: 1px solid rgba(245, 158, 11, 0.25) !important;
-  border-bottom: 2px solid rgba(245, 158, 11, 0.35) !important;
-  box-shadow: 0 12px 36px rgba(245, 158, 11, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
-  color: #0f172a !important;
+  background: linear-gradient(180deg, #fcfbf9 0%, #f6f3ec 100%) !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: none !important;
+  color: #111827 !important;
 }
 
 body.theme-light .hero-banner .hero-tag-pill,
 [data-theme="light"] .hero-banner .hero-tag-pill,
 .mode-light .hero-banner .hero-tag-pill {
-  background: rgba(245, 158, 11, 0.18) !important;
-  color: #b45309 !important;
-  border: 1px solid rgba(245, 158, 11, 0.38) !important;
+  background: #f0fdf4 !important;
+  color: #047857 !important;
+  border: 1px solid #a7f3d0 !important;
 }
 
 body.theme-light .hero-banner .hero-title,
 [data-theme="light"] .hero-banner .hero-title,
 .mode-light .hero-banner .hero-title {
-  color: #0f172a !important;
-  text-shadow: 0 1px 2px rgba(245, 158, 11, 0.12);
+  color: #111827 !important;
+  text-shadow: none !important;
 }
 
 body.theme-light .hero-banner .hero-title span,
 [data-theme="light"] .hero-banner .hero-title span,
 .mode-light .hero-banner .hero-title span {
-  color: #d97706 !important;
+  color: #0d9488 !important;
 }
 
 body.theme-light .hero-banner .hero-subtitle,
 [data-theme="light"] .hero-banner .hero-subtitle,
 .mode-light .hero-banner .hero-subtitle {
-  color: #475569 !important;
+  color: #4b5563 !important;
 }
 
 body.theme-light .hero-banner a,
 [data-theme="light"] .hero-banner a,
 .mode-light .hero-banner a {
-  color: #b45309 !important;
+  color: #0d9488 !important;
   font-weight: 600;
 }
 
@@ -9356,18 +9641,93 @@ body.theme-dark .site-header .logo-text:not(.seasonal-logo-text),
   color: #ffffff !important;
 }
 
-/* Logo 4 Mùa (Seasonal Logo Text) - Đảm bảo chỉ 1 lớp duy nhất, không bao giờ bị đè chữ / đổ bóng kép */
+/* Logo 4 Mùa (Seasonal Logo Text) - Luôn hiển thị sắc nét, nổi bật theo từng mùa trên cả Chế độ Ngày và Đêm */
+.site-header .logo-text,
 .site-header .seasonal-logo-text,
-body.theme-light .site-header .seasonal-logo-text,
-body.theme-dark .site-header .seasonal-logo-text,
-[data-theme="light"] .site-header .seasonal-logo-text,
-[data-theme="dark"] .site-header .seasonal-logo-text {
-  color: transparent !important;
-  -webkit-text-fill-color: transparent !important;
-}
-
 .site-header .seasonal-logo-text .idle-weather-text-wrap,
 .site-header .seasonal-logo-text .idle-weather-inner-text {
+  font-family: var(--font-serif) !important;
+  font-size: 1.25rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.5px !important;
+  display: inline-block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+}
+
+/* 1. Mùa Đông (Winter) - Xanh băng tuyết dịu êm và rõ nét */
+.site-header .seasonal-logo-text.season-winter,
+body.theme-light .site-header .seasonal-logo-text.season-winter,
+[data-theme="light"] .site-header .seasonal-logo-text.season-winter,
+.mode-light .site-header .seasonal-logo-text.season-winter {
+  color: #0284c7 !important;
+  -webkit-text-fill-color: #0284c7 !important;
+  text-shadow: 0 1px 2px rgba(2, 132, 199, 0.18);
+}
+body.theme-dark .site-header .seasonal-logo-text.season-winter,
+[data-theme="dark"] .site-header .seasonal-logo-text.season-winter,
+.mode-dark .site-header .seasonal-logo-text.season-winter {
+  color: #38bdf8 !important;
+  -webkit-text-fill-color: #38bdf8 !important;
+  text-shadow: 0 2px 8px rgba(56, 189, 248, 0.4);
+}
+
+/* 2. Mùa Xuân (Spring) - Hồng hoa đào tươi mới */
+.site-header .seasonal-logo-text.season-spring,
+body.theme-light .site-header .seasonal-logo-text.season-spring,
+[data-theme="light"] .site-header .seasonal-logo-text.season-spring,
+.mode-light .site-header .seasonal-logo-text.season-spring {
+  color: #db2777 !important;
+  -webkit-text-fill-color: #db2777 !important;
+  text-shadow: 0 1px 2px rgba(219, 39, 119, 0.18);
+}
+body.theme-dark .site-header .seasonal-logo-text.season-spring,
+[data-theme="dark"] .site-header .seasonal-logo-text.season-spring,
+.mode-dark .site-header .seasonal-logo-text.season-spring {
+  color: #f472b6 !important;
+  -webkit-text-fill-color: #f472b6 !important;
+  text-shadow: 0 2px 8px rgba(244, 114, 182, 0.4);
+}
+
+/* 3. Mùa Hạ (Summer) - Vàng hổ phách rực rỡ */
+.site-header .seasonal-logo-text.season-summer,
+body.theme-light .site-header .seasonal-logo-text.season-summer,
+[data-theme="light"] .site-header .seasonal-logo-text.season-summer,
+.mode-light .site-header .seasonal-logo-text.season-summer {
+  color: #d97706 !important;
+  -webkit-text-fill-color: #d97706 !important;
+  text-shadow: 0 1px 2px rgba(217, 119, 6, 0.18);
+}
+body.theme-dark .site-header .seasonal-logo-text.season-summer,
+[data-theme="dark"] .site-header .seasonal-logo-text.season-summer,
+.mode-dark .site-header .seasonal-logo-text.season-summer {
+  color: #fbbf24 !important;
+  -webkit-text-fill-color: #fbbf24 !important;
+  text-shadow: 0 2px 8px rgba(251, 191, 36, 0.4);
+}
+
+/* 4. Mùa Thu (Autumn) - Cam lá phong trầm ấm */
+.site-header .seasonal-logo-text.season-autumn,
+body.theme-light .site-header .seasonal-logo-text.season-autumn,
+[data-theme="light"] .site-header .seasonal-logo-text.season-autumn,
+.mode-light .site-header .seasonal-logo-text.season-autumn {
+  color: #c2410c !important;
+  -webkit-text-fill-color: #c2410c !important;
+  text-shadow: 0 1px 2px rgba(194, 65, 12, 0.18);
+}
+body.theme-dark .site-header .seasonal-logo-text.season-autumn,
+[data-theme="dark"] .site-header .seasonal-logo-text.season-autumn,
+.mode-dark .site-header .seasonal-logo-text.season-autumn {
+  color: #fb923c !important;
+  -webkit-text-fill-color: #fb923c !important;
+  text-shadow: 0 2px 8px rgba(251, 146, 60, 0.4);
+}
+
+.site-header .seasonal-logo-text .idle-weather-inner-text {
+  color: inherit !important;
+  -webkit-text-fill-color: inherit !important;
   will-change: auto !important;
   backface-visibility: visible !important;
 }
@@ -11013,6 +11373,32 @@ body.theme-light .audio-voice-selection-row {
   border-top-color: #cbd5e1;
 }
 
+.audio-lang-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.audio-lang-select {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+
+body.theme-dark .audio-lang-select,
+[data-theme="dark"] .audio-lang-select,
+.mode-dark .audio-lang-select {
+  background: rgba(15, 23, 42, 0.85);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 .audio-gender-picker {
   display: flex;
   align-items: center;
@@ -11025,13 +11411,13 @@ body.theme-light .audio-voice-selection-row {
 }
 
 .audio-gender-btn {
-  background: rgba(255, 255, 255, 0.08);
-  color: #cbd5e1;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #ffffff;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1;
   border-radius: 8px;
   padding: 5px 12px;
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 800;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -11039,30 +11425,32 @@ body.theme-light .audio-voice-selection-row {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-[data-theme="light"] .audio-gender-btn,
-body.theme-light .audio-gender-btn {
-  background: #ffffff;
-  color: #475569;
-  border-color: #cbd5e1;
+.audio-gender-btn .audio-gender-text {
+  color: inherit !important;
+  font-weight: 800;
 }
 
 .audio-gender-btn:hover {
-  background: rgba(13, 148, 136, 0.15);
+  background: rgba(13, 148, 136, 0.12);
   border-color: #0d9488;
-  color: #2dd4bf;
+  color: #0d9488 !important;
 }
 
 [data-theme="light"] .audio-gender-btn:hover,
 body.theme-light .audio-gender-btn:hover {
   background: rgba(13, 148, 136, 0.08);
-  color: #0d9488;
+  color: #0d9488 !important;
 }
 
 .audio-gender-btn.active {
-  background: linear-gradient(135deg, #0d9488, #059669);
+  background: linear-gradient(135deg, #0d9488, #059669) !important;
   color: #ffffff !important;
-  border-color: #0d9488;
+  border-color: #0d9488 !important;
   box-shadow: 0 3px 10px rgba(13, 148, 136, 0.35);
+}
+
+.audio-gender-btn.active .audio-gender-text {
+  color: #ffffff !important;
 }
 
 .audio-region-picker {
@@ -11766,7 +12154,7 @@ body.theme-light .card-audio-mood-btn:hover .audio-btn-label,
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  animation: festiveGlowPulse 2.8s infinite ease-in-out;
+  animation: festiveGlowPulse 5.5s infinite ease-in-out;
   transition: all 0.2s ease;
   flex-shrink: 0;
   max-width: 140px;
@@ -11838,7 +12226,7 @@ body.theme-light .card-audio-mood-btn:hover .audio-btn-label,
 }
 
 /* ==========================================================================
-   HIỆU ỨNG LÁ CỜ ĐỎ SAO VÀNG 30/4 BAY LƯỢN SÓNG DẺO DẺO (FLUID WAVING CLOTH)
+   HIỆU ỨNG LÁ CỜ ĐỎ SAO VÀNG 30/4 BAY LƯỢN SÓNG DẺO DẺO (CHUYỂN ĐỘNG CHẬM RÃI & MƯỢT MÀ)
    ========================================================================== */
 @keyframes fluidFlagWave {
   0% {
@@ -11864,14 +12252,14 @@ body.theme-light .card-audio-mood-btn:hover .audio-btn-label,
 }
 
 .fluid-waving-flag {
-  animation: fluidFlagWave 3.6s infinite ease-in-out;
+  animation: fluidFlagWave 7.5s infinite ease-in-out;
   transform-origin: left center;
   will-change: transform, filter;
   display: inline-block;
 }
 
 /* ==========================================================================
-   HIỆU ỨNG DẢI LỤA ĐỎ VÀNG 2/9 BAY DẺO DẺO (FLUID RIBBON FLUTTER)
+   HIỆU ỨNG DẢI LỤA ĐỎ VÀNG 2/9 BAY DẺO DẺO (CHUYỂN ĐỘNG CHẬM RÃI & MƯỢT MÀ)
    ========================================================================== */
 @keyframes fluidRibbonFlutter {
   0% {
@@ -11893,13 +12281,13 @@ body.theme-light .card-audio-mood-btn:hover .audio-btn-label,
 }
 
 .fluid-waving-ribbon {
-  animation: fluidRibbonFlutter 4.2s infinite ease-in-out;
+  animation: fluidRibbonFlutter 8.5s infinite ease-in-out;
   will-change: transform, filter;
   display: inline-block;
 }
 
 /* ==========================================================================
-   HIỆU ỨNG SỐ 8 TRÁI TIM 8/3 BAY NHỎ NHỎ (GENTLE HEART-8 FLOAT)
+   HIỆU ỨNG SỐ 8 TRÁI TIM 8/3 BAY NHỎ NHỎ (CHUYỂN ĐỘNG CHẬM RÃI & MƯỢT MÀ)
    ========================================================================== */
 @keyframes heartEightGentleFloat {
   0% {
@@ -11917,7 +12305,7 @@ body.theme-light .card-audio-mood-btn:hover .audio-btn-label,
 }
 
 .fluid-waving-heart8 {
-  animation: heartEightGentleFloat 3.2s infinite ease-in-out;
+  animation: heartEightGentleFloat 7.0s infinite ease-in-out;
   will-change: transform;
   display: inline-block;
 }
@@ -14288,7 +14676,7 @@ body.has-floating-audio-player.floating-audio-minimized .floating-quick-preferen
 /* 6. Chống tràn Header và bảo vệ nút Đăng xuất luôn nằm trọn vẹn trong khung nhìn */
 .site-header {
   width: 100% !important;
-  max-width: 100vw !important;
+  max-width: 100% !important;
   box-sizing: border-box !important;
 }
 
@@ -14297,20 +14685,22 @@ body.has-floating-audio-player.floating-audio-minimized .floating-quick-preferen
   max-width: 100% !important;
   width: 100% !important;
   box-sizing: border-box !important;
-  padding: 6px 20px !important;
+  padding: 6px 14px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  gap: 12px !important;
+  gap: 8px !important;
 }
 
 .site-header .header-top-center {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  flex: 1 1 auto !important;
+  flex: 1 1 280px !important;
+  min-width: 250px !important;
   max-width: 680px !important;
   margin: 0 auto !important;
+  gap: 10px !important;
 }
 
 .site-header .header-user-wrap {
@@ -14326,16 +14716,18 @@ body.has-floating-audio-player.floating-audio-minimized .floating-quick-preferen
 }
 
 .header-brand-wrap .header-festive-event-pill {
-  max-width: 140px !important;
+  max-width: 125px !important;
   flex-shrink: 0 !important;
   white-space: nowrap !important;
+  padding: 3px 8px !important;
 }
 
 .header-brand-wrap .header-festive-event-pill .festive-pill-name {
-  max-width: 90px !important;
+  max-width: 75px !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
+  font-size: 0.74rem !important;
   display: inline-block !important;
 }
 
@@ -16039,7 +16431,8 @@ body.theme-dark .anonymous-warmth-card p,
 .header-ambient-dropdown {
   position: absolute;
   top: calc(100% + 10px);
-  right: 0;
+  left: 0;
+  right: auto;
   width: 350px;
   max-width: 94vw;
   background: #ffffff;
@@ -16047,7 +16440,7 @@ body.theme-dark .anonymous-warmth-card p,
   padding: 16px;
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16), 0 0 0 1px rgba(226, 232, 240, 0.8);
   border: 1px solid #e2e8f0;
-  z-index: 1000;
+  z-index: 10000;
   box-sizing: border-box;
   animation: fadeInDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -16324,14 +16717,15 @@ body.theme-dark .ambient-toggle-btn.is-inactive,
 
 /* Audio Ducking Tip */
 .ambient-ducking-tip {
-  font-size: 0.72rem;
-  color: #0f766e;
+  font-size: 0.74rem;
+  color: #0f766e !important;
+  font-weight: 600;
   background: #f0fdfa;
-  border: 1px solid #ccfbf1;
+  border: 1px solid #99f6e4;
   padding: 8px 10px;
   border-radius: 10px;
   line-height: 1.45;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 body.theme-dark .ambient-ducking-tip,
@@ -16574,6 +16968,34 @@ body.theme-dark .story-media-upload-btn,
   color: #ffffff !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
   backdrop-filter: blur(6px) !important;
+}
+
+/* Đảm bảo thanh âm thanh không gian luôn có tương phản hoàn hảo, không bị chìm chữ */
+.post-atmosphere-sound-bar {
+  transition: all 0.25s ease;
+}
+
+body.theme-dark .post-atmosphere-sound-bar,
+[data-theme="dark"] .post-atmosphere-sound-bar,
+.mode-dark .post-atmosphere-sound-bar {
+  background: rgba(15, 23, 42, 0.94) !important;
+  border-color: rgba(45, 212, 191, 0.45) !important;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45) !important;
+}
+
+body.theme-dark .post-atmosphere-sound-bar strong,
+[data-theme="dark"] .post-atmosphere-sound-bar strong {
+  color: #f8fafc !important;
+}
+
+body.theme-dark .post-atmosphere-sound-bar p,
+[data-theme="dark"] .post-atmosphere-sound-bar p {
+  color: #cbd5e1 !important;
+}
+
+body.theme-dark .post-atmosphere-sound-bar span,
+[data-theme="dark"] .post-atmosphere-sound-bar span {
+  color: #f1f5f9 !important;
 }
 
 /* Thẻ bài viết có không gian cảm xúc trên Feed */
@@ -19061,6 +19483,15 @@ body.theme-light .sort-select-box,
   100% {
     transform: scale(1) rotate(-6deg);
     opacity: 1;
+  }
+}
+
+@keyframes spinRecord {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 

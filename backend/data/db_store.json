@@ -35,17 +35,30 @@
         "github": "",
         "website": "https://cantstophere.com"
       },
-      "views": 9,
-      "cheersCount": 0,
+      "views": 16,
+      "cheersCount": 2,
       "showReactionCount": true,
       "allowComments": true,
-      "reactions": [],
+      "reactions": [
+        {
+          "userName": "Đơn Thân Mẹ",
+          "userAvatar": "/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg",
+          "types": [
+            "love",
+            "encourage"
+          ]
+        }
+      ],
       "reactionCounts": {
         "sympathy": 0,
         "stop": 0,
-        "love": 0,
-        "encourage": 0,
-        "total": 0
+        "love": 1,
+        "encourage": 1,
+        "hug": 0,
+        "tea": 0,
+        "coffee": 0,
+        "goodnight": 0,
+        "total": 2
       },
       "sharesCount": 0,
       "repostCount": 0,
@@ -186,7 +199,7 @@
         "github": "",
         "website": "https://cantstophere.com"
       },
-      "views": 28,
+      "views": 31,
       "cheersCount": 42,
       "reactions": [
         {
@@ -253,7 +266,22 @@
       },
       "flagReason": "",
       "isFlagged": false,
-      "moderationStatus": "approved"
+      "moderationStatus": "approved",
+      "allowComments": true,
+      "atmosphere": {
+        "bgPreset": "default",
+        "customBgGradient": "",
+        "customColor": "",
+        "particleEffect": "none",
+        "soundEffect": "auto",
+        "soundEnabled": true,
+        "theme": "default"
+      },
+      "repostCount": 0,
+      "repostedBy": [],
+      "visibility": "public",
+      "voiceGender": "female",
+      "voiceRegion": "north"
     },
     {
       "_id": "post_2",
@@ -290,7 +318,7 @@
         "linkedin": "https://linkedin.com/in/nam-pm",
         "website": ""
       },
-      "views": 24,
+      "views": 25,
       "cheersCount": 68,
       "reactions": [
         {
@@ -342,7 +370,17 @@
       "repostedBy": [],
       "visibility": "public",
       "voiceGender": "female",
-      "voiceRegion": "north"
+      "voiceRegion": "north",
+      "allowComments": true,
+      "atmosphere": {
+        "bgPreset": "default",
+        "customBgGradient": "",
+        "customColor": "",
+        "particleEffect": "none",
+        "soundEffect": "auto",
+        "soundEnabled": true,
+        "theme": "default"
+      }
     },
     {
       "_id": "post_3",
@@ -1238,7 +1276,7 @@
       "isBuiltin": true
     }
   ],
-  "adminPreviewEventId": null,
+  "adminPreviewEventId": "giai_phong_30_4",
   "stories": [
     {
       "_id": "story_1794083881804_xfi0",

@@ -5,23 +5,98 @@ import googleTTS from 'google-tts-api';
 const audioCache = new Map();
 const MAX_CACHE_ITEMS = 500;
 
-// Mapping giọng đọc Neural tiếng Việt chuẩn 100% của Microsoft
-const VIETNAMESE_VOICES = {
-  female: 'vi-VN-HoaiMyNeural', // Giọng Nữ truyền cảm, ấm áp, phát thanh viên Hoài My
-  male: 'vi-VN-NamMinhNeural',   // Giọng Nam trầm ấm, điềm đạm, lắng đọng Nam Minh
+// Mapping giọng đọc Neural đa ngôn ngữ chuẩn 100% của Microsoft Edge
+const MULTI_LANG_VOICES = {
+  vi: {
+    female: 'vi-VN-HoaiMyNeural', // Hoài My (Nữ Việt Nam truyền cảm, ấm áp)
+    male: 'vi-VN-NamMinhNeural',   // Nam Minh (Nam Việt Nam trầm ấm, đĩnh đạc)
+  },
+  en: {
+    female: 'en-US-JennyNeural',   // Jenny (Nữ Mỹ tự nhiên, biểu cảm)
+    male: 'en-US-GuyNeural',       // Guy (Nam Mỹ trầm ấm, đĩnh đạc)
+  },
+  zh: {
+    female: 'zh-CN-XiaoxiaoNeural', // Xiaoxiao (Nữ Bắc Kinh nhẹ nhàng, ngọt ngào)
+    male: 'zh-CN-YunxiNeural',      // Yunxi (Nam Bắc Kinh trẻ trung, rõ ràng)
+  },
+  ja: {
+    female: 'ja-JP-NanamiNeural',   // Nanami (Nữ Nhật Bản trong trẻo, lịch thiệp)
+    male: 'ja-JP-KeitaNeural',      // Keita (Nam Nhật Bản đĩnh đạc, ấm áp)
+  },
+  ko: {
+    female: 'ko-KR-SunHiNeural',    // SunHi (Nữ Hàn Quốc nhẹ nhàng, truyền cảm)
+    male: 'ko-KR-InJoonNeural',     // InJoon (Nam Hàn Quốc trầm ấm, sâu lắng)
+  },
 };
+
+const GOOGLE_LANG_FALLBACK = {
+  vi: 'vi',
+  en: 'en',
+  zh: 'zh-CN',
+  ja: 'ja',
+  ko: 'ko',
+};
+
+/**
+ * Tính toán options { rate, pitch } cho Microsoft Edge TTS theo Vùng Miền & Tâm Trạng
+ */
+function calculateEdgeVoiceOptions({ lang = 'vi', gender = 'female', region = 'north', mood = 'auto' }) {
+  let rateOffset = 0;
+  let pitchOffset = 0;
+
+  // 1. Điều chỉnh theo Vùng Miền Việt Nam (Chỉ áp dụng khi ngôn ngữ là Tiếng Việt)
+  if (lang === 'vi') {
+    if (region === 'central') {
+      // Miền Trung (Huế & Đà Nẵng): Da diết, trầm sâu, nhịp điệu chậm rãi và lắng đọng
+      rateOffset += -8;
+      pitchOffset += gender === 'male' ? -8 : -5;
+    } else if (region === 'south') {
+      // Miền Nam (Sài Gòn): Ngọt ngào, phóng khoáng, nhịp điệu nhanh và thanh thoát
+      rateOffset += gender === 'male' ? 6 : 5;
+      pitchOffset += gender === 'male' ? 3 : 4;
+    } else {
+      // Miền Bắc (Hà Nội): Chuẩn âm thanh lịch, tròn vành rõ chữ
+      rateOffset += 0;
+      pitchOffset += 0;
+    }
+  }
+
+  // 2. Điều chỉnh theo Tâm trạng (Mood)
+  if (mood === 'melancholic') {
+    rateOffset += -6;
+    pitchOffset += -4;
+  } else if (mood === 'uplifting') {
+    rateOffset += 6;
+    pitchOffset += 5;
+  } else if (mood === 'child') {
+    rateOffset += 4;
+    pitchOffset += 22;
+  } else if (mood === 'podcast') {
+    rateOffset += -3;
+    pitchOffset += -2;
+  }
+
+  const rateStr = rateOffset === 0 ? '+0%' : `${rateOffset > 0 ? '+' : ''}${rateOffset}%`;
+  const pitchStr = pitchOffset === 0 ? '+0Hz' : `${pitchOffset > 0 ? '+' : ''}${pitchOffset}%`;
+
+  return { rate: rateStr, pitch: pitchStr, rateOffset, pitchOffset };
+}
 
 /**
  * Hàm tổng hợp âm thanh Neural qua Microsoft Edge TTS với cơ chế tự động thử lại (Retry)
  */
-async function synthesizeWithEdge(targetVoice, text, maxRetries = 3) {
+async function synthesizeWithEdge(targetVoice, text, voiceOptions = {}, maxRetries = 3) {
   let lastError = null;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const client = new MsEdgeTTS();
       await client.setMetadata(targetVoice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-      // Sử dụng cú pháp SSML chuẩn mặc định của Edge TTS (không ép prosody thủ công gây lỗi 1006)
-      const { audioStream } = await client.toStream(text);
+      
+      const streamOptions = {};
+      if (voiceOptions.rate && voiceOptions.rate !== '+0%') streamOptions.rate = voiceOptions.rate;
+      if (voiceOptions.pitch && voiceOptions.pitch !== '+0Hz') streamOptions.pitch = voiceOptions.pitch;
+
+      const { audioStream } = await client.toStream(text, streamOptions);
 
       const chunks = [];
       await new Promise((resolve, reject) => {
@@ -50,15 +125,17 @@ async function synthesizeWithEdge(targetVoice, text, maxRetries = 3) {
 }
 
 /**
- * Controller Text-To-Speech (TTS) Tiếng Việt Chuẩn Neural 100%
- * Sử dụng Microsoft Edge Neural Voice (Hoài My - Nữ & Nam Minh - Nam)
- * Fallback sang Google TTS nếu cần thiết
+ * Controller Text-To-Speech (TTS) Đa Ngôn Ngữ & Vùng Miền Chuẩn Neural 100%
+ * Hỗ trợ: Tiếng Việt (Bắc/Trung/Nam), Tiếng Anh, Tiếng Trung, Tiếng Nhật, Tiếng Hàn
  */
 export const synthesizeVietnameseSpeech = async (req, res) => {
   try {
     const rawText = req.query.text || req.body?.text || '';
     const rawGender = (req.query.gender || req.body?.gender || 'female').toLowerCase();
     const gender = rawGender.includes('nam') || rawGender === 'male' ? 'male' : 'female';
+    const lang = (req.query.lang || req.body?.lang || 'vi').toLowerCase();
+    const region = (req.query.region || req.body?.region || 'north').toLowerCase();
+    const mood = (req.query.mood || req.body?.mood || 'auto').toLowerCase();
 
     // Làm sạch emoji và ký tự đặc biệt ở đầu/cuối câu
     const cleanText = rawText
@@ -72,8 +149,16 @@ export const synthesizeVietnameseSpeech = async (req, res) => {
 
     // Giới hạn độ dài mỗi lượt đọc
     const truncatedText = cleanText.slice(0, 350);
-    const targetVoice = VIETNAMESE_VOICES[gender] || VIETNAMESE_VOICES.female;
-    const cacheKey = `${targetVoice}_${truncatedText.toLowerCase()}`;
+
+    // Xác định giọng đọc theo Ngôn ngữ và Giới tính
+    const langVoiceMap = MULTI_LANG_VOICES[lang] || MULTI_LANG_VOICES.vi;
+    const targetVoice = langVoiceMap[gender] || langVoiceMap.female;
+
+    // Tính toán options cao độ & tốc độ theo vùng miền và cảm xúc
+    const voiceOptions = calculateEdgeVoiceOptions({ lang, gender, region, mood });
+
+    // Cache key bao gồm cả voice, region, mood để âm sắc chuẩn không bị đè cache
+    const cacheKey = `${targetVoice}_${region}_${mood}_${voiceOptions.rate}_${truncatedText.toLowerCase()}`;
 
     // 1. Phục vụ ngay từ bộ đệm RAM nếu đã có
     if (audioCache.has(cacheKey)) {
@@ -84,16 +169,18 @@ export const synthesizeVietnameseSpeech = async (req, res) => {
         'Cache-Control': 'public, max-age=86400',
         'X-TTS-Engine': 'Cache-HIT',
         'X-TTS-Voice': targetVoice,
+        'X-TTS-Lang': lang,
+        'X-TTS-Region': region,
         'X-TTS-Gender': gender,
       });
       return res.end(cachedBuffer);
     }
 
-    // 2. Tạo giọng đọc Neural qua Microsoft Edge TTS (Hoài My Nữ / Nam Minh Nam)
+    // 2. Tạo giọng đọc Neural qua Microsoft Edge TTS
     let audioBuffer = null;
     let engine = 'MsEdge-Neural';
     try {
-      audioBuffer = await synthesizeWithEdge(targetVoice, truncatedText, 3);
+      audioBuffer = await synthesizeWithEdge(targetVoice, truncatedText, voiceOptions, 3);
     } catch (edgeErr) {
       console.warn('[TTS] Microsoft Edge Neural TTS cần fallback sang Google TTS:', edgeErr.message);
     }
@@ -101,9 +188,10 @@ export const synthesizeVietnameseSpeech = async (req, res) => {
     // 3. Fallback: Google TTS nếu Microsoft Edge chưa phản hồi
     if (!audioBuffer) {
       engine = 'Google-TTS-Fallback';
+      const googleLang = GOOGLE_LANG_FALLBACK[lang] || 'vi';
       const base64Audio = await googleTTS.getAudioBase64(truncatedText, {
-        lang: 'vi',
-        slow: false,
+        lang: googleLang,
+        slow: region === 'central' || mood === 'melancholic',
         host: 'https://translate.google.com',
         timeout: 8000,
       });
@@ -123,6 +211,8 @@ export const synthesizeVietnameseSpeech = async (req, res) => {
       'Cache-Control': 'public, max-age=86400',
       'X-TTS-Engine': engine,
       'X-TTS-Voice': targetVoice,
+      'X-TTS-Lang': lang,
+      'X-TTS-Region': region,
       'X-TTS-Gender': gender,
     });
 

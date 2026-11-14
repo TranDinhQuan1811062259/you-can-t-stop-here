@@ -158,18 +158,23 @@ export const DraggableWritePostButton = ({ onClick }) => {
     }
   };
 
+  const screenWidth = typeof document !== 'undefined' && document.documentElement.clientWidth
+    ? document.documentElement.clientWidth
+    : (typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const isRightSide = btnPos.x > screenWidth / 2;
+
   return (
     <div
       ref={btnRef}
       className={`draggable-write-post-btn-wrapper ${isDragging ? 'is-dragging' : ''}`}
       style={{
         position: 'fixed',
-        left: `${btnPos.x}px`,
+        left: isDragging ? `${btnPos.x}px` : (!isRightSide ? '24px' : 'auto'),
+        right: isDragging ? 'auto' : (isRightSide ? '32px' : 'auto'),
         top: `${btnPos.y}px`,
         width: '156px',
         height: '44px',
         boxSizing: 'border-box',
-        right: 'auto',
         bottom: 'auto',
         zIndex: isDragging ? 9998 : 9995,
         cursor: isDragging ? 'grabbing' : 'grab',

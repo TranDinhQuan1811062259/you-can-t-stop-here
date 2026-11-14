@@ -15,6 +15,10 @@ import { StickyNoteWallModal } from '../wellness/StickyNoteWallModal';
 import { EmergencyCalmModal } from '../wellness/EmergencyCalmModal';
 import { CozyWorkCafeModal } from '../wellness/CozyWorkCafeModal';
 import { MoodPixelTrackerModal } from '../wellness/MoodPixelTrackerModal';
+import { RantAndBurnModal } from '../wellness/RantAndBurnModal';
+import { MidnightDriftBottleModal } from '../wellness/MidnightDriftBottleModal';
+import { WorkplaceMoodRadarModal } from '../wellness/WorkplaceMoodRadarModal';
+import { AnonymousWhisperWall } from '../wellness/AnonymousWhisperWall';
 import { postService, getCachedPosts, removeVietnameseTones } from '../../services/postService';
 import { eventService } from '../../services/eventService';
 import { isSoundEnabled, toggleSound, playClickSound, playFestiveEventSound } from '../../utils/soundEffects';
@@ -61,7 +65,13 @@ export const Header = () => {
   const [isEmergencyCalmOpen, setIsEmergencyCalmOpen] = useState(false);
   const [isCozyCafeOpen, setIsCozyCafeOpen] = useState(false);
   const [isMoodPixelOpen, setIsMoodPixelOpen] = useState(false);
+  const [isRantAndBurnOpen, setIsRantAndBurnOpen] = useState(false);
+  const [isDriftBottleOpen, setIsDriftBottleOpen] = useState(false);
+  const [isMoodRadarOpen, setIsMoodRadarOpen] = useState(false);
+  const [isWhisperWallOpen, setIsWhisperWallOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [isWellnessDropdownOpen, setIsWellnessDropdownOpen] = useState(false);
+  const [wellnessCategoryTab, setWellnessCategoryTab] = useState('vent'); // 'vent' | 'cozy' | 'heal' (chia nhỏ theo phân loại, không gôm tất cả)
   const wellnessDropdownRef = useRef(null);
 
   // States cho Âm Thanh Môi Trường Duy Trì (Ambient Soundscape Engine)
@@ -300,6 +310,38 @@ export const Header = () => {
     setIsWellnessDropdownOpen(false);
   }, [location?.pathname]);
 
+  // Lắng nghe sự kiện mở Lò Đốt Muộn Phiền từ bất kỳ đâu (Banner, Pet, Chat, Phím tắt)
+  useEffect(() => {
+    const handleOpenRant = () => {
+      setIsRantAndBurnOpen(true);
+      setIsWellnessDropdownOpen(false);
+    };
+    const handleOpenDrift = () => {
+      setIsDriftBottleOpen(true);
+      setIsWellnessDropdownOpen(false);
+    };
+    const handleOpenRadar = () => {
+      setIsMoodRadarOpen(true);
+      setIsWellnessDropdownOpen(false);
+    };
+    const handleOpenWhisper = () => {
+      setIsWhisperWallOpen(true);
+      setIsWellnessDropdownOpen(false);
+    };
+
+    window.addEventListener('freedom_open_rant_and_burn', handleOpenRant);
+    window.addEventListener('freedom_open_drift_bottle', handleOpenDrift);
+    window.addEventListener('freedom_open_mood_radar', handleOpenRadar);
+    window.addEventListener('freedom_open_whisper_wall', handleOpenWhisper);
+
+    return () => {
+      window.removeEventListener('freedom_open_rant_and_burn', handleOpenRant);
+      window.removeEventListener('freedom_open_drift_bottle', handleOpenDrift);
+      window.removeEventListener('freedom_open_mood_radar', handleOpenRadar);
+      window.removeEventListener('freedom_open_whisper_wall', handleOpenWhisper);
+    };
+  }, []);
+
   const toggleNav = () => setIsNavOpen((prev) => !prev);
   const closeNav = () => setIsNavOpen(false);
 
@@ -378,13 +420,24 @@ export const Header = () => {
               to="/"
               className={`logo-link seasonal-logo-wrap season-${activeSeason.id}`}
               onClick={closeNav}
-              title={`YOU CAN'T STOP HERE - ${activeSeason.name}: ${activeSeason.quote}`}
+              title="You Can't Stop Here - Về trang chủ"
             >
               <span className="healing-icon-pill healing-icon-sage" style={{ width: '34px', height: '34px' }}>
                 <i className="fa-solid fa-seedling"></i>
               </span>
-              <span className={`logo-text seasonal-logo-text season-${activeSeason.id}`}>
-                <IdleWeatherText>YOU CAN'T STOP HERE</IdleWeatherText>
+              <span
+                className={`logo-text seasonal-logo-text season-${activeSeason.id}`}
+                style={{
+                  display: 'inline-block',
+                  visibility: 'visible',
+                  opacity: 1,
+                  fontWeight: 800,
+                  fontSize: '1.25rem',
+                  letterSpacing: '0.5px',
+                  color: activeSeason.id === 'spring' ? '#db2777' : activeSeason.id === 'summer' ? '#d97706' : activeSeason.id === 'autumn' ? '#c2410c' : '#0284c7',
+                }}
+              >
+                YOU CAN'T STOP HERE
               </span>
               <span className={`seasonal-logo-sparkle season-${activeSeason.id}`} aria-hidden="true">
                 {activeSeason.titleAccent}
@@ -818,7 +871,7 @@ export const Header = () => {
                   )}
                 </Link>
 
-                {/* Nút Tài khoản */}
+                {/* Nút Cài đặt tài khoản & hồ sơ */}
                 <button
                   type="button"
                   className="header-account-btn"
@@ -826,9 +879,9 @@ export const Header = () => {
                   title="Cài đặt thông tin tài khoản, giao diện & nhạc nền"
                 >
                   <span className="btn-icon">
-                    <i className="fa-solid fa-sliders"></i>
+                    <i className="fa-solid fa-gear"></i>
                   </span>
-                  <span>Tài khoản</span>
+                  <span>Cài đặt</span>
                 </button>
 
                 {/* Nút Quản lý Lễ Hội (Chỉ Admin) */}
@@ -843,6 +896,22 @@ export const Header = () => {
                     <span className="btn-icon">🎊</span>
                   </button>
                 )}
+
+                {/* Nút Đăng xuất an toàn */}
+                <button
+                  type="button"
+                  className="header-logout-btn"
+                  onClick={() => {
+                    playClickSound();
+                    setIsLogoutConfirmOpen(true);
+                  }}
+                  title="Đăng xuất khỏi tài khoản"
+                >
+                  <span className="btn-icon">
+                    <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                  </span>
+                  <span>Đăng xuất</span>
+                </button>
               </div>
             ) : (
               <div className="header-guest-btns">
@@ -916,217 +985,313 @@ export const Header = () => {
               <span className="item-label">Small Wins</span>
             </NavLink>
 
-            {/* Cụm Trạm Chữa Lành Dropdown - Gom gọn 8 công cụ xả áp lực & chăm sóc tâm lý */}
+            {/* Cụm Trạm Chữa Lành Dropdown - Gom gọn 12 công cụ xả áp lực & chăm sóc tâm lý */}
             <div className="header-wellness-dropdown-wrapper" ref={wellnessDropdownRef}>
               <button
                 type="button"
-                className={`dashboard-3d-item tab-wellness-hub ${isWellnessDropdownOpen || isWellnessOpen || isTimeCapsuleOpen || isRadioOpen || isGratitudeJarOpen || isStickyWallOpen || isEmergencyCalmOpen || isCozyCafeOpen || isMoodPixelOpen ? 'active' : ''}`}
+                className={`dashboard-3d-item tab-wellness-hub ${isWellnessDropdownOpen || isWellnessOpen || isTimeCapsuleOpen || isRadioOpen || isGratitudeJarOpen || isStickyWallOpen || isEmergencyCalmOpen || isCozyCafeOpen || isMoodPixelOpen || isRantAndBurnOpen || isDriftBottleOpen || isMoodRadarOpen || isWhisperWallOpen ? 'active' : ''}`}
                 onClick={() => {
                   playClickSound();
                   setIsWellnessDropdownOpen((prev) => !prev);
                 }}
-                title="Trạm Chữa Lành & Chăm Sóc Tâm Trí: Bấm để mở bảng 8 công cụ xả áp lực"
+                title="Trạm Chữa Lành & Chăm Sóc Tâm Trí: Bấm để mở bảng 12 công cụ xả áp lực"
                 aria-expanded={isWellnessDropdownOpen}
               >
                 <span className="healing-icon-pill healing-icon-sage" style={{ width: '28px', height: '28px', fontSize: '0.85rem' }}>
                   🌿
                 </span>
                 <span className="item-label">Trạm Chữa Lành</span>
-                <span className="wellness-hub-badge">8</span>
+                <span className="wellness-hub-badge">12</span>
                 <i
                   className={`fa-solid fa-chevron-${isWellnessDropdownOpen ? 'up' : 'down'}`}
                   style={{ fontSize: '0.68rem', opacity: 0.8, marginLeft: '2px', transition: 'transform 0.2s' }}
                 ></i>
               </button>
 
-              {/* Bảng Mega-Dropdown Danh Sách Công Cụ Chữa Lành */}
-              {isWellnessDropdownOpen && (
-                <div className="wellness-hub-mega-dropdown">
-                  <div className="wellness-hub-header">
-                    <div className="hub-title-row">
-                      <span className="hub-header-icon">🌿</span>
-                      <div>
-                        <h4 className="hub-title">Trạm Chữa Lành & Không Gian Tâm Lý</h4>
-                        <p className="hub-subtitle">Các công cụ thả lỏng tâm trí, xả áp lực deadline & nuôi dưỡng cảm xúc</p>
+              {/* Bảng Mega-Dropdown Danh Sách Công Cụ Chữa Lành Đã Phân Mục Rõ Ràng */}
+              {isWellnessDropdownOpen && (() => {
+                const WELLNESS_TOOLS = [
+                  // NHÓM 1: XẢ STRESS & CỨU TRỢ (vent)
+                  {
+                    id: 'burn',
+                    category: 'vent',
+                    title: 'Lò Đốt Muộn Phiền',
+                    desc: 'Gõ hết ức chế & thiêu rụi thành tro bụi vĩnh viễn',
+                    icon: '🔥',
+                    iconBg: 'rgba(234, 88, 12, 0.22)',
+                    iconColor: '#ea580c',
+                    tag: 'Hot 🔥',
+                    tagBg: '#ea580c',
+                    tagColor: '#ffffff',
+                    cardStyle: {
+                      background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.12) 0%, rgba(153, 27, 27, 0.08) 100%)',
+                      border: '1.5px solid rgba(249, 115, 22, 0.5)',
+                    },
+                    action: () => setIsRantAndBurnOpen(true),
+                  },
+                  {
+                    id: 'radar',
+                    category: 'vent',
+                    title: 'Radar Cảm Xúc Công Sở',
+                    desc: '1 chạm đo nhiệt độ deadline, cà phê & trút giận ẩn danh',
+                    icon: '📡',
+                    iconBg: 'rgba(16, 185, 129, 0.22)',
+                    iconColor: '#10b981',
+                    tag: '1-Tap Pulse',
+                    tagBg: '#059669',
+                    tagColor: '#ffffff',
+                    cardStyle: {
+                      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(6, 78, 59, 0.1) 100%)',
+                      border: '1.5px solid rgba(16, 185, 129, 0.45)',
+                    },
+                    action: () => setIsMoodRadarOpen(true),
+                  },
+                  {
+                    id: 'stress',
+                    category: 'vent',
+                    title: 'Xả Áp Lực & Đập Đĩa',
+                    desc: 'Phòng đập phá ảo, máy xé giấy & nhịp thở 4-7-8',
+                    icon: '💥',
+                    iconBg: 'rgba(239, 68, 68, 0.15)',
+                    iconColor: '#ef4444',
+                    tag: 'Giải tỏa',
+                    tagBg: 'rgba(239, 68, 68, 0.2)',
+                    tagColor: '#ef4444',
+                    action: () => setIsWellnessOpen(true),
+                  },
+                  {
+                    id: 'emergency',
+                    category: 'vent',
+                    title: 'Cứu Trợ Định Tâm (SOS)',
+                    desc: 'Bài tập nối đất 5-4-3-2-1 cắt cơn hoảng loạn tức thì',
+                    icon: '🆘',
+                    iconBg: 'rgba(220, 38, 38, 0.2)',
+                    iconColor: '#dc2626',
+                    tag: 'Khẩn cấp',
+                    tagBg: 'rgba(220, 38, 38, 0.25)',
+                    tagColor: '#ef4444',
+                    action: () => setIsEmergencyCalmOpen(true),
+                  },
+
+                  // NHÓM 2: THƯ GIÃN & ĐÊM MUỘN (cozy)
+                  {
+                    id: 'cafe',
+                    category: 'cozy',
+                    title: 'Tiệm Cà Phê Mưa',
+                    desc: 'Pomodoro 25/5 & bản phối mưa rơi, lò sưởi ấm áp',
+                    icon: '☕',
+                    iconBg: 'rgba(217, 119, 6, 0.2)',
+                    iconColor: '#d97706',
+                    tag: 'Tập trung',
+                    tagBg: 'rgba(217, 119, 6, 0.25)',
+                    tagColor: '#d97706',
+                    action: () => setIsCozyCafeOpen(true),
+                  },
+                  {
+                    id: 'radio',
+                    category: 'cozy',
+                    title: 'Trạm Radio Đêm Muộn',
+                    desc: 'Giai điệu Lo-Fi Jazz & hòm thư thì thầm ẩn danh',
+                    icon: '📻',
+                    iconBg: 'rgba(244, 63, 94, 0.15)',
+                    iconColor: '#f43f5e',
+                    tag: '24/7',
+                    tagBg: 'rgba(244, 63, 94, 0.25)',
+                    tagColor: '#f43f5e',
+                    action: () => setIsRadioOpen(true),
+                  },
+                  {
+                    id: 'drift',
+                    category: 'cozy',
+                    title: 'Chai Thư Nửa Đêm',
+                    desc: 'Gõ máy đánh chữ cơ ASMR & thả trôi dòng sông đêm',
+                    icon: '🌊',
+                    iconBg: 'rgba(56, 189, 248, 0.22)',
+                    iconColor: '#38bdf8',
+                    tag: 'Thơ mộng',
+                    tagBg: '#0284c7',
+                    tagColor: '#ffffff',
+                    cardStyle: {
+                      background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(30, 58, 138, 0.1) 100%)',
+                      border: '1.5px solid rgba(56, 189, 248, 0.45)',
+                    },
+                    action: () => setIsDriftBottleOpen(true),
+                  },
+
+                  // NHÓM 3: CHỮA LÀNH & GỬI GẮM (heal)
+                  {
+                    id: 'whisper',
+                    category: 'heal',
+                    title: 'Thì Thầm & Voice Hugs',
+                    desc: 'Thu âm 10s gửi cái ôm âm thanh ấm áp lúc nửa đêm',
+                    icon: '🎙️',
+                    iconBg: 'rgba(236, 72, 153, 0.22)',
+                    iconColor: '#ec4899',
+                    tag: 'Voice Hugs',
+                    tagBg: '#db2777',
+                    tagColor: '#ffffff',
+                    cardStyle: {
+                      background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.12) 0%, rgba(131, 24, 67, 0.1) 100%)',
+                      border: '1.5px solid rgba(236, 72, 153, 0.45)',
+                    },
+                    action: () => setIsWhisperWallOpen(true),
+                  },
+                  {
+                    id: 'capsule',
+                    category: 'heal',
+                    title: 'Chiếc Hộp Thời Gian',
+                    desc: 'Viết thư gửi tương lai, tem cổ điển & niêm phong sáp 3D',
+                    icon: '📜',
+                    iconBg: 'rgba(245, 158, 11, 0.18)',
+                    iconColor: '#f59e0b',
+                    tag: 'Tương lai',
+                    tagBg: 'rgba(245, 158, 11, 0.25)',
+                    tagColor: '#f59e0b',
+                    action: () => setIsTimeCapsuleOpen(true),
+                  },
+                  {
+                    id: 'sticky',
+                    category: 'heal',
+                    title: 'Bảng Giấy Nhớ Yêu Thương',
+                    desc: 'Dán note dặn dò, trao gửi cái ôm ấm áp vô danh',
+                    icon: '💌',
+                    iconBg: 'rgba(234, 179, 8, 0.2)',
+                    iconColor: '#eab308',
+                    tag: 'Chia sẻ',
+                    tagBg: 'rgba(234, 179, 8, 0.25)',
+                    tagColor: '#eab308',
+                    action: () => setIsStickyWallOpen(true),
+                  },
+                  {
+                    id: 'gratitude',
+                    category: 'heal',
+                    title: 'Chiếc Lọ Biết Ơn',
+                    desc: 'Gấp sao lưu giữ 3 điều may mắn, dễ thương hôm nay',
+                    icon: '⭐',
+                    iconBg: 'rgba(234, 179, 8, 0.18)',
+                    iconColor: '#eab308',
+                    tag: 'Tích cực',
+                    tagBg: 'rgba(234, 179, 8, 0.25)',
+                    tagColor: '#eab308',
+                    action: () => setIsGratitudeJarOpen(true),
+                  },
+                  {
+                    id: 'pixel',
+                    category: 'heal',
+                    title: 'Nhật Ký Cảm Xúc 365 Ngày',
+                    desc: 'Tô màu từng ô pixel theo biểu đồ tâm trạng cả năm',
+                    icon: '🗓️',
+                    iconBg: 'rgba(99, 102, 241, 0.18)',
+                    iconColor: '#6366f1',
+                    tag: 'Pixel',
+                    tagBg: 'rgba(99, 102, 241, 0.25)',
+                    tagColor: '#6366f1',
+                    action: () => setIsMoodPixelOpen(true),
+                  },
+                ];
+
+                const currentTab = wellnessCategoryTab || 'vent';
+                const filteredTools = WELLNESS_TOOLS.filter((t) => t.category === currentTab);
+
+                return (
+                  <div className="wellness-hub-mega-dropdown">
+                    {/* Header Dropdown */}
+                    <div className="wellness-hub-header">
+                      <div className="hub-title-row">
+                        <span className="hub-header-icon">🌿</span>
+                        <div>
+                          <h4 className="hub-title">Trạm Chữa Lành &amp; Không Gian Tâm Lý</h4>
+                          <p className="hub-subtitle">
+                            Chọn phân loại bạn cần — Gọn gàng, vừa vặn &amp; không còn phải cuộn tìm kiếm
+                          </p>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Thanh Tabs Phân Loại Danh Mục (Đã bỏ tab Tất Cả gôm chung) */}
+                    <div className="wellness-hub-tabs">
+                      <button
+                        type="button"
+                        className={`wellness-tab-pill ${currentTab === 'vent' ? 'active' : ''}`}
+                        onClick={() => {
+                          playClickSound();
+                          setWellnessCategoryTab('vent');
+                        }}
+                      >
+                        <span>🔥</span>
+                        <span>Xả Stress &amp; SOS (4)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`wellness-tab-pill ${currentTab === 'cozy' ? 'active' : ''}`}
+                        onClick={() => {
+                          playClickSound();
+                          setWellnessCategoryTab('cozy');
+                        }}
+                      >
+                        <span>☕</span>
+                        <span>Thư Giãn &amp; Đêm Muộn (3)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`wellness-tab-pill ${currentTab === 'heal' ? 'active' : ''}`}
+                        onClick={() => {
+                          playClickSound();
+                          setWellnessCategoryTab('heal');
+                        }}
+                      >
+                        <span>💌</span>
+                        <span>Chữa Lành &amp; Gửi Gắm (5)</span>
+                      </button>
+                    </div>
+
+                    {/* Lưới Danh Sách Các Thẻ Công Cụ - Rộng rãi & Tiêu Đề Rõ Ràng */}
+                    <div className="wellness-hub-grid">
+                      {filteredTools.map((tool) => (
+                        <button
+                          key={tool.id}
+                          type="button"
+                          className={`wellness-hub-card card-${tool.id}`}
+                          onClick={() => {
+                            playClickSound();
+                            setIsWellnessDropdownOpen(false);
+                            tool.action();
+                          }}
+                          title={`Mở ${tool.title}: ${tool.desc}`}
+                          style={tool.cardStyle || {}}
+                        >
+                          <div className="hub-card-icon-wrap" style={{ background: tool.iconBg, color: tool.iconColor }}>
+                            {tool.icon}
+                          </div>
+                          <div className="hub-card-text">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                              <span className="hub-card-title">{tool.title}</span>
+                              {tool.tag && (
+                                <span
+                                  className="hub-card-tag"
+                                  style={{
+                                    background: tool.tagBg,
+                                    color: tool.tagColor,
+                                  }}
+                                >
+                                  {tool.tag}
+                                </span>
+                              )}
+                            </div>
+                            <span className="hub-card-desc">{tool.desc}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="wellness-hub-footer">
+                      <span>💡 <em>Mỗi ngày dành 5 phút chăm sóc sức khỏe tinh thần bạn nhé!</em></span>
+                    </div>
                   </div>
-
-                  <div className="wellness-hub-grid">
-                    {/* 1. Xả Stress & Đập Đĩa */}
-                    <button
-                      type="button"
-                      className="wellness-hub-card card-stress"
-                      onClick={() => {
-                        playClickSound();
-                        setIsWellnessDropdownOpen(false);
-                        setIsWellnessOpen(true);
-                      }}
-                      title="Mở Phòng Đập Phá Ảo & Xé Giấy Deadline"
-                    >
-                      <div className="hub-card-icon-wrap" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' }}>
-                        <i className="fa-solid fa-spa"></i>
-                      </div>
-                      <div className="hub-card-text">
-                        <span className="hub-card-title">Xả Áp Lực & Đập Đĩa</span>
-                        <span className="hub-card-desc">Phòng đập phá ảo, máy xé giấy & nhịp thở 4-7-8</span>
-                      </div>
-                      <span className="hub-card-tag hot">Giải tỏa</span>
-                    </button>
-
-                    {/* 2. Cứu Trợ Định Tâm 5-4-3-2-1 */}
-                    <button
-                      type="button"
-                      className="wellness-hub-card card-emergency"
-                      onClick={() => {
-                        playClickSound();
-                        setIsWellnessDropdownOpen(false);
-                        setIsEmergencyCalmOpen(true);
-                      }}
-                      title="Mở Bài Tập Định Tâm Khẩn Cấp 5-4-3-2-1"
-                    >
-                      <div className="hub-card-icon-wrap" style={{ background: 'rgba(220, 38, 38, 0.2)', color: '#dc2626' }}>
-                        🆘
-                      </div>
-                      <div className="hub-card-text">
-                        <span className="hub-card-title" style={{ color: '#ef4444' }}>Cứu Trợ Định Tâm (SOS)</span>
-                        <span className="hub-card-desc">Bài tập nối đất 5-4-3-2-1 cắt cơn hoảng loạn tức thì</span>
-                      </div>
-                      <span className="hub-card-tag sos">Khẩn cấp</span>
-                    </button>
-
-                    {/* 3. Tiệm Cà Phê Mưa & Pomodoro */}
-                    <button
-                      type="button"
-                      className="wellness-hub-card card-cafe"
-                      onClick={() => {
-                        playClickSound();
-                        setIsWellnessDropdownOpen(false);
-                        setIsCozyCafeOpen(true);
-                      }}
-                      title="Mở Tiệm Cà Phê Mưa & Đồng Hồ Pomodoro"
-                    >
-                      <div className="hub-card-icon-wrap" style={{ background: 'rgba(217, 119, 6, 0.2)', color: '#d97706' }}>
-                        ☕
-                      </div>
-                      <div className="hub-card-text">
-                        <span className="hub-card-title">Tiệm Cà Phê Mưa</span>
-                        <span className="hub-card-desc">Pomodoro 25/5 & bản phối mưa rơi, lò sưởi ấm áp</span>
-                      </div>
-                      <span className="hub-card-tag focus">Tập trung</span>
-                    </button>
-
-                    {/* 4. Radio Đêm Muộn 24/7 */}
-                    <button
-                      type="button"
-                      className="wellness-hub-card card-radio"
-                      onClick={() => {
-                        playClickSound();
-                        setIsWellnessDropdownOpen(false);
-                        setIsRadioOpen(true);
-                      }}
-                      title="Mở Trạm Radio Đêm Muộn 24/7"
-                    >
-                      <div className="hub-card-icon-wrap" style={{ background: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e' }}>
-                        <i className="fa-solid fa-radio"></i>
-                      </div>
-                      <div className="hub-card-text">
-                        <span className="hub-card-title">Trạm Radio Đêm Muộn</span>
-                        <span className="hub-card-desc">Giai điệu Lo-Fi Jazz & hòm thư thì thầm ẩn danh</span>
-                      </div>
-                      <span className="hub-card-tag radio">24/7</span>
-                    </button>
-
-                    {/* 5. Bảng Giấy Nhớ Yêu Thương */}
-                    <button
-                      type="button"
-                      className="wellness-hub-card card-sticky"
-                      onClick={() => {
-                        playClickSound();
-                        setIsWellnessDropdownOpen(false);
-                        setIsStickyWallOpen(true);
-                      }}
-                      title="Mở Bảng Giấy Nhớ Dặn Dò Ẩn Danh"
-                    >
-                      <div className="hub-card-icon-wrap" style={{ background: 'rgba(234, 179, 8, 0.2)', color: '#eab308' }}>
-                        💌
-                      </div>
-                      <div className="hub-card-text">
-                        <span className="hub-card-title">Bảng Giấy Nhớ Yêu Thương</span>
-                        <span className="hub-card-desc">Dán note dặn dò, trao gửi cái ôm ấm áp vô danh</span>
-                      </div>
-                      <span className="hub-card-tag note">Chia sẻ</span>
-                    </button>
-
-                    {/* 6. Chiếc Hộp Thời Gian */}
-                    <button
-                      type="button"
-                      className="wellness-hub-card card-capsule"
-                      onClick={() => {
-                        playClickSound();
-                        setIsWellnessDropdownOpen(false);
-                        setIsTimeCapsuleOpen(true);
-                      }}
-                      title="Mở Hộp Thời Gian: Gửi thư cho tương lai"
-                    >
-                      <div className="hub-card-icon-wrap" style={{ background: 'rgba(245, 158, 11, 0.18)', color: '#f59e0b' }}>
-                        <i className="fa-solid fa-hourglass-half"></i>
-                      </div>
-                      <div className="hub-card-text">
-                        <span className="hub-card-title">Chiếc Hộp Thời Gian</span>
-                        <span className="hub-card-desc">Viết thư cho chính mình trong tương lai & hẹn giờ mở</span>
-                      </div>
-                      <span className="hub-card-tag capsule">Tương lai</span>
-                    </button>
-
-                    {/* 7. Lọ Biết Ơn Cuối Ngày */}
-                    <button
-                      type="button"
-                      className="wellness-hub-card card-gratitude"
-                      onClick={() => {
-                        playClickSound();
-                        setIsWellnessDropdownOpen(false);
-                        setIsGratitudeJarOpen(true);
-                      }}
-                      title="Mở Chiếc Lọ Biết Ơn Cuối Ngày"
-                    >
-                      <div className="hub-card-icon-wrap" style={{ background: 'rgba(234, 179, 8, 0.18)', color: '#eab308' }}>
-                        <i className="fa-solid fa-star"></i>
-                      </div>
-                      <div className="hub-card-text">
-                        <span className="hub-card-title">Chiếc Lọ Biết Ơn</span>
-                        <span className="hub-card-desc">Gấp sao lưu giữ 3 điều may mắn, dễ thương hôm nay</span>
-                      </div>
-                      <span className="hub-card-tag star">Tích cực</span>
-                    </button>
-
-                    {/* 8. Nhật Ký Cảm Xúc 365 Ngày */}
-                    <button
-                      type="button"
-                      className="wellness-hub-card card-pixel"
-                      onClick={() => {
-                        playClickSound();
-                        setIsWellnessDropdownOpen(false);
-                        setIsMoodPixelOpen(true);
-                      }}
-                      title="Mở Nhật Ký Cảm Xúc Pixel 365 Ngày"
-                    >
-                      <div className="hub-card-icon-wrap" style={{ background: 'rgba(99, 102, 241, 0.18)', color: '#6366f1' }}>
-                        🗓️
-                      </div>
-                      <div className="hub-card-text">
-                        <span className="hub-card-title">Nhật Ký Cảm Xúc 365 Ngày</span>
-                        <span className="hub-card-desc">Tô màu từng ô pixel theo biểu đồ tâm trạng cả năm</span>
-                      </div>
-                      <span className="hub-card-tag mood">Pixel</span>
-                    </button>
-                  </div>
-
-                  <div className="wellness-hub-footer">
-                    <span>💡 <em>Mỗi ngày dành 5 phút chăm sóc sức khỏe tinh thần bạn nhé!</em></span>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           </div>
         </nav>
@@ -1221,6 +1386,166 @@ export const Header = () => {
         isOpen={isMoodPixelOpen}
         onClose={() => setIsMoodPixelOpen(false)}
       />
+
+      {/* Lò Đốt Muộn Phiền (Rant & Burn - Sọt rác cảm xúc kỹ thuật số) */}
+      <RantAndBurnModal
+        isOpen={isRantAndBurnOpen}
+        onClose={() => setIsRantAndBurnOpen(false)}
+        onOpenCafe={() => setIsCozyCafeOpen(true)}
+      />
+
+      {/* Chiếc Máy Đánh Chữ Nửa Đêm & Chai Thư Trôi Sông */}
+      <MidnightDriftBottleModal
+        isOpen={isDriftBottleOpen}
+        onClose={() => setIsDriftBottleOpen(false)}
+      />
+
+      {/* Radar Bản Đồ Cảm Xúc Công Sở Thời Gian Thực */}
+      <WorkplaceMoodRadarModal
+        isOpen={isMoodRadarOpen}
+        onClose={() => setIsMoodRadarOpen(false)}
+      />
+
+      {/* Bức Tường Thì Thầm 10 Giây & Voice Hugs */}
+      <AnonymousWhisperWall
+        isOpen={isWhisperWallOpen}
+        onClose={() => setIsWhisperWallOpen(false)}
+      />
+
+      {/* Modal Xác Nhận Đăng Xuất An Toàn & Tinh Tế (Thay thế hoàn toàn window.confirm) */}
+      {isLogoutConfirmOpen && (
+        <div
+          className="modal-backdrop logout-confirm-backdrop"
+          onClick={() => setIsLogoutConfirmOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.72)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            animation: 'fadeIn 0.2s ease-out',
+          }}
+        >
+          <div
+            className="logout-confirm-box"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
+              border: '1.5px solid rgba(248, 113, 113, 0.45)',
+              borderRadius: '20px',
+              padding: '28px 24px',
+              maxWidth: '420px',
+              width: '100%',
+              boxShadow: '0 20px 45px rgba(0, 0, 0, 0.6), 0 0 25px rgba(239, 68, 68, 0.25)',
+              textAlign: 'center',
+              animation: 'popupSlideUp 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.2)',
+            }}
+          >
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1.5px solid rgba(239, 68, 68, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px',
+                fontSize: '1.6rem',
+              }}
+            >
+              👋
+            </div>
+
+            <h3
+              style={{
+                color: '#f8fafc',
+                fontSize: '1.25rem',
+                fontWeight: 800,
+                marginBottom: '8px',
+                fontFamily: 'var(--font-serif)',
+              }}
+            >
+              Bạn muốn đăng xuất khỏi tài khoản?
+            </h3>
+
+            <p
+              style={{
+                color: '#cbd5e1',
+                fontSize: '0.88rem',
+                lineHeight: 1.6,
+                marginBottom: '22px',
+              }}
+            >
+              You Can't Stop Here sẽ luôn ở đây chờ bạn quay lại bất cứ khi nào bạn cần một nơi yên bình để nghỉ chân và trút bỏ những áp lực cuộc sống.
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setIsLogoutConfirmOpen(false)}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  borderRadius: '12px',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#e2e8f0',
+                  fontWeight: 700,
+                  fontSize: '0.86rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.16)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                }}
+              >
+                Ở lại cùng mọi người
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLogoutConfirmOpen(false);
+                  logout();
+                }}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontWeight: 800,
+                  fontSize: '0.86rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 6px 18px rgba(239, 68, 68, 0.55)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 14px rgba(239, 68, 68, 0.4)';
+                }}
+              >
+                Đăng xuất an toàn
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

@@ -86,6 +86,17 @@ export const MOOD_VOICE_PRESETS = [
 ];
 
 /**
+ * DANH SÁCH CÁC NGÔN NGỮ ĐỌC ĐA QUỐC GIA (VIỆT, ANH, TRUNG, NHẬT, HÀN)
+ */
+export const SUPPORTED_LANGUAGES = [
+  { id: 'vi', name: 'Tiếng Việt', flag: '🇻🇳', code: 'vi-VN', hasRegions: true, label: 'Tiếng Việt' },
+  { id: 'en', name: 'Tiếng Anh (English)', flag: '🇺🇸', code: 'en-US', hasRegions: false, label: 'English' },
+  { id: 'zh', name: 'Tiếng Trung (中文)', flag: '🇨🇳', code: 'zh-CN', hasRegions: false, label: '中文' },
+  { id: 'ja', name: 'Tiếng Nhật (日本語)', flag: '🇯🇵', code: 'ja-JP', hasRegions: false, label: '日本語' },
+  { id: 'ko', name: 'Tiếng Hàn (한국어)', flag: '🇰🇷', code: 'ko-KR', hasRegions: false, label: '한국어' },
+];
+
+/**
  * PHÂN LOẠI GIỚI TÍNH GIỌNG ĐỌC (MALE / FEMALE)
  */
 export const VIETNAMESE_VOICE_GENDERS = [
@@ -429,6 +440,7 @@ class AIVoicePlayer {
     this.isPlaying = false;
     this.isPaused = false;
     this.speed = 1.0;
+    this.lang = 'vi';
     this.activeMood = 'auto';
     this.gender = 'female';
     this.region = 'north';
@@ -497,6 +509,7 @@ class AIVoicePlayer {
 
   play({
     text,
+    lang = 'vi',
     moodId = 'auto',
     gender = 'female',
     region = 'north',
@@ -515,6 +528,7 @@ class AIVoicePlayer {
     this.chunks = splitTextIntoChunks(clean);
     this.currentChunkIndex = 0;
     this.speed = speed;
+    this.lang = lang || 'vi';
     this.activeMood = moodId;
     this.gender = gender || 'female';
     this.region = region || 'north';
@@ -589,20 +603,12 @@ class AIVoicePlayer {
       customProfile: this.customProfile,
     });
 
-    // Tìm giọng đọc tiếng Việt tương thích trên thiết bị
-    const nativeViVoice = getVietnameseVoice(this.gender, this.region, voiceParams.moodId);
-
-    if (nativeViVoice && this.synth) {
-      // Thiết bị đã có sẵn giọng tiếng Việt chất lượng -> Dùng Web Speech API
-      this._speakWithWebSpeech(chunkText, nativeViVoice, voiceParams);
-    } else {
-      // Thiết bị không có gói tiếng Việt cục bộ -> Dùng Google Natural Vietnamese Voice Stream
-      this._speakWithGoogleAudio(chunkText, voiceParams);
-    }
+    // Ưu tiên phát bằng Edge Neural Audio Stream (Hỗ trợ ngữ điệu vùng miền chuẩn & đa ngôn ngữ 100%)
+    this._speakWithGoogleAudio(chunkText, voiceParams);
   }
 
   /**
-   * Phát bằng Natural Vietnamese Audio Stream (Chuẩn giọng Việt 100%, không bị lơ lớ hay đọc tiếng Anh)
+   * Phát bằng Natural Audio Stream (Microsoft Edge Neural TTS chuẩn ngữ điệu đa ngôn ngữ & vùng miền)
    */
   _speakWithGoogleAudio(chunkText, voiceParams) {
     if (!this.audioElement) {
@@ -612,7 +618,7 @@ class AIVoicePlayer {
 
     try {
       const cleanEncoded = encodeURIComponent(chunkText.slice(0, 300));
-      const audioUrl = `/api/tts?text=${cleanEncoded}&gender=${this.gender || 'female'}`;
+      const audioUrl = `/api/tts?text=${cleanEncoded}&lang=${this.lang || 'vi'}&gender=${this.gender || 'female'}&region=${this.region || 'north'}&mood=${this.activeMood || 'auto'}`;
 
       this.audioElement.src = audioUrl;
       this.audioElement.playbackRate = voiceParams.rate;
@@ -625,7 +631,7 @@ class AIVoicePlayer {
       }
 
       this.audioElement.play().catch((err) => {
-        console.warn('Audio play fallback to speech:', err);
+        console.warn('Audio stream fallback to Web Speech:', err);
         this._speakWithWebSpeech(chunkText, null, voiceParams);
       });
     } catch (e) {
@@ -634,7 +640,7 @@ class AIVoicePlayer {
   }
 
   /**
-   * Phát bằng Web Speech API
+   * Phát bằng Web Speech API (Fallback khi ngoại tuyến)
    */
   _speakWithWebSpeech(chunkText, nativeVoice, voiceParams) {
     if (!this.synth) return;
@@ -643,24 +649,28 @@ class AIVoicePlayer {
     const textToSpeak = chunkText || this.chunks[this.currentChunkIndex];
     if (!textToSpeak) return;
 
-    // Kiểm tra xem máy người dùng có voice tiếng Việt thực thụ hay không
-    // Tuyệt đối không để trình duyệt dùng giọng mặc định tiếng Anh/Ấn Độ để đọc tiếng Việt
+    const langCodeMap = {
+      vi: 'vi-VN',
+      en: 'en-US',
+      zh: 'zh-CN',
+      ja: 'ja-JP',
+      ko: 'ko-KR',
+    };
+    const targetLangCode = langCodeMap[this.lang] || 'vi-VN';
+    const targetLangPrefix = this.lang || 'vi';
+
     const voices = this.synth.getVoices() || [];
-    const viVoice = nativeVoice || voices.find(v => {
+    const matchedVoice = nativeVoice || voices.find(v => {
       const l = (v.lang || '').toLowerCase().replace('_', '-');
       const n = (v.name || '').toLowerCase();
-      return l.startsWith('vi') || n.includes('vietnam') || n.includes('tiếng việt');
+      return l.startsWith(targetLangPrefix) || n.includes(targetLangPrefix);
     });
 
-    if (!viVoice) {
-      console.warn('[aiVoiceEngine] Không tìm thấy giọng tiếng Việt cài sẵn trong trình duyệt, bỏ qua WebSpeech để tránh phát âm sai giọng ngoại quốc.');
-      this._onChunkEnded();
-      return;
-    }
-
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.lang = 'vi-VN';
-    utterance.voice = viVoice;
+    utterance.lang = targetLangCode;
+    if (matchedVoice) {
+      utterance.voice = matchedVoice;
+    }
 
     if (voiceParams) {
       utterance.pitch = voiceParams.pitch;
@@ -669,7 +679,7 @@ class AIVoicePlayer {
 
     utterance.onend = () => this._onChunkEnded();
     utterance.onerror = (e) => {
-      console.warn('Speech error:', e);
+      console.warn('Web Speech error:', e);
       this._onChunkEnded();
     };
 
@@ -746,6 +756,16 @@ class AIVoicePlayer {
       } else {
         this._speakCurrentChunk();
       }
+    }
+  }
+
+  setLanguage(lang) {
+    if (this.lang === lang) return;
+    this.lang = lang;
+    if (this.isPlaying && !this.isPaused) {
+      if (this.audioElement) this.audioElement.pause();
+      if (this.synth) this.synth.cancel();
+      this._speakCurrentChunk();
     }
   }
 

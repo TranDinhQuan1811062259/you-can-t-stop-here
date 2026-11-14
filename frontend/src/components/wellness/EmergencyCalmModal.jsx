@@ -67,6 +67,7 @@ export const EmergencyCalmModal = ({ isOpen, onClose }) => {
   };
 
   const handleNextStep = () => {
+    if (!isStepDone) return;
     playSingingBowlSound();
     if (currentStepIdx < GROUNDING_STEPS.length - 1) {
       setCurrentStepIdx((prev) => prev + 1);
@@ -276,29 +277,46 @@ export const EmergencyCalmModal = ({ isOpen, onClose }) => {
               })}
             </div>
 
-            {/* Nút Chuyển Bước Tiếp Theo */}
+            {/* Nút Chuyển Bước Tiếp Theo (Rõ ràng trạng thái chưa đủ mục vs đã xong) */}
             <button
               type="button"
+              disabled={!isStepDone}
               onClick={handleNextStep}
               style={{
                 width: '100%',
-                padding: '13px 20px',
+                padding: '14px 20px',
                 borderRadius: '14px',
-                border: 'none',
+                border: isStepDone ? '1.5px solid #2dd4bf' : '1.5px dashed rgba(255, 255, 255, 0.25)',
                 background: isStepDone
                   ? 'linear-gradient(135deg, #0d9488, #10b981)'
-                  : 'rgba(255, 255, 255, 0.12)',
+                  : 'rgba(255, 255, 255, 0.08)',
                 color: isStepDone ? '#ffffff' : '#94a3b8',
                 fontSize: '0.94rem',
                 fontWeight: 800,
-                cursor: isStepDone ? 'pointer' : 'default',
-                boxShadow: isStepDone ? '0 6px 24px rgba(13, 148, 136, 0.5)' : 'none',
-                transition: 'all 0.2s ease',
+                cursor: isStepDone ? 'pointer' : 'not-allowed',
+                boxShadow: isStepDone ? '0 6px 25px rgba(13, 148, 136, 0.55)' : 'none',
+                opacity: isStepDone ? 1 : 0.7,
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
               }}
             >
-              {currentStepIdx < GROUNDING_STEPS.length - 1
-                ? `Tiếp Tục Bước ${currentStepIdx + 2} / 5 ➔`
-                : 'Hoàn Thành Bài Tập Định Tâm 🎉'}
+              {isStepDone ? (
+                currentStepIdx < GROUNDING_STEPS.length - 1 ? (
+                  <>
+                    <span>Tiếp Tục Bước {currentStepIdx + 2} / 5</span>
+                    <span>➔</span>
+                  </>
+                ) : (
+                  <span>✓ Hoàn Thành Tái Định Tâm 🎉</span>
+                )
+              ) : (
+                <span>
+                  👆 Vui lòng chọn đủ {stepRequiredCount - stepCheckedCount} mục còn lại để tiếp tục
+                </span>
+              )}
             </button>
           </>
         ) : (

@@ -13,7 +13,7 @@ export const PwaInstallPrompt = () => {
   const [isIOS, setIsIOS] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showFloatingPill, setShowFloatingPill] = useState(false);
+  const [showFloatingPill, setShowFloatingPill] = useState(true);
   const [installSuccess, setInstallSuccess] = useState(false);
   const [isMinimized, setIsMinimized] = useState(() => {
     try {
@@ -133,7 +133,8 @@ export const PwaInstallPrompt = () => {
 
     if (hasMovedRef.current) {
       setBtnPos((current) => {
-        const snapped = snapToNearestEdge('pwa', current);
+        const pwaW = pillRef.current ? Math.round(pillRef.current.getBoundingClientRect().width) : (isMinimized ? 140 : 380);
+        const snapped = snapToNearestEdge('pwa', current, pwaW);
         saveFabPos('pwa', snapped, true);
         return snapped;
       });
@@ -155,7 +156,8 @@ export const PwaInstallPrompt = () => {
       activePointerIdRef.current = null;
       if (hasMovedRef.current) {
         setBtnPos((current) => {
-          const snapped = snapToNearestEdge('pwa', current);
+          const pwaW = pillRef.current ? Math.round(pillRef.current.getBoundingClientRect().width) : (isMinimized ? 140 : 380);
+          const snapped = snapToNearestEdge('pwa', current, pwaW);
           saveFabPos('pwa', snapped, true);
           return snapped;
         });
@@ -257,14 +259,22 @@ export const PwaInstallPrompt = () => {
 
   const handleDismissPill = (e) => {
     e.stopPropagation();
-    setShowFloatingPill(false);
-    sessionStorage.setItem('freedom_pwa_dismissed', 'true');
+    // Thay vì ẩn vĩnh viễn, thu nhỏ lại dạng mini để người dùng luôn có nút cài đặt
+    setIsMinimized(true);
+    try {
+      localStorage.setItem('freedom_pwa_minimized', 'true');
+    } catch (_) {}
   };
 
   // Nếu đang chạy trong app standalone rồi thì không hiển thị banner
   if (isStandalone) {
     return null;
   }
+
+  const screenWidth = typeof document !== 'undefined' && document.documentElement.clientWidth
+    ? document.documentElement.clientWidth
+    : (typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const isRightSide = btnPos.x > screenWidth / 2;
 
   return (
     <>
@@ -314,33 +324,33 @@ export const PwaInstallPrompt = () => {
             onPointerCancel={handlePointerCancel}
             style={{
               position: 'fixed',
-              left: `${btnPos.x}px`,
+              left: isDragging ? `${btnPos.x}px` : (!isRightSide ? '24px' : 'auto'),
+              right: isDragging ? 'auto' : (isRightSide ? '32px' : 'auto'),
               top: `${btnPos.y}px`,
-              right: 'auto',
               bottom: 'auto',
               zIndex: isDragging ? 10000 : 9998,
               cursor: isDragging ? 'grabbing' : 'grab',
-              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(13, 148, 136, 0.92) 100%)',
-              border: '1.5px solid rgba(45, 212, 191, 0.65)',
+              background: 'rgba(23, 29, 38, 0.92)',
+              border: '1px solid rgba(255, 255, 255, 0.14)',
               boxShadow: isDragging
-                ? '0 16px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(13, 148, 136, 0.65)'
-                : '0 8px 24px rgba(0, 0, 0, 0.45), 0 0 16px rgba(13, 148, 136, 0.35)',
+                ? '0 16px 36px rgba(0, 0, 0, 0.5)'
+                : '0 8px 24px rgba(0, 0, 0, 0.28)',
               borderRadius: '999px',
-              padding: '6px 14px',
+              padding: '6px 12px',
               width: 'max-content',
-              minWidth: '172px',
-              height: '42px',
+              minWidth: '136px',
+              height: '38px',
               boxSizing: 'border-box',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              color: '#ffffff',
-              fontWeight: 800,
+              color: '#f8fafc',
+              fontWeight: 600,
               fontSize: '0.8rem',
               whiteSpace: 'nowrap',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
               userSelect: 'none',
               WebkitUserSelect: 'none',
               touchAction: 'none',
@@ -350,30 +360,15 @@ export const PwaInstallPrompt = () => {
             }}
             title="📲 Cài Đặt Freedom App (Bấm để mở rộng, hoặc giữ & kéo để di dời)"
           >
-            <span style={{ fontSize: '0.75rem', opacity: 0.6, cursor: 'grab', pointerEvents: 'none', userSelect: 'none', flexShrink: 0 }}>⠿</span>
+            <span style={{ fontSize: '0.75rem', opacity: 0.5, cursor: 'grab', pointerEvents: 'none', userSelect: 'none', flexShrink: 0 }}>⠿</span>
             <img
               src="/icons/icon-192.png"
               alt="App"
               draggable={false}
               onDragStart={(e) => e.preventDefault()}
-              style={{ width: '22px', height: '22px', borderRadius: '6px', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.3)', pointerEvents: 'none', WebkitUserDrag: 'none' }}
+              style={{ width: '20px', height: '20px', borderRadius: '5px', flexShrink: 0, pointerEvents: 'none', WebkitUserDrag: 'none' }}
             />
-            <span style={{ letterSpacing: '0.2px', whiteSpace: 'nowrap', pointerEvents: 'none', flexShrink: 0, fontSize: '0.82rem' }}>Cài App</span>
-            <span
-              style={{
-                fontSize: '0.62rem',
-                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                color: '#ffffff',
-                padding: '2px 6px',
-                borderRadius: '6px',
-                fontWeight: 800,
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none',
-                flexShrink: 0,
-              }}
-            >
-              FREE
-            </span>
+            <span style={{ letterSpacing: '0.2px', whiteSpace: 'nowrap', pointerEvents: 'none', flexShrink: 0, fontSize: '0.82rem', color: '#f8fafc' }}>Cài App</span>
             <button
               type="button"
               onClick={(e) => {
@@ -385,7 +380,7 @@ export const PwaInstallPrompt = () => {
                 border: 'none',
                 color: '#94a3b8',
                 cursor: 'pointer',
-                padding: '0 4px',
+                padding: '0 2px 0 4px',
                 fontSize: '0.75rem',
                 lineHeight: 1,
                 flexShrink: 0,
@@ -413,26 +408,26 @@ export const PwaInstallPrompt = () => {
             onPointerCancel={handlePointerCancel}
             style={{
               position: 'fixed',
-              left: `${btnPos.x}px`,
+              left: isDragging ? `${btnPos.x}px` : (!isRightSide ? '24px' : 'auto'),
+              right: isDragging ? 'auto' : (isRightSide ? '32px' : 'auto'),
               top: `${btnPos.y}px`,
-              right: 'auto',
               bottom: 'auto',
               zIndex: isDragging ? 10000 : 9998,
               cursor: isDragging ? 'grabbing' : 'grab',
               maxWidth: 'min(440px, calc(100vw - 32px))',
               width: 'max-content',
               boxSizing: 'border-box',
-              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(13, 148, 136, 0.88) 100%)',
-              border: '1.5px solid rgba(45, 212, 191, 0.45)',
+              background: 'rgba(23, 29, 38, 0.95)',
+              border: '1px solid rgba(255, 255, 255, 0.16)',
               borderRadius: '999px',
-              padding: '8px 12px 8px 10px',
+              padding: '8px 14px 8px 10px',
               boxShadow: isDragging
-                ? '0 24px 50px rgba(0, 0, 0, 0.75), 0 0 30px rgba(45, 212, 191, 0.65)'
-                : '0 16px 40px rgba(0, 0, 0, 0.55), 0 0 24px rgba(13, 148, 136, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.35)',
+                ? '0 20px 45px rgba(0, 0, 0, 0.6)'
+                : '0 12px 32px rgba(0, 0, 0, 0.35)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              gap: '10px',
+              gap: '12px',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
               transition: isDragging
@@ -465,16 +460,16 @@ export const PwaInstallPrompt = () => {
               ⠿
             </div>
 
-            {/* App Icon với vòng sáng ngọc bích */}
+            {/* App Icon */}
             <div
               style={{
                 position: 'relative',
-                width: '36px',
-                height: '36px',
-                borderRadius: '10px',
+                width: '34px',
+                height: '34px',
+                borderRadius: '9px',
                 overflow: 'hidden',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.35), 0 0 10px rgba(45, 212, 191, 0.4)',
-                border: '1.5px solid rgba(255, 255, 255, 0.4)',
+                boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
                 flexShrink: 0,
                 pointerEvents: 'none',
               }}
@@ -492,7 +487,7 @@ export const PwaInstallPrompt = () => {
             <div style={{ minWidth: 0, flex: '1 1 auto' }}>
               <div
                 style={{
-                  fontWeight: 800,
+                  fontWeight: 700,
                   fontSize: '0.86rem',
                   display: 'flex',
                   alignItems: 'center',
@@ -501,35 +496,20 @@ export const PwaInstallPrompt = () => {
                   lineHeight: 1.3,
                 }}
               >
-                <span style={{ color: '#ffffff', whiteSpace: 'nowrap', flexShrink: 0, fontWeight: 800 }}>
+                <span style={{ color: '#ffffff', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   Cài Freedom App
-                </span>
-                <span
-                  style={{
-                    fontSize: '0.62rem',
-                    background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
-                    color: '#ffffff',
-                    padding: '2px 6px',
-                    borderRadius: '999px',
-                    fontWeight: 800,
-                    letterSpacing: '0.5px',
-                    boxShadow: '0 2px 6px rgba(245, 158, 11, 0.45)',
-                    flexShrink: 0,
-                  }}
-                >
-                  MIỄN PHÍ
                 </span>
               </div>
               <div
                 style={{
                   fontSize: '0.72rem',
-                  color: '#99f6e4',
+                  color: '#94a3b8',
                   fontWeight: 500,
                   whiteSpace: 'nowrap',
                   marginTop: '1px',
                 }}
               >
-                ⚡ Tải nhanh • Dùng như app gốc
+                ⚡ Truy cập nhanh • Nhận thông báo mới
               </div>
             </div>
 

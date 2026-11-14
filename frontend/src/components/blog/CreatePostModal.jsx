@@ -947,10 +947,10 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
           <div className="form-group" style={{ marginTop: '14px', background: 'rgba(99, 102, 241, 0.05)', padding: '14px 16px', borderRadius: '10px', border: '1px solid rgba(99, 102, 241, 0.25)' }}>
             <label style={{ fontWeight: 700, color: '#4338ca', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', fontSize: '0.95rem' }}>
               <span>🎧</span>
-              <span>Cài đặt Giọng đọc A.I Tiếng Việt & Ngữ điệu vùng miền</span>
+              <span>Bản đọc truyền cảm & Giọng đọc tâm sự (Tiếng Việt)</span>
             </label>
             <p style={{ margin: '0 0 12px', fontSize: '0.8rem', color: '#64748b' }}>
-              Bạn có thể chọn giọng đọc Nam hoặc Nữ, ngữ điệu vùng miền (Bắc / Trung / Nam) và tâm trạng mặc định khi người đọc bấm nút "Nghe AI đọc".
+              Bạn có thể chọn giọng đọc Nam hoặc Nữ, ngữ điệu vùng miền (Bắc / Trung / Nam) và cảm xúc mặc định khi người nghe bấm nút "Nghe đọc".
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '10px' }}>
@@ -1056,12 +1056,12 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
                   color: '#1e1b4b',
                 }}
               >
-                <option value="auto">✨ Tự động theo tâm trạng (A.I tự phân tích cảm xúc từ ngữ)</option>
+                <option value="auto">✨ Tự động theo tâm trạng (Thấu hiểu cảm xúc câu chuyện)</option>
                 <option value="melancholic">🌧️ Trầm buồn, sâu lắng & vỗ về (Tâm sự đêm muộn, burnout, áp lực)</option>
                 <option value="uplifting">☀️ Vui tươi, tích cực & hứng khởi (Small wins, khởi sắc, truyền cảm hứng)</option>
                 <option value="child">🎈 Hồn nhiên, trong trẻo (Giọng đọc trẻ em đáng yêu)</option>
                 <option value="podcast">🎙️ Podcast truyền cảm (Chuẩn phát thanh viên Storyteller)</option>
-                <option value="custom_voice">🧬 Giọng A.I nhân bản chính chủ (Dùng giọng thu âm của bạn)</option>
+                <option value="custom_voice">🎙️ Giọng đọc cá nhân chính chủ (Dùng giọng thu âm của bạn)</option>
               </select>
             </div>
           </div>

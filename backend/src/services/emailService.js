@@ -8,8 +8,8 @@
  *    1. Link lấy Mật khẩu ứng dụng 16 ký tự: https://myaccount.google.com/apppasswords
  *    2. Điền Gmail và Mật khẩu 16 ký tự vào:
  */
-export const DIRECT_GMAIL_USER = '';     // Điền Gmail của bạn (VD: 'anthonyq012025@gmail.com')
-export const DIRECT_GMAIL_APP_PASS = ''; // Điền Mật khẩu ứng dụng 16 chữ cái (VD: 'abcd efgh ijkl mnop')
+export const DIRECT_GMAIL_USER = 'anthonyq012025@gmail.com';     // Gmail chính thức
+export const DIRECT_GMAIL_APP_PASS = 'ddiz rcxk dzgh xkkx';        // Mật khẩu ứng dụng 16 ký tự Google
 
 import nodemailer from 'nodemailer';
 

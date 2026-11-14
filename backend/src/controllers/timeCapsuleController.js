@@ -120,7 +120,7 @@ export const timeCapsuleController = {
   // Tạo chiếc hộp thời gian mới
   createCapsule: async (req, res) => {
     try {
-      const { title, content, unlockDate, mood, envelopeColor, musicTheme, creatorName, notifyEmail } = req.body;
+      const { title, content, unlockDate, mood, envelopeColor, paperType, stampType, waxColor, musicTheme, creatorName, notifyEmail } = req.body;
       const userId = req.user?._id;
       const guestId = req.headers['x-guest-id'] || req.body.guestId || `guest_${Date.now()}`;
 
@@ -141,6 +141,9 @@ export const timeCapsuleController = {
         unlockDate: unlockTime,
         mood: mood || 'hopeful',
         envelopeColor: envelopeColor || 'amber',
+        paperType: paperType || 'kraft',
+        stampType: stampType || 'dandelion',
+        waxColor: waxColor || 'royal_red',
         musicTheme: musicTheme || 'piano',
         creatorName: creatorName || req.user?.name || 'Tôi của quá khứ',
         creatorAvatar: req.user?.avatar || '/images/man.jpg',

@@ -12,8 +12,8 @@
  * và KHÔNG BAO GIỜ bị đè / che khuất nhau!
  */
 
-// Tự động reset và đồng bộ toạ độ lề phải chuẩn xác 24px với khoảng cách đều đặn 16px giữa các nút
-const FAB_ALIGN_VERSION = 'freedom_fab_aligned_v9';
+// Tự động reset và đồng bộ toạ độ lề phải chuẩn xác 32px với khoảng cách đều đặn 16px giữa các nút
+const FAB_ALIGN_VERSION = 'freedom_fab_aligned_v25';
 if (typeof window !== 'undefined') {
   try {
     if (localStorage.getItem(FAB_ALIGN_VERSION) !== 'true') {
@@ -31,14 +31,14 @@ export const FAB_SIZES = {
   chat: { width: 56, height: 56 },
   write: { width: 156, height: 44 },
   mascot: { width: 108, height: 86 },
-  pwa: { width: 160, height: 42 },
+  pwa: { width: 136, height: 40 }, // Chuẩn kích thước mini pill mặc định của thanh PWA
   pref: { width: 52, height: 52 },
   radio: { width: 310, height: 46 },
-  pet: { width: 72, height: 72 },
+  pet: { width: 104, height: 76 }, // 70px thú cưng + 6px gap + 28px nút bánh răng/xương + viền/đổ bóng
 };
 
 export const MARGIN_LEFT = 24;
-export const MARGIN_RIGHT = 24; // Đồng nhất lề phải đúng chuẩn 24px, không bao giờ cấn thanh cuộn
+export const MARGIN_RIGHT = 32; // Đồng nhất thụt lề phải an toàn 32px, chống cấn thanh cuộn và mép màn hình
 export const MARGIN_TOP = 20;
 export const MARGIN_BOTTOM = 24;
 export const FAB_GAP = 16; // Khoảng cách đều tăm tắp giữa các nút nổi (16px)
@@ -86,9 +86,13 @@ export const getMascotBox = () => {
 /**
  * Đảm bảo toạ độ luôn nằm gọn gàng bên trong khung nhìn trình duyệt (Viewport Bounds)
  */
-export const ensureInBounds = (type, pos) => {
+export const ensureInBounds = (type, pos, dynamicWidth = null) => {
   if (typeof window === 'undefined') return pos;
-  const size = FAB_SIZES[type] || { width: 58, height: 58 };
+  const baseSize = FAB_SIZES[type] || { width: 58, height: 58 };
+  const size = {
+    width: dynamicWidth || baseSize.width,
+    height: baseSize.height,
+  };
   const { width: vpWidth, height: vpHeight } = getViewport();
 
   const maxX = Math.max(MARGIN_LEFT, vpWidth - size.width - MARGIN_RIGHT);
@@ -261,17 +265,21 @@ export const saveFabPos = (type, pos, shouldNotify = false) => {
 };
 
 /**
- * TỰ ĐỘNG GIẢI QUYẾT VA CHẠM (ANTI-COLLISION REPULSION CHO CẢ 4 NÚT)
+ * TỰ ĐỘNG GIẢI QUYẾT VA CHẠM (ANTI-COLLISION REPULSION CHO CÁC NÚT)
  * - Khi các nút ở mép màn hình: BẮT BUỘC chỉ né dọc Y, TUYỆT ĐỐI KHÔNG né ngang X
- *   để các nút luôn luôn giữ nguyên hàng dọc thẳng tắp bám sát lề 20px!
+ *   để các nút luôn luôn giữ nguyên hàng dọc thẳng tắp bám sát lề!
  */
-export const resolveAntiCollision = (movingType, candidatePos, keepOnEdge = false) => {
+export const resolveAntiCollision = (movingType, candidatePos, keepOnEdge = false, dynamicWidth = null) => {
   const allTypes = ['chat', 'write', 'mascot', 'pwa', 'pref', 'radio', 'pet'];
   const otherTypes = allTypes.filter((t) => t !== movingType);
-  const movingSize = FAB_SIZES[movingType] || { width: 58, height: 58 };
+  const baseSize = FAB_SIZES[movingType] || { width: 58, height: 58 };
+  const movingSize = {
+    width: dynamicWidth || baseSize.width,
+    height: baseSize.height,
+  };
   const { width: vpWidth } = getViewport();
 
-  let resolved = ensureInBounds(movingType, candidatePos);
+  let resolved = ensureInBounds(movingType, candidatePos, movingSize.width);
 
   // Kiểm tra xem vị trí có đang thuộc phạm vi bám mép (trái hoặc phải)
   const isRightHalf = resolved.x >= vpWidth / 2;
@@ -279,7 +287,7 @@ export const resolveAntiCollision = (movingType, candidatePos, keepOnEdge = fals
   const isNearRightEdge = resolved.x >= vpWidth - movingSize.width - MARGIN_RIGHT - 80;
   const lockToEdge = keepOnEdge || isNearLeftEdge || isNearRightEdge || isRightHalf;
 
-  // Nếu đang ở mép: Khóa cứng X về đúng sát mép (20px)
+  // Nếu đang ở mép: Khóa cứng X về đúng sát mép
   if (lockToEdge) {
     if (!isRightHalf && isNearLeftEdge) {
       resolved.x = MARGIN_LEFT;
@@ -376,12 +384,16 @@ export const resolveAntiCollision = (movingType, candidatePos, keepOnEdge = fals
 
 /**
  * Hít vào mép màn hình thông minh (Snap to nearest screen edge)
- * Tự động hút dạt về mép trái (20px) hoặc mép phải (20px tương tự lề trái)
+ * Tự động hút dạt về mép trái hoặc mép phải an toàn
  * BẮT BUỘC giữ nguyên toạ độ trên mép (keepOnEdge = true)
  */
-export const snapToNearestEdge = (type, pos) => {
+export const snapToNearestEdge = (type, pos, dynamicWidth = null) => {
   if (typeof window === 'undefined') return pos;
-  const size = FAB_SIZES[type] || { width: 58, height: 58 };
+  const baseSize = FAB_SIZES[type] || { width: 58, height: 58 };
+  const size = {
+    width: dynamicWidth || baseSize.width,
+    height: baseSize.height,
+  };
   const { width: vpWidth } = getViewport();
   const midX = vpWidth / 2;
 
@@ -393,8 +405,8 @@ export const snapToNearestEdge = (type, pos) => {
       : Math.max(MARGIN_LEFT, vpWidth - size.width - MARGIN_RIGHT);
 
   // Đảm bảo toạ độ Y nằm trong phạm vi an toàn
-  const candidate = ensureInBounds(type, { x: snappedX, y: pos.y });
+  const candidate = ensureInBounds(type, { x: snappedX, y: pos.y }, size.width);
 
   // Kiểm tra chống va chạm sau khi hít vào mép - giữ nguyên trên mép cột X
-  return resolveAntiCollision(type, candidate, true);
+  return resolveAntiCollision(type, candidate, true, size.width);
 };

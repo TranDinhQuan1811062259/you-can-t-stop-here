@@ -98,6 +98,29 @@ export const DeskCompanionPet = () => {
   const hasMovedRef = useRef(false);
   const activePointerIdRef = useRef(null);
   const bubbleTimerRef = useRef(null);
+  const asideRef = useRef(null);
+
+  // Tự động kiểm tra và thụt lề nếu bị cấn vào mép phải màn hình
+  useEffect(() => {
+    const checkEdgeInset = () => {
+      const el = asideRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const clientW = document.documentElement.clientWidth || window.innerWidth;
+      const safeRight = clientW - 32; // Luôn giữ thụt lề an toàn ít nhất 32px
+      if (rect.right > safeRight) {
+        const excess = rect.right - safeRight;
+        setBtnPos((prev) => {
+          const next = { ...prev, x: Math.max(24, Math.round(prev.x - excess)) };
+          saveFabPos('pet', next, false);
+          return next;
+        });
+      }
+    };
+    checkEdgeInset();
+    const timer = setTimeout(checkEdgeInset, 200);
+    return () => clearTimeout(timer);
+  }, [isMinimized, showActionsMenu, petType]);
 
   // Giữ vị trí trong màn hình & Tự động hít mép khi thay đổi kích thước cửa sổ (Debounce)
   useEffect(() => {
@@ -206,7 +229,8 @@ export const DeskCompanionPet = () => {
     if (hasMovedRef.current) {
       setBtnPos((current) => {
         // Tự động khép góc dạt về mép gần nhất (khóa cột mép X, né dọc Y nếu chạm)
-        const snapped = snapToNearestEdge('pet', current);
+        const petW = asideRef.current ? Math.round(asideRef.current.getBoundingClientRect().width) : 114;
+        const snapped = snapToNearestEdge('pet', current, petW);
         saveFabPos('pet', snapped, true);
         return snapped;
       });
@@ -354,16 +378,20 @@ export const DeskCompanionPet = () => {
 
   const currentConfig = PET_CONFIG[petType] || PET_CONFIG.cat;
   const currentFood = currentConfig.foods[currentFoodIndex % currentConfig.foods.length];
-  const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+  const screenWidth = typeof document !== 'undefined' && document.documentElement.clientWidth
+    ? document.documentElement.clientWidth
+    : (typeof window !== 'undefined' ? window.innerWidth : 1200);
   const isRightSide = btnPos.x > screenWidth / 2;
   const isTopSide = btnPos.y < 230;
 
   return (
     <aside
+      ref={asideRef}
       className={`desk-companion-pet-root ${isDragging ? 'is-dragging' : ''} ${isRightSide ? 'docked-right' : 'docked-left'}`}
       style={{
         position: 'fixed',
-        left: `${btnPos.x}px`,
+        left: isDragging ? `${btnPos.x}px` : (!isRightSide ? '24px' : 'auto'),
+        right: isDragging ? 'auto' : (isRightSide ? '32px' : 'auto'),
         top: `${btnPos.y}px`,
         zIndex: isDragging ? 10001 : 9996,
         userSelect: 'none',
@@ -382,15 +410,17 @@ export const DeskCompanionPet = () => {
       aria-label="Bé thú cưng bàn làm việc"
     >
       {/* ========================================================
-          1. BONG BÓNG LỜI THOẠI 3D GLASSMORPHISM (TỰ HƯỚNG THEO GÓC)
+          1. BONG BÓNG LỜI THOẠI 3D GLASSMORPHISM (TỰ HƯỚNG RA KHOẢNG TRỐNG TRÁI/PHẢI)
          ======================================================== */}
       {showSpeechBubble && (
         <div
           className={`pet-speech-bubble-3d ${isRightSide ? 'bubble-dock-right' : 'bubble-dock-left'} ${isTopSide ? 'bubble-dock-top' : 'bubble-dock-bottom'}`}
           style={{
             position: 'absolute',
-            [isTopSide ? 'top' : 'bottom']: isMinimized ? '58px' : '78px',
-            [isRightSide ? 'right' : 'left']: '0',
+            [isRightSide ? 'right' : 'left']: 'calc(100% + 14px)',
+            [isRightSide ? 'left' : 'right']: 'auto',
+            top: isTopSide ? '0' : 'auto',
+            bottom: isTopSide ? 'auto' : '0',
             width: '270px',
             maxWidth: 'calc(100vw - 36px)',
             background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.94) 0%, rgba(30, 41, 59, 0.92) 100%)',
@@ -452,13 +482,13 @@ export const DeskCompanionPet = () => {
           <div
             style={{
               position: 'absolute',
-              [isTopSide ? 'top' : 'bottom']: '-8px',
-              [isRightSide ? 'right' : 'left']: isMinimized ? '20px' : '28px',
+              [isRightSide ? 'right' : 'left']: '-8px',
+              top: '20px',
               width: 0,
               height: 0,
-              borderLeft: '8px solid transparent',
-              borderRight: '8px solid transparent',
-              [isTopSide ? 'borderBottom' : 'borderTop']: `8px solid ${currentConfig.accentColor}`,
+              borderTop: '7px solid transparent',
+              borderBottom: '7px solid transparent',
+              [isRightSide ? 'borderLeft' : 'borderRight']: `8px solid ${currentConfig.accentColor}`,
               filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.3))',
             }}
           />
@@ -473,8 +503,10 @@ export const DeskCompanionPet = () => {
           className="pet-actions-menu-3d"
           style={{
             position: 'absolute',
-            [isTopSide ? 'top' : 'bottom']: '78px',
-            [isRightSide ? 'right' : 'left']: '0',
+            [isRightSide ? 'right' : 'left']: 'calc(100% + 14px)',
+            [isRightSide ? 'left' : 'right']: 'auto',
+            top: isTopSide ? '0' : 'auto',
+            bottom: isTopSide ? 'auto' : '0',
             background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.94) 100%)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',

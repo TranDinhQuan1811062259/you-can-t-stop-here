@@ -345,7 +345,7 @@ export const FloatingAiAudioPlayer = () => {
                       {playbackState === 'playing' ? (
                         <>
                           <span className="audio-live-dot" />
-                          <span>ĐANG ĐỌC A.I</span>
+                          <span>ĐANG ĐỌC TRUYỀN CẢM</span>
                         </>
                       ) : (
                         <span>TẠM DỪNG</span>
@@ -369,7 +369,7 @@ export const FloatingAiAudioPlayer = () => {
                 <div className="floating-audio-sub-marquee">
                   <span className="subtitle-quote-icon">“</span>
                   <span className="subtitle-text">
-                    {currentSentence || 'A.I đang chuẩn bị giọng đọc truyền cảm cho câu chuyện này...'}
+                    {currentSentence || 'Đang chuẩn bị bản đọc truyền cảm cho câu chuyện này...'}
                   </span>
                   <span className="subtitle-quote-icon">”</span>
                 </div>
@@ -405,7 +405,7 @@ export const FloatingAiAudioPlayer = () => {
                     value={selectedMood}
                     onChange={handleMoodSelect}
                     className="floating-mood-select"
-                    title="Chọn phong cách / ngữ điệu giọng đọc A.I"
+                    title="Chọn phong cách / ngữ điệu giọng đọc tâm sự"
                   >
                     {MOOD_VOICE_PRESETS.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -440,7 +440,7 @@ export const FloatingAiAudioPlayer = () => {
                   type="button"
                   className="floating-voice-clone-btn"
                   onClick={() => setIsCloningOpen(true)}
-                  title="Thu âm giọng của bạn để A.I nhân bản đọc câu chuyện"
+                  title="Thu âm giọng của bạn để đọc câu chuyện"
                 >
                   <i className="fa-solid fa-microphone"></i>
                 </button>

@@ -40,6 +40,18 @@ const timeCapsuleSchema = new mongoose.Schema(
       type: String,
       default: 'amber', // 'amber' | 'emerald' | 'indigo' | 'rose' | 'slate'
     },
+    paperType: {
+      type: String,
+      default: 'kraft', // 'kraft' | 'parchment' | 'grid'
+    },
+    stampType: {
+      type: String,
+      default: 'dandelion', // 'dandelion' | 'coffee' | 'maple' | 'train'
+    },
+    waxColor: {
+      type: String,
+      default: 'royal_red', // 'royal_red' | 'antique_gold' | 'forest_emerald' | 'midnight_navy'
+    },
     musicTheme: {
       type: String,
       default: 'piano', // 'piano' | 'acoustic' | 'lofi' | 'silence'

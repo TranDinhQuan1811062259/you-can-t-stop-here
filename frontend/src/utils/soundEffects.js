@@ -1790,6 +1790,71 @@ export const playCatPurrSound = () => {
 };
 
 /**
+ * Tiếng Mèo Rung Rừ Rừ Duy Trì (Continuous Feline Purr Ambient Engine)
+ * Rung động tần số thấp 24Hz-46Hz liên tục, tạo cảm giác thư giãn, điều hòa nhịp tim và giảm căng thẳng
+ */
+export const createCatPurrAmbientNode = (volume = 0.5) => {
+  const ctx = getAudioContext();
+  if (!ctx) return null;
+
+  try {
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const lfo = ctx.createOscillator();
+    const lfoGain = ctx.createGain();
+    const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(46, now);
+
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(24, now); // 24Hz purr rhythm
+    lfoGain.gain.setValueAtTime(20, now);
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc.frequency);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(160, now);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(volume * 0.45, now + 0.3);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    lfo.start(now);
+    osc.start(now);
+
+    return {
+      setVolume: (v) => {
+        try {
+          gain.gain.linearRampToValueAtTime(v * 0.45, ctx.currentTime + 0.1);
+        } catch (_) {}
+      },
+      stop: () => {
+        try {
+          gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+          setTimeout(() => {
+            try {
+              lfo.stop();
+              osc.stop();
+              lfo.disconnect();
+              osc.disconnect();
+              gain.disconnect();
+            } catch (_) {}
+          }, 200);
+        } catch (_) {}
+      },
+    };
+  } catch (_) {
+    return null;
+  }
+};
+
+/**
  * Tiếng cún Shiba sủa "Gâu! Gâu!" mừng rỡ và rộn rã (Canine Dual-Bark Synthesis)
  * Sử dụng Formant filter + Pitch drop + Noise crackle mô phỏng tiếng sủa vang của cún cưng
  */

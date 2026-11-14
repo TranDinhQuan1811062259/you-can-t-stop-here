@@ -223,6 +223,136 @@ export const HomePage = () => {
                 </div>
               )}
             </div>
+
+            {/* Phím Tắt Khám Phá: Lò Đốt Muộn Phiền (Rant & Burn) */}
+            <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('freedom_open_rant_and_burn'))}
+                className="hero-rant-burn-pill"
+                title="Đang bực tức, ức chế hoặc quá tải vì công việc? Bấm vào đây để xả giận và thiêu rụi thành tro bụi!"
+              >
+                <span className="rant-pill-flame-wrap">
+                  <span className="rant-pill-flame" aria-hidden="true">🔥</span>
+                </span>
+                <span className="rant-pill-text-wrap">
+                  <span className="rant-pill-text">
+                    Đang ức chế &amp; quá tải? Ghé <strong className="rant-pill-highlight">Lò Đốt Muộn Phiền</strong> để thiêu rụi
+                  </span>
+                  <span className="rant-pill-arrow" aria-hidden="true">→</span>
+                </span>
+                <span className="rant-pill-badge">MỚI</span>
+              </button>
+
+              {/* Dải 4 Lối Khám Phá Nhanh: 4 Ý Tưởng Mới Ra Mắt */}
+              <div
+                className="hero-new-features-strip"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  marginTop: '4px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('freedom_open_drift_bottle'))}
+                  className="hero-quick-feat-pill"
+                  title="Mở Chiếc Máy Đánh Chữ Nửa Đêm & Thả Thư Trôi Sông"
+                  style={{
+                    background: 'rgba(56, 189, 248, 0.1)',
+                    border: '1px solid rgba(56, 189, 248, 0.35)',
+                    color: '#0284c7',
+                    padding: '5px 12px',
+                    borderRadius: '999px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <span>🌊</span>
+                  <span>Chai Thư Nửa Đêm</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('freedom_open_mood_radar'))}
+                  className="hero-quick-feat-pill"
+                  title="Mở Radar Đo Nhịp Cảm Xúc Công Sở Thời Gian Thực"
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.1)',
+                    border: '1px solid rgba(16, 185, 129, 0.35)',
+                    color: '#059669',
+                    padding: '5px 12px',
+                    borderRadius: '999px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <span>📡</span>
+                  <span>Radar Công Sở</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('freedom_open_whisper_wall'))}
+                  className="hero-quick-feat-pill"
+                  title="Mở Bức Tường Thì Thầm 10 Giây & Gửi Cái Ôm Âm Thanh"
+                  style={{
+                    background: 'rgba(236, 72, 153, 0.1)',
+                    border: '1px solid rgba(236, 72, 153, 0.35)',
+                    color: '#db2777',
+                    padding: '5px 12px',
+                    borderRadius: '999px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <span>🎙️</span>
+                  <span>Thì Thầm 10s</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('freedom_open_time_capsule'))}
+                  className="hero-quick-feat-pill"
+                  title="Mở Tiệm Hộp Thời Gian & Đóng Dấu Sáp Niêm Phong"
+                  style={{
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid rgba(245, 158, 11, 0.35)',
+                    color: '#d97706',
+                    padding: '5px 12px',
+                    borderRadius: '999px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <span>📜</span>
+                  <span>Tiệm Thư Sáp Niêm Phong</span>
+                </button>
+              </div>
+            </div>
           </div>
         </section>
       )}

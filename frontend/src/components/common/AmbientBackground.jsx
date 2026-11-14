@@ -81,9 +81,10 @@ export const AmbientBackground = ({ profileLayout }) => {
     return Array.from({ length: totalCount }).map((_, idx) => {
       const char = particlePool[idx % particlePool.length];
       const left = Math.floor(Math.random() * 94) + 3; // 3% -> 97%
-      const baseDuration = isBalloons ? 9 + (idx % 5) * 2.5 : 12 + (idx % 7) * 3;
-      const duration = isBursting ? Math.max(5, baseDuration * 0.6) : baseDuration;
-      const delay = -((idx * 1.8) % 12);
+      // Giảm tốc độ rơi của hạt sự kiện và 4 mùa: Chậm rãi, thư thái & êm mắt hơn
+      const baseDuration = isBalloons ? 18 + (idx % 5) * 4 : 24 + (idx % 7) * 5;
+      const duration = isBursting ? Math.max(10, baseDuration * 0.7) : baseDuration;
+      const delay = -((idx * 2.5) % 20);
       const size = isBalloons ? 20 + (idx % 4) * 6 : 14 + (idx % 5) * 4;
       const opacity = 0.5 + (idx % 5) * 0.11;
 

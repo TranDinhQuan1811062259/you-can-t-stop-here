@@ -83,7 +83,7 @@ export const VoiceCloningModal = ({ isOpen, onClose, onVoiceSaved }) => {
             f0: 175,
             timbre: 'Tự nhiên & truyền cảm',
             duration: recordDuration,
-            name: 'Giọng đọc A.I chính chủ',
+            name: 'Giọng đọc cá nhân chính chủ',
             analyzedAt: new Date().toISOString(),
           });
           setStep('completed');
@@ -124,7 +124,7 @@ export const VoiceCloningModal = ({ isOpen, onClose, onVoiceSaved }) => {
     }
 
     setIsTestingSpeech(true);
-    const testText = 'Xin chào, tôi là mô hình A.I đã học xong giọng nói của bạn. Giờ đây tôi có thể đọc bất kỳ bài viết tâm sự nào bằng chính chất giọng này!';
+    const testText = 'Xin chào, đây là bản thử giọng đọc của bạn. Giờ đây bạn có thể lắng nghe các bài viết tâm sự bằng chính chất giọng ấm áp này!';
 
     aiVoicePlayer.play({
       text: testText,
@@ -146,7 +146,7 @@ export const VoiceCloningModal = ({ isOpen, onClose, onVoiceSaved }) => {
     try {
       const voiceData = {
         enabled: true,
-        voiceName: clonedProfile.name || 'Giọng đọc A.I chính chủ',
+        voiceName: clonedProfile.name || 'Giọng đọc cá nhân chính chủ',
         sampleAudioUrl: audioUrl || '',
         pitch: clonedProfile.pitch,
         rate: clonedProfile.rate,
@@ -206,10 +206,10 @@ export const VoiceCloningModal = ({ isOpen, onClose, onVoiceSaved }) => {
             🎙️
           </div>
           <h3 style={{ margin: '0 0 6px', fontSize: '1.25rem', color: 'var(--text-color, #0f172a)' }}>
-            Phòng Thu Âm Nhân Bản Giọng Nói A.I
+            Phòng Thu Âm Giọng Đọc Cá Nhân
           </h3>
           <p style={{ margin: 0, fontSize: '0.84rem', color: '#64748b', lineHeight: 1.5 }}>
-            Chỉ cần đọc một đoạn ngắn 5-10 giây, A.I sẽ phân tích âm sắc & cao độ để tự động đọc mọi bài viết bằng chính giọng của bạn!
+            Chỉ cần đọc một đoạn ngắn 5-10 giây, hệ thống sẽ lưu âm sắc & cao độ để bạn có thể lắng nghe các bài viết tâm sự bằng chính giọng đọc của mình!
           </p>
         </div>
 
@@ -290,20 +290,20 @@ export const VoiceCloningModal = ({ isOpen, onClose, onVoiceSaved }) => {
         )}
 
         {/* ========================================================
-            BƯỚC 2: A.I ĐANG PHÂN TÍCH ÂM VỰC & CAO ĐỘ
+            BƯỚC 2: ĐANG PHÂN TÍCH ÂM VỰC & ĐỘ ẤM ÁP
            ======================================================== */}
         {step === 'analyzing' && (
           <div style={{ textAlign: 'center', padding: '30px 0' }}>
             <div className="voice-dna-spinner" style={{ fontSize: '2.5rem', marginBottom: '16px', animation: 'spin 1.5s linear infinite' }}>
-              🧬
+              🎙️
             </div>
             <h4 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#0f172a' }}>
-              A.I Đang Trích Xuất & Phân Tích Giọng Nói...
+              Đang Trích Xuất & Cân Chỉnh Giọng Đọc...
             </h4>
             <div style={{ fontSize: '0.82rem', color: '#6366f1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <span>• Đang đo tần số âm cơ bản (F0 Autocorrelation)...</span>
+              <span>• Đang đo tần số âm cơ bản (Pitch & Timbre)...</span>
               <span>• Đang phân tích âm sắc, nhịp điệu và độ ấm áp...</span>
-              <span>• Đang hiệu chỉnh mô hình giọng đọc A.I cá nhân hóa...</span>
+              <span>• Đang lưu trữ cấu hình giọng đọc cá nhân hóa...</span>
             </div>
           </div>
         )}
@@ -324,10 +324,10 @@ export const VoiceCloningModal = ({ isOpen, onClose, onVoiceSaved }) => {
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <span style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}>
-                  📊 Kết quả phân tích âm học A.I:
+                  📊 Kết quả phân tích âm sắc giọng đọc:
                 </span>
                 <span style={{ fontSize: '0.72rem', background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '999px', fontWeight: 600 }}>
-                  ✓ Đã học xong
+                  ✓ Đã ghi nhận
                 </span>
               </div>
 
@@ -381,7 +381,7 @@ export const VoiceCloningModal = ({ isOpen, onClose, onVoiceSaved }) => {
                   transition: 'all 0.2s',
                 }}
               >
-                <span>{isTestingSpeech ? '⏹ Dừng thử' : '🔊 Nghe A.I đọc thử bằng giọng này'}</span>
+                <span>{isTestingSpeech ? '⏹ Dừng thử' : '🔊 Nghe thử giọng đọc này'}</span>
               </button>
 
               <button
@@ -414,17 +414,17 @@ export const VoiceCloningModal = ({ isOpen, onClose, onVoiceSaved }) => {
               style={{
                 width: '100%',
                 padding: '12px',
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                background: 'var(--primary-color, #0d9488)',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '10px',
                 fontWeight: 700,
                 fontSize: '0.96rem',
                 cursor: isSaving ? 'not-allowed' : 'pointer',
-                boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
+                boxShadow: '0 4px 14px rgba(13, 148, 136, 0.25)',
               }}
             >
-              {isSaving ? 'Đang lưu...' : '✓ Lưu & Dùng Giọng A.I Này Cho Bài Viết'}
+              {isSaving ? 'Đang lưu...' : '✓ Lưu & Áp Dụng Giọng Đọc Này'}
             </button>
           </div>
         )}

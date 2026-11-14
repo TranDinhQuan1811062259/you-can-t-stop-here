@@ -860,10 +860,10 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
                 <div>
                   <strong style={{ fontSize: '0.9rem', color: '#4338ca', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span>🎙️</span>
-                    <span>Hồ Sơ Giọng Đọc A.I Nhân Bản (Voice Cloning)</span>
+                    <span>Phòng Thu Âm Giọng Đọc Cá Nhân</span>
                   </strong>
                   <span style={{ fontSize: '0.78rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
-                    Thu âm mẫu giọng để A.I đọc các bài viết tâm sự bằng chính chất giọng của bạn.
+                    Thu âm mẫu giọng để bài viết tâm sự được cất lên bằng chính chất giọng ấm áp của bạn.
                   </span>
                 </div>
                 <button
@@ -873,7 +873,7 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
                   style={{ padding: '8px 16px', fontSize: '0.84rem' }}
                 >
                   <span>🎙️</span>
-                  <span>Mở Phòng Thu Âm A.I</span>
+                  <span>Mở Phòng Thu Âm</span>
                 </button>
               </div>
 

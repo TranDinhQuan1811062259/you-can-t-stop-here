@@ -592,127 +592,138 @@ export const PostDetailPage = () => {
                   </div>
                 </div>
 
-                <div
-                  className="post-stats-pill"
-                  style={{
-                    background: isCustomBg ? 'rgba(0, 0, 0, 0.32)' : undefined,
-                    border: isCustomBg ? '1px solid rgba(255, 255, 255, 0.28)' : undefined,
-                    backdropFilter: isCustomBg ? 'blur(8px)' : undefined,
-                  }}
-                >
-                  <span
-                    className="post-stat-item"
+                {/* Cụm Thống Kê & Nút Hành Động Bên Phải (Tự động xuống dòng gọn gàng, chống tràn lề) */}
+                <div className="post-author-right-wrap">
+                  {/* Viên thuốc hiển thị Ngày & Lượt đọc */}
+                  <div
+                    className="post-stats-pill"
                     style={{
-                      color: isCustomBg ? '#ffffff' : undefined,
-                      fontWeight: isCustomBg ? 700 : undefined,
-                      textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
+                      background: isCustomBg ? 'rgba(0, 0, 0, 0.35)' : undefined,
+                      border: isCustomBg ? '1px solid rgba(255, 255, 255, 0.28)' : undefined,
+                      backdropFilter: isCustomBg ? 'blur(8px)' : undefined,
                     }}
                   >
-                    <span>🗓️</span>
-                    <span>{formatDate(post.createdAt)}</span>
-                  </span>
-                  <span
-                    className="post-stat-item"
-                    style={{
-                      color: isCustomBg ? '#ffffff' : undefined,
-                      fontWeight: isCustomBg ? 700 : undefined,
-                      textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
-                    }}
-                  >
-                    <span>👁️</span>
-                    <span>{post.views || 1} lượt đọc</span>
-                  </span>
-
-                  {/* Nút Chia sẻ Đa Năng */}
-                  <button
-                    type="button"
-                    className="post-share-trigger-btn"
-                    onClick={() => setIsShareOpen(true)}
-                    title="Chia sẻ bài viết lên trang cá nhân hoặc mạng xã hội"
-                    style={{
-                      background: isCustomBg ? 'rgba(255, 255, 255, 0.22)' : 'rgba(13, 148, 136, 0.15)',
-                      border: isCustomBg ? '1.5px solid rgba(255, 255, 255, 0.45)' : '1px solid #0d9488',
-                      color: isCustomBg ? '#ffffff' : '#0d9488',
-                      padding: '5px 12px',
-                      borderRadius: '6px',
-                      fontWeight: 800,
-                      fontSize: '0.8rem',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0,
-                      textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
-                      backdropFilter: isCustomBg ? 'blur(6px)' : undefined,
-                    }}
-                  >
-                    💌 Chia sẻ
-                  </button>
-
-                  {/* Nút Sửa bài viết CHỈ hiển thị cho chính chủ tác giả */}
-                  {canEdit && (
-                    <button
-                      type="button"
-                      className="edit-post-trigger-btn"
-                      onClick={() => setIsEditModalOpen(true)}
-                      title="Chỉnh sửa bài viết này (Dành riêng cho tác giả)"
-                    >
-                      ✏️ Sửa bài viết
-                    </button>
-                  )}
-
-                  {/* Nút Kiểm duyệt dành cho Admin (dời từ Header vào thẳng bài viết) */}
-                  {user?.role === 'admin' && (
-                    <button
-                      type="button"
-                      className="admin-moderation-pill-btn"
-                      onClick={() => setIsModerationOpen(true)}
-                      title="Mở Bảng kiểm duyệt an toàn nội dung cộng đồng (Admin)"
+                    <span
+                      className="post-stat-item"
                       style={{
-                        background: 'rgba(59, 130, 246, 0.15)',
-                        border: '1px solid #3b82f6',
-                        color: '#60a5fa',
+                        color: isCustomBg ? '#ffffff' : undefined,
+                        fontWeight: isCustomBg ? 700 : undefined,
+                        textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
+                      }}
+                    >
+                      <span>🗓️</span>
+                      <span>{formatDate(post.createdAt)}</span>
+                    </span>
+                    <span
+                      className="post-stat-item"
+                      style={{
+                        color: isCustomBg ? '#ffffff' : undefined,
+                        fontWeight: isCustomBg ? 700 : undefined,
+                        textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
+                      }}
+                    >
+                      <span>👁️</span>
+                      <span>{post.views || 1} lượt đọc</span>
+                    </span>
+                  </div>
+
+                  {/* Nhóm Các Nút Hành Động: Chia Sẻ, Sửa Bài, Kiểm Duyệt, Xóa Bài */}
+                  <div className="post-action-buttons-group">
+                    {/* Nút Chia sẻ Đa Năng */}
+                    <button
+                      type="button"
+                      className="post-share-trigger-btn"
+                      onClick={() => setIsShareOpen(true)}
+                      title="Chia sẻ bài viết lên trang cá nhân hoặc mạng xã hội"
+                      style={{
+                        background: isCustomBg ? 'rgba(255, 255, 255, 0.22)' : 'rgba(13, 148, 136, 0.15)',
+                        border: isCustomBg ? '1.5px solid rgba(255, 255, 255, 0.45)' : '1px solid #0d9488',
+                        color: isCustomBg ? '#ffffff' : '#0d9488',
                         padding: '5px 12px',
                         borderRadius: '6px',
-                        fontWeight: 700,
+                        fontWeight: 800,
                         fontSize: '0.8rem',
                         cursor: 'pointer',
-                        transition: 'all 0.2s',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '5px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
+                        backdropFilter: isCustomBg ? 'blur(6px)' : undefined,
                       }}
                     >
-                      <span>🛡️ Kiểm duyệt</span>
+                      💌 Chia sẻ
                     </button>
-                  )}
 
-                  {/* Nút Xóa Ngang Dành Cho Admin (Ngay cả khi bài không bị gắn cờ) */}
-                  {user?.role === 'admin' && !post.isFlagged && (
-                    <button
-                      type="button"
-                      disabled={adminDeleting}
-                      onClick={handleAdminDelete}
-                      style={{
-                        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                        color: '#ffffff',
-                        border: 'none',
-                        padding: '5px 12px',
-                        borderRadius: '6px',
-                        fontWeight: 700,
-                        fontSize: '0.8rem',
-                        cursor: 'pointer',
-                        boxShadow: '0 2px 6px rgba(220, 38, 38, 0.25)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                      }}
-                      title="Quyền Admin: Xóa ngang bài viết khỏi toàn hệ thống"
-                    >
-                      {adminDeleting ? 'Đang xóa...' : '🚨 Xóa ngang (Admin)'}
-                    </button>
-                  )}
+                    {/* Nút Sửa bài viết CHỈ hiển thị cho chính chủ tác giả */}
+                    {canEdit && (
+                      <button
+                        type="button"
+                        className="edit-post-trigger-btn"
+                        onClick={() => setIsEditModalOpen(true)}
+                        title="Chỉnh sửa bài viết này (Dành riêng cho tác giả)"
+                      >
+                        ✏️ Sửa bài viết
+                      </button>
+                    )}
+
+                    {/* Nút Kiểm duyệt dành cho Admin */}
+                    {user?.role === 'admin' && (
+                      <button
+                        type="button"
+                        className="admin-moderation-pill-btn"
+                        onClick={() => setIsModerationOpen(true)}
+                        title="Mở Bảng kiểm duyệt an toàn nội dung cộng đồng (Admin)"
+                        style={{
+                          background: 'rgba(59, 130, 246, 0.18)',
+                          border: '1px solid #3b82f6',
+                          color: '#60a5fa',
+                          padding: '5px 12px',
+                          borderRadius: '6px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <span>🛡️ Kiểm duyệt</span>
+                      </button>
+                    )}
+
+                    {/* Nút Xóa Ngang Dành Cho Admin (Ngăn chặn tràn khung viền) */}
+                    {user?.role === 'admin' && !post.isFlagged && (
+                      <button
+                        type="button"
+                        disabled={adminDeleting}
+                        onClick={handleAdminDelete}
+                        style={{
+                          background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                          color: '#ffffff',
+                          border: 'none',
+                          padding: '5px 12px',
+                          borderRadius: '6px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 6px rgba(220, 38, 38, 0.25)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                        }}
+                        title="Quyền Admin: Xóa ngang bài viết khỏi toàn hệ thống"
+                      >
+                        {adminDeleting ? 'Đang xóa...' : '🚨 Xóa ngang (Admin)'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
