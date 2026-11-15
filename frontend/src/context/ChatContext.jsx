@@ -85,13 +85,19 @@ export const ChatProvider = ({ children }) => {
     }
 
     try {
-      const res = await chatService.findOrCreateConversation(targetUser._id);
-      if (res.data) {
+      const targetId = targetUser?._id || targetUser?.id || (typeof targetUser === 'string' ? targetUser : null);
+      if (!targetId) {
+        console.warn('Thiếu targetId khi mở chat:', targetUser);
+        return;
+      }
+      const res = await chatService.findOrCreateConversation(targetId);
+      if (res?.data) {
         setActiveConversation(res.data);
         setIsWidgetOpen(true); // Tự động mở cửa sổ mini chat
       }
     } catch (err) {
       console.warn('Lỗi mở cuộc trò chuyện:', err);
+      alert(err.message || 'Không thể mở cuộc trò chuyện lúc này. Vui lòng thử lại!');
     }
   };
 

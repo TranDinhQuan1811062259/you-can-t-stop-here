@@ -3,6 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 import { storyService } from '../../services/storyService';
 import { playClickSound } from '../../utils/soundEffects';
 
+const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
+
 export const StoryBar = ({ onOpenCreateStory, onOpenViewStory }) => {
   const { user, isAuthenticated, openLoginModal } = useAuth();
   const [stories, setStories] = useState([]);
@@ -82,11 +84,11 @@ export const StoryBar = ({ onOpenCreateStory, onOpenViewStory }) => {
         >
           <img
             src={
-              user?.avatar && !user?.avatar.includes('google_avatar')
+              user?.avatar && !user?.avatar.includes('google_avatar') && !user?.avatar.includes('man.jpg')
                 ? user.avatar
                 : (user?.role === 'admin'
                     ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg'
-                    : '/images/man.jpg')
+                    : DEFAULT_EMPTY_AVATAR)
             }
             alt="Tạo Story"
             style={{
@@ -172,7 +174,7 @@ export const StoryBar = ({ onOpenCreateStory, onOpenViewStory }) => {
               }}
             >
               <img
-                src={story.userAvatar || '/images/man.jpg'}
+                src={(story.userAvatar && !story.userAvatar.includes('man.jpg')) ? story.userAvatar : DEFAULT_EMPTY_AVATAR}
                 alt={story.userName}
                 style={{
                   width: '100%',

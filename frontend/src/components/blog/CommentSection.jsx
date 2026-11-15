@@ -8,6 +8,13 @@ import { LoadingSpinner } from '../common/LoadingSpinner';
 import { maskSensitiveText } from '../../utils/sensitiveFilter';
 import { AsmrKeyboardToggle } from '../common/AsmrKeyboardToggle';
 
+const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
+
+const getSafeAvatar = (av) => {
+  if (av && !av.includes('/images/man.jpg') && !av.includes('google_avatar')) return av;
+  return DEFAULT_EMPTY_AVATAR;
+};
+
 const CHEER_TYPES = [
   { id: 'encourage', label: '💪 Cố lên nhé' },
   { id: 'hug', label: '🫂 Gửi cái ôm' },
@@ -318,7 +325,7 @@ export const CommentSection = ({
 
           <div className="comment-input-wrap">
             <img
-              src={user?.avatar || '/images/man.jpg'}
+              src={getSafeAvatar(user?.avatar)}
               alt={user?.name}
               className="comment-author-avatar"
             />
@@ -454,7 +461,7 @@ export const CommentSection = ({
                     title={`Xem trang cá nhân của ${c.user?.name || 'người dùng'}`}
                   >
                     <img
-                      src={c.user?.avatar || '/images/man.jpg'}
+                      src={getSafeAvatar(c.user?.avatar)}
                       alt={c.user?.name}
                       className="comment-avatar"
                     />
@@ -584,7 +591,7 @@ export const CommentSection = ({
                       return (
                         <div key={reply._id} className="comment-reply-item">
                           <img
-                            src={reply.user?.avatar || '/images/man.jpg'}
+                            src={getSafeAvatar(reply.user?.avatar)}
                             alt={reply.user?.name}
                             className="reply-avatar"
                           />

@@ -41,7 +41,7 @@ export const protect = async (req, res, next) => {
           email: decoded.email || (isAdm ? 'anthonyq012025@gmail.com' : ''),
           role: isAdm ? 'admin' : (decoded.role || 'user'),
           jobTitle: decoded.jobTitle || (isAdm ? 'System Admin & Lead Dev' : 'Người đi làm'),
-          avatar: isAdm ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : '/images/man.jpg',
+          avatar: isAdm ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : (decoded.avatar || ''),
         };
       }
 

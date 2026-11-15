@@ -3,19 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
 
 export const getEffectiveAvatar = () => {
-  try {
-    const raw = localStorage.getItem('freedom_persisted_profile');
-    if (raw) {
-      const p = JSON.parse(raw);
-      if (p.avatar && !p.avatar.includes('/images/man.jpg') && !p.avatar.includes('google_avatar')) return p.avatar;
-    }
-    const userRaw = localStorage.getItem('user');
-    if (userRaw) {
-      const u = JSON.parse(userRaw);
-      if (u.avatar && !u.avatar.includes('/images/man.jpg') && !u.avatar.includes('google_avatar')) return u.avatar;
-    }
-  } catch (e) {}
-  return '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
+  return '';
 };
 
 export const getEffectiveCover = () => {
@@ -168,7 +156,7 @@ export const AuthModal = () => {
       filtered.unshift({
         name: name || clean.split('@')[0],
         email: clean,
-        avatar: avatar || getEffectiveAvatar(),
+        avatar: avatar || '',
       });
       localStorage.setItem('saved_google_accounts', JSON.stringify(filtered.slice(0, 5)));
       window.dispatchEvent(new Event('saved_accounts_updated'));
@@ -188,7 +176,7 @@ export const AuthModal = () => {
       brandColor: provider.brandColor,
       name: defaultName,
       email: defaultEmail,
-      avatar: getEffectiveAvatar(),
+      avatar: '',
       jobTitle: registerForm.jobTitle.trim() || provider.defaultJobTitle || 'Thành viên cộng đồng',
       bio: `Tài khoản kết nối qua ${provider.name}.`,
       socialUrl: '',
@@ -483,7 +471,7 @@ export const AuthModal = () => {
       providerId: `${providerId}_${Date.now()}`,
       name: userName,
       email: userEmail,
-      avatar: getEffectiveAvatar(),
+      avatar: '',
       coverImage: getEffectiveCover(),
       jobTitle: targetProvider.defaultJobTitle || 'Thành viên cộng đồng',
       bio: `Tài khoản kết nối qua ${targetProvider.name}.`,
@@ -638,6 +626,9 @@ export const AuthModal = () => {
           const res = await authService.sendOtp({
             email: cleanEmail,
             identifier: cleanEmail,
+            name: regData.name,
+            password: regData.password,
+            jobTitle: regData.jobTitle,
             purpose: 'register',
           });
           const previewUrl = res?.data?.data?.previewUrl || null;
@@ -673,23 +664,42 @@ export const AuthModal = () => {
     try {
       if (pendingRegisterData) {
         // Hoàn tất ĐĂNG KÝ tài khoản nội bộ sau khi xác thực Email
-        try {
-          await authService.verifyOtp({
-            email: pendingRegisterData.email,
-            identifier: pendingRegisterData.email,
-            otpCode: cleanOtp,
-          });
-        } catch (otpErr) {
-          console.warn('Backend verifyOtp warning:', otpErr);
-        }
+        let finalRegisteredUser = null;
 
         if (pendingRegisterData.provider === 'google') {
           await socialLogin({ ...pendingRegisterData, otpCode: cleanOtp });
         } else {
-          await register(pendingRegisterData);
+          const res = await authService.verifyOtp({
+            email: pendingRegisterData.email,
+            identifier: pendingRegisterData.email,
+            otpCode: cleanOtp,
+            name: pendingRegisterData.name,
+            password: pendingRegisterData.password,
+            jobTitle: pendingRegisterData.jobTitle,
+            purpose: 'register',
+          });
+
+          const rawData = res?.data?.data || res?.data || {};
+          const receivedToken = rawData.token || `token_${Date.now()}_freedom`;
+          const { token: _t, ...extractedUser } = rawData;
+          finalRegisteredUser = {
+            ...extractedUser,
+            name: pendingRegisterData.name, // Đảm bảo giữ đúng Họ tên người dùng đã đặt 100%
+            email: pendingRegisterData.email,
+            role: 'user',
+            avatar: '', // Avatar ban đầu trống để người dùng tự cài đặt
+            jobTitle: pendingRegisterData.jobTitle || 'Thành viên cộng đồng',
+          };
+
+          if (typeof setToken === 'function') setToken(receivedToken);
+          if (typeof setUser === 'function') setUser(finalRegisteredUser);
+          localStorage.setItem('token', receivedToken);
+          localStorage.setItem('freedom_token', receivedToken);
+          localStorage.setItem('user', JSON.stringify(finalRegisteredUser));
+          localStorage.setItem('freedom_persisted_profile', JSON.stringify(finalRegisteredUser));
         }
 
-        saveGoogleAccountLocally(pendingRegisterData.email, pendingRegisterData.name, pendingRegisterData.avatar);
+        saveGoogleAccountLocally(pendingRegisterData.email, pendingRegisterData.name, '');
 
         setSuccessMsg('✓ Đã xác thực thành công! Hoàn tất tạo tài khoản.');
         setEmailOtpStep(false);
@@ -698,6 +708,9 @@ export const AuthModal = () => {
         setTimeout(() => {
           closeAuthModal();
           window.dispatchEvent(new Event('profile_updated'));
+          if (finalRegisteredUser) {
+            window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: finalRegisteredUser }));
+          }
         }, 500);
       } else {
         // Đăng nhập nội bộ bằng mã OTP (Email hoặc SMS Số điện thoại)

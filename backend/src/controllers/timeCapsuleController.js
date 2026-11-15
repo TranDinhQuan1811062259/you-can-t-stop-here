@@ -15,7 +15,7 @@ const DEFAULT_CAPSULES = [
     content:
       'Chào bạn! Khi bạn đọc được những dòng này, có thể những khó khăn của ngày hôm nay đã ở lại phía sau. Dù kết quả có thế nào, hãy nhớ rằng bạn đã luôn nỗ lực hết mình. Đừng quên mỉm cười và tự thưởng cho mình một tách trà ấm nhé! 🌿✨',
     creatorName: 'Tôi của ngày hôm qua',
-    creatorAvatar: '/images/man.jpg',
+    creatorAvatar: '',
     mood: 'hopeful',
     envelopeColor: 'amber',
     musicTheme: 'piano',
@@ -146,7 +146,7 @@ export const timeCapsuleController = {
         waxColor: waxColor || 'royal_red',
         musicTheme: musicTheme || 'piano',
         creatorName: creatorName || req.user?.name || 'Tôi của quá khứ',
-        creatorAvatar: req.user?.avatar || '/images/man.jpg',
+        creatorAvatar: req.user?.avatar || '',
         user: userId || null,
         guestId: guestId,
         isOpened: false,

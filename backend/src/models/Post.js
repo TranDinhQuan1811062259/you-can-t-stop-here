@@ -51,7 +51,7 @@ const postSchema = new mongoose.Schema(
     },
     authorAvatar: {
       type: String,
-      default: '/images/man.jpg',
+      default: '',
     },
     authorSocialLinks: {
       facebook: { type: String, default: '', trim: true },
@@ -81,7 +81,7 @@ const postSchema = new mongoose.Schema(
         },
         userAvatar: {
           type: String,
-          default: '/images/man.jpg',
+          default: '',
         },
         types: [
           {
@@ -130,7 +130,7 @@ const postSchema = new mongoose.Schema(
         },
         userAvatar: {
           type: String,
-          default: '/images/man.jpg',
+          default: '',
         },
         repostedAt: {
           type: Date,

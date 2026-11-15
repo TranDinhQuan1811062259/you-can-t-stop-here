@@ -10,7 +10,7 @@ const DEFAULT_WELCOME_CAPSULE = {
   content:
     'Chào bạn! Khi bạn mở được bức thư này, có thể những áp lực của ngày hôm nay đã ở lại phía sau. Dù kết quả thế nào, bạn đã luôn kiên cường và nỗ lực hết mình. Đừng quên mỉm cười và thưởng cho mình một tách trà ấm nhé! 🌿✨',
   creatorName: 'Tôi của ngày hôm qua',
-  creatorAvatar: '/images/man.jpg',
+  creatorAvatar: '',
   mood: 'hopeful',
   envelopeColor: 'amber',
   musicTheme: 'piano',

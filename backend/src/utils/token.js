@@ -91,11 +91,27 @@ export const verifyToken = async (token) => {
     }
   }
 
-  // 3. Fallback: Phiên đăng nhập Offline / Mock Token (token_...)
-  if (typeof token === 'string' && (token.startsWith('token_') || token.includes('freedom') || token.includes('admin'))) {
+  // 3. Fallback: Tra cứu trong persistent store nếu token được lưu vào hồ sơ người dùng
+  try {
+    const { loadStore } = await import('./persistentStore.js');
+    const store = loadStore();
+    const matchedUser = (store.users || []).find((u) => u.token === token);
+    if (matchedUser) {
+      return {
+        id: (matchedUser._id || matchedUser.id).toString(),
+        name: matchedUser.name,
+        email: matchedUser.email,
+        role: matchedUser.role || 'user',
+        jobTitle: matchedUser.jobTitle || 'Thành viên cộng đồng',
+      };
+    }
+  } catch (_) {}
+
+  // 4. Fallback đặc biệt CHỈ DÀNH RIÊNG cho token mock có chứa tiền tố admin rõ ràng
+  if (typeof token === 'string' && (token.startsWith('token_admin_') || token === 'admin_secret_token')) {
     return {
       id: '6aec5b46ee112662b33c0e32',
-      name: 'Anthony Quân (Trần Đình Quân)',
+      name: 'Đơn Thân Mẹ',
       email: 'anthonyq012025@gmail.com',
       role: 'admin',
       jobTitle: 'System Admin & Lead Dev',

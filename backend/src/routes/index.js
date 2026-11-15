@@ -11,6 +11,7 @@ import eventRoutes from './eventRoutes.js';
 import storyRoutes from './storyRoutes.js';
 import timeCapsuleRoutes from './timeCapsuleRoutes.js';
 import ttsRoutes from './ttsRoutes.js';
+import notificationRoutes from './notificationRoutes.js';
 
 const router = express.Router();
 
@@ -20,6 +21,7 @@ router.use('/categories', categoryRoutes);
 router.use('/comments', commentRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/chat', chatRoutes);
+router.use('/notifications', notificationRoutes);
 router.use('/newsletter', newsletterRoutes);
 router.use('/music', musicRoutes);
 router.use('/events', eventRoutes);

@@ -775,10 +775,14 @@ export const getFestiveSoundType = (eventOrId) => {
     return 'christmas_bells';
   }
 
-  // 3. Ngày Phụ Nữ: 8/3, 20/10 - Đàn hạc & chuông gió lãng mạn
+  // 3. Ngày Phụ Nữ (8/3, 20/10) & Lễ Tình Nhân 14/2 (Valentine): Đàn hạc & chuông gió lãng mạn
   if (
     id === 'quoc_te_phu_nu_8_3' ||
     id === 'phu_nu_viet_nam_20_10' ||
+    id === 'le_tinh_nhan_14_2' ||
+    name.includes('valentine') ||
+    name.includes('14/2') ||
+    name.includes('tình nhân') ||
     name.includes('8/3') ||
     name.includes('20/10') ||
     name.includes('phụ nữ') ||

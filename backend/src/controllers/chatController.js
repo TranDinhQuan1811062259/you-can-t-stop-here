@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
@@ -5,130 +6,167 @@ import { checkDbReady } from '../config/db.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { loadStore, saveStore } from '../utils/persistentStore.js';
 import { maskSensitiveText } from '../utils/sensitiveFilter.js';
+import { createNotification } from '../services/notificationService.js';
+
+/**
+ * Helper: Tìm thông tin người dùng từ persistent store hoặc MongoDB Atlas
+ */
+export const findUserAnywhere = async (userId) => {
+  if (!userId) return null;
+  const idStr = (userId._id || userId.id || userId).toString().trim();
+  const store = loadStore();
+
+  // 1. Tìm trong store.users theo _id, id, email hoặc họ tên
+  let found = (store.users || []).find(
+    (u) =>
+      (u._id && u._id.toString() === idStr) ||
+      (u.id && u.id.toString() === idStr) ||
+      (u.email && u.email.toLowerCase() === idStr.toLowerCase()) ||
+      (u.name && u.name.trim().toLowerCase() === idStr.toLowerCase())
+  );
+
+  // 2. Tìm trong MongoDB nếu là ObjectId hợp lệ và DB đã sẵn sàng
+  if (!found && checkDbReady() && mongoose.isValidObjectId(idStr)) {
+    try {
+      const dbUser = await User.findById(idStr).lean();
+      if (dbUser) {
+        found = {
+          _id: dbUser._id.toString(),
+          id: dbUser._id.toString(),
+          name: dbUser.name,
+          email: dbUser.email,
+          avatar: dbUser.avatar || '',
+          jobTitle: dbUser.jobTitle || 'Thành viên',
+          role: dbUser.role || 'user',
+          friends: (dbUser.friends || []).map((f) => f.toString()),
+          chatStatus: dbUser.chatStatus || 'online',
+          lastActiveAt: dbUser.lastActiveAt,
+          bio: dbUser.bio || '',
+        };
+      }
+    } catch (_) {}
+  }
+
+  // 3. Chuẩn hóa dữ liệu trả về
+  if (found) {
+    return {
+      _id: (found._id || found.id || idStr).toString(),
+      id: (found._id || found.id || idStr).toString(),
+      name: found.name || 'Người dùng',
+      email: found.email || '',
+      avatar: found.avatar || '',
+      jobTitle: found.jobTitle || 'Thành viên',
+      role: found.role || 'user',
+      friends: Array.isArray(found.friends) ? found.friends.map((f) => f.toString()) : [],
+      chatStatus: found.chatStatus || 'online',
+      lastActiveAt: found.lastActiveAt || new Date().toISOString(),
+      bio: found.bio || '',
+    };
+  }
+
+  return null;
+};
+
+/**
+ * Helper: Kiểm tra 2 người dùng có phải là bạn bè hay không
+ */
+export const checkAreFriends = (userA, userB) => {
+  if (!userA || !userB) return false;
+  const idA = (userA._id || userA.id || '').toString();
+  const idB = (userB._id || userB.id || '').toString();
+  const friendsA = Array.isArray(userA.friends) ? userA.friends.map((f) => f.toString()) : [];
+  const friendsB = Array.isArray(userB.friends) ? userB.friends.map((f) => f.toString()) : [];
+  return friendsA.includes(idB) || friendsB.includes(idA);
+};
 
 /**
  * Lấy danh sách các cuộc trò chuyện của người dùng hiện tại
  * Hỗ trợ sắp xếp:
- * - 'recent' (Mặc định): Cuộc trò chuyện có tin nhắn cuối cùng mới nhất sẽ hiện lên đầu
+ * - 'recent' (Mặc định): Cuộc trò chuyện có tin nhắn cuối cùng mới nhất lên đầu
  * - 'alphabet': Theo bảng chữ cái A-Z tên người trò chuyện
- * - 'frequency': Theo mức độ nhắn tin (tổng số tin nhắn nhiều nhất lên đầu)
+ * - 'frequency': Theo tần suất nhắn tin (tổng số tin nhắn nhiều nhất lên đầu)
  */
 export const getConversations = async (req, res) => {
   try {
-    const currentUserId = req.user._id;
+    const currentUserId = (req.user._id || req.user.id).toString();
     const { sortBy = 'recent', q } = req.query;
 
-    if (checkDbReady()) {
-      let conversations = await Conversation.find({
-        participants: currentUserId,
-      })
-        .populate('participants', 'name avatar jobTitle role email friends chatStatus lastActiveAt')
-        .populate('lastMessage.sender', 'name avatar')
-        .sort({ updatedAt: -1 })
-        .lean();
+    const currentUser = (await findUserAnywhere(currentUserId)) || req.user;
+    const store = loadStore();
+    const allConvs = store.conversations || [];
 
-      // Xử lý dữ liệu định dạng trả về cho Frontend
-      let formatted = conversations.map((c) => {
-        const otherUser = c.participants.find(
-          (p) => p._id.toString() !== currentUserId.toString()
-        ) || c.participants[0] || {};
+    // Lọc các cuộc hội thoại mà người dùng hiện tại tham gia
+    let userConvs = allConvs.filter(
+      (c) => Array.isArray(c.participants) && c.participants.map((p) => p.toString()).includes(currentUserId)
+    );
 
-        const isFriend = Array.isArray(req.user.friends)
-          ? req.user.friends.some((f) => f.toString() === otherUser._id?.toString())
-          : false;
+    // Bổ sung các cuộc hội thoại từ MongoDB nếu kết nối khả dụng
+    if (checkDbReady() && mongoose.isValidObjectId(currentUserId)) {
+      try {
+        const dbConvs = await Conversation.find({ participants: currentUserId }).lean();
+        for (const dbc of dbConvs) {
+          const dbId = dbc._id.toString();
+          const existing = userConvs.find((c) => c._id === dbId);
+          if (!existing) {
+            userConvs.push({
+              _id: dbId,
+              participants: (dbc.participants || []).map((p) => p.toString()),
+              status: dbc.status || 'accepted',
+              isStranger: Boolean(dbc.isStranger),
+              requestedBy: dbc.requestedBy?.toString(),
+              totalMessagesCount: dbc.totalMessagesCount || 0,
+              unreadCounts: dbc.unreadCounts || {},
+              lastMessage: dbc.lastMessage || null,
+              createdAt: dbc.createdAt || new Date().toISOString(),
+              updatedAt: dbc.updatedAt || dbc.createdAt || new Date().toISOString(),
+            });
+          }
+        }
+      } catch (dbErr) {
+        console.warn('MongoDB getConversations warning:', dbErr.message);
+      }
+    }
+
+    // Định dạng đầy đủ thông tin người trò chuyện cùng
+    let formatted = await Promise.all(
+      userConvs.map(async (c) => {
+        const participantsStr = (c.participants || []).map((p) => (p._id || p.id || p).toString());
+        const otherId = participantsStr.find((p) => p !== currentUserId) || participantsStr[0] || 'stranger';
+        const otherUserObj = (await findUserAnywhere(otherId)) || {
+          _id: otherId,
+          name: 'Người dùng',
+          avatar: '',
+          jobTitle: 'Thành viên',
+          role: 'user',
+          chatStatus: 'online',
+        };
+
+        const isFriend = checkAreFriends(currentUser, otherUserObj);
 
         return {
           _id: c._id,
           otherUser: {
-            _id: otherUser._id,
-            name: otherUser.name || 'Người dùng',
-            avatar: otherUser.avatar || '/images/man.jpg',
-            jobTitle: otherUser.jobTitle || 'Thành viên',
-            role: otherUser.role || 'user',
-            chatStatus: otherUser.chatStatus || 'online',
-            lastActiveAt: otherUser.lastActiveAt,
+            _id: otherUserObj._id,
+            name: otherUserObj.name || 'Người dùng',
+            avatar: otherUserObj.avatar || '',
+            jobTitle: otherUserObj.jobTitle || 'Thành viên',
+            role: otherUserObj.role || 'user',
+            chatStatus: otherUserObj.chatStatus || 'online',
+            lastActiveAt: otherUserObj.lastActiveAt,
             isFriend,
           },
           lastMessage: c.lastMessage || null,
           totalMessagesCount: c.totalMessagesCount || 0,
           status: c.status || 'accepted',
-          isStranger: Boolean(c.isStranger),
+          isStranger: isFriend ? false : Boolean(c.isStranger),
           requestedBy: c.requestedBy,
-          unreadCount: (c.unreadCounts && c.unreadCounts[currentUserId.toString()]) || 0,
-          updatedAt: c.updatedAt || c.createdAt,
+          unreadCount: (c.unreadCounts && c.unreadCounts[currentUserId]) || 0,
+          updatedAt: c.updatedAt || c.createdAt || new Date().toISOString(),
         };
-      });
-
-      // Lọc theo từ khóa tìm kiếm nếu có
-      if (q && q.trim()) {
-        const lowerQ = q.trim().toLowerCase();
-        formatted = formatted.filter((c) =>
-          c.otherUser.name.toLowerCase().includes(lowerQ)
-        );
-      }
-
-      // Áp dụng các tiêu chí sắp xếp theo yêu cầu
-      if (sortBy === 'alphabet') {
-        formatted.sort((a, b) =>
-          a.otherUser.name.localeCompare(b.otherUser.name, 'vi')
-        );
-      } else if (sortBy === 'frequency') {
-        formatted.sort((a, b) => (b.totalMessagesCount || 0) - (a.totalMessagesCount || 0));
-      } else {
-        // Mặc định: Gần nhất (Ai nhắn cuối cùng thì hiện lên trước)
-        formatted.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-      }
-
-      return sendSuccess(res, {
-        message: 'Lấy danh sách tin nhắn thành công',
-        data: formatted,
-      });
-    }
-
-    // Fallback persistentStore
-    const store = loadStore();
-    const allConvs = store.conversations || [];
-    const userConvs = allConvs.filter((c) =>
-      Array.isArray(c.participants) && c.participants.includes(currentUserId.toString())
+      })
     );
 
-    const currentUser = (store.users || []).find((u) => u._id === currentUserId.toString()) || req.user;
-    const currentUserFriends = Array.isArray(currentUser?.friends) ? currentUser.friends : [];
-
-    let formatted = userConvs.map((c) => {
-      const otherId = c.participants.find((p) => p.toString() !== currentUserId.toString()) || c.participants[0];
-      const otherUserObj = (store.users || []).find((u) => u._id === otherId?.toString()) || {
-        _id: otherId,
-        name: 'Người dùng',
-        avatar: '/images/man.jpg',
-        jobTitle: 'Thành viên',
-        chatStatus: 'online',
-      };
-
-      const isFriend = currentUserFriends.some((f) => f.toString() === otherId?.toString());
-
-      return {
-        _id: c._id,
-        otherUser: {
-          _id: otherUserObj._id,
-          name: otherUserObj.name || 'Người dùng',
-          avatar: otherUserObj.avatar || '/images/man.jpg',
-          jobTitle: otherUserObj.jobTitle || 'Thành viên',
-          role: otherUserObj.role || 'user',
-          chatStatus: otherUserObj.chatStatus || 'online',
-          lastActiveAt: otherUserObj.lastActiveAt,
-          isFriend,
-        },
-        lastMessage: c.lastMessage || null,
-        totalMessagesCount: c.totalMessagesCount || 0,
-        status: c.status || 'accepted',
-        isStranger: Boolean(c.isStranger),
-        requestedBy: c.requestedBy,
-        unreadCount: (c.unreadCounts && c.unreadCounts[currentUserId.toString()]) || 0,
-        updatedAt: c.updatedAt || c.createdAt,
-      };
-    });
-
+    // Lọc theo từ khóa tìm kiếm
     if (q && q.trim()) {
       const lowerQ = q.trim().toLowerCase();
       formatted = formatted.filter((c) =>
@@ -136,6 +174,7 @@ export const getConversations = async (req, res) => {
       );
     }
 
+    // Sắp xếp
     if (sortBy === 'alphabet') {
       formatted.sort((a, b) => a.otherUser.name.localeCompare(b.otherUser.name, 'vi'));
     } else if (sortBy === 'frequency') {
@@ -145,7 +184,7 @@ export const getConversations = async (req, res) => {
     }
 
     return sendSuccess(res, {
-      message: 'Lấy danh sách tin nhắn thành công (Persistent Store)',
+      message: 'Lấy danh sách tin nhắn thành công',
       data: formatted,
     });
   } catch (error) {
@@ -154,82 +193,108 @@ export const getConversations = async (req, res) => {
 };
 
 /**
- * Tìm hoặc tạo cuộc trò chuyện với một người dùng (Bấm từ comment hoặc profile)
+ * Khởi tạo hoặc tìm cuộc trò chuyện với một người dùng (Bấm từ profile hoặc comment)
  */
 export const findOrCreateConversation = async (req, res) => {
   try {
-    const currentUserId = req.user._id;
+    const currentUserId = (req.user._id || req.user.id).toString();
     const { targetUserId } = req.body;
 
-    if (!targetUserId || targetUserId.toString() === currentUserId.toString()) {
+    if (!targetUserId || targetUserId.toString() === currentUserId) {
       return sendError(res, { message: 'ID người nhận không hợp lệ', status: 400 });
     }
 
-    if (checkDbReady()) {
-      const currentUser = await User.findById(currentUserId);
-      const targetUser = await User.findById(targetUserId).select(
-        'name avatar jobTitle role email friends chatStatus lastActiveAt'
-      );
+    const targetUserIdStr = targetUserId.toString();
+    const currentUser = (await findUserAnywhere(currentUserId)) || req.user;
+    const targetUser = await findUserAnywhere(targetUserIdStr);
 
-      if (!targetUser) {
-        return sendError(res, { message: 'Không tìm thấy người dùng này', status: 404 });
-      }
-
-      // Kiểm tra cuộc trò chuyện đã tồn tại giữa 2 người chưa
-      let conv = await Conversation.findOne({
-        participants: { $all: [currentUserId, targetUserId] },
-      }).populate('participants', 'name avatar jobTitle role email chatStatus lastActiveAt');
-
-      const isFriend = Array.isArray(currentUser.friends) &&
-        currentUser.friends.some((f) => f.toString() === targetUserId.toString());
-
-      if (!conv) {
-        conv = await Conversation.create({
-          participants: [currentUserId, targetUserId],
-          status: isFriend ? 'accepted' : 'pending',
-          isStranger: !isFriend,
-          requestedBy: currentUserId,
-          totalMessagesCount: 0,
-        });
-
-        conv = await Conversation.findById(conv._id).populate(
-          'participants',
-          'name avatar jobTitle role email chatStatus lastActiveAt'
-        );
-      }
-
-      const formatted = {
-        _id: conv._id,
-        otherUser: {
-          _id: targetUser._id,
-          name: targetUser.name,
-          avatar: targetUser.avatar,
-          jobTitle: targetUser.jobTitle,
-          role: targetUser.role,
-          chatStatus: targetUser.chatStatus || 'online',
-          lastActiveAt: targetUser.lastActiveAt,
-          isFriend,
-        },
-        lastMessage: conv.lastMessage || null,
-        totalMessagesCount: conv.totalMessagesCount || 0,
-        status: conv.status,
-        isStranger: conv.isStranger,
-        requestedBy: conv.requestedBy,
-        updatedAt: conv.updatedAt,
-      };
-
-      return sendSuccess(res, {
-        message: 'Lấy cuộc trò chuyện thành công',
-        data: formatted,
-      });
+    if (!targetUser) {
+      return sendError(res, { message: 'Không tìm thấy người dùng này', status: 404 });
     }
 
-    return sendSuccess(res, {
-      data: {
-        _id: `conv_${currentUserId}_${targetUserId}`,
-        otherUser: { _id: targetUserId, name: 'Người dùng', avatar: '/images/man.jpg' },
-        status: 'accepted',
+    const isFriend = checkAreFriends(currentUser, targetUser);
+    const store = loadStore();
+    store.conversations = store.conversations || [];
+
+    // Tìm trong store trước
+    let storeConv = store.conversations.find((c) =>
+      Array.isArray(c.participants) &&
+      c.participants.map((p) => p.toString()).includes(currentUserId) &&
+      c.participants.map((p) => p.toString()).includes(targetUserIdStr)
+    );
+
+    let dbConv = null;
+    // Nếu cả 2 đều là ObjectId và DB sẵn sàng, tìm/tạo trên MongoDB
+    if (checkDbReady() && mongoose.isValidObjectId(currentUserId) && mongoose.isValidObjectId(targetUserIdStr)) {
+      try {
+        dbConv = await Conversation.findOne({
+          participants: { $all: [currentUserId, targetUserIdStr] },
+        }).lean();
+
+        if (!dbConv) {
+          dbConv = await Conversation.create({
+            participants: [currentUserId, targetUserIdStr],
+            status: isFriend ? 'accepted' : 'pending',
+            isStranger: !isFriend,
+            requestedBy: currentUserId,
+            totalMessagesCount: 0,
+          });
+        }
+      } catch (dbErr) {
+        console.warn('MongoDB findOrCreateConversation warning:', dbErr.message);
+      }
+    }
+
+    const convId = dbConv ? dbConv._id.toString() : (storeConv ? storeConv._id : `conv_${currentUserId}_${targetUserIdStr}`);
+
+    if (!storeConv) {
+      storeConv = {
+        _id: convId,
+        participants: [currentUserId, targetUserIdStr],
+        status: isFriend ? 'accepted' : 'pending',
+        isStranger: !isFriend,
+        requestedBy: currentUserId,
+        totalMessagesCount: 0,
+        unreadCounts: {},
+        lastMessage: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      store.conversations.unshift(storeConv);
+      saveStore(store);
+    } else {
+      storeConv.participants = [currentUserId, targetUserIdStr];
+      if (isFriend) {
+        storeConv.status = 'accepted';
+        storeConv.isStranger = false;
+      }
+      saveStore(store);
+    }
+
+    const formatted = {
+      _id: storeConv._id,
+      otherUser: {
+        _id: targetUser._id,
+        name: targetUser.name,
+        avatar: targetUser.avatar || '',
+        jobTitle: targetUser.jobTitle || 'Thành viên',
+        role: targetUser.role || 'user',
+        chatStatus: targetUser.chatStatus || 'online',
+        lastActiveAt: targetUser.lastActiveAt,
+        isFriend,
       },
+      lastMessage: storeConv.lastMessage || null,
+      totalMessagesCount: storeConv.totalMessagesCount || 0,
+      status: storeConv.status || 'accepted',
+      isStranger: Boolean(storeConv.isStranger),
+      requestedBy: storeConv.requestedBy,
+      unreadCount: (storeConv.unreadCounts && storeConv.unreadCounts[currentUserId]) || 0,
+      updatedAt: storeConv.updatedAt,
+    };
+
+    return sendSuccess(res, {
+      message: 'Lấy cuộc trò chuyện thành công',
+      data: formatted,
     });
   } catch (error) {
     return sendError(res, { message: error.message, status: 500 });
@@ -242,64 +307,105 @@ export const findOrCreateConversation = async (req, res) => {
 export const getMessages = async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const currentUserId = req.user._id;
-
-    if (checkDbReady()) {
-      const conv = await Conversation.findById(conversationId);
-      if (!conv) {
-        return sendError(res, { message: 'Không tìm thấy cuộc trò chuyện', status: 404 });
-      }
-
-      const isParticipant = conv.participants.some(
-        (p) => p.toString() === currentUserId.toString()
-      );
-      if (!isParticipant) {
-        return sendError(res, { message: 'Bạn không có quyền truy cập cuộc trò chuyện này', status: 403 });
-      }
-
-      // Lấy toàn bộ tin nhắn được xếp theo thời gian tăng dần
-      const messages = await Message.find({ conversation: conversationId })
-        .populate('sender', 'name avatar')
-        .populate('receiver', 'name avatar')
-        .sort({ createdAt: 1 })
-        .lean();
-
-      // Đánh dấu các tin nhắn người khác gửi cho mình là đã đọc
-      await Message.updateMany(
-        { conversation: conversationId, receiver: currentUserId, isRead: false },
-        { isRead: true }
-      );
-
-      return sendSuccess(res, {
-        message: 'Lấy tin nhắn thành công',
-        data: {
-          conversation: conv,
-          messages,
-        },
-      });
-    }
+    const currentUserId = (req.user._id || req.user.id).toString();
 
     const store = loadStore();
-    const conv = (store.conversations || []).find((c) => c._id === conversationId);
-    const msgs = (store.messages || []).filter((m) => m.conversation === conversationId);
+    store.messages = store.messages || [];
+    store.conversations = store.conversations || [];
 
-    // Đánh dấu các tin nhắn người khác gửi cho mình là đã đọc
+    let conv = store.conversations.find((c) => c._id === conversationId);
+
+    // Đồng bộ từ MongoDB nếu conversationId là ObjectId hợp lệ
+    if (checkDbReady() && mongoose.isValidObjectId(conversationId)) {
+      try {
+        const dbConv = await Conversation.findById(conversationId).lean();
+        if (dbConv) {
+          if (!conv) {
+            conv = {
+              _id: dbConv._id.toString(),
+              participants: (dbConv.participants || []).map((p) => p.toString()),
+              status: dbConv.status,
+              isStranger: dbConv.isStranger,
+              requestedBy: dbConv.requestedBy?.toString(),
+              totalMessagesCount: dbConv.totalMessagesCount || 0,
+              unreadCounts: dbConv.unreadCounts || {},
+              lastMessage: dbConv.lastMessage,
+              updatedAt: dbConv.updatedAt,
+            };
+            store.conversations.unshift(conv);
+          }
+
+          const dbMessages = await Message.find({ conversation: conversationId })
+            .populate('sender', 'name avatar')
+            .populate('receiver', 'name avatar')
+            .sort({ createdAt: 1 })
+            .lean();
+
+          // Đánh dấu đã đọc trên MongoDB
+          await Message.updateMany(
+            { conversation: conversationId, receiver: currentUserId, isRead: false },
+            { isRead: true }
+          );
+
+          // Đồng bộ vào persistent store
+          dbMessages.forEach((dbm) => {
+            const mId = dbm._id.toString();
+            const existingIdx = store.messages.findIndex((m) => m._id === mId);
+            const msgObj = {
+              _id: mId,
+              conversation: conversationId,
+              sender: {
+                _id: dbm.sender?._id?.toString() || dbm.sender?.toString(),
+                name: dbm.sender?.name || 'Người dùng',
+                email: dbm.sender?.email || '',
+                avatar: dbm.sender?.avatar || '',
+              },
+              receiver: {
+                _id: dbm.receiver?._id?.toString() || dbm.receiver?.toString(),
+                name: dbm.receiver?.name || 'Người nhận',
+                email: dbm.receiver?.email || '',
+                avatar: dbm.receiver?.avatar || '',
+              },
+              content: dbm.content,
+              isRead: true,
+              createdAt: dbm.createdAt,
+            };
+            if (existingIdx >= 0) {
+              store.messages[existingIdx] = msgObj;
+            } else {
+              store.messages.push(msgObj);
+            }
+          });
+        }
+      } catch (dbErr) {
+        console.warn('MongoDB getMessages warning:', dbErr.message);
+      }
+    }
+
+    // Lọc tin nhắn của cuộc trò chuyện trong persistent store
+    let msgs = store.messages.filter((m) => m.conversation === conversationId);
+
+    // Đánh dấu đã đọc trong persistent store
     let updated = false;
     msgs.forEach((m) => {
-      if ((m.receiver?._id === currentUserId.toString() || m.receiver === currentUserId.toString()) && !m.isRead) {
+      const recId = (m.receiver?._id || m.receiver?.id || m.receiver || '').toString();
+      if (recId === currentUserId && !m.isRead) {
         m.isRead = true;
         updated = true;
       }
     });
 
-    if (conv && conv.unreadCounts && conv.unreadCounts[currentUserId.toString()]) {
-      conv.unreadCounts[currentUserId.toString()] = 0;
+    if (conv && conv.unreadCounts && conv.unreadCounts[currentUserId]) {
+      conv.unreadCounts[currentUserId] = 0;
       updated = true;
     }
 
     if (updated) {
       saveStore(store);
     }
+
+    // Sắp xếp tin nhắn theo thời gian tăng dần
+    msgs.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
     return sendSuccess(res, {
       data: {
@@ -317,7 +423,7 @@ export const getMessages = async (req, res) => {
  */
 export const sendMessage = async (req, res) => {
   try {
-    const currentUserId = req.user._id;
+    const currentUserId = (req.user._id || req.user.id).toString();
     const { conversationId, receiverId, content } = req.body;
 
     if (!content || !content.trim()) {
@@ -325,130 +431,159 @@ export const sendMessage = async (req, res) => {
     }
 
     const cleanContent = maskSensitiveText(content.trim());
+    const store = loadStore();
+    store.conversations = store.conversations || [];
+    store.messages = store.messages || [];
 
-    if (checkDbReady()) {
-      let conv;
-      let targetUserId = receiverId;
+    // Xác định ID người nhận
+    let targetUserId = receiverId ? receiverId.toString() : null;
 
-      if (conversationId) {
-        conv = await Conversation.findById(conversationId);
-        if (conv) {
-          targetUserId = conv.participants.find(
-            (p) => p.toString() !== currentUserId.toString()
-          );
-        }
-      }
-
-      if (!conv && targetUserId) {
-        const currentUser = await User.findById(currentUserId);
-        const isFriend = Array.isArray(currentUser.friends) &&
-          currentUser.friends.some((f) => f.toString() === targetUserId.toString());
-
-        conv = await Conversation.create({
-          participants: [currentUserId, targetUserId],
-          status: isFriend ? 'accepted' : 'pending',
-          isStranger: !isFriend,
-          requestedBy: currentUserId,
-          totalMessagesCount: 0,
-        });
-      }
-
-      if (!conv) {
-        return sendError(res, { message: 'Không thể xác định cuộc trò chuyện', status: 400 });
-      }
-
-      // Tạo tin nhắn mới
-      const newMessage = await Message.create({
-        conversation: conv._id,
-        sender: currentUserId,
-        receiver: targetUserId,
-        content: cleanContent,
-        isRead: false,
-      });
-
-      // Cập nhật thông tin cuộc trò chuyện
-      conv.lastMessage = {
-        content: cleanContent,
-        sender: currentUserId,
-        createdAt: new Date(),
-      };
-      conv.totalMessagesCount = (conv.totalMessagesCount || 0) + 1;
-      conv.updatedAt = new Date(); // Đảm bảo nhảy lên đầu danh sách theo sắp xếp gần nhất
-      await conv.save();
-
-      const populatedMessage = await Message.findById(newMessage._id)
-        .populate('sender', 'name avatar')
-        .populate('receiver', 'name avatar')
-        .lean();
-
-      // Lưu trữ persistent
-      const store = loadStore();
-      store.messages = store.messages || [];
-      store.messages.push(populatedMessage);
-      saveStore(store);
-
-      return sendSuccess(res, {
-        message: 'Gửi tin nhắn thành công',
-        data: populatedMessage,
-        status: 201,
-      });
+    let conv = null;
+    if (conversationId) {
+      conv = store.conversations.find((c) => c._id === conversationId);
     }
 
-    // Fallback store
-    const store = loadStore();
-    const currentUser = (store.users || []).find((u) => u._id === currentUserId.toString()) || req.user;
-    const targetUser = (store.users || []).find((u) => u._id === receiverId?.toString());
+    if (!targetUserId && conv && Array.isArray(conv.participants)) {
+      targetUserId = conv.participants.map((p) => p.toString()).find((p) => p !== currentUserId);
+    }
 
-    let conv = (store.conversations || []).find((c) => c._id === conversationId);
-    if (!conv && receiverId) {
-      conv = (store.conversations || []).find(
+    if (!targetUserId) {
+      return sendError(res, { message: 'Không thể xác định người nhận tin nhắn', status: 400 });
+    }
+
+    const currentUser = (await findUserAnywhere(currentUserId)) || req.user;
+    const targetUser = await findUserAnywhere(targetUserId);
+
+    const isFriend = checkAreFriends(currentUser, targetUser);
+
+    if (!conv) {
+      conv = store.conversations.find(
         (c) =>
           Array.isArray(c.participants) &&
-          c.participants.includes(currentUserId.toString()) &&
-          c.participants.includes(receiverId.toString())
+          c.participants.map((p) => p.toString()).includes(currentUserId) &&
+          c.participants.map((p) => p.toString()).includes(targetUserId)
       );
     }
 
+    const convId = conv ? conv._id : (conversationId || `conv_${currentUserId}_${targetUserId}`);
+
     if (!conv) {
-      const isFriend = Array.isArray(currentUser.friends) && currentUser.friends.includes(receiverId?.toString());
       conv = {
-        _id: conversationId || `conv_${Date.now()}`,
-        participants: [currentUserId.toString(), receiverId?.toString()],
+        _id: convId,
+        participants: [currentUserId, targetUserId],
         status: isFriend ? 'accepted' : 'pending',
         isStranger: !isFriend,
-        requestedBy: currentUserId.toString(),
+        requestedBy: currentUserId,
         totalMessagesCount: 0,
         unreadCounts: {},
         updatedAt: new Date().toISOString(),
       };
-      if (!Array.isArray(store.conversations)) store.conversations = [];
       store.conversations.unshift(conv);
     }
 
-    const fallbackMsg = {
-      _id: `msg_${Date.now()}`,
-      conversation: conv._id,
-      sender: { _id: currentUserId, name: currentUser.name, avatar: currentUser.avatar },
-      receiver: { _id: receiverId, name: targetUser?.name || 'Người nhận' },
+    // Nếu cả 2 đều là ObjectId hợp lệ, ghi đồng thời vào MongoDB
+    let mongoMsgId = null;
+    if (
+      checkDbReady() &&
+      mongoose.isValidObjectId(currentUserId) &&
+      mongoose.isValidObjectId(targetUserId)
+    ) {
+      try {
+        let dbConv = null;
+        if (mongoose.isValidObjectId(convId)) {
+          dbConv = await Conversation.findById(convId);
+        }
+        if (!dbConv) {
+          dbConv = await Conversation.findOne({
+            participants: { $all: [currentUserId, targetUserId] },
+          });
+        }
+        if (!dbConv) {
+          dbConv = await Conversation.create({
+            participants: [currentUserId, targetUserId],
+            status: isFriend ? 'accepted' : 'pending',
+            isStranger: !isFriend,
+            requestedBy: currentUserId,
+            totalMessagesCount: 0,
+          });
+        }
+
+        const newDbMsg = await Message.create({
+          conversation: dbConv._id,
+          sender: currentUserId,
+          receiver: targetUserId,
+          content: cleanContent,
+          isRead: false,
+        });
+
+        mongoMsgId = newDbMsg._id.toString();
+
+        dbConv.lastMessage = {
+          content: cleanContent,
+          sender: currentUserId,
+          createdAt: new Date(),
+        };
+        dbConv.totalMessagesCount = (dbConv.totalMessagesCount || 0) + 1;
+        dbConv.updatedAt = new Date();
+        await dbConv.save();
+      } catch (dbErr) {
+        console.warn('MongoDB sendMessage warning:', dbErr.message);
+      }
+    }
+
+    // Tạo đối tượng tin nhắn chuẩn hóa
+    const newMsg = {
+      _id: mongoMsgId || `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      conversation: convId,
+      sender: {
+        _id: currentUserId,
+        name: currentUser.name || 'Người dùng',
+        email: currentUser.email || '',
+        avatar: currentUser.avatar || '',
+      },
+      receiver: {
+        _id: targetUserId,
+        name: targetUser?.name || 'Người nhận',
+        email: targetUser?.email || '',
+        avatar: targetUser?.avatar || '',
+      },
       content: cleanContent,
       isRead: false,
       createdAt: new Date().toISOString(),
     };
 
+    // Cập nhật thông tin cuộc trò chuyện trong persistent store
     conv.lastMessage = {
-      _id: fallbackMsg._id,
+      _id: newMsg._id,
       content: cleanContent,
-      sender: fallbackMsg.sender,
-      createdAt: fallbackMsg.createdAt,
+      sender: newMsg.sender,
+      createdAt: newMsg.createdAt,
     };
     conv.totalMessagesCount = (conv.totalMessagesCount || 0) + 1;
     conv.updatedAt = new Date().toISOString();
+    if (!conv.unreadCounts) conv.unreadCounts = {};
+    conv.unreadCounts[targetUserId] = (conv.unreadCounts[targetUserId] || 0) + 1;
 
-    if (!Array.isArray(store.messages)) store.messages = [];
-    store.messages.push(fallbackMsg);
+    store.messages.push(newMsg);
     saveStore(store);
 
-    return sendSuccess(res, { data: fallbackMsg, status: 201 });
+    // Bắn thông báo tin nhắn mới tới người nhận
+    try {
+      await createNotification({
+        recipientId: targetUserId,
+        sender: currentUser,
+        type: 'message',
+        conversationId: convId,
+        title: 'Tin nhắn mới 💬',
+        message: `${currentUser.name}: "${cleanContent.length > 50 ? cleanContent.substring(0, 50) + '...' : cleanContent}"`,
+      });
+    } catch (_) {}
+
+    return sendSuccess(res, {
+      message: 'Gửi tin nhắn thành công',
+      data: newMsg,
+      status: 201,
+    });
   } catch (error) {
     return sendError(res, { message: error.message, status: 500 });
   }
@@ -460,21 +595,14 @@ export const sendMessage = async (req, res) => {
 export const acceptConversation = async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const currentUserId = req.user._id;
 
-    if (checkDbReady()) {
-      const conv = await Conversation.findById(conversationId);
-      if (!conv) {
-        return sendError(res, { message: 'Không tìm thấy cuộc trò chuyện', status: 404 });
-      }
-
-      conv.status = 'accepted';
-      await conv.save();
-
-      return sendSuccess(res, {
-        message: 'Đã đồng ý nhận tin nhắn từ người này!',
-        data: conv,
-      });
+    if (checkDbReady() && mongoose.isValidObjectId(conversationId)) {
+      try {
+        await Conversation.findByIdAndUpdate(conversationId, {
+          status: 'accepted',
+          isStranger: false,
+        });
+      } catch (_) {}
     }
 
     const store = loadStore();
@@ -483,13 +611,12 @@ export const acceptConversation = async (req, res) => {
       conv.status = 'accepted';
       conv.isStranger = false;
       saveStore(store);
-      return sendSuccess(res, {
-        message: 'Đã đồng ý nhận tin nhắn từ người này!',
-        data: conv,
-      });
     }
 
-    return sendSuccess(res, { message: 'Đã chấp nhận cuộc trò chuyện' });
+    return sendSuccess(res, {
+      message: 'Đã đồng ý nhận tin nhắn từ người này!',
+      data: conv || { _id: conversationId, status: 'accepted' },
+    });
   } catch (error) {
     return sendError(res, { message: error.message, status: 500 });
   }
@@ -501,106 +628,67 @@ export const acceptConversation = async (req, res) => {
  */
 export const getFriends = async (req, res) => {
   try {
-    const currentUserId = req.user._id;
+    const currentUserId = (req.user._id || req.user.id).toString();
     const { sortBy = 'alphabet', q } = req.query;
 
-    if (checkDbReady()) {
-      const user = await User.findById(currentUserId).populate(
-        'friends',
-        'name avatar jobTitle role email bio chatStatus lastActiveAt'
-      );
+    const currentUser = (await findUserAnywhere(currentUserId)) || req.user;
+    const friendIds = Array.isArray(currentUser.friends) ? currentUser.friends.map((f) => f.toString()) : [];
 
-      let friendsList = (user?.friends || []).map((f) => ({
-        _id: f._id,
-        name: f.name,
-        avatar: f.avatar || '/images/man.jpg',
-        jobTitle: f.jobTitle || 'Thành viên',
-        role: f.role || 'user',
-        bio: f.bio || '',
-        chatStatus: f.chatStatus || 'online',
-        lastActiveAt: f.lastActiveAt,
-      }));
+    const store = loadStore();
 
-      // Lấy thêm thông tin tin nhắn giữa 2 người để hỗ trợ sắp xếp theo 'frequency' và 'recent'
-      const convs = await Conversation.find({
-        participants: currentUserId,
-      }).lean();
+    let friendsList = [];
+    for (const fId of friendIds) {
+      const u = await findUserAnywhere(fId);
+      if (u) {
+        friendsList.push({
+          _id: u._id,
+          name: u.name,
+          avatar: u.avatar || '',
+          jobTitle: u.jobTitle || 'Thành viên',
+          role: u.role || 'user',
+          bio: u.bio || '',
+          chatStatus: u.chatStatus || 'online',
+          lastActiveAt: u.lastActiveAt,
+          isFriend: true,
+        });
+      }
+    }
 
-      const convMap = {};
-      convs.forEach((c) => {
-        const otherId = c.participants.find(
-          (p) => p.toString() !== currentUserId.toString()
-        );
+    const allConvs = store.conversations || [];
+    const convMap = {};
+    allConvs.forEach((c) => {
+      if (Array.isArray(c.participants) && c.participants.map((p) => p.toString()).includes(currentUserId)) {
+        const otherId = c.participants.map((p) => p.toString()).find((p) => p !== currentUserId);
         if (otherId) {
-          convMap[otherId.toString()] = {
+          convMap[otherId] = {
             totalMessagesCount: c.totalMessagesCount || 0,
             lastMessageTime: c.lastMessage?.createdAt || c.updatedAt || new Date(0),
           };
         }
-      });
-
-      friendsList = friendsList.map((f) => ({
-        ...f,
-        totalMessagesCount: convMap[f._id.toString()]?.totalMessagesCount || 0,
-        lastMessageTime: convMap[f._id.toString()]?.lastMessageTime || new Date(0),
-      }));
-
-      if (q && q.trim()) {
-        const lowerQ = q.trim().toLowerCase();
-        friendsList = friendsList.filter((f) =>
-          f.name.toLowerCase().includes(lowerQ)
-        );
       }
+    });
 
-      if (sortBy === 'recent') {
-        friendsList.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
-      } else if (sortBy === 'frequency') {
-        friendsList.sort((a, b) => (b.totalMessagesCount || 0) - (a.totalMessagesCount || 0));
-      } else {
-        // Mặc định cho danh bạ: Thứ tự chữ cái Alpha B
-        friendsList.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-      }
-
-      return sendSuccess(res, {
-        message: 'Lấy danh bạ bạn bè thành công',
-        data: friendsList,
-      });
-    }
-
-    // Fallback persistentStore
-    const store = loadStore();
-    const currentUser = (store.users || []).find((u) => u._id === currentUserId.toString()) || req.user;
-    const friendsIds = Array.isArray(currentUser?.friends) ? currentUser.friends : [];
-
-    let friendsList = (store.users || [])
-      .filter((u) => friendsIds.includes(u._id))
-      .map((f) => ({
-        _id: f._id,
-        name: f.name,
-        avatar: f.avatar || '/images/man.jpg',
-        jobTitle: f.jobTitle || 'Thành viên',
-        role: f.role || 'user',
-        bio: f.bio || '',
-        chatStatus: f.chatStatus || 'online',
-        lastActiveAt: f.lastActiveAt,
-        isFriend: true,
-      }));
+    friendsList = friendsList.map((f) => ({
+      ...f,
+      totalMessagesCount: convMap[f._id]?.totalMessagesCount || 0,
+      lastMessageTime: convMap[f._id]?.lastMessageTime || new Date(0),
+    }));
 
     if (q && q.trim()) {
       const lowerQ = q.trim().toLowerCase();
-      friendsList = friendsList.filter((f) =>
-        f.name.toLowerCase().includes(lowerQ)
-      );
+      friendsList = friendsList.filter((f) => f.name.toLowerCase().includes(lowerQ));
     }
 
-    if (sortBy === 'alphabet') {
-      friendsList.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+    if (sortBy === 'recent') {
+      friendsList.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
+    } else if (sortBy === 'frequency') {
+      friendsList.sort((a, b) => (b.totalMessagesCount || 0) - (a.totalMessagesCount || 0));
     } else {
       friendsList.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
     }
 
     return sendSuccess(res, {
-      message: 'Lấy danh bạ bạn bè thành công (Persistent Store)',
+      message: 'Lấy danh bạ bạn bè thành công',
       data: friendsList,
     });
   } catch (error) {
@@ -609,74 +697,83 @@ export const getFriends = async (req, res) => {
 };
 
 /**
- * Kết bạn trực tiếp với một người dùng (Thêm vào danh bạ)
+ * Gửi lời mời kết bạn (Hoặc chấp nhận ngay nếu đối phương đã gửi lời mời trước)
  */
 export const addFriend = async (req, res) => {
   try {
-    const currentUserId = req.user._id;
+    const currentUserId = (req.user._id || req.user.id).toString();
     const { targetUserId } = req.body;
 
-    if (!targetUserId || targetUserId.toString() === currentUserId.toString()) {
+    if (!targetUserId || targetUserId.toString() === currentUserId) {
       return sendError(res, { message: 'ID người bạn không hợp lệ', status: 400 });
     }
 
-    if (checkDbReady()) {
-      const currentUser = await User.findById(currentUserId);
-      const targetUser = await User.findById(targetUserId);
+    const targetUserIdStr = targetUserId.toString();
+    const currentUser = (await findUserAnywhere(currentUserId)) || req.user;
+    const targetUser = await findUserAnywhere(targetUserIdStr);
 
-      if (!targetUser) {
-        return sendError(res, { message: 'Không tìm thấy người dùng này', status: 404 });
-      }
+    if (!targetUser) {
+      return sendError(res, { message: 'Không tìm thấy người dùng này', status: 404 });
+    }
 
-      // Thêm nhau vào danh sách bạn bè 2 chiều
-      if (!currentUser.friends.includes(targetUserId)) {
-        currentUser.friends.push(targetUserId);
-        await currentUser.save();
-      }
-
-      if (!targetUser.friends.includes(currentUserId)) {
-        targetUser.friends.push(currentUserId);
-        await targetUser.save();
-      }
-
-      // Nếu có cuộc trò chuyện đang là 'pending' (người lạ), tự động chuyển sang 'accepted' và 'isStranger: false'
-      await Conversation.updateMany(
-        { participants: { $all: [currentUserId, targetUserId] } },
-        { status: 'accepted', isStranger: false }
-      );
-
+    // 1. Kiểm tra nếu hai người đã là bạn bè từ trước
+    const alreadyFriends = checkAreFriends(currentUser, targetUser);
+    if (alreadyFriends) {
       return sendSuccess(res, {
-        message: `Đã kết bạn thành công với ${targetUser.name}! Tên đã được lưu vào Danh bạ bạn bè.`,
+        message: `Bạn và ${targetUser.name} đã là bạn bè từ trước!`,
         data: {
           _id: targetUser._id,
           name: targetUser.name,
-          avatar: targetUser.avatar,
+          avatar: targetUser.avatar || '',
           isFriend: true,
+          friendshipStatus: 'friends',
         },
       });
     }
 
-    // Fallback persistent store
     const store = loadStore();
-    const currentUser = (store.users || []).find((u) => u._id === currentUserId.toString());
-    const targetUser = (store.users || []).find((u) => u._id === targetUserId.toString());
+    store.notifications = store.notifications || [];
 
-    if (currentUser && targetUser) {
-      if (!Array.isArray(currentUser.friends)) currentUser.friends = [];
-      if (!Array.isArray(targetUser.friends)) targetUser.friends = [];
+    // 2. Kiểm tra nếu đối phương ĐÃ gửi lời mời kết bạn cho currentUser trước đó (đang pending)
+    // Nếu có -> Chấp thuận kết bạn ngay (kết nối 2 chiều)
+    const incomingReq = store.notifications.find(
+      (n) =>
+        n.type === 'friend_request' &&
+        n.recipient === currentUserId &&
+        n.sender?._id === targetUserIdStr &&
+        n.actionStatus === 'pending'
+    );
 
-      if (!currentUser.friends.includes(targetUserId.toString())) {
-        currentUser.friends.push(targetUserId.toString());
+    if (incomingReq) {
+      incomingReq.actionStatus = 'accepted';
+      incomingReq.isRead = true;
+
+      // Thêm nhau vào danh sách bạn bè trong persistent store
+      let storeMe = store.users.find((u) => (u._id || u.id)?.toString() === currentUserId);
+      let storeTarget = store.users.find((u) => (u._id || u.id)?.toString() === targetUserIdStr);
+
+      if (!storeMe) {
+        storeMe = { ...currentUser, _id: currentUserId, friends: [] };
+        store.users.push(storeMe);
       }
-      if (!targetUser.friends.includes(currentUserId.toString())) {
-        targetUser.friends.push(currentUserId.toString());
+      if (!storeTarget) {
+        storeTarget = { ...targetUser, _id: targetUserIdStr, friends: [] };
+        store.users.push(storeTarget);
       }
 
+      if (!Array.isArray(storeMe.friends)) storeMe.friends = [];
+      if (!storeMe.friends.includes(targetUserIdStr)) storeMe.friends.push(targetUserIdStr);
+
+      if (!Array.isArray(storeTarget.friends)) storeTarget.friends = [];
+      if (!storeTarget.friends.includes(currentUserId)) storeTarget.friends.push(currentUserId);
+
+      // Cập nhật trạng thái trò chuyện giữa hai người
       if (Array.isArray(store.conversations)) {
         store.conversations.forEach((c) => {
           if (
-            c.participants.includes(currentUserId.toString()) &&
-            c.participants.includes(targetUserId.toString())
+            Array.isArray(c.participants) &&
+            c.participants.map((p) => p.toString()).includes(currentUserId) &&
+            c.participants.map((p) => p.toString()).includes(targetUserIdStr)
           ) {
             c.status = 'accepted';
             c.isStranger = false;
@@ -684,58 +781,174 @@ export const addFriend = async (req, res) => {
         });
       }
 
+      // Cập nhật MongoDB nếu cả 2 là ObjectId hợp lệ
+      if (
+        checkDbReady() &&
+        mongoose.isValidObjectId(currentUserId) &&
+        mongoose.isValidObjectId(targetUserIdStr)
+      ) {
+        try {
+          await User.findByIdAndUpdate(currentUserId, { $addToSet: { friends: targetUserIdStr } });
+          await User.findByIdAndUpdate(targetUserIdStr, { $addToSet: { friends: currentUserId } });
+          await Conversation.updateMany(
+            { participants: { $all: [currentUserId, targetUserIdStr] } },
+            { status: 'accepted', isStranger: false }
+          );
+        } catch (_) {}
+      }
+
       saveStore(store);
 
+      // Gửi thông báo chúc mừng
+      await createNotification({
+        recipientId: targetUserIdStr,
+        sender: currentUser,
+        type: 'friend_accept',
+        title: 'Lời mời kết bạn được chấp nhận 🎉',
+        message: `${currentUser.name} đã chấp nhận lời mời kết bạn của bạn! Hai người hiện đã là bạn bè trên Freedom.`,
+      });
+
       return sendSuccess(res, {
-        message: `Đã kết bạn thành công với ${targetUser.name}! Tên đã được lưu vào Danh bạ bạn bè.`,
+        message: `Đã trở thành bạn bè với ${targetUser.name}!`,
         data: {
           _id: targetUser._id,
           name: targetUser.name,
-          avatar: targetUser.avatar,
+          avatar: targetUser.avatar || '',
           isFriend: true,
+          friendshipStatus: 'friends',
         },
       });
     }
 
-    return sendSuccess(res, { message: 'Đã kết bạn thành công!' });
+    // 3. Kiểm tra nếu currentUser đã gửi lời mời cho targetUser rồi và đang chờ duyệt
+    const existingSentReq = store.notifications.find(
+      (n) =>
+        n.type === 'friend_request' &&
+        n.recipient === targetUserIdStr &&
+        n.sender?._id === currentUserId &&
+        n.actionStatus === 'pending'
+    );
+
+    if (existingSentReq) {
+      return sendSuccess(res, {
+        message: `Lời mời kết bạn đã được gửi tới ${targetUser.name}. Vui lòng chờ đối phương đồng ý nhé!`,
+        data: {
+          _id: targetUser._id,
+          name: targetUser.name,
+          avatar: targetUser.avatar || '',
+          isFriend: false,
+          friendshipStatus: 'sent_pending',
+        },
+      });
+    }
+
+    // 4. Tạo thông báo Lời mời kết bạn (CHƯA là bạn bè, chờ đối phương bấm Đồng ý)
+    await createNotification({
+      recipientId: targetUserIdStr,
+      sender: currentUser,
+      type: 'friend_request',
+      actionStatus: 'pending',
+      title: 'Lời mời kết bạn mới 👥',
+      message: `${currentUser.name} đã gửi lời mời kết bạn tới bạn. Hãy đồng ý để kết nối vào danh bạ nhé!`,
+    });
+
+    return sendSuccess(res, {
+      message: `Đã gửi lời mời kết bạn tới ${targetUser.name}! Vui lòng chờ đối phương chấp nhận.`,
+      data: {
+        _id: targetUser._id,
+        name: targetUser.name,
+        avatar: targetUser.avatar || '',
+        isFriend: false,
+        friendshipStatus: 'sent_pending',
+      },
+    });
   } catch (error) {
     return sendError(res, { message: error.message, status: 500 });
   }
 };
 
 /**
- * Hủy kết bạn
+ * Hủy kết bạn hoặc hủy lời mời kết bạn đang chờ
  */
 export const removeFriend = async (req, res) => {
   try {
-    const currentUserId = req.user._id;
+    const currentUserId = (req.user._id || req.user.id).toString();
     const { targetUserId } = req.body;
 
-    if (checkDbReady()) {
-      await User.findByIdAndUpdate(currentUserId, {
-        $pull: { friends: targetUserId },
-      });
-      await User.findByIdAndUpdate(targetUserId, {
-        $pull: { friends: currentUserId },
-      });
-
-      return sendSuccess(res, { message: 'Đã xóa khỏi danh bạ bạn bè' });
+    if (!targetUserId) {
+      return sendError(res, { message: 'ID người bạn không hợp lệ', status: 400 });
     }
 
-    // Fallback persistent store
+    const targetUserIdStr = targetUserId.toString();
+    const currentUser = (await findUserAnywhere(currentUserId)) || req.user;
+    const targetUser = await findUserAnywhere(targetUserIdStr);
+
+    // 1. Cập nhật MongoDB nếu cả hai là ObjectId
+    if (
+      checkDbReady() &&
+      mongoose.isValidObjectId(currentUserId) &&
+      mongoose.isValidObjectId(targetUserIdStr)
+    ) {
+      try {
+        await User.findByIdAndUpdate(currentUserId, {
+          $pull: { friends: targetUserIdStr },
+        });
+        await User.findByIdAndUpdate(targetUserIdStr, {
+          $pull: { friends: currentUserId },
+        });
+        await Notification.updateMany(
+          {
+            type: 'friend_request',
+            $or: [
+              { recipient: targetUserIdStr, 'sender._id': currentUserId },
+              { recipient: currentUserId, 'sender._id': targetUserIdStr },
+            ],
+            actionStatus: 'pending',
+          },
+          { actionStatus: 'declined', isRead: true }
+        );
+      } catch (dbErr) {
+        console.warn('MongoDB removeFriend warning:', dbErr.message);
+      }
+    }
+
+    // 2. Persistent store: Xóa khỏi danh bạ bạn bè của cả hai
     const store = loadStore();
-    const currentUser = (store.users || []).find((u) => u._id === currentUserId.toString());
-    const targetUser = (store.users || []).find((u) => u._id === targetUserId.toString());
+    const storeMe = (store.users || []).find((u) => (u._id || u.id)?.toString() === currentUserId);
+    const storeTarget = (store.users || []).find((u) => (u._id || u.id)?.toString() === targetUserIdStr);
 
-    if (currentUser && Array.isArray(currentUser.friends)) {
-      currentUser.friends = currentUser.friends.filter((id) => id !== targetUserId.toString());
+    if (storeMe && Array.isArray(storeMe.friends)) {
+      storeMe.friends = storeMe.friends.filter((id) => id.toString() !== targetUserIdStr);
     }
-    if (targetUser && Array.isArray(targetUser.friends)) {
-      targetUser.friends = targetUser.friends.filter((id) => id !== currentUserId.toString());
+    if (storeTarget && Array.isArray(storeTarget.friends)) {
+      storeTarget.friends = storeTarget.friends.filter((id) => id.toString() !== currentUserId);
     }
+
+    // Đánh dấu hủy/từ chối các lời mời kết bạn đang chờ giữa hai người
+    if (Array.isArray(store.notifications)) {
+      store.notifications.forEach((n) => {
+        if (
+          n.type === 'friend_request' &&
+          ((n.recipient === targetUserIdStr && n.sender?._id === currentUserId) ||
+            (n.recipient === currentUserId && n.sender?._id === targetUserIdStr)) &&
+          n.actionStatus === 'pending'
+        ) {
+          n.actionStatus = 'declined';
+          n.isRead = true;
+        }
+      });
+    }
+
     saveStore(store);
 
-    return sendSuccess(res, { message: 'Đã xóa khỏi danh bạ bạn bè' });
+    return sendSuccess(res, {
+      message: `Đã hủy kết bạn / hủy lời mời kết bạn với ${targetUser?.name || 'người dùng'}.`,
+      data: {
+        _id: targetUserIdStr,
+        isFriend: false,
+        friendshipStatus: 'none',
+      },
+    });
   } catch (error) {
     return sendError(res, { message: error.message, status: 500 });
   }
@@ -746,31 +959,26 @@ export const removeFriend = async (req, res) => {
  */
 export const updateChatSettings = async (req, res) => {
   try {
-    const currentUserId = req.user._id;
+    const currentUserId = (req.user._id || req.user.id).toString();
     const { allowStrangerNotifications } = req.body;
 
-    if (checkDbReady()) {
-      const user = await User.findById(currentUserId);
-      if (user) {
-        user.allowStrangerNotifications = Boolean(allowStrangerNotifications);
-        await user.save();
-
-        return sendSuccess(res, {
-          message: 'Đã cập nhật cài đặt thông báo tin nhắn!',
-          data: { allowStrangerNotifications: user.allowStrangerNotifications },
+    if (checkDbReady() && mongoose.isValidObjectId(currentUserId)) {
+      try {
+        await User.findByIdAndUpdate(currentUserId, {
+          allowStrangerNotifications: Boolean(allowStrangerNotifications),
         });
-      }
+      } catch (_) {}
     }
 
-    // Fallback persistent store
     const store = loadStore();
-    const userInStore = (store.users || []).find((u) => u._id === currentUserId.toString());
+    const userInStore = (store.users || []).find((u) => (u._id || u.id)?.toString() === currentUserId);
     if (userInStore) {
       userInStore.allowStrangerNotifications = Boolean(allowStrangerNotifications);
       saveStore(store);
     }
 
     return sendSuccess(res, {
+      message: 'Đã cập nhật cài đặt thông báo tin nhắn!',
       data: { allowStrangerNotifications: Boolean(allowStrangerNotifications) },
     });
   } catch (error) {
@@ -780,56 +988,18 @@ export const updateChatSettings = async (req, res) => {
 
 /**
  * Lấy số lượng tin nhắn chưa đọc tổng thể
- * Có kiểm tra điều kiện cài đặt allowStrangerNotifications
  */
 export const getUnreadCount = async (req, res) => {
   try {
-    const currentUserId = req.user._id;
-
-    if (checkDbReady()) {
-      const user = await User.findById(currentUserId);
-      const allowStrangerNotif = user?.allowStrangerNotifications ?? true;
-
-      // Lấy các tin nhắn chưa đọc mà người nhận là currentUserId
-      const unreadMessages = await Message.find({
-        receiver: currentUserId,
-        isRead: false,
-      }).populate('conversation');
-
-      let count = 0;
-      let strangerUnreadCount = 0;
-
-      unreadMessages.forEach((m) => {
-        const isStrangerConv = m.conversation && m.conversation.isStranger && m.conversation.status === 'pending';
-        if (isStrangerConv) {
-          strangerUnreadCount++;
-          if (allowStrangerNotif) {
-            count++;
-          }
-        } else {
-          count++;
-        }
-      });
-
-      return sendSuccess(res, {
-        data: {
-          unreadCount: count,
-          strangerUnreadCount,
-          allowStrangerNotifications: allowStrangerNotif,
-        },
-      });
-    }
-
-    // Fallback persistent store
+    const currentUserId = (req.user._id || req.user.id).toString();
     const store = loadStore();
-    const currentUser = (store.users || []).find((u) => u._id === currentUserId.toString());
+    const currentUser = (await findUserAnywhere(currentUserId)) || req.user;
     const allowStrangerNotif = currentUser?.allowStrangerNotifications ?? true;
 
-    const unreadMessages = (store.messages || []).filter(
-      (m) =>
-        (m.receiver?._id === currentUserId.toString() || m.receiver === currentUserId.toString()) &&
-        !m.isRead
-    );
+    const unreadMessages = (store.messages || []).filter((m) => {
+      const recId = (m.receiver?._id || m.receiver?.id || m.receiver || '').toString();
+      return recId === currentUserId && !m.isRead;
+    });
 
     let count = 0;
     let strangerUnreadCount = 0;
@@ -860,38 +1030,32 @@ export const getUnreadCount = async (req, res) => {
 };
 
 /**
- * Cập nhật trạng thái hoạt động của người dùng (online: Đang onl, busy: Đang bận/Treo máy, offline: Đang off)
+ * Cập nhật trạng thái hoạt động (online: Đang onl, busy: Đang bận/Treo máy, offline: Đang off)
  */
 export const updateChatStatus = async (req, res) => {
   try {
-    const currentUserId = req.user._id;
+    const currentUserId = (req.user._id || req.user.id).toString();
     const { status } = req.body;
     const VALID_STATUSES = ['online', 'busy', 'offline'];
 
     if (!VALID_STATUSES.includes(status)) {
       return sendError(res, {
-        message: 'Trạng thái không hợp lệ. Chọn online (Đang onl), busy (Đang bận / Treo máy), hoặc offline (Đang off)',
+        message: 'Trạng thái không hợp lệ. Chọn online, busy, hoặc offline',
         status: 400,
       });
     }
 
-    if (checkDbReady()) {
-      const user = await User.findById(currentUserId);
-      if (user) {
-        user.chatStatus = status;
-        user.lastActiveAt = new Date();
-        await user.save();
-
-        return sendSuccess(res, {
-          message: 'Đã cập nhật trạng thái hoạt động thành công!',
-          data: { chatStatus: user.chatStatus },
+    if (checkDbReady() && mongoose.isValidObjectId(currentUserId)) {
+      try {
+        await User.findByIdAndUpdate(currentUserId, {
+          chatStatus: status,
+          lastActiveAt: new Date(),
         });
-      }
+      } catch (_) {}
     }
 
-    // Fallback persistent store
     const store = loadStore();
-    const userInStore = (store.users || []).find((u) => u._id === currentUserId.toString());
+    const userInStore = (store.users || []).find((u) => (u._id || u.id)?.toString() === currentUserId);
     if (userInStore) {
       userInStore.chatStatus = status;
       userInStore.lastActiveAt = new Date().toISOString();
@@ -906,4 +1070,3 @@ export const updateChatStatus = async (req, res) => {
     return sendError(res, { message: error.message, status: 500 });
   }
 };
-

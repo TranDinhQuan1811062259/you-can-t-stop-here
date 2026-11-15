@@ -24,6 +24,12 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
   const is304 = event.id === 'giai_phong_30_4' || event.name?.includes('30/4');
   const is29 = event.id === 'quoc_khanh_2_9' || event.name?.includes('2/9');
   const is83 = event.id === 'quoc_te_phu_nu_8_3' || event.name?.includes('8/3');
+  const isValentine =
+    event.id === 'le_tinh_nhan_14_2' ||
+    event.id?.includes('valentine') ||
+    event.name?.toLowerCase().includes('valentine') ||
+    event.name?.includes('14/2') ||
+    event.name?.toLowerCase().includes('tình nhân');
   const is16 = event.id === 'quoc_te_thieu_nhi_1_6' || event.name?.includes('1/6');
   const isTet = event.id?.includes('tet') || event.name?.toLowerCase().includes('tết');
   const isHalloween =
@@ -454,7 +460,25 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
             </div>
           )}
 
-          {!is304 && !is29 && !is83 && !isHalloween && (
+          {isValentine && (
+            <div className="festive-valentine-stage" style={{ textAlign: 'center', padding: '16px 0' }}>
+              <div style={{ fontSize: '4.6rem', filter: 'drop-shadow(0 0 22px #ec4899) drop-shadow(0 0 40px #f43f5e)' }}>
+                💖
+              </div>
+              <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', marginTop: '10px', fontSize: '1.8rem' }}>
+                <span title="Thần Cupid tình yêu">💘</span>
+                <span title="Bông hồng đỏ thắm">🌹</span>
+                <span title="Hộp socola ngọt ngào">🍫</span>
+                <span title="Bức thư tình yêu thương">💌</span>
+                <span title="Trái tim đong đầy">💕</span>
+              </div>
+              <div className="festive-stage-caption" style={{ color: '#f43f5e', marginTop: '12px', fontWeight: 800 }}>
+                🌹 Happy Valentine's Day 14/2 • Ngọt Ngào &amp; Tràn Ngập Yêu Thương 💕
+              </div>
+            </div>
+          )}
+
+          {!is304 && !is29 && !is83 && !isHalloween && !isValentine && (
             <div className="festive-default-stage">
               <div className="default-festive-icon-circle">
                 <span className="big-festive-icon">{event.icon || '🎊'}</span>
@@ -479,7 +503,9 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
                 'Chúc một nửa thế giới luôn rạng ngời, tự tin, được yêu thương và trân trọng mỗi ngày. Cảm ơn bạn vì đã mang đến sự ấm áp và kỳ diệu cho cuộc sống này!'}
               {isHalloween &&
                 'Chúc bạn một mùa lễ hội Halloween ngập tràn sắc màu bí ẩn, xua tan mọi áp lực thường nhật và thỏa sức sáng tạo trong không gian huyền ảo lung linh!'}
-              {!is304 && !is29 && !is83 && !isHalloween && (event.bannerTitle || event.name)}
+              {isValentine &&
+                'Chúc bạn một ngày Lễ Tình Nhân 14/2 thật ấm áp, ngọt ngào bên người thương. Dù bạn đang tay trong tay cùng người ấy hay đang tận hưởng sự tự do tuyệt vời của độc thân, bạn luôn xứng đáng được yêu thương, nâng niu và hạnh phúc mỗi ngày! 💖🌹🍫'}
+              {!is304 && !is29 && !is83 && !isHalloween && !isValentine && (event.bannerTitle || event.name)}
             </p>
             <span className="quote-mark end">”</span>
           </div>
@@ -501,6 +527,8 @@ export const FestiveShowcaseModal = ({ isOpen, onClose, event, onOpenAdminManage
                 ? 'Thả Cờ Đỏ Sao Vàng 2/9'
                 : is83
                 ? 'Thả Bóng Bay & Trái Tim'
+                : isValentine
+                ? 'Thả Mưa Tim & Hoa Hồng 14/2'
                 : 'Kích Hoạt Hiệu Ứng Bùng Nổ'}
             </span>
           </button>

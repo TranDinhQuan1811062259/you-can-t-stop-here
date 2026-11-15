@@ -5,6 +5,7 @@ import { playClickSound, playFestiveEventSound } from '../../utils/soundEffects'
 const PRESET_PARTICLE_PACKS = [
   { label: '🇻🇳 Cờ Tổ Quốc & Pháo Hoa', particles: ['🇻🇳', '⭐', '🕊️', '✨', '🎆'], type: 'vietnam_flag' },
   { label: '🌹 Hoa Hồng & Trái Tim', particles: ['🌹', '🌷', '🌸', '🎀', '💖', '✨'], type: 'flower_petals' },
+  { label: '💖 Trái Tim Valentine 14/2 & Socola', particles: ['💖', '💕', '💘', '🌹', '🍫', '✨', '💌'], type: 'hearts_valentine' },
   { label: '🎈 Bong Bóng Tuổi Thơ', particles: ['🎈', '🍭', '🎡', '🧸', '⭐', '✨'], type: 'balloons' },
   { label: '🧧 Lì Xì & Hoa Mai Đào Tết', particles: ['🌸', '🌼', '🧧', '🏮', '🧨', '✨'], type: 'tet_blossoms' },
   { label: '🎆 Pháo Hoa & Kim Tuyến', particles: ['🎆', '✨', '🍾', '🎊', '🎉', '🥂'], type: 'fireworks' },

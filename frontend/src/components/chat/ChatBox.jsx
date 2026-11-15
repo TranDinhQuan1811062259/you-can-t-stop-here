@@ -4,6 +4,9 @@ import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import { chatService } from '../../services/chatService';
 
+const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
+const getSafeAvatar = (av) => (av && !av.includes('man.jpg') && !av.includes('google_avatar')) ? av : DEFAULT_EMPTY_AVATAR;
+
 export const ChatBox = () => {
   const {
     activeConversation,
@@ -132,7 +135,7 @@ export const ChatBox = () => {
           title={`Xem trang cá nhân của ${otherUser.name}`}
         >
           <img
-            src={otherUser.avatar || '/images/man.jpg'}
+            src={getSafeAvatar(otherUser.avatar)}
             alt={otherUser.name}
             className="chatbox-avatar"
           />
@@ -205,7 +208,35 @@ export const ChatBox = () => {
           </div>
         ) : (
           messages.map((m) => {
-            const isMe = m.sender?._id === user?._id || m.sender === user?._id;
+            const myId = (user?._id || user?.id || '').toString();
+            const myEmail = (user?.email || '').toLowerCase().trim();
+            const myName = (user?.name || '').trim().toLowerCase();
+
+            const otherId = (otherUser?._id || otherUser?.id || '').toString();
+            const otherEmail = (otherUser?.email || '').toLowerCase().trim();
+            const otherName = (otherUser?.name || '').trim().toLowerCase();
+
+            const senderId = (m.sender?._id || m.sender?.id || m.sender || '').toString();
+            const senderEmail = (m.sender?.email || '').toLowerCase().trim();
+            const senderName = (m.sender?.name || '').trim().toLowerCase();
+
+            // Nếu người gửi khớp với ID, email hoặc tên của đối phương trong cuộc trò chuyện 1-1
+            const isOther = Boolean(
+              (otherId && senderId && senderId === otherId) ||
+              (otherEmail && senderEmail && senderEmail === otherEmail) ||
+              (otherName && senderName && senderName === otherName)
+            );
+
+            // Nếu người gửi khớp trực tiếp với tài khoản hiện tại
+            const isMeExplicit = Boolean(
+              (myId && senderId && senderId === myId) ||
+              (myEmail && senderEmail && senderEmail === myEmail) ||
+              (myName && senderName && senderName === myName)
+            );
+
+            // Trong cuộc đối thoại 1-1 giữa tôi và đối phương: Nếu không phải đối phương gửi thì chính là tôi gửi
+            const isMe = isMeExplicit || !isOther;
+
             const isPendingStrangerMsg = !isMe && isPendingRequest;
             const timeStr = new Date(m.createdAt).toLocaleTimeString([], {
               hour: '2-digit',
@@ -221,7 +252,7 @@ export const ChatBox = () => {
               >
                 {!isMe && (
                   <img
-                    src={otherUser.avatar || '/images/man.jpg'}
+                    src={getSafeAvatar(m.sender?.avatar || otherUser.avatar)}
                     alt={otherUser.name}
                     className="bubble-avatar"
                   />

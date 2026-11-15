@@ -6,6 +6,7 @@ import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { slugify } from '../utils/slugify.js';
 import { loadStore, saveStore } from '../utils/persistentStore.js';
 import { maskSensitiveText, analyzeContentSafety } from '../utils/sensitiveFilter.js';
+import { createNotification } from '../services/notificationService.js';
 
 export const removeVietnameseTones = (str) => {
   if (!str) return '';
@@ -120,7 +121,7 @@ export const getPosts = async (req, res) => {
               ...dbP,
               author: dbP.user?.name || dbP.author,
               authorJob: dbP.user?.jobTitle || dbP.authorJob,
-              authorAvatar: dbP.user?.avatar || dbP.authorAvatar || '/images/man.jpg',
+              authorAvatar: dbP.user?.avatar || dbP.authorAvatar || '',
             };
             if (!map.has(key)) {
               map.set(key, enrichedDb);
@@ -447,7 +448,7 @@ export const reactToPost = async (req, res) => {
 
     const userId = req.user?._id;
     const userName = req.user?.name || 'Thành viên';
-    const userAvatar = req.user?.avatar || '/images/man.jpg';
+    const userAvatar = req.user?.avatar || '';
 
     if (checkDbReady()) {
       try {
@@ -549,6 +550,31 @@ export const reactToPost = async (req, res) => {
             saveStore(store);
           }
 
+          if (currentTypes.includes(type)) {
+            try {
+              const authorId = (post.user?._id || post.user?.id || post.user)?.toString();
+              const myId = (req.user?._id || req.user?.id || '').toString();
+              if (authorId && authorId !== myId) {
+                const REACTION_LABELS = {
+                  love: '❤️ Yêu thương',
+                  sympathy: '🤗 Đồng cảm',
+                  stop: '🛑 Dừng lại & Nghỉ ngơi',
+                  encourage: '🌱 Tiếp thêm động lực',
+                };
+                const label = REACTION_LABELS[type] || '❤️ Cảm xúc';
+                await createNotification({
+                  recipientId: authorId,
+                  sender: req.user || { name: userName, avatar: userAvatar },
+                  type: 'reaction',
+                  reactionType: type,
+                  post: { _id: post._id, title: post.title, slug: post.slug, coverImage: post.coverImage },
+                  title: 'Tương tác mới về bài viết',
+                  message: `${userName} đã bày tỏ cảm xúc ${label} vào bài tâm sự "${post.title}" của bạn.`,
+                });
+              }
+            } catch (_) {}
+          }
+
           return sendSuccess(res, {
             message: currentTypes.includes(type) ? 'Đã bày tỏ cảm xúc thành công!' : 'Đã bỏ chọn cảm xúc',
             data: {
@@ -626,6 +652,31 @@ export const reactToPost = async (req, res) => {
     post.cheersCount = counts.total;
     saveStore(store);
 
+    if (currentTypes.includes(type)) {
+      try {
+        const authorId = (post.user?._id || post.user?.id || post.user)?.toString();
+        const myId = (req.user?._id || req.user?.id || '').toString();
+        if (authorId && authorId !== myId) {
+          const REACTION_LABELS = {
+            love: '❤️ Yêu thương',
+            sympathy: '🤗 Đồng cảm',
+            stop: '🛑 Dừng lại & Nghỉ ngơi',
+            encourage: '🌱 Tiếp thêm động lực',
+          };
+          const label = REACTION_LABELS[type] || '❤️ Cảm xúc';
+          await createNotification({
+            recipientId: authorId,
+            sender: req.user || { name: userName, avatar: userAvatar },
+            type: 'reaction',
+            reactionType: type,
+            post: { _id: post._id, title: post.title, slug: post.slug, coverImage: post.coverImage },
+            title: 'Tương tác mới về bài viết',
+            message: `${userName} đã bày tỏ cảm xúc ${label} vào bài tâm sự "${post.title}" của bạn.`,
+          });
+        }
+      } catch (_) {}
+    }
+
     return sendSuccess(res, {
       message: currentTypes.includes(type) ? 'Đã bày tỏ cảm xúc thành công!' : 'Đã bỏ chọn cảm xúc',
       data: {
@@ -667,6 +718,21 @@ export const sharePost = async (req, res) => {
           saveStore(store);
         }
 
+        try {
+          const authorId = (post.user?._id || post.user?.id || post.user)?.toString();
+          const myId = (req.user?._id || req.user?.id || '').toString();
+          if (authorId && authorId !== myId) {
+            await createNotification({
+              recipientId: authorId,
+              sender: req.user || { name: 'Thành viên' },
+              type: 'share',
+              post: { _id: post._id, title: post.title, slug: post.slug, coverImage: post.coverImage },
+              title: 'Bài viết được chia sẻ 🔄',
+              message: `${req.user?.name || 'Một thành viên'} vừa chia sẻ bài tâm sự "${post.title}" của bạn.`,
+            });
+          }
+        } catch (_) {}
+
         return sendSuccess(res, {
           message: 'Chia sẻ bài viết thành công!',
           data: { sharesCount: post.sharesCount },
@@ -679,6 +745,22 @@ export const sharePost = async (req, res) => {
     if (post) {
       post.sharesCount = (post.sharesCount || 0) + 1;
       saveStore(store);
+
+      try {
+        const authorId = (post.user?._id || post.user?.id || post.user)?.toString();
+        const myId = (req.user?._id || req.user?.id || '').toString();
+        if (authorId && authorId !== myId) {
+          await createNotification({
+            recipientId: authorId,
+            sender: req.user || { name: 'Thành viên' },
+            type: 'share',
+            post: { _id: post._id, title: post.title, slug: post.slug, coverImage: post.coverImage },
+            title: 'Bài viết được chia sẻ 🔄',
+            message: `${req.user?.name || 'Một thành viên'} vừa chia sẻ bài tâm sự "${post.title}" của bạn.`,
+          });
+        }
+      } catch (_) {}
+
       return sendSuccess(res, {
         message: 'Chia sẻ bài viết thành công!',
         data: { sharesCount: post.sharesCount },
@@ -808,9 +890,10 @@ export const createPost = async (req, res) => {
     }
 
     const resolvedCategory = await resolveCategory(category);
-    const authorDisplayName = author || (req.user ? req.user.name : 'Trần Đình Quân');
-    const authorDisplayJob = authorJob || (req.user ? req.user.jobTitle : 'System Admin & Lead Dev');
-    const authorAvatar = req.user?.avatar || '/images/man.jpg';
+    const isUserAdmin = req.user?.role === 'admin' || req.user?.email === 'anthonyq012025@gmail.com';
+    const authorDisplayName = req.user?.name || author || 'Thành viên cộng đồng';
+    const authorDisplayJob = req.user?.jobTitle || authorJob || (isUserAdmin ? 'System Admin & Lead Dev' : 'Thành viên cộng đồng');
+    const authorAvatar = req.user?.avatar || '';
     const authorSocialLinks = req.user?.socialLinks || {};
     const parsedTags = Array.isArray(tags) ? tags : tags ? tags.split(',').map((t) => t.trim().replace(/^#/, '')) : [];
 
@@ -835,6 +918,7 @@ export const createPost = async (req, res) => {
       user: req.user ? {
         _id: req.user._id,
         name: req.user.name,
+        email: req.user.email,
         avatar: req.user.avatar || authorAvatar,
         jobTitle: req.user.jobTitle,
         bio: req.user.bio,
@@ -1101,16 +1185,40 @@ export const deletePost = async (req, res) => {
   try {
     const { id } = req.params;
     const store = loadStore();
-    const postToDelete = (store.posts || []).find((p) => String(p._id) === String(id) || p.slug === id);
+    let postToDelete = (store.posts || []).find((p) => String(p._id) === String(id) || p.slug === id);
 
-    const isAdmin = req.user?.role === 'admin';
-    const isOwner = postToDelete && (
-      (postToDelete.user && String(postToDelete.user._id || postToDelete.user) === String(req.user?._id)) ||
-      postToDelete.author === req.user?.name
+    let dbPost = null;
+    if (checkDbReady()) {
+      try {
+        const mongoQuery = String(id).match(/^[0-9a-fA-F]{24}$/) ? { _id: id } : { slug: id };
+        dbPost = await Post.findOne(mongoQuery);
+      } catch (err) {}
+    }
+
+    const targetPost = dbPost || postToDelete;
+    if (!targetPost) {
+      return sendError(res, { message: 'Không tìm thấy bài viết để xóa', status: 404 });
+    }
+
+    const isAdmin = req.user?.role === 'admin' || req.user?.email === 'anthonyq012025@gmail.com';
+    const currentUserId = req.user?._id ? String(req.user._id) : '';
+    const currentUserName = (req.user?.name || '').trim().toLowerCase();
+    const currentUserEmail = (req.user?.email || '').trim().toLowerCase();
+
+    const postUserId = targetPost.user ? String(targetPost.user._id || targetPost.user) : '';
+    const postAuthor = (targetPost.author || '').trim().toLowerCase();
+
+    const postUserEmail = (targetPost.user?.email || '').trim().toLowerCase();
+
+    const isOwner = Boolean(
+      (currentUserId && postUserId && currentUserId === postUserId) ||
+      (currentUserName && postAuthor && currentUserName === postAuthor) ||
+      (currentUserEmail && postAuthor && currentUserEmail.split('@')[0] === postAuthor) ||
+      (currentUserEmail && postUserEmail && currentUserEmail === postUserEmail)
     );
 
-    if (!isAdmin && !isOwner && req.user) {
-      return sendError(res, { message: 'Bạn không có quyền xóa bài viết này', status: 403 });
+    if (!isAdmin && !isOwner) {
+      return sendError(res, { message: 'Bạn chỉ có quyền xóa bài viết do chính bạn đăng!', status: 403 });
     }
 
     store.posts = (store.posts || []).filter(
@@ -1315,7 +1423,7 @@ export const repostPost = async (req, res) => {
             dbPost.repostedBy.push({
               user: user._id,
               userName: user.name,
-              userAvatar: user.avatar || '/images/man.jpg',
+              userAvatar: user.avatar || '',
               repostedAt: new Date(),
             });
             dbPost.repostCount = (dbPost.repostCount || 0) + 1;
@@ -1336,10 +1444,10 @@ export const repostPost = async (req, res) => {
           user: {
             _id: user._id,
             name: user.name,
-            avatar: user.avatar || '/images/man.jpg',
+            avatar: user.avatar || '',
           },
           userName: user.name,
-          userAvatar: user.avatar || '/images/man.jpg',
+          userAvatar: user.avatar || '',
           repostedAt: new Date().toISOString(),
         });
         post.repostCount = (post.repostCount || 0) + 1;

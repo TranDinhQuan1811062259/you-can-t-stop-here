@@ -9,6 +9,8 @@ import { SharePostModal } from './SharePostModal';
 import { IdleWeatherText } from '../common/IdleWeatherText';
 import { PostCardIdleOverlay } from './PostCardIdleOverlay';
 
+const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
+
 export const PostCard = ({ post }) => {
   const { user } = useAuth();
   if (!post) return null;
@@ -72,16 +74,57 @@ export const PostCard = ({ post }) => {
 
   // Giữ đúng tác giả của từng bài viết; nếu là chính chủ đang đăng nhập thì đồng bộ 100% tên & avatar hiện tại
   const cleanAdminAvatar = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
-  const authorName = isCurrentUserAuthor ? user.name : (post.author || post.user?.name || 'Thành viên');
-  const authorJob = isCurrentUserAuthor ? (user.jobTitle || 'System Admin & Lead Dev') : (post.authorJob || post.user?.jobTitle || 'Thành viên cộng đồng');
-  const rawAuthorAvatar = isCurrentUserAuthor ? user.avatar : (post.authorAvatar || post.user?.avatar || '/images/man.jpg');
-  const authorAvatar = (rawAuthorAvatar && !rawAuthorAvatar.includes('google_avatar.jpg') && !rawAuthorAvatar.includes('man.jpg'))
-    ? rawAuthorAvatar
-    : (post.author === 'Đơn Thân Mẹ' || post.authorJob?.includes('Admin') || isCurrentUserAuthor ? cleanAdminAvatar : '/images/man.jpg');
+  const authorName = post.author || post.user?.name || (isCurrentUserAuthor ? user.name : 'Thành viên');
+  const authorJob = post.authorJob || post.user?.jobTitle || (isCurrentUserAuthor ? user.jobTitle : 'Thành viên cộng đồng');
+
+  // Đồng bộ Avatar chuẩn xác 100%:
+  const getAuthorAvatar = () => {
+    // 1. Nếu tác giả bài viết có avatar riêng hợp lệ
+    const raw = post.authorAvatar || post.user?.avatar || (isCurrentUserAuthor ? user?.avatar : '');
+    if (raw && !raw.includes('man.jpg') && !raw.includes('google_avatar')) {
+      return raw;
+    }
+
+    // 2. Chỉ gắn avatar Admin nếu bài viết thực sự do Admin đăng
+    const isPostByAdmin =
+      post.author === 'Đơn Thân Mẹ' ||
+      post.author === 'Trần Đình Quân' ||
+      post.author === 'Anthony Quân' ||
+      post.user?.role === 'admin' ||
+      post.user?.email === 'anthonyq012025@gmail.com';
+
+    if (isPostByAdmin) {
+      return cleanAdminAvatar;
+    }
+
+    return DEFAULT_EMPTY_AVATAR;
+  };
+
+  const authorAvatar = getAuthorAvatar();
   const authorFrame = user?.customLayout?.frameStyle && isCurrentUserAuthor ? user.customLayout.frameStyle : (post.user?.customLayout?.frameStyle || 'none');
 
   const [deleting, setDeleting] = useState(false);
   const [approving, setApproving] = useState(false);
+
+  // Xóa bài viết dành riêng cho chính chủ tác giả
+  const handleAuthorDelete = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const confirmed = window.confirm(
+      `🗑️ XÁC NHẬN XÓA BÀI VIẾT:\n\nBạn có chắc chắn muốn xóa bài viết "${post.title}" của mình không?\n\nBài viết sẽ bị gỡ bỏ khỏi trang chủ và trang cá nhân của bạn.`
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      await postService.deletePost(post._id || post.slug);
+      window.dispatchEvent(new Event('post_updated'));
+    } catch (err) {
+      alert(`Lỗi xóa bài: ${err.message}`);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleAdminDelete = async (e) => {
     e.preventDefault();
@@ -404,6 +447,56 @@ export const PostCard = ({ post }) => {
                 {deleting ? 'Đang xóa...' : '🚨 Xóa ngang (Admin)'}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Thanh công cụ dành riêng cho chính chủ tác giả (Xóa bài viết của mình) */}
+        {isCurrentUserAuthor && user?.role !== 'admin' && (
+          <div
+            className="card-author-actions-bar"
+            style={{
+              marginTop: '10px',
+              paddingTop: '8px',
+              borderTop: '1px dashed #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px',
+            }}
+          >
+            <span style={{ fontSize: '0.74rem', color: '#0d9488', fontWeight: 700 }}>
+              ✍️ Bài viết của bạn
+            </span>
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={handleAuthorDelete}
+              style={{
+                background: 'rgba(239, 68, 68, 0.08)',
+                color: '#dc2626',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                padding: '3px 10px',
+                borderRadius: '6px',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#dc2626';
+                e.currentTarget.style.color = '#ffffff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
+                e.currentTarget.style.color = '#dc2626';
+              }}
+              title="Xóa vĩnh viễn bài tâm sự này của bạn"
+            >
+              {deleting ? 'Đang xóa...' : '🗑️ Xóa bài'}
+            </button>
           </div>
         )}
       </div>

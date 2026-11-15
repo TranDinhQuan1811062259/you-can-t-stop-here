@@ -4,6 +4,8 @@ import { storyService } from '../../services/storyService';
 import { playClickSound } from '../../utils/soundEffects';
 import { playStoryPresetSound, stopStoryMusic } from '../../utils/storyAudioEngine';
 
+const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
+
 const STORY_GRADIENTS_MAP = {
   sunset: 'linear-gradient(135deg, #f97316 0%, #ec4899 50%, #8b5cf6 100%)',
   midnight: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%)',
@@ -432,7 +434,7 @@ export const StoryViewerModal = ({ isOpen, onClose, initialIndex = 0, stories = 
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
               <img
-                src={currentStory.userAvatar || '/images/man.jpg'}
+                src={(currentStory.userAvatar && !currentStory.userAvatar.includes('man.jpg')) ? currentStory.userAvatar : DEFAULT_EMPTY_AVATAR}
                 alt={currentStory.userName}
                 style={{
                   width: '38px',
@@ -928,7 +930,7 @@ export const StoryViewerModal = ({ isOpen, onClose, initialIndex = 0, stories = 
                       }}
                     >
                       <img
-                        src={rep.user?.avatar || '/images/man.jpg'}
+                        src={(rep.user?.avatar && !rep.user?.avatar.includes('man.jpg')) ? rep.user?.avatar : DEFAULT_EMPTY_AVATAR}
                         alt={rep.user?.name}
                         style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
                       />

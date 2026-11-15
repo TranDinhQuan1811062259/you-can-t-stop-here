@@ -4,6 +4,7 @@ import { checkDbReady } from '../config/db.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { loadStore, saveStore } from '../utils/persistentStore.js';
 import { maskSensitiveText } from '../utils/sensitiveFilter.js';
+import { createNotification } from '../services/notificationService.js';
 
 export const getCommentsByPost = async (req, res) => {
   try {
@@ -162,6 +163,25 @@ export const createComment = async (req, res) => {
       });
       saveStore(store);
 
+      // Gửi thông báo bình luận bài viết tới tác giả
+      try {
+        const postDoc = await Post.findById(postId).select('title slug coverImage user').lean();
+        if (postDoc) {
+          const authorId = postDoc.user?.toString();
+          if (authorId && authorId !== req.user._id?.toString()) {
+            await createNotification({
+              recipientId: authorId,
+              sender: req.user,
+              type: 'comment',
+              commentContent: cleanContent,
+              post: { _id: postDoc._id, title: postDoc.title, slug: postDoc.slug, coverImage: postDoc.coverImage },
+              title: 'Bình luận mới 💬',
+              message: `${req.user?.name || 'Thành viên'} đã bình luận vào bài tâm sự "${postDoc.title}": "${cleanContent.length > 50 ? cleanContent.substring(0, 50) + '...' : cleanContent}"`,
+            });
+          }
+        }
+      } catch (_) {}
+
       return sendSuccess(res, {
         message: 'Đã gửi lời động viên thành công!',
         data: populated,
@@ -195,6 +215,25 @@ export const createComment = async (req, res) => {
 
     store.comments.push(mockComment);
     saveStore(store);
+
+    // Gửi thông báo bình luận bài viết tới tác giả
+    try {
+      const targetPost = (store.posts || []).find((p) => String(p._id) === String(postId) || p.slug === postId);
+      if (targetPost) {
+        const authorId = (targetPost.user?._id || targetPost.user?.id || targetPost.user)?.toString();
+        if (authorId && authorId !== (req.user?._id || 'guest')?.toString()) {
+          await createNotification({
+            recipientId: authorId,
+            sender: req.user || mockComment.user,
+            type: 'comment',
+            commentContent: cleanContent,
+            post: { _id: targetPost._id, title: targetPost.title, slug: targetPost.slug, coverImage: targetPost.coverImage },
+            title: 'Bình luận mới 💬',
+            message: `${(req.user?.name || mockComment.user?.name || 'Thành viên')} đã bình luận vào bài tâm sự "${targetPost.title}": "${cleanContent.length > 50 ? cleanContent.substring(0, 50) + '...' : cleanContent}"`,
+          });
+        }
+      }
+    } catch (_) {}
 
     return sendSuccess(res, {
       message: 'Đã gửi lời động viên thành công!',

@@ -188,6 +188,12 @@ export const FloatingFestiveMascot = ({ onOpenShowcase }) => {
   const is304 = activeEvent.id === 'giai_phong_30_4' || activeEvent.name?.includes('30/4');
   const is29 = activeEvent.id === 'quoc_khanh_2_9' || activeEvent.name?.includes('2/9');
   const is83 = activeEvent.id === 'quoc_te_phu_nu_8_3' || activeEvent.name?.includes('8/3');
+  const isValentine =
+    activeEvent.id === 'le_tinh_nhan_14_2' ||
+    activeEvent.id?.includes('valentine') ||
+    activeEvent.name?.toLowerCase().includes('valentine') ||
+    activeEvent.name?.includes('14/2') ||
+    activeEvent.name?.toLowerCase().includes('tình nhân');
   const isHalloween =
     activeEvent.id === 'le_hoi_halloween' ||
     activeEvent.id?.includes('halloween') ||
@@ -318,7 +324,21 @@ export const FloatingFestiveMascot = ({ onOpenShowcase }) => {
           </div>
         )}
 
-        {!is304 && !is29 && !is83 && !isHalloween && (
+        {isValentine && (
+          <div className="mascot-valentine-container fluid-waving-valentine" title="14/2: Lễ Tình Nhân • Trái tim ngọt ngào &amp; Thần Cupid" style={{ position: 'relative', textAlign: 'center' }}>
+            <span className="mascot-valentine-heart" style={{ fontSize: '2.1rem', display: 'inline-block', filter: 'drop-shadow(0 0 12px #ec4899)' }}>
+              💖
+            </span>
+            <span className="mascot-valentine-cupid" style={{ position: 'absolute', top: '-8px', right: '-6px', fontSize: '1rem' }}>
+              💘
+            </span>
+            <span className="mascot-valentine-rose" style={{ position: 'absolute', bottom: '-4px', left: '-6px', fontSize: '0.9rem' }}>
+              🌹
+            </span>
+          </div>
+        )}
+
+        {!is304 && !is29 && !is83 && !isHalloween && !isValentine && (
           <div className="mascot-default-icon" style={{ pointerEvents: 'none' }}>
             <span className="mascot-emoji" style={{ pointerEvents: 'none' }}>{activeEvent.icon || '🎊'}</span>
           </div>

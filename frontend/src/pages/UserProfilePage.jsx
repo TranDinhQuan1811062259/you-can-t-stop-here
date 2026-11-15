@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { notificationService } from '../services/notificationService';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
@@ -8,6 +9,20 @@ import { ErrorMessage } from '../components/common/ErrorMessage';
 import { PostCard } from '../components/blog/PostCard';
 import { ProfileMusicPlayer } from '../components/profile/ProfileMusicPlayer';
 import { Pagination } from '../components/common/Pagination';
+
+export const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
+
+export const getProfileAvatarSrc = (targetUser) => {
+  if (!targetUser) return DEFAULT_EMPTY_AVATAR;
+  const isAdm = targetUser.role === 'admin' || targetUser.email === 'anthonyq012025@gmail.com';
+  if (targetUser.avatar && !targetUser.avatar.includes('/images/man.jpg') && !targetUser.avatar.includes('google_avatar')) {
+    return targetUser.avatar;
+  }
+  if (isAdm) {
+    return '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
+  }
+  return DEFAULT_EMPTY_AVATAR;
+};
 
 /**
  * Phân tích và tạo liên kết cho các hashtag trong tiểu sử
@@ -53,6 +68,7 @@ export const UserProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
+  const [profilePostsPage, setProfilePostsPage] = useState(1);
 
   const fetchProfile = async () => {
     try {
@@ -92,8 +108,7 @@ export const UserProfilePage = () => {
     );
   }
 
-  const { user, stats, friendshipStatus, posts } = profileData;
-  const [profilePostsPage, setProfilePostsPage] = useState(1);
+  const { user, stats, friendshipStatus, pendingNotificationId, posts } = profileData;
   const POSTS_PER_PAGE = 6;
   const totalUserPosts = posts?.length || 0;
   const totalUserPostPages = Math.ceil(totalUserPosts / POSTS_PER_PAGE) || 1;
@@ -105,14 +120,19 @@ export const UserProfilePage = () => {
   // Xác định tình trạng bạn bè thực tế dựa trên danh bạ local và backend
   const isSelf =
     currentUser &&
-    (currentUser._id === user._id ||
-      currentUser.email === user.email ||
+    (String(currentUser._id || currentUser.id) === String(user._id || user.id) ||
+      (currentUser.email && user.email && currentUser.email.toLowerCase() === user.email.toLowerCase()) ||
       friendshipStatus === 'self');
 
   const isFriend =
     !isSelf &&
     (friendshipStatus === 'friends' ||
-      friendsList.some((f) => f._id === user._id || f.name === user.name));
+      friendsList.some(
+        (f) => String(f._id || f.id) === String(user._id || user.id)
+      ));
+
+  const isSentPending = !isSelf && !isFriend && friendshipStatus === 'sent_pending';
+  const isReceivedPending = !isSelf && !isFriend && friendshipStatus === 'received_pending';
 
   const hashtagsInBio = extractHashtags(user.bio);
   const social = user.socialLinks || {};
@@ -136,15 +156,63 @@ export const UserProfilePage = () => {
       setFriendActionLoading(true);
       if (isFriend) {
         if (window.confirm(`Bạn có chắc chắn muốn hủy kết bạn với ${user.name}?`)) {
-          await handleRemoveFriend(user._id);
+          await handleRemoveFriend(user._id || user.id);
           await fetchProfile();
         }
       } else {
-        await handleAddFriend(user._id);
+        await handleAddFriend(user._id || user.id);
         await fetchProfile();
       }
     } catch (err) {
       alert(err.message || 'Thao tác kết bạn thất bại. Vui lòng thử lại!');
+    } finally {
+      setFriendActionLoading(false);
+    }
+  };
+
+  // Hủy lời mời kết bạn đã gửi
+  const onCancelPendingRequest = async () => {
+    try {
+      setFriendActionLoading(true);
+      await handleRemoveFriend(user._id || user.id);
+      await fetchProfile();
+    } catch (err) {
+      alert(err.message || 'Hủy lời mời thất bại. Vui lòng thử lại!');
+    } finally {
+      setFriendActionLoading(false);
+    }
+  };
+
+  // Đồng ý lời mời kết bạn
+  const onAcceptFriend = async () => {
+    try {
+      setFriendActionLoading(true);
+      if (pendingNotificationId) {
+        await notificationService.respondToFriendRequest(pendingNotificationId, 'accept');
+      } else {
+        await handleAddFriend(user._id || user.id);
+      }
+      if (typeof fetchFriends === 'function') fetchFriends();
+      await fetchProfile();
+    } catch (err) {
+      alert(err.message || 'Lỗi chấp nhận kết bạn');
+    } finally {
+      setFriendActionLoading(false);
+    }
+  };
+
+  // Từ chối lời mời kết bạn
+  const onDeclineFriend = async () => {
+    try {
+      setFriendActionLoading(true);
+      if (pendingNotificationId) {
+        await notificationService.respondToFriendRequest(pendingNotificationId, 'decline');
+      } else {
+        await handleRemoveFriend(user._id || user.id);
+      }
+      await fetchProfile();
+    } catch (err) {
+      alert(err.message || 'Lỗi từ chối kết bạn');
     } finally {
       setFriendActionLoading(false);
     }
@@ -195,19 +263,39 @@ export const UserProfilePage = () => {
         <div className="profile-header-content">
           <div className="profile-avatar-wrap">
             <img
-              src={
-                user.avatar && !user.avatar.includes('google_avatar')
-                  ? user.avatar
-                  : ((user.role === 'admin' || user.email === 'anthonyq012025@gmail.com')
-                      ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg'
-                      : '/images/man.jpg')
-              }
+              src={getProfileAvatarSrc(user)}
               alt={user.name}
               onError={(e) => {
-                e.target.src = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
+                e.target.src = DEFAULT_EMPTY_AVATAR;
               }}
               className={`profile-avatar-img frame-${user.customLayout?.frameStyle || 'none'}`}
             />
+            {isSelf && (
+              <button
+                type="button"
+                onClick={() => openProfileModal('info')}
+                title="Bấm để cài đặt ảnh đại diện của bạn"
+                style={{
+                  position: 'absolute',
+                  bottom: '4px',
+                  right: '4px',
+                  background: 'rgba(15, 23, 42, 0.85)',
+                  border: '1.5px solid #ffffff',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  color: '#ffffff',
+                  fontSize: '0.9rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                }}
+              >
+                📷
+              </button>
+            )}
             {user.role === 'admin' && (
               <span className="profile-admin-crown" title="Quản Trị Viên Hệ Thống">
                 👑
@@ -216,9 +304,100 @@ export const UserProfilePage = () => {
           </div>
 
           <div className="profile-main-meta">
-            <div className="profile-name-row">
+            <div className="profile-name-row" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <h1 className="profile-display-name">{user.name}</h1>
               {user.role === 'admin' && <span className="profile-badge-admin">ADMIN</span>}
+              {isSelf ? (
+                <span
+                  style={{
+                    background: 'rgba(13, 148, 136, 0.15)',
+                    color: '#0d9488',
+                    border: '1px solid rgba(13, 148, 136, 0.35)',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title="Đây là hồ sơ cá nhân của chính bạn"
+                >
+                  👤 Bạn (Chủ tài khoản)
+                </span>
+              ) : isFriend ? (
+                <span
+                  style={{
+                    background: 'rgba(34, 197, 94, 0.15)',
+                    color: '#16a34a',
+                    border: '1px solid rgba(34, 197, 94, 0.35)',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title="Hai người đã kết bạn và kết nối với nhau trên hệ thống"
+                >
+                  👥 Bạn bè (Đã kết nối ✓)
+                </span>
+              ) : isSentPending ? (
+                <span
+                  style={{
+                    background: '#fef3c7',
+                    color: '#b45309',
+                    border: '1px solid #fde68a',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title="Bạn đã gửi lời mời kết bạn, đang chờ đối phương đồng ý"
+                >
+                  ⏳ Đã gửi lời mời (Chờ đồng ý)
+                </span>
+              ) : isReceivedPending ? (
+                <span
+                  style={{
+                    background: '#e0f2fe',
+                    color: '#0369a1',
+                    border: '1px solid #bae6fd',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title="Người này đã gửi lời mời kết bạn tới bạn"
+                >
+                  👥 Đã gửi lời mời kết bạn tới bạn
+                </span>
+              ) : (
+                <span
+                  style={{
+                    background: 'rgba(100, 116, 139, 0.15)',
+                    color: '#64748b',
+                    border: '1px solid rgba(100, 116, 139, 0.3)',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title="Bạn và người này chưa kết bạn trên Freedom"
+                >
+                  🌐 Người lạ (Chưa kết bạn)
+                </span>
+              )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '6px' }}>
               <p className="profile-job-title" style={{ margin: 0 }}>{user.jobTitle || 'Thành viên cộng đồng'}</p>
@@ -375,16 +554,94 @@ export const UserProfilePage = () => {
                 {/* Tình trạng kết bạn */}
                 <div className="profile-friend-status-box">
                   {isFriend ? (
-                    <div className="friend-badge-wrap">
-                      <span className="friend-badge-pill">✓ Bạn bè</span>
+                    <div className="friend-badge-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span className="friend-badge-pill" style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', fontWeight: 700, padding: '6px 14px', borderRadius: '8px' }}>
+                        ✓ Bạn bè
+                      </span>
                       <button
                         type="button"
                         className="friend-unfriend-btn"
                         onClick={onToggleFriend}
                         disabled={friendActionLoading}
-                        title="Hủy kết bạn"
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.1)',
+                          color: '#dc2626',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                        title="Hủy kết bạn với người này"
                       >
-                        Hủy kết bạn
+                        {friendActionLoading ? 'Đang hủy...' : 'Hủy kết bạn'}
+                      </button>
+                    </div>
+                  ) : isSentPending ? (
+                    <div className="friend-badge-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span className="friend-badge-pill" style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', fontWeight: 700, padding: '6px 14px', borderRadius: '8px' }}>
+                        ⏳ Chờ đối phương đồng ý
+                      </span>
+                      <button
+                        type="button"
+                        className="friend-unfriend-btn"
+                        onClick={onCancelPendingRequest}
+                        disabled={friendActionLoading}
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.1)',
+                          color: '#dc2626',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                        title="Hủy lời mời kết bạn đã gửi"
+                      >
+                        {friendActionLoading ? 'Đang hủy...' : 'Hủy lời mời'}
+                      </button>
+                    </div>
+                  ) : isReceivedPending ? (
+                    <div className="friend-badge-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="friend-add-btn"
+                        onClick={onAcceptFriend}
+                        disabled={friendActionLoading}
+                        style={{
+                          background: '#16a34a',
+                          color: '#ffffff',
+                          padding: '8px 16px',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          border: 'none',
+                          cursor: 'pointer',
+                          boxShadow: '0 3px 8px rgba(22, 163, 74, 0.35)',
+                        }}
+                        title="Đồng ý lời mời kết bạn từ người này"
+                      >
+                        {friendActionLoading ? 'Đang xử lý...' : '✓ Đồng ý kết bạn'}
+                      </button>
+                      <button
+                        type="button"
+                        className="friend-unfriend-btn"
+                        onClick={onDeclineFriend}
+                        disabled={friendActionLoading}
+                        style={{
+                          background: '#f1f5f9',
+                          color: '#475569',
+                          border: '1px solid #cbd5e1',
+                          padding: '8px 14px',
+                          borderRadius: '8px',
+                          fontSize: '0.85rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                        title="Từ chối lời mời"
+                      >
+                        ✕ Bỏ qua
                       </button>
                     </div>
                   ) : (
@@ -393,9 +650,24 @@ export const UserProfilePage = () => {
                       className="friend-add-btn"
                       onClick={onToggleFriend}
                       disabled={friendActionLoading}
-                      title="Thêm vào danh bạ bạn bè"
+                      style={{
+                        background: 'linear-gradient(135deg, #0d9488, #059669)',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '8px 18px',
+                        borderRadius: '8px',
+                        fontWeight: 700,
+                        fontSize: '0.88rem',
+                        cursor: 'pointer',
+                        boxShadow: '0 3px 8px rgba(13, 148, 136, 0.35)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.2s',
+                      }}
+                      title="Gửi lời mời kết bạn và thêm vào danh bạ bạn bè"
                     >
-                      {friendActionLoading ? 'Đang xử lý...' : '+ Kết bạn'}
+                      {friendActionLoading ? 'Đang gửi lời mời...' : '➕ Thêm Bạn Bè'}
                     </button>
                   )}
                 </div>

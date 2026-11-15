@@ -121,7 +121,7 @@ export const createStory = async (req, res) => {
       _id: `story_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       userId: user._id || `guest_${Date.now()}`,
       userName: user.name || 'Thành viên ẩn danh',
-      userAvatar: user.avatar || '/images/man.jpg',
+      userAvatar: user.avatar || '',
       content: content ? content.trim() : '',
       drawingData: drawingData || null,
       mediaUrl: mediaUrl || null,

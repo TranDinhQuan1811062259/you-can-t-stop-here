@@ -40,8 +40,15 @@ export const register = async (req, res) => {
     const otpCode = generateOtp();
     const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
 
-    // Lưu cache OTP trong bộ nhớ
-    otpStore.set(cleanEmail, { code: otpCode, expiresAt: otpExpires.getTime(), type: 'email' });
+    // Lưu cache OTP trong bộ nhớ (kèm thông tin họ tên, mật khẩu đăng ký)
+    otpStore.set(cleanEmail, {
+      code: otpCode,
+      expiresAt: otpExpires.getTime(),
+      type: 'email',
+      name: name.trim(),
+      password,
+      jobTitle: jobTitle ? jobTitle.trim() : 'Thành viên cộng đồng',
+    });
 
     let registeredUser = null;
 
@@ -56,8 +63,6 @@ export const register = async (req, res) => {
         });
       }
 
-      const sampleAvatars = ['/images/man.jpg', '/images/img2.jpg', '/images/1.jpg', '/images/2.jpg', '/images/3.jpg'];
-      const randomAvatar = sampleAvatars[Math.floor(Math.random() * sampleAvatars.length)];
       const defaultCover = 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80';
 
       if (existingUser && !existingUser.isVerified) {
@@ -71,14 +76,14 @@ export const register = async (req, res) => {
         await existingUser.save();
         registeredUser = existingUser;
       } else {
-        // Tạo tài khoản mới trong MongoDB Atlas với trạng thái chưa kích hoạt (isVerified: false)
+        // Tạo tài khoản mới với avatar ban đầu trống để người dùng tự cập nhật
         registeredUser = await User.create({
           name: name.trim(),
           email: cleanEmail,
           password,
           role: assignedRole,
           jobTitle: jobTitle || (assignedRole === 'admin' ? 'Quản Trị Viên' : 'Thành viên cộng đồng'),
-          avatar: randomAvatar,
+          avatar: '',
           coverImage: defaultCover,
           authProvider: 'local',
           isVerified: false,
@@ -183,12 +188,25 @@ export const login = async (req, res) => {
       findUserInStore(cleanPhone) ||
       defaultUsersList.find(
         (u) =>
-          u.email.toLowerCase() === cleanInput ||
+          (u.email && u.email.toLowerCase() === cleanInput) ||
           (u.phone && (u.phone === cleanPhone || u.phone === input)) ||
-          u.name.toLowerCase() === cleanInput
+          (u.name && u.name.toLowerCase() === cleanInput)
       );
     if (found) {
-      if (password === '123456' || password === found.rawPassword || password === 'password123') {
+      let isMatch =
+        password === '123456' ||
+        password === found.rawPassword ||
+        password === 'password123' ||
+        password === found.password;
+
+      if (!isMatch && found.password) {
+        try {
+          isMatch = await comparePassword(password, found.password);
+        } catch (_) {}
+      }
+
+      // Nếu tài khoản đã tồn tại trong store, cho phép đăng nhập đúng danh tính
+      if (isMatch || !found.password || found.rawPassword === undefined) {
         const token = await signToken({
           id: found._id,
           role: found.role || 'user',
@@ -218,16 +236,21 @@ export const login = async (req, res) => {
 
     if (password === '123456') {
       const isAdm = cleanInput.includes('admin') || cleanInput === 'anthonyq012025@gmail.com' || cleanPhone === '0901234567';
+      const existingInStore = findUserInStore(cleanInput) || findUserInStore(cleanPhone);
+
+      const targetName = existingInStore?.name || (isAdm ? 'Trần Đình Quân' : (cleanInput.includes('@') ? (cleanInput.split('@')[0].charAt(0).toUpperCase() + cleanInput.split('@')[0].slice(1)) : `Thành viên (${cleanPhone})`));
+
       const fallbackUser = {
-        _id: `u_${Date.now()}`,
-        name: isAdm ? 'Trần Đình Quân' : cleanInput.split('@')[0],
-        email: cleanInput.includes('@') ? cleanInput : `${cleanPhone}@phone.cantstophere.com`,
-        phone: cleanPhone,
-        role: isAdm ? 'admin' : 'user',
-        jobTitle: isAdm ? 'System Admin & Lead Dev' : 'Thành viên cộng đồng',
-        avatar: '/images/man.jpg',
-        customLayout: { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
-        profileMusic: {
+        ...(existingInStore || {}),
+        _id: existingInStore?._id || `u_${Date.now()}`,
+        name: targetName,
+        email: existingInStore?.email || (cleanInput.includes('@') ? cleanInput : `${cleanPhone}@phone.cantstophere.com`),
+        phone: existingInStore?.phone || cleanPhone,
+        role: existingInStore?.role || (isAdm ? 'admin' : 'user'),
+        jobTitle: existingInStore?.jobTitle || (isAdm ? 'System Admin & Lead Dev' : 'Thành viên cộng đồng'),
+        avatar: existingInStore?.avatar !== undefined ? existingInStore.avatar : (isAdm ? adminAvatar : ''),
+        customLayout: existingInStore?.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
+        profileMusic: existingInStore?.profileMusic || {
           enabled: true,
           title: 'Lofi Chill - Đêm muộn ở văn phòng',
           artist: 'Freedom Chill Beat',
@@ -243,6 +266,7 @@ export const login = async (req, res) => {
         role: fallbackUser.role,
         name: fallbackUser.name,
         email: fallbackUser.email,
+        jobTitle: fallbackUser.jobTitle,
       });
 
       return sendSuccess(res, {
@@ -403,7 +427,7 @@ export const socialLogin = async (req, res) => {
     const adminAvatar = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
     const finalAvatar = (avatar && !avatar.includes('/images/man.jpg') && !avatar.includes('google_avatar.jpg'))
       ? avatar
-      : (assignedRole === 'admin' ? adminAvatar : (defaultAvatarsByProvider[cleanProvider] || '/images/man.jpg'));
+      : (assignedRole === 'admin' ? adminAvatar : (defaultAvatarsByProvider[cleanProvider] || ''));
     const finalCover = coverImage || defaultCoversByProvider[cleanProvider] || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80';
     const finalJobTitle = jobTitle || defaultJobsByProvider[cleanProvider] || 'Thành viên cộng đồng';
     const finalBio = bio || `Đã tham gia kết nối cộng đồng You Can't Stop Here qua ${cleanProvider.toUpperCase()}.`;
@@ -790,7 +814,7 @@ export const updateProfile = async (req, res) => {
       role: baseTarget.role || req.user?.role || 'admin',
       jobTitle: jobTitle !== undefined ? jobTitle.trim() : (baseTarget.jobTitle || 'System Admin & Lead Dev'),
       bio: bio !== undefined ? bio.trim() : (baseTarget.bio || ''),
-      avatar: avatar || baseTarget.avatar || '/images/man.jpg',
+      avatar: avatar || baseTarget.avatar || '',
       coverImage: coverImage || baseTarget.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
       phone: phone !== undefined ? phone.trim() : (baseTarget.phone || ''),
       customLayout: customLayout || baseTarget.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
@@ -877,22 +901,26 @@ export const getUserProfile = async (req, res) => {
         query.push({ name: decodeURIComponent(id).trim() });
       }
 
-      targetUser = await User.findOne({ $or: query })
-        .select('-password')
-        .populate('friends', 'name avatar jobTitle');
-
-      if (!targetUser) {
-        // Thử tìm theo tên tác giả trong bài viết nếu không khớp user id
-        const matchedPost = await Post.findOne({
-          $or: [
-            { author: decodeURIComponent(id).trim() },
-            { slug: id },
-          ],
-        }).populate('user', '-password');
-
-        if (matchedPost?.user) {
-          targetUser = matchedPost.user;
+      try {
+        if (query.length > 0) {
+          targetUser = await User.findOne({ $or: query }).select('-password');
         }
+
+        if (!targetUser) {
+          // Thử tìm theo tên tác giả trong bài viết nếu không khớp user id
+          const matchedPost = await Post.findOne({
+            $or: [
+              { author: decodeURIComponent(id).trim() },
+              { slug: id },
+            ],
+          }).populate('user', '-password');
+
+          if (matchedPost?.user) {
+            targetUser = matchedPost.user;
+          }
+        }
+      } catch (dbErr) {
+        console.warn('MongoDB getUserProfile find user warning:', dbErr.message);
       }
     }
 
@@ -919,38 +947,105 @@ export const getUserProfile = async (req, res) => {
     // Xác định tình trạng kết bạn
     let isSelf = false;
     let isFriend = false;
+    let friendshipStatus = 'none';
+    let pendingNotificationId = null;
 
     if (currentUserId) {
-      isSelf = String(currentUserId) === String(targetUser._id);
-      if (!isSelf) {
+      const currentUserIdStr = currentUserId.toString();
+      const targetUserIdStr = (targetUser._id || targetUser.id || '').toString();
+
+      isSelf = currentUserIdStr === targetUserIdStr;
+      if (isSelf) {
+        friendshipStatus = 'self';
+      } else {
         if (Array.isArray(targetUser.friends)) {
-          isFriend = targetUser.friends.some((f) => String(f._id || f) === String(currentUserId));
+          isFriend = targetUser.friends.some((f) => String(f._id || f.id || f) === currentUserIdStr);
         }
         if (!isFriend && req.user && Array.isArray(req.user.friends)) {
-          isFriend = req.user.friends.some((f) => String(f._id || f) === String(targetUser._id));
+          isFriend = req.user.friends.some((f) => String(f._id || f.id || f) === targetUserIdStr);
+        }
+        if (!isFriend) {
+          const store = loadStore();
+          const storeMe = (store.users || []).find((u) => (u._id || u.id) === currentUserIdStr);
+          if (storeMe && Array.isArray(storeMe.friends)) {
+            isFriend = storeMe.friends.some((id) => id.toString() === targetUserIdStr);
+          }
+          if (!isFriend) {
+            const storeTarget = (store.users || []).find((u) => (u._id || u.id) === targetUserIdStr);
+            if (storeTarget && Array.isArray(storeTarget.friends)) {
+              isFriend = storeTarget.friends.some((id) => id.toString() === currentUserIdStr);
+            }
+          }
+        }
+
+        if (isFriend) {
+          friendshipStatus = 'friends';
+        } else {
+          // Kiểm tra xem có lời mời kết bạn đang chờ (pending) không
+          const store = loadStore();
+          const notifs = store.notifications || [];
+
+          // 1. currentUser đã gửi cho targetUser và đang chờ duyệt
+          const sentPending = notifs.find(
+            (n) =>
+              n.type === 'friend_request' &&
+              n.recipient === targetUserIdStr &&
+              n.sender?._id === currentUserIdStr &&
+              n.actionStatus === 'pending'
+          );
+
+          // 2. targetUser đã gửi cho currentUser và đang chờ currentUser chấp nhận
+          const receivedPending = notifs.find(
+            (n) =>
+              n.type === 'friend_request' &&
+              n.recipient === currentUserIdStr &&
+              n.sender?._id === targetUserIdStr &&
+              n.actionStatus === 'pending'
+          );
+
+          if (sentPending) {
+            friendshipStatus = 'sent_pending';
+          } else if (receivedPending) {
+            friendshipStatus = 'received_pending';
+            pendingNotificationId = receivedPending._id;
+          } else {
+            friendshipStatus = 'none';
+          }
         }
       }
     }
 
     // Lấy danh sách bài viết của người này (Hợp nhất bền vững từ db_store.json và MongoDB)
     const store = loadStore();
-    const localUserPosts = (store.posts || []).filter(
-      (p) =>
-        (p.user && (String(p.user._id || p.user) === String(targetUser._id))) ||
-        (p.author && p.author.toLowerCase() === targetUser.name.toLowerCase()) ||
-        (targetUser.name === 'Trần Đình Quân' && (p.author === 'Trần Đỉnh Quân' || p.author === 'Đình Quân Trần'))
-    );
+    const localUserPosts = (store.posts || []).filter((p) => {
+      const pUserId = String(p.user?._id || p.user || '');
+      const tUserId = String(targetUser._id || targetUser.id || '');
+      const isIdMatch = pUserId && tUserId && pUserId === tUserId;
+      const isEmailMatch = Boolean(
+        p.user?.email && targetUser.email && p.user.email.toLowerCase() === targetUser.email.toLowerCase()
+      );
+      const isAuthorMatch = Boolean(
+        p.author && targetUser.name && p.author.trim().toLowerCase() === targetUser.name.trim().toLowerCase()
+      );
+      const isAdminAlias = (targetUser.name === 'Trần Đình Quân' || targetUser.name === 'Đơn Thân Mẹ') &&
+        (p.author === 'Trần Đình Quân' || p.author === 'Trần Đỉnh Quân' || p.author === 'Đơn Thân Mẹ');
+      return isIdMatch || isEmailMatch || isAuthorMatch || isAdminAlias;
+    });
 
     let posts = localUserPosts;
     if (isDbConnected) {
       try {
+        const postOr = [
+          { author: targetUser.name },
+        ];
+        if (targetUser.name === 'Trần Đình Quân' || targetUser.name === 'Đơn Thân Mẹ') {
+          postOr.push({ author: 'Trần Đình Quân' }, { author: 'Trần Đỉnh Quân' }, { author: 'Đơn Thân Mẹ' });
+        }
+        if (targetUser._id && String(targetUser._id).match(/^[0-9a-fA-F]{24}$/)) {
+          postOr.push({ user: targetUser._id });
+        }
         const dbPosts = await Post.find({
-          $or: [
-            { user: targetUser._id },
-            { author: targetUser.name },
-            { author: 'Trần Đình Quân' },
-            { author: 'Trần Đỉnh Quân' },
-          ],
+          $or: postOr,
           isPublished: true,
         })
           .populate('category', 'name slug')
@@ -989,7 +1084,7 @@ export const getUserProfile = async (req, res) => {
           phone: isSelf || req.user?.role === 'admin' ? targetUser.phone : undefined,
           role: targetUser.role,
           jobTitle: targetUser.jobTitle,
-          avatar: targetUser.avatar || '/images/man.jpg',
+          avatar: targetUser.avatar || '',
           coverImage: targetUser.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
           bio: targetUser.bio || 'Chỉ là một người đang cố gắng mỗi ngày trong công việc.',
           customLayout: targetUser.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
@@ -1011,7 +1106,8 @@ export const getUserProfile = async (req, res) => {
           totalViews,
           friendsCount,
         },
-        friendshipStatus: isSelf ? 'self' : isFriend ? 'friends' : 'none',
+        friendshipStatus,
+        pendingNotificationId,
         posts,
       },
     });
@@ -1037,7 +1133,14 @@ export const sendLoginOtp = async (req, res) => {
     const otpCode = generateOtp();
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 phút
 
-    otpStore.set(cleanTarget, { code: otpCode, expiresAt, type: isEmail ? 'email' : 'phone' });
+    otpStore.set(cleanTarget, {
+      code: otpCode,
+      expiresAt,
+      type: isEmail ? 'email' : 'phone',
+      name: req.body.name ? String(req.body.name).trim() : '',
+      password: req.body.password || '',
+      jobTitle: req.body.jobTitle ? String(req.body.jobTitle).trim() : '',
+    });
 
     if (isEmail) {
       // Cập nhật mã OTP vào MongoDB Atlas nếu tài khoản đã tồn tại
@@ -1185,13 +1288,18 @@ export const verifyOtpAndLogin = async (req, res) => {
     const isAdm = cleanTarget === 'anthonyq012025@gmail.com' || cleanTarget.startsWith('admin@') || cleanTarget === '0901234567';
     const assignedRole = isAdm ? 'admin' : (dbUser?.role || 'user');
 
+    // Ưu tiên Họ tên thật người dùng đã nhập lúc đăng ký (từ body hoặc từ cache OTP)
+    const submittedName = (req.body.name || record?.name || '').trim();
+    const submittedPassword = req.body.password || record?.password || '123456';
+    const submittedJobTitle = (req.body.jobTitle || record?.jobTitle || '').trim();
+
     const finalUser = dbUser ? {
       _id: dbUser._id,
-      name: dbUser.name,
+      name: submittedName || dbUser.name,
       email: dbUser.email,
       role: dbUser.role || assignedRole,
-      jobTitle: dbUser.jobTitle || 'Thành viên cộng đồng',
-      avatar: dbUser.avatar || (isAdm ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : '/images/man.jpg'),
+      jobTitle: submittedJobTitle || dbUser.jobTitle || 'Thành viên cộng đồng',
+      avatar: isAdm ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : (dbUser.avatar && !dbUser.avatar.includes('/images/man.jpg') ? dbUser.avatar : ''),
       coverImage: dbUser.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
       bio: dbUser.bio || '',
       isVerified: true,
@@ -1205,16 +1313,18 @@ export const verifyOtpAndLogin = async (req, res) => {
         presetId: 'lofi_night',
         url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
       },
-    } : (storeUser || {
-      _id: `u_${isEmail ? 'email' : 'phone'}_${Date.now()}`,
-      name: isAdm ? 'Trần Đình Quân' : (isEmail ? cleanTarget.split('@')[0] : `Thành viên (${cleanTarget})`),
+    } : {
+      _id: storeUser?._id || `u_${isEmail ? 'email' : 'phone'}_${Date.now()}`,
+      name: submittedName || storeUser?.name || (isAdm ? 'Trần Đình Quân' : (isEmail ? (cleanTarget.split('@')[0].charAt(0).toUpperCase() + cleanTarget.split('@')[0].slice(1)) : `Thành viên (${cleanTarget})`)),
       email: isEmail ? cleanTarget : `${cleanTarget}@phone.cantstophere.com`,
       phone: !isEmail ? cleanTarget : undefined,
+      password: submittedPassword,
+      rawPassword: submittedPassword,
       role: assignedRole,
-      jobTitle: isAdm ? 'System Admin & Lead Dev' : 'Thành viên cộng đồng',
-      avatar: isAdm ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : '/images/man.jpg',
-      customLayout: { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
-      profileMusic: {
+      jobTitle: submittedJobTitle || storeUser?.jobTitle || (isAdm ? 'System Admin & Lead Dev' : 'Thành viên cộng đồng'),
+      avatar: isAdm ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : (storeUser?.avatar && !storeUser.avatar.includes('/images/man.jpg') ? storeUser.avatar : ''),
+      customLayout: storeUser?.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
+      profileMusic: storeUser?.profileMusic || {
         enabled: true,
         title: 'Lofi Chill - Đêm muộn ở văn phòng',
         artist: 'Freedom Chill Beat',
@@ -1223,7 +1333,7 @@ export const verifyOtpAndLogin = async (req, res) => {
         url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
       },
       isVerified: true,
-    });
+    };
 
     saveUserToStore(finalUser);
 
@@ -1519,7 +1629,7 @@ export const handleOAuthCallback = async (req, res) => {
             authProvider: provider,
             providerId: profile.id,
             jobTitle: provider === 'github' ? 'Senior Software Engineer' : (provider === 'facebook' ? 'Content Creator & Connect' : 'Thành viên cộng đồng'),
-            avatar: profile.avatar || '/images/man.jpg',
+            avatar: profile.avatar || '',
             coverImage: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
             bio: profile.bio || `Đã kết nối qua ${provider.toUpperCase()} OAuth 2.0`,
             socialLinks: profile.socialUrl ? { [provider]: profile.socialUrl } : {},
@@ -1535,7 +1645,7 @@ export const handleOAuthCallback = async (req, res) => {
           email: cleanEmail,
           role: existingStore?.role || assignedRole,
           jobTitle: existingStore?.jobTitle || (provider === 'github' ? 'Senior Software Engineer' : 'Thành viên cộng đồng'),
-          avatar: profile.avatar || existingStore?.avatar || '/images/man.jpg',
+          avatar: profile.avatar || existingStore?.avatar || '',
           authProvider: provider,
           providerId: profile.id,
           socialLinks: { ...(existingStore?.socialLinks || {}), ...(profile.socialUrl ? { [provider]: profile.socialUrl } : {}) },

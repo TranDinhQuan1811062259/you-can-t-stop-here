@@ -31,7 +31,7 @@ const sampleUsers = [
     role: 'admin',
     chatStatus: 'online',
     jobTitle: 'System Admin & Lead Dev',
-    avatar: '/images/man.jpg',
+    avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg',
     bio: 'Chủ sở hữu & Quản trị viên You Can\'t Stop Here. Đam mê lập trình và chia sẻ góc nhìn nghề nghiệp chân thành. #Burnout #Overtime #LeadDev #KeepMoving',
     socialLinks: {
       facebook: 'https://facebook.com/anthony.quan',
@@ -63,7 +63,7 @@ const sampleUsers = [
     role: 'user',
     chatStatus: 'busy',
     jobTitle: 'Frontend Dev 3 năm kinh nghiệm',
-    avatar: '/images/man.jpg',
+    avatar: '',
     bio: 'Đang vật lộn với deadlines và tìm lại niềm vui code ngày đầu. #Burnout #Frontend',
     socialLinks: {
       x: 'https://x.com/minhanh_fe',
@@ -254,7 +254,7 @@ const seedDatabase = async () => {
           {
             user: userMap['anthonyq012025@gmail.com']._id,
             userName: 'Trần Đình Quân',
-            userAvatar: '/images/man.jpg',
+            userAvatar: '',
             types: ['sympathy', 'encourage'],
           },
           {
@@ -291,7 +291,7 @@ const seedDatabase = async () => {
           {
             user: userMap['anthonyq012025@gmail.com']._id,
             userName: 'Trần Đình Quân',
-            userAvatar: '/images/man.jpg',
+            userAvatar: '',
             types: ['love', 'encourage'],
           },
         ],
@@ -323,7 +323,7 @@ const seedDatabase = async () => {
           {
             user: userMap['anthonyq012025@gmail.com']._id,
             userName: 'Trần Đình Quân',
-            userAvatar: '/images/man.jpg',
+            userAvatar: '',
             types: ['love', 'encourage'],
           },
           {

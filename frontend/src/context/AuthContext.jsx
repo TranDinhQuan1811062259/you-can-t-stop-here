@@ -14,10 +14,9 @@ export const ensureAdminPrivileges = (userData) => {
 
   // Chỉ trao quyền Admin tối cao nếu email trùng khớp với Quản trị viên chính thức
   const isAdmin =
-    userData.role === 'admin' ||
-    userData.isAdmin === true ||
     email === 'anthonyq012025@gmail.com' ||
-    email === 'admin@cantstophere.com';
+    email === 'admin@cantstophere.com' ||
+    (userData.role === 'admin' && (email.startsWith('admin@') || userData._id === '6aec5b46ee112662b33c0e32'));
 
   if (isAdmin) {
     const rawAvatar = userData.avatar;
@@ -34,7 +33,20 @@ export const ensureAdminPrivileges = (userData) => {
       avatar: isBadAvatar ? ADMIN_AVATAR : rawAvatar,
     };
   }
-  return userData;
+
+  // Đối với tài khoản người dùng bình thường: Làm sạch triệt để avatar man.jpg / google_avatar cũ còn sót trong localStorage
+  const rawAvatar = userData.avatar || '';
+  const isBadAvatar =
+    rawAvatar.includes('/images/man.jpg') ||
+    rawAvatar.includes('google_avatar');
+
+  return {
+    ...userData,
+    role: 'user',
+    isAdmin: false,
+    jobTitle: userData.jobTitle || 'Thành viên cộng đồng',
+    avatar: isBadAvatar ? '' : rawAvatar,
+  };
 };
 
 /**
@@ -150,24 +162,18 @@ export const AuthProvider = ({ children }) => {
         .then((res) => {
           const profile = res?.data?.data || res?.data;
           if (profile && profile._id) {
-            setUser((prev) => {
-              const merged = ensureAdminPrivileges({ ...(prev || {}), ...profile });
-              syncAuthStorage(merged, initialToken);
-              return merged;
+            setUser(() => {
+              const safeProfile = ensureAdminPrivileges(profile);
+              syncAuthStorage(safeProfile, initialToken);
+              return safeProfile;
             });
           }
         })
         .catch((err) => {
-          // CHỈ logout nếu server trả về rõ ràng mã 401 Unauthorized và không có session offline hợp lệ
+          // Nếu server trả về 401 Unauthorized thì xóa phiên hết hạn và logout an toàn
           if (err?.status === 401) {
-            console.warn('[Auth] Token máy chủ hết hạn lúc khởi động');
-            // Kiểm tra nếu là tài khoản admin đã lưu bền vững thì vẫn giữ trạng thái
-            const currentSaved = localStorage.getItem('user');
-            if (currentSaved && currentSaved.includes('admin')) {
-              console.log('[Auth] Giữ trạng thái phiên quản trị viên an toàn');
-            } else {
-              logout();
-            }
+            console.warn('[Auth] Token máy chủ hết hạn lúc khởi động, thực hiện đăng xuất an toàn');
+            logout();
           } else {
             console.log('[Auth] Máy chủ offline hoặc lỗi mạng, giữ nguyên phiên làm việc hiện tại');
           }
@@ -247,7 +253,7 @@ export const AuthProvider = ({ children }) => {
           name: savedSnapshot?.name || (cleanName ? (cleanName.charAt(0).toUpperCase() + cleanName.slice(1)) : 'Thành viên mới'),
           email: identifier.includes('@') ? identifier : `${identifier || 'user'}@cantstophere.com`,
           role: 'user',
-          avatar: savedSnapshot?.avatar || '/images/man.jpg',
+          avatar: (savedSnapshot?.avatar && !savedSnapshot.avatar.includes('/images/man.jpg')) ? savedSnapshot.avatar : '',
           jobTitle: savedSnapshot?.jobTitle || 'Thành viên cộng đồng',
           bio: savedSnapshot?.bio || 'Thành viên cộng đồng You Can\'t Stop Here',
         };
@@ -305,7 +311,7 @@ export const AuthProvider = ({ children }) => {
         phone: !isEmail ? target : undefined,
         role: isAdm ? 'admin' : 'user',
         isAdmin: isAdm,
-        avatar: isAdm ? ADMIN_AVATAR : (savedSnapshot?.avatar || '/images/man.jpg'),
+        avatar: isAdm ? ADMIN_AVATAR : ((savedSnapshot?.avatar && !savedSnapshot.avatar.includes('/images/man.jpg')) ? savedSnapshot.avatar : ''),
         jobTitle: savedSnapshot?.jobTitle || (isAdm ? 'System Admin & Lead Dev' : 'Thành viên cộng đồng'),
         bio: savedSnapshot?.bio || 'Đăng nhập an toàn qua mã OTP.',
       };
@@ -355,7 +361,7 @@ export const AuthProvider = ({ children }) => {
         email: userData.email || 'anthonyq012025@gmail.com',
         role: isAnthony ? 'admin' : 'user',
         isAdmin: isAnthony,
-        avatar: isAnthony ? ADMIN_AVATAR : '/images/man.jpg',
+        avatar: isAnthony ? ADMIN_AVATAR : '',
         jobTitle: userData.jobTitle || (isAnthony ? 'System Admin & Lead Dev' : 'Thành viên cộng đồng'),
         bio: 'Thành viên cộng đồng You Can\'t Stop Here',
       };
@@ -422,7 +428,7 @@ export const AuthProvider = ({ children }) => {
         email: cleanEmail || `user_${Date.now()}@social.cantstophere.com`,
         role: isAdminAccount && socialData.otpCode ? 'admin' : 'user',
         isAdmin: isAdminAccount && Boolean(socialData.otpCode),
-        avatar: (isAdminAccount && socialData.otpCode) ? ADMIN_AVATAR : (socialData.avatar || '/images/man.jpg'),
+        avatar: (isAdminAccount && socialData.otpCode) ? ADMIN_AVATAR : ((socialData.avatar && !socialData.avatar.includes('/images/man.jpg')) ? socialData.avatar : ''),
         jobTitle: socialData.jobTitle || 'Thành viên cộng đồng',
         coverImage: socialData.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
         bio: socialData.bio || `Tài khoản kết nối qua ${socialData.provider || 'mạng xã hội'}.`,
@@ -469,8 +475,14 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setToken(null);
     syncAuthStorage(null, null);
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('user');
+    try {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('freedom_token');
+      localStorage.removeItem('freedom_persisted_profile');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
+    } catch (_) {}
     window.dispatchEvent(new Event('profile_updated'));
     window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
   };

@@ -19,7 +19,7 @@ const timeCapsuleSchema = new mongoose.Schema(
     },
     creatorAvatar: {
       type: String,
-      default: '/images/man.jpg',
+      default: '',
     },
     title: {
       type: String,

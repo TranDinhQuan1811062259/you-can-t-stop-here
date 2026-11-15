@@ -38,6 +38,27 @@ export const PostDetailPage = () => {
   const [adminDeleting, setAdminDeleting] = useState(false);
   const [adminApproving, setAdminApproving] = useState(false);
   const [isCinemaMode, setIsCinemaMode] = useState(false);
+  const [isDeletingPost, setIsDeletingPost] = useState(false);
+
+  // Xóa bài viết dành riêng cho chính chủ tác giả
+  const handleAuthorDelete = async () => {
+    const confirmed = window.confirm(
+      `🗑️ XÁC NHẬN XÓA BÀI VIẾT:\n\nBạn có chắc chắn muốn xóa bài viết "${post.title}" của mình không?\n\nSau khi xóa, bài viết này sẽ bị gỡ bỏ hoàn toàn khỏi trang chủ và trang cá nhân của bạn.`
+    );
+    if (!confirmed) return;
+
+    setIsDeletingPost(true);
+    try {
+      await postService.deletePost(post._id || post.slug);
+      alert('✓ Đã xóa bài viết của bạn thành công!');
+      window.dispatchEvent(new Event('post_updated'));
+      navigate('/', { replace: true });
+    } catch (err) {
+      alert(`Lỗi khi xóa bài viết: ${err.message}`);
+    } finally {
+      setIsDeletingPost(false);
+    }
+  };
 
   const handleAdminDelete = async () => {
     const confirmed = window.confirm(
@@ -207,13 +228,35 @@ export const PostDetailPage = () => {
   );
 
   // Giữ đúng tác giả của bài viết; nếu là chính chủ đang đăng nhập thì đồng bộ 100% tên & avatar hiện tại
+  const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
   const cleanAdminAvatar = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
-  const authorName = isCurrentUserAuthor ? user.name : (post.author || post.user?.name || 'Tác giả');
-  const authorJob = isCurrentUserAuthor ? (user.jobTitle || 'System Admin & Lead Dev') : (post.authorJob || post.user?.jobTitle || 'Thành viên cộng đồng');
-  const rawAuthorAvatar = isCurrentUserAuthor ? user.avatar : (post.authorAvatar || post.user?.avatar || '/images/man.jpg');
-  const authorAvatar = (rawAuthorAvatar && !rawAuthorAvatar.includes('google_avatar.jpg') && !rawAuthorAvatar.includes('man.jpg'))
-    ? rawAuthorAvatar
-    : (post.author === 'Đơn Thân Mẹ' || post.authorJob?.includes('Admin') || isCurrentUserAuthor ? cleanAdminAvatar : '/images/man.jpg');
+  const authorName = post.author || post.user?.name || (isCurrentUserAuthor ? user.name : 'Tác giả');
+  const authorJob = post.authorJob || post.user?.jobTitle || (isCurrentUserAuthor ? user.jobTitle : 'Thành viên cộng đồng');
+
+  // Lấy avatar tác giả bài viết đồng nhất 100%:
+  const getAuthorAvatar = () => {
+    // 1. Ưu tiên avatar riêng của tác giả bài viết
+    const raw = post.authorAvatar || post.user?.avatar || (isCurrentUserAuthor ? user?.avatar : '');
+    if (raw && !raw.includes('man.jpg') && !raw.includes('google_avatar')) {
+      return raw;
+    }
+
+    // 2. Chỉ gắn avatar Admin nếu bài viết thực sự do Admin đăng
+    const isPostByAdmin =
+      post.author === 'Đơn Thân Mẹ' ||
+      post.author === 'Trần Đình Quân' ||
+      post.author === 'Anthony Quân' ||
+      post.user?.role === 'admin' ||
+      post.user?.email === 'anthonyq012025@gmail.com';
+
+    if (isPostByAdmin) {
+      return cleanAdminAvatar;
+    }
+
+    return DEFAULT_EMPTY_AVATAR;
+  };
+
+  const authorAvatar = getAuthorAvatar();
   const authorFrame = user?.customLayout?.frameStyle && isCurrentUserAuthor ? user.customLayout.frameStyle : (post.user?.customLayout?.frameStyle || 'none');
   const authorBio = post.user?.bio || (isCurrentUserAuthor ? user?.bio : 'Thành viên chia sẻ tâm sự tại You Can\'t Stop Here.');
   const authorSocial = post.user?.socialLinks || post.authorSocialLinks || (isCurrentUserAuthor ? user?.socialLinks : {});
@@ -593,7 +636,17 @@ export const PostDetailPage = () => {
                 </div>
 
                 {/* Cụm Thống Kê & Nút Hành Động Bên Phải (Tự động xuống dòng gọn gàng, chống tràn lề) */}
-                <div className="post-author-right-wrap">
+                <div
+                  className="post-author-right-wrap"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    flexWrap: 'wrap',
+                    justifyContent: 'flex-end',
+                    maxWidth: '100%',
+                  }}
+                >
                   {/* Viên thuốc hiển thị Ngày & Lượt đọc */}
                   <div
                     className="post-stats-pill"
@@ -601,6 +654,7 @@ export const PostDetailPage = () => {
                       background: isCustomBg ? 'rgba(0, 0, 0, 0.35)' : undefined,
                       border: isCustomBg ? '1px solid rgba(255, 255, 255, 0.28)' : undefined,
                       backdropFilter: isCustomBg ? 'blur(8px)' : undefined,
+                      flexShrink: 0,
                     }}
                   >
                     <span
@@ -628,7 +682,15 @@ export const PostDetailPage = () => {
                   </div>
 
                   {/* Nhóm Các Nút Hành Động: Chia Sẻ, Sửa Bài, Kiểm Duyệt, Xóa Bài */}
-                  <div className="post-action-buttons-group">
+                  <div
+                    className="post-action-buttons-group"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      flexWrap: 'wrap',
+                    }}
+                  >
                     {/* Nút Chia sẻ Đa Năng */}
                     <button
                       type="button"
@@ -668,6 +730,44 @@ export const PostDetailPage = () => {
                       </button>
                     )}
 
+                    {/* Nút Xóa bài viết dành riêng cho chính chủ tác giả */}
+                    {canEdit && (
+                      <button
+                        type="button"
+                        disabled={isDeletingPost}
+                        onClick={handleAuthorDelete}
+                        className="author-delete-post-btn"
+                        style={{
+                          background: isCustomBg ? 'rgba(239, 68, 68, 0.32)' : 'rgba(239, 68, 68, 0.12)',
+                          color: isCustomBg ? '#ffffff' : '#ef4444',
+                          border: isCustomBg ? '1px solid rgba(255, 255, 255, 0.45)' : '1px solid rgba(239, 68, 68, 0.35)',
+                          padding: '5px 12px',
+                          borderRadius: '6px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                          backdropFilter: isCustomBg ? 'blur(6px)' : undefined,
+                          transition: 'all 0.2s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#ef4444';
+                          e.currentTarget.style.color = '#ffffff';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = isCustomBg ? 'rgba(239, 68, 68, 0.32)' : 'rgba(239, 68, 68, 0.12)';
+                          e.currentTarget.style.color = isCustomBg ? '#ffffff' : '#ef4444';
+                        }}
+                        title="Xóa vĩnh viễn bài tâm sự này của bạn"
+                      >
+                        {isDeletingPost ? 'Đang xóa...' : '🗑️ Xóa bài'}
+                      </button>
+                    )}
+
                     {/* Nút Kiểm duyệt dành cho Admin */}
                     {user?.role === 'admin' && (
                       <button
@@ -696,8 +796,8 @@ export const PostDetailPage = () => {
                       </button>
                     )}
 
-                    {/* Nút Xóa Ngang Dành Cho Admin (Ngăn chặn tràn khung viền) */}
-                    {user?.role === 'admin' && !post.isFlagged && (
+                    {/* Nút Xóa Ngang Dành Cho Admin (khi xem bài viết của thành viên khác) */}
+                    {user?.role === 'admin' && !canEdit && !post.isFlagged && (
                       <button
                         type="button"
                         disabled={adminDeleting}

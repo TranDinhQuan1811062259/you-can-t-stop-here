@@ -84,7 +84,7 @@ export const defaultStoreUsers = [
     chatStatus: 'offline',
     friends: ['u_admin_1'],
     jobTitle: 'Frontend Dev 3 năm kinh nghiệm',
-    avatar: '/images/man.jpg',
+    avatar: '',
     bio: 'Đang vật lộn với deadlines và tìm lại niềm vui code ngày đầu.',
     profileMusic: {
       enabled: true,
@@ -244,7 +244,7 @@ export const defaultStoreMessages = [
   {
     _id: 'msg_2_prev',
     conversation: 'conv_2',
-    sender: { _id: 'u_admin_1', name: 'Trần Đình Quân', avatar: '/images/man.jpg' },
+    sender: { _id: 'u_admin_1', name: 'Trần Đình Quân', avatar: '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' },
     receiver: { _id: 'u_huy', name: 'Đức Huy' },
     content: 'Chào Huy, bài viết chia sẻ về việc chuyển ngành của em rất truyền cảm hứng!',
     isRead: true,
@@ -465,6 +465,12 @@ export const loadStore = () => {
           needsSave = true;
         }
 
+        // Đảm bảo luôn có notifications
+        if (!Array.isArray(parsed.notifications)) {
+          parsed.notifications = [];
+          needsSave = true;
+        }
+
         if (needsSave) {
           saveStore(parsed);
         }
@@ -548,7 +554,7 @@ export const saveUserToStore = (userData) => {
       _id: userData._id || `u_${Date.now()}`,
       role: userData.role || 'user',
       jobTitle: userData.jobTitle || 'Thành viên cộng đồng',
-      avatar: userData.avatar || '/images/man.jpg',
+      avatar: userData.avatar || '',
       bio: userData.bio || '',
       ...userData,
     };

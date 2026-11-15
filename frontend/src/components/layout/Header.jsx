@@ -19,12 +19,19 @@ import { RantAndBurnModal } from '../wellness/RantAndBurnModal';
 import { MidnightDriftBottleModal } from '../wellness/MidnightDriftBottleModal';
 import { WorkplaceMoodRadarModal } from '../wellness/WorkplaceMoodRadarModal';
 import { AnonymousWhisperWall } from '../wellness/AnonymousWhisperWall';
+import { MentalFirstAidModal } from '../wellness/MentalFirstAidModal';
+import { LateNightTeaLoungeModal } from '../wellness/LateNightTeaLoungeModal';
+import { BrainDumpDeclutterModal } from '../wellness/BrainDumpDeclutterModal';
+import { MoodWeatherForecastModal } from '../wellness/MoodWeatherForecastModal';
+import { FocusSleepCocoonModal } from '../wellness/FocusSleepCocoonModal';
 import { postService, getCachedPosts, removeVietnameseTones } from '../../services/postService';
 import { eventService } from '../../services/eventService';
 import { isSoundEnabled, toggleSound, playClickSound, playFestiveEventSound } from '../../utils/soundEffects';
 import { getActiveSeason, setActiveSeason, SEASONS } from '../../utils/seasonUtils';
 import { formatDate } from '../../utils/formatDate';
 import { IdleWeatherText } from '../common/IdleWeatherText';
+import { NotificationDropdown } from './NotificationDropdown';
+import { notificationService } from '../../services/notificationService';
 import {
   startWeatherAmbient,
   stopWeatherAmbient,
@@ -34,6 +41,8 @@ import {
   setMelodicSeason,
   MELODIC_SEASONS,
 } from '../../utils/ambientSoundEngine';
+
+const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
 
 export const Header = () => {
   const {
@@ -50,6 +59,8 @@ export const Header = () => {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [notifUnreadCount, setNotifUnreadCount] = useState(0);
   const [activeSeason, setLocalSeason] = useState(() => getActiveSeason());
   const [isSeasonOpen, setIsSeasonOpen] = useState(false);
   const [isModerationOpen, setIsModerationOpen] = useState(false);
@@ -69,6 +80,11 @@ export const Header = () => {
   const [isDriftBottleOpen, setIsDriftBottleOpen] = useState(false);
   const [isMoodRadarOpen, setIsMoodRadarOpen] = useState(false);
   const [isWhisperWallOpen, setIsWhisperWallOpen] = useState(false);
+  const [isMentalFirstAidOpen, setIsMentalFirstAidOpen] = useState(false);
+  const [isTeaLoungeOpen, setIsTeaLoungeOpen] = useState(false);
+  const [isDeclutterOpen, setIsDeclutterOpen] = useState(false);
+  const [isMoodWeatherOpen, setIsMoodWeatherOpen] = useState(false);
+  const [isFocusCocoonOpen, setIsFocusCocoonOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [isWellnessDropdownOpen, setIsWellnessDropdownOpen] = useState(false);
   const [wellnessCategoryTab, setWellnessCategoryTab] = useState('vent'); // 'vent' | 'cozy' | 'heal' (chia nhỏ theo phân loại, không gôm tất cả)
@@ -78,6 +94,65 @@ export const Header = () => {
   const [ambientState, setAmbientState] = useState(() => getAmbientState());
   const [isAmbientMenuOpen, setIsAmbientMenuOpen] = useState(false);
   const ambientMenuRef = useRef(null);
+
+  // States cho Danh Sách Bản Thu Âm 4 Mùa Chính Chủ
+  const [seasonalTracks, setSeasonalTracks] = useState(() => {
+    try {
+      const saved = localStorage.getItem('freedom_seasonal_recordings');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return {
+      spring: {
+        id: 'spring',
+        seasonId: 'spring',
+        name: 'Mùa Xuân',
+        icon: '🌸',
+        title: 'Lời Thì Thầm Mùa Xuân',
+        artist: 'Chính chủ Freedom 🎙️',
+        desc: 'Khúc giao mùa đâm chồi, chuông phong linh & hy vọng',
+        url: '',
+        hasUserAudio: false,
+      },
+      summer: {
+        id: 'summer',
+        seasonId: 'summer',
+        name: 'Mùa Hạ',
+        icon: '☀️',
+        title: 'Bản Tình Ca Biển Chiều',
+        artist: 'Chính chủ Freedom 🎙️',
+        desc: 'Hợp âm hoàng hôn ấm áp & tiếng sóng biển rì rào',
+        url: '',
+        hasUserAudio: false,
+      },
+      autumn: {
+        id: 'autumn',
+        seasonId: 'autumn',
+        name: 'Mùa Thu',
+        icon: '🍁',
+        title: 'Giai Điệu Lá Vàng Lắng Đọng',
+        artist: 'Chính chủ Freedom 🎙️',
+        desc: 'Khúc acoustic guitar hoài niệm & êm đềm',
+        url: '',
+        hasUserAudio: false,
+      },
+      winter: {
+        id: 'winter',
+        seasonId: 'winter',
+        name: 'Mùa Đông',
+        icon: '❄️',
+        title: 'Đêm Lạnh Bên Dòng Sông (Bản Mộc Acoustic)',
+        artist: 'Chính chủ Freedom 🎙️ (100% bản quyền)',
+        desc: 'Bản nhạc mộc mạc do chính bạn gửi từ video',
+        url: '/audio/midnight-river-song.mp4',
+        hasUserAudio: true,
+      },
+    };
+  });
+
+  const [selectedTrackSeason, setSelectedTrackSeason] = useState('winter');
+  const [isPlayingRecording, setIsPlayingRecording] = useState(false);
+  const recordingAudioRef = useRef(null);
+  const recordingFileInputRef = useRef(null);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -288,6 +363,26 @@ export const Header = () => {
     return () => window.removeEventListener('freedom_ambient_sound_changed', handleAmbientChange);
   }, []);
 
+  // Polling liên tục số lượng thông báo mới (Lời mời kết bạn, tin nhắn, tương tác)
+  useEffect(() => {
+    if (!isAuthenticated && !user) return;
+    const fetchNotifCount = async () => {
+      try {
+        const res = await notificationService.getUnreadCount();
+        if (res?.data?.unreadCount !== undefined) {
+          setNotifUnreadCount(res.data.unreadCount);
+        }
+      } catch (_) {}
+    };
+    fetchNotifCount();
+    const interval = setInterval(fetchNotifCount, 4000);
+    window.addEventListener('notification_updated', fetchNotifCount);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notification_updated', fetchNotifCount);
+    };
+  }, [isAuthenticated, user]);
+
   // Đóng dropdown mùa, âm thanh môi trường & trạm chữa lành khi click ra ngoài
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -357,7 +452,8 @@ export const Header = () => {
     if (ambientState.isWeatherSoundActive) {
       startWeatherAmbient(nextSeason.id);
     }
-    // Tự động đồng bộ bài ngân nga theo mùa mới
+    // Tự động đồng bộ tab mùa của playlist thu âm theo ô thời tiết bên cạnh!
+    setSelectedTrackSeason(nextSeason.id);
     setMelodicSeason(nextSeason.id);
   };
 
@@ -370,45 +466,97 @@ export const Header = () => {
     }
   };
 
-  const handleToggleEventAmbient = () => {
+  // Điều khiển phát bản thu âm 4 mùa chính chủ
+  const handleSelectRecordingSeason = (seasonId) => {
     playClickSound();
-    if (ambientState.isEventSoundActive) {
-      stopEventAmbient();
-    } else {
-      const targetMelody = ambientState.currentMelodicSeasonId || activeSeason?.id || 'winter';
-      startEventAmbient(targetMelody);
-    }
-  };
-
-  const handleSelectMelodicSeason = (seasonId) => {
-    playClickSound();
+    setSelectedTrackSeason(seasonId);
     setMelodicSeason(seasonId);
-    if (!ambientState.isEventSoundActive) {
-      startEventAmbient(seasonId);
-    }
-  };
 
-  const handleSelectFestiveEventMelody = () => {
-    playClickSound();
-    if (activeFestiveEvent) {
-      startEventAmbient(activeFestiveEvent.id || 'festive');
-    }
-  };
-
-  const isSpecialEventMelodyPlaying =
-    ambientState.isEventSoundActive &&
-    !['spring', 'summer', 'autumn', 'winter'].includes(ambientState.currentEventId);
-
-  const activeMelodyKey = ambientState.currentMelodicSeasonId || activeSeason?.id || 'winter';
-  const currentMelodyMeta = isSpecialEventMelodyPlaying && activeFestiveEvent
-    ? {
-        id: activeFestiveEvent.id,
-        name: activeFestiveEvent.name,
-        title: activeFestiveEvent.shortName || activeFestiveEvent.name,
-        desc: activeFestiveEvent.bannerDesc || 'Bản hòa tấu sự kiện lễ hội tưng bừng',
-        icon: activeFestiveEvent.icon || '🎊',
+    if (isPlayingRecording) {
+      if (recordingAudioRef.current) {
+        recordingAudioRef.current.pause();
       }
-    : (MELODIC_SEASONS[activeMelodyKey] || MELODIC_SEASONS.winter);
+      stopEventAmbient();
+
+      const nextTrack = seasonalTracks[seasonId];
+      if (nextTrack?.url) {
+        recordingAudioRef.current.src = nextTrack.url;
+        recordingAudioRef.current.play().catch(() => {});
+        duckAmbientForMusic();
+        setIsPlayingRecording(true);
+      } else {
+        startEventAmbient(seasonId);
+        setIsPlayingRecording(true);
+      }
+    }
+  };
+
+  const handleTogglePlayRecording = () => {
+    playClickSound();
+    const track = seasonalTracks[selectedTrackSeason] || seasonalTracks.winter;
+
+    if (isPlayingRecording) {
+      if (recordingAudioRef.current) {
+        recordingAudioRef.current.pause();
+      }
+      stopEventAmbient();
+      restoreAmbientFromMusic();
+      setIsPlayingRecording(false);
+    } else {
+      if (track?.url) {
+        if (recordingAudioRef.current) {
+          recordingAudioRef.current.src = track.url;
+          recordingAudioRef.current.play().catch(() => {});
+        }
+        duckAmbientForMusic();
+        setIsPlayingRecording(true);
+      } else {
+        startEventAmbient(selectedTrackSeason);
+        setIsPlayingRecording(true);
+      }
+    }
+  };
+
+  const handleUploadCustomRecording = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fileUrl = URL.createObjectURL(file);
+    const cleanTitle = file.name.replace(/\.[^/.]+$/, '');
+
+    setSeasonalTracks((prev) => {
+      const updated = {
+        ...prev,
+        [selectedTrackSeason]: {
+          ...prev[selectedTrackSeason],
+          title: cleanTitle || `Bản thu âm ${prev[selectedTrackSeason]?.name || ''}`,
+          artist: 'Chính chủ thu âm 🎙️',
+          url: fileUrl,
+          hasUserAudio: true,
+          desc: 'File thu âm do bạn tải lên từ thiết bị',
+        },
+      };
+      try {
+        localStorage.setItem('freedom_seasonal_recordings', JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+
+    if (recordingAudioRef.current) {
+      recordingAudioRef.current.src = fileUrl;
+      recordingAudioRef.current.play().catch(() => {});
+    }
+    duckAmbientForMusic();
+    setIsPlayingRecording(true);
+    stopEventAmbient();
+  };
+
+  const handleRecordingEnded = () => {
+    setIsPlayingRecording(false);
+    restoreAmbientFromMusic();
+  };
+
+  const currentTrackMeta = seasonalTracks[selectedTrackSeason] || seasonalTracks.winter;
 
   return (
     <>
@@ -598,107 +746,153 @@ export const Header = () => {
                 )}
               </button>
 
-              {/* Popover Tùy Chọn Âm Thanh Môi Trường Duy Trì */}
+              {/* Audio player phát bản thu âm chính chủ 4 mùa */}
+              <audio ref={recordingAudioRef} onEnded={handleRecordingEnded} preload="auto" />
+
+              {/* Popover Tùy Chọn Âm Thanh Môi Trường & Playlist Thu Âm 4 Mùa */}
               {isAmbientMenuOpen && (
                 <div className="header-ambient-dropdown">
                   <div className="ambient-dropdown-header">
                     <div className="ambient-dropdown-title-wrap">
                       <span className="ambient-title-icon">🎧</span>
                       <strong className="ambient-title-text">
-                        Âm Thanh Môi Trường
+                        Âm Thanh & Bản Thu 4 Mùa
                       </strong>
                     </div>
-                    {ambientState.isCombined && (
-                      <span className="ambient-combined-badge">
-                        Hòa Âm Kép
-                      </span>
-                    )}
+                    <span className="ambient-season-live-badge" title="Tự động đồng bộ theo ô thời tiết bên cạnh">
+                      {activeSeason.icon} {activeSeason.shortName}
+                    </span>
                   </div>
 
-                  {/* Mục 1: Âm thanh thời tiết 4 mùa */}
-                  <div className={`ambient-card ambient-card-weather ${ambientState.isWeatherSoundActive ? 'is-active' : ''}`}>
-                    <div className="ambient-card-info">
-                      <div className="ambient-card-title-row">
-                        <span>{activeSeason.icon}</span>
-                        <strong className="ambient-card-title">
-                          {activeSeason.name}
+                  {/* Mục 1: Âm thanh môi trường nền (Gọn gàng, tự động theo ô thời tiết) */}
+                  <div className={`ambient-weather-compact-card ${ambientState.isWeatherSoundActive ? 'is-active' : ''}`}>
+                    <div className="ambient-weather-compact-left">
+                      <span className="ambient-weather-pill-icon">{activeSeason.icon}</span>
+                      <div className="ambient-weather-compact-texts">
+                        <strong className="ambient-weather-compact-title">
+                          Âm thanh nền: {activeSeason.name}
                         </strong>
+                        <span className="ambient-weather-compact-desc">
+                          {activeSeason.id === 'winter'
+                            ? 'Gió bấc rít êm & lò sưởi ấm'
+                            : activeSeason.id === 'summer'
+                            ? 'Sóng biển rì rào & ve sầu'
+                            : activeSeason.id === 'spring'
+                            ? 'Gió xuân & chim hót líu lo'
+                            : 'Lá xào xạc & mưa phùn'}
+                          <span className="ambient-sync-text"> (Tự đổi theo ô thời tiết)</span>
+                        </span>
                       </div>
-                      <p className="ambient-card-desc">
-                        {activeSeason.id === 'winter'
-                          ? 'Gió bấc rít êm & lò sưởi ấm'
-                          : activeSeason.id === 'summer'
-                          ? 'Sóng biển rì rào & ve sầu'
-                          : activeSeason.id === 'spring'
-                          ? 'Gió xuân & chim hót líu lo'
-                          : 'Lá xào xạc & mưa phùn'}
-                      </p>
                     </div>
 
                     <button
                       type="button"
                       onClick={handleToggleWeatherAmbient}
-                      className={`ambient-toggle-btn ${ambientState.isWeatherSoundActive ? 'weather-btn-active' : 'is-inactive'}`}
-                      title={ambientState.isWeatherSoundActive ? 'Bấm để tắt âm thanh thời tiết' : 'Bấm để bật âm thanh thời tiết'}
+                      className={`ambient-weather-toggle-btn ${ambientState.isWeatherSoundActive ? 'is-on' : 'is-off'}`}
+                      title={ambientState.isWeatherSoundActive ? 'Bấm để tắt âm thanh môi trường' : 'Bấm để bật âm thanh môi trường'}
                     >
-                      {ambientState.isWeatherSoundActive ? 'ĐANG BẬT' : 'BẬT'}
+                      {ambientState.isWeatherSoundActive ? '🔊 ĐANG BẬT' : '🔇 BẬT'}
                     </button>
                   </div>
 
-                  {/* Mục 2: Âm hưởng ngân nga 4 Mùa & Lễ hội (Mỗi mùa 1 bài riêng biệt) */}
-                  <div className={`ambient-card ambient-card-event ambient-card-melody ${ambientState.isEventSoundActive ? 'is-active' : ''}`}>
-                    <div className="ambient-card-melody-top">
-                      <div className="ambient-card-info">
-                        <div className="ambient-card-title-row">
-                          <span>{currentMelodyMeta.icon}</span>
-                          <strong className="ambient-card-title" title={currentMelodyMeta.title}>
-                            {currentMelodyMeta.title}
-                          </strong>
-                        </div>
-                        <p className="ambient-card-desc" title={currentMelodyMeta.desc}>
-                          {currentMelodyMeta.desc}
-                        </p>
+                  {/* Mục 2: KHU VỰC SPOTLIGHT DÀNH RIÊNG CHO CÁC BẢN THU ÂM CHÍNH CHỦ CỦA BẠN */}
+                  <div className="ambient-recording-playlist-box">
+                    <div className="ambient-playlist-head">
+                      <div className="ambient-playlist-title-wrap">
+                        <span className="playlist-head-icon">🎙️</span>
+                        <strong className="playlist-head-title">Bản Thu Âm 4 Mùa Của Bạn</strong>
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={handleToggleEventAmbient}
-                        className={`ambient-toggle-btn ${ambientState.isEventSoundActive ? 'event-btn-active' : 'is-inactive'}`}
-                        title={ambientState.isEventSoundActive ? 'Bấm để tắt âm hưởng' : 'Bấm để bật âm hưởng'}
-                      >
-                        {ambientState.isEventSoundActive ? 'ĐANG BẬT' : 'BẬT'}
-                      </button>
+                      <span className="playlist-head-badge">100% Chính Chủ</span>
                     </div>
 
-                    {/* Hàng nút chuyển bài theo Mùa (4 Mùa + Sự kiện nếu có) */}
-                    <div className={`ambient-melody-row ${activeFestiveEvent ? 'has-festive' : ''}`}>
-                      {Object.values(MELODIC_SEASONS).map((mSeason) => {
-                        const isSelected = !isSpecialEventMelodyPlaying && activeMelodyKey === mSeason.id;
+                    {/* Hàng Tab chọn mùa cho bản thu */}
+                    <div className="ambient-playlist-tabs">
+                      {[
+                        { id: 'spring', icon: '🌸', name: 'Xuân' },
+                        { id: 'summer', icon: '☀️', name: 'Hạ' },
+                        { id: 'autumn', icon: '🍁', name: 'Thu' },
+                        { id: 'winter', icon: '❄️', name: 'Đông' },
+                      ].map((s) => {
+                        const isCurrentTab = selectedTrackSeason === s.id;
+                        const track = seasonalTracks[s.id];
                         return (
                           <button
-                            key={mSeason.id}
+                            key={s.id}
                             type="button"
-                            className={`ambient-melody-pill ${isSelected ? 'is-active' : ''}`}
-                            onClick={() => handleSelectMelodicSeason(mSeason.id)}
-                            title={`Nghe bài: ${mSeason.title} (${mSeason.name})`}
+                            className={`ambient-season-tab ${isCurrentTab ? 'is-selected' : ''}`}
+                            onClick={() => handleSelectRecordingSeason(s.id)}
+                            title={`Bản thu âm ${s.name}: ${track?.title || ''}`}
                           >
-                            <span>{mSeason.icon}</span>
-                            <span>{mSeason.name.replace('Mùa ', '')}</span>
+                            <span>{s.icon}</span>
+                            <span>{s.name}</span>
+                            {track?.hasUserAudio && <span className="tab-audio-dot" title="Đã có file thu âm" />}
                           </button>
                         );
                       })}
+                    </div>
 
-                      {activeFestiveEvent && (
+                    {/* Thẻ Chi Tiết & Mini Player Của Mùa Đang Chọn */}
+                    <div className={`ambient-track-card ${isPlayingRecording ? 'is-playing' : ''}`}>
+                      <div className="track-card-visual">
+                        <div className={`track-disc ${isPlayingRecording ? 'spinning' : ''}`}>
+                          <span>{currentTrackMeta.icon}</span>
+                        </div>
+                        {isPlayingRecording && (
+                          <div className="track-sound-waves">
+                            <span className="wave-bar bar-1" />
+                            <span className="wave-bar bar-2" />
+                            <span className="wave-bar bar-3" />
+                            <span className="wave-bar bar-4" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="track-card-info">
+                        <div className="track-title-row">
+                          <strong className="track-title" title={currentTrackMeta.title}>
+                            {currentTrackMeta.title}
+                          </strong>
+                        </div>
+                        <span className="track-artist">{currentTrackMeta.artist}</span>
+                        <span className={`track-status-tag ${currentTrackMeta.hasUserAudio ? 'ready' : 'pending'}`}>
+                          {currentTrackMeta.hasUserAudio ? '✓ Đã có bản thu âm mộc' : '⏳ Đang chờ bản thu của bạn'}
+                        </span>
+                      </div>
+
+                      <div className="track-card-action">
                         <button
                           type="button"
-                          className={`ambient-melody-pill ${isSpecialEventMelodyPlaying ? 'is-active' : ''}`}
-                          onClick={handleSelectFestiveEventMelody}
-                          title={`Giai điệu sự kiện: ${activeFestiveEvent.name}`}
+                          onClick={handleTogglePlayRecording}
+                          className={`track-play-btn ${isPlayingRecording ? 'is-playing-btn' : ''}`}
+                          title={isPlayingRecording ? 'Tạm dừng bản nhạc' : 'Phát bản nhạc mùa này'}
                         >
-                          <span>{activeFestiveEvent.icon || '🎊'}</span>
-                          <span>Sự kiện</span>
+                          {isPlayingRecording ? '⏸' : '▶'}
                         </button>
-                      )}
+                      </div>
+                    </div>
+
+                    {/* Nút Tải Lên / Gửi File Thu Âm */}
+                    <div className="ambient-upload-action-row">
+                      <input
+                        type="file"
+                        ref={recordingFileInputRef}
+                        accept="audio/*,.mp4"
+                        style={{ display: 'none' }}
+                        onChange={handleUploadCustomRecording}
+                      />
+                      <button
+                        type="button"
+                        className="ambient-upload-btn"
+                        onClick={() => recordingFileInputRef.current?.click()}
+                        title="Chọn file thu âm của bạn từ máy tính để phát cho mùa này"
+                      >
+                        <span className="upload-btn-icon">📂</span>
+                        <span>Tải lên bản thu cho {currentTrackMeta.name}</span>
+                      </button>
+                    </div>
+
+                    <div className="ambient-recording-note">
+                      🎙️ <em>Bạn cứ gửi file thu âm qua chat cho tui, tui sẽ gắn chuẩn vào từng mùa nhé!</em>
                     </div>
                   </div>
 
@@ -844,6 +1038,30 @@ export const Header = () => {
           <div className="header-user-wrap">
             {(isAuthenticated || !!user) ? (
               <div className="header-user-badge">
+                {/* Chuông Thông Báo (Lời mời kết bạn, tin nhắn, tương tác bài viết) */}
+                <div className="header-notif-bell-container" style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    className={`header-notif-bell-btn ${isNotifOpen ? 'active' : ''}`}
+                    onClick={() => setIsNotifOpen(!isNotifOpen)}
+                    title={notifUnreadCount > 0 ? `Bạn có ${notifUnreadCount} thông báo mới (Lời mời kết bạn, tin nhắn, tương tác)` : 'Thông báo hệ thống (Lời mời kết bạn, tin nhắn, tương tác)'}
+                  >
+                    <span className="bell-icon" style={{ fontSize: '1.1rem', lineHeight: 1 }}>🔔</span>
+                    {notifUnreadCount > 0 && (
+                      <span className="header-notif-badge">
+                        {notifUnreadCount > 99 ? '99+' : notifUnreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  <NotificationDropdown
+                    isOpen={isNotifOpen}
+                    onClose={() => setIsNotifOpen(false)}
+                    unreadCount={notifUnreadCount}
+                    onUnreadChange={setNotifUnreadCount}
+                  />
+                </div>
+
                 <Link
                   to={`/profile/${user?._id}`}
                   className="header-profile-click"
@@ -851,15 +1069,17 @@ export const Header = () => {
                 >
                   <img
                     src={
-                      user?.avatar && !user?.avatar.includes('google_avatar')
-                        ? user?.avatar
+                      user?.avatar && !user?.avatar.includes('google_avatar') && !user?.avatar.includes('man.jpg')
+                        ? user.avatar
                         : ((user?.role === 'admin' || user?.email === 'anthonyq012025@gmail.com')
                             ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg'
-                            : '/images/man.jpg')
+                            : DEFAULT_EMPTY_AVATAR)
                     }
                     alt={user?.name}
                     onError={(e) => {
-                      e.target.src = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
+                      e.target.src = (user?.role === 'admin' || user?.email === 'anthonyq012025@gmail.com')
+                        ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg'
+                        : DEFAULT_EMPTY_AVATAR;
                     }}
                     className="header-avatar"
                   />
@@ -989,19 +1209,19 @@ export const Header = () => {
             <div className="header-wellness-dropdown-wrapper" ref={wellnessDropdownRef}>
               <button
                 type="button"
-                className={`dashboard-3d-item tab-wellness-hub ${isWellnessDropdownOpen || isWellnessOpen || isTimeCapsuleOpen || isRadioOpen || isGratitudeJarOpen || isStickyWallOpen || isEmergencyCalmOpen || isCozyCafeOpen || isMoodPixelOpen || isRantAndBurnOpen || isDriftBottleOpen || isMoodRadarOpen || isWhisperWallOpen ? 'active' : ''}`}
+                className={`dashboard-3d-item tab-wellness-hub ${isWellnessDropdownOpen || isWellnessOpen || isTimeCapsuleOpen || isRadioOpen || isGratitudeJarOpen || isStickyWallOpen || isEmergencyCalmOpen || isCozyCafeOpen || isMoodPixelOpen || isRantAndBurnOpen || isDriftBottleOpen || isMoodRadarOpen || isWhisperWallOpen || isMentalFirstAidOpen || isTeaLoungeOpen || isDeclutterOpen || isMoodWeatherOpen || isFocusCocoonOpen ? 'active' : ''}`}
                 onClick={() => {
                   playClickSound();
                   setIsWellnessDropdownOpen((prev) => !prev);
                 }}
-                title="Trạm Chữa Lành & Chăm Sóc Tâm Trí: Bấm để mở bảng 12 công cụ xả áp lực"
+                title="Trạm Chữa Lành & Chăm Sóc Tâm Trí: Bấm để mở bảng 17 công cụ xả áp lực"
                 aria-expanded={isWellnessDropdownOpen}
               >
                 <span className="healing-icon-pill healing-icon-sage" style={{ width: '28px', height: '28px', fontSize: '0.85rem' }}>
                   🌿
                 </span>
                 <span className="item-label">Trạm Chữa Lành</span>
-                <span className="wellness-hub-badge">12</span>
+                <span className="wellness-hub-badge">17</span>
                 <i
                   className={`fa-solid fa-chevron-${isWellnessDropdownOpen ? 'up' : 'down'}`}
                   style={{ fontSize: '0.68rem', opacity: 0.8, marginLeft: '2px', transition: 'transform 0.2s' }}
@@ -1072,6 +1292,40 @@ export const Header = () => {
                     tagColor: '#ef4444',
                     action: () => setIsEmergencyCalmOpen(true),
                   },
+                  {
+                    id: 'firstaid',
+                    category: 'vent',
+                    title: 'Thuốc Cứu Thương Tâm Trí',
+                    desc: 'Toa thuốc tâm lý cho sếp mắng, deadline & kiệt sức',
+                    icon: '💊',
+                    iconBg: 'rgba(236, 72, 153, 0.22)',
+                    iconColor: '#ec4899',
+                    tag: 'Cấp cứu',
+                    tagBg: '#db2777',
+                    tagColor: '#ffffff',
+                    cardStyle: {
+                      background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.12) 0%, rgba(131, 24, 67, 0.08) 100%)',
+                      border: '1.5px solid rgba(236, 72, 153, 0.5)',
+                    },
+                    action: () => setIsMentalFirstAidOpen(true),
+                  },
+                  {
+                    id: 'declutter',
+                    category: 'vent',
+                    title: 'Bàn Tháo Gỡ Cuộn Rối',
+                    desc: 'Brain dump xả hết âu lo, phân loại & thả bay mất',
+                    icon: '🧶',
+                    iconBg: 'rgba(139, 92, 246, 0.22)',
+                    iconColor: '#8b5cf6',
+                    tag: 'Gỡ rối',
+                    tagBg: '#7c3aed',
+                    tagColor: '#ffffff',
+                    cardStyle: {
+                      background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(76, 29, 149, 0.08) 100%)',
+                      border: '1.5px solid rgba(139, 92, 246, 0.5)',
+                    },
+                    action: () => setIsDeclutterOpen(true),
+                  },
 
                   // NHÓM 2: THƯ GIÃN & ĐÊM MUỘN (cozy)
                   {
@@ -1116,6 +1370,40 @@ export const Header = () => {
                       border: '1.5px solid rgba(56, 189, 248, 0.45)',
                     },
                     action: () => setIsDriftBottleOpen(true),
+                  },
+                  {
+                    id: 'tealounge',
+                    category: 'cozy',
+                    title: 'Quán Trà Nửa Đêm',
+                    desc: 'Cùng thức bên khung cửa sổ mưa đêm & rót trà ấm',
+                    icon: '🍵',
+                    iconBg: 'rgba(217, 119, 6, 0.22)',
+                    iconColor: '#d97706',
+                    tag: 'Cùng thức',
+                    tagBg: '#b45309',
+                    tagColor: '#ffffff',
+                    cardStyle: {
+                      background: 'linear-gradient(135deg, rgba(217, 119, 6, 0.12) 0%, rgba(120, 53, 15, 0.08) 100%)',
+                      border: '1.5px solid rgba(217, 119, 6, 0.5)',
+                    },
+                    action: () => setIsTeaLoungeOpen(true),
+                  },
+                  {
+                    id: 'cocoon',
+                    category: 'cozy',
+                    title: 'Kén Tập Trung & Ngủ Sâu',
+                    desc: 'Pomodoro 25p sóng Alpha 10Hz, hẹn giờ tắt & ươm mầm',
+                    icon: '🎧',
+                    iconBg: 'rgba(20, 184, 166, 0.22)',
+                    iconColor: '#14b8a6',
+                    tag: 'Zen Flow',
+                    tagBg: '#0f766e',
+                    tagColor: '#ffffff',
+                    cardStyle: {
+                      background: 'linear-gradient(135deg, rgba(20, 184, 166, 0.12) 0%, rgba(19, 78, 74, 0.08) 100%)',
+                      border: '1.5px solid rgba(20, 184, 166, 0.5)',
+                    },
+                    action: () => setIsFocusCocoonOpen(true),
                   },
 
                   // NHÓM 3: CHỮA LÀNH & GỬI GẮM (heal)
@@ -1188,6 +1476,23 @@ export const Header = () => {
                     tagColor: '#6366f1',
                     action: () => setIsMoodPixelOpen(true),
                   },
+                  {
+                    id: 'weather',
+                    category: 'heal',
+                    title: 'Thời Tiết Nội Tâm',
+                    desc: 'Check-in cảm xúc đầu ngày, nhận dự báo & toa đồ uống',
+                    icon: '⛅',
+                    iconBg: 'rgba(56, 189, 248, 0.22)',
+                    iconColor: '#38bdf8',
+                    tag: 'Daily Mood',
+                    tagBg: '#0284c7',
+                    tagColor: '#ffffff',
+                    cardStyle: {
+                      background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(12, 74, 110, 0.08) 100%)',
+                      border: '1.5px solid rgba(56, 189, 248, 0.5)',
+                    },
+                    action: () => setIsMoodWeatherOpen(true),
+                  },
                 ];
 
                 const currentTab = wellnessCategoryTab || 'vent';
@@ -1219,7 +1524,7 @@ export const Header = () => {
                         }}
                       >
                         <span>🔥</span>
-                        <span>Xả Stress &amp; SOS (4)</span>
+                        <span>Xả Stress &amp; SOS ({WELLNESS_TOOLS.filter((t) => t.category === 'vent').length})</span>
                       </button>
 
                       <button
@@ -1231,7 +1536,7 @@ export const Header = () => {
                         }}
                       >
                         <span>☕</span>
-                        <span>Thư Giãn &amp; Đêm Muộn (3)</span>
+                        <span>Thư Giãn &amp; Đêm Muộn ({WELLNESS_TOOLS.filter((t) => t.category === 'cozy').length})</span>
                       </button>
 
                       <button
@@ -1243,7 +1548,7 @@ export const Header = () => {
                         }}
                       >
                         <span>💌</span>
-                        <span>Chữa Lành &amp; Gửi Gắm (5)</span>
+                        <span>Chữa Lành &amp; Gửi Gắm ({WELLNESS_TOOLS.filter((t) => t.category === 'heal').length})</span>
                       </button>
                     </div>
 
@@ -1410,6 +1715,36 @@ export const Header = () => {
       <AnonymousWhisperWall
         isOpen={isWhisperWallOpen}
         onClose={() => setIsWhisperWallOpen(false)}
+      />
+
+      {/* Hộp Thuốc Cứu Thương Cho Tâm Trí */}
+      <MentalFirstAidModal
+        isOpen={isMentalFirstAidOpen}
+        onClose={() => setIsMentalFirstAidOpen(false)}
+      />
+
+      {/* Quán Trà Nửa Đêm Ẩn Danh */}
+      <LateNightTeaLoungeModal
+        isOpen={isTeaLoungeOpen}
+        onClose={() => setIsTeaLoungeOpen(false)}
+      />
+
+      {/* Chiếc Bàn Tháo Gỡ Cuộn Rối */}
+      <BrainDumpDeclutterModal
+        isOpen={isDeclutterOpen}
+        onClose={() => setIsDeclutterOpen(false)}
+      />
+
+      {/* Bản Tin Thời Tiết Nội Tâm Đầu Ngày */}
+      <MoodWeatherForecastModal
+        isOpen={isMoodWeatherOpen}
+        onClose={() => setIsMoodWeatherOpen(false)}
+      />
+
+      {/* Kén Tập Trung & Ngủ Sâu */}
+      <FocusSleepCocoonModal
+        isOpen={isFocusCocoonOpen}
+        onClose={() => setIsFocusCocoonOpen(false)}
       />
 
       {/* Modal Xác Nhận Đăng Xuất An Toàn & Tinh Tế (Thay thế hoàn toàn window.confirm) */}

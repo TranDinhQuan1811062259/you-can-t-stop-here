@@ -61,7 +61,7 @@ const userSchema = new mongoose.Schema(
     },
     avatar: {
       type: String,
-      default: '/images/man.jpg',
+      default: '',
     },
     coverImage: {
       type: String,
@@ -73,7 +73,7 @@ const userSchema = new mongoose.Schema(
     },
     friends: [
       {
-        type: mongoose.Schema.Types.ObjectId,
+        type: mongoose.Schema.Types.Mixed,
         ref: 'User',
       },
     ],

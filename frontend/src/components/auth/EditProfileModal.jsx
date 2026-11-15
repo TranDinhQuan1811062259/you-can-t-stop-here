@@ -14,8 +14,9 @@ import {
   fetchMusicMetadata,
 } from '../../utils/musicPresets';
 
+const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
+
 const SAMPLE_AVATARS = [
-  '/images/man.jpg',
   '/images/img2.jpg',
   '/images/1.jpg',
   '/images/2.jpg',
@@ -165,7 +166,7 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
         phone: user.phone || '',
         jobTitle: user.jobTitle || '',
         bio: user.bio || '',
-        avatar: user.avatar || '/images/man.jpg',
+        avatar: (user.avatar && !user.avatar.includes('man.jpg')) ? user.avatar : '',
         coverImage: user.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
         customLayout: {
           theme: user.customLayout?.theme || 'default',
@@ -579,7 +580,7 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
                 <label style={{ display: 'block', marginBottom: '8px' }}>Ảnh đại diện</label>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                   <img
-                    src={formData.avatar || '/images/man.jpg'}
+                    src={(formData.avatar && !formData.avatar.includes('man.jpg')) ? formData.avatar : DEFAULT_EMPTY_AVATAR}
                     alt={formData.name}
                     className={`frame-${formData.customLayout.frameStyle || 'none'}`}
                     style={{
@@ -1147,7 +1148,7 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
 
                   <div style={{ display: 'inline-block', position: 'relative' }}>
                     <img
-                      src={formData.avatar || '/images/man.jpg'}
+                      src={(formData.avatar && !formData.avatar.includes('man.jpg')) ? formData.avatar : DEFAULT_EMPTY_AVATAR}
                       alt={formData.name}
                       className={`frame-${formData.customLayout.frameStyle || 'none'}`}
                       style={{
