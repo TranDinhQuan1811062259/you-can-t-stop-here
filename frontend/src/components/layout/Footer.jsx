@@ -354,6 +354,7 @@ export const Footer = () => {
           </p>
           <div>
             <Link to="/" style={{ color: 'var(--text-light)', marginRight: '16px' }}>Trang chủ</Link>
+            <Link to="/music" style={{ color: '#38bdf8', marginRight: '16px', textDecoration: 'none' }}>Không gian nhạc ❄️</Link>
             <a href="#root" style={{ color: 'var(--primary-color)' }}>Lên đầu trang ↑</a>
           </div>
         </div>

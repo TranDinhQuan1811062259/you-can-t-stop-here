@@ -1,0 +1,1028 @@
+/* ========================================================
+   Freedom Web - Music & Winter Playlist Stylesheet
+   Chuẩn Dark / Minimalist / Frost Glass & Zen Healing Tone
+   ======================================================== */
+
+.music-page-wrapper {
+  position: relative;
+  min-height: calc(100vh - 72px);
+  padding: 2.5rem 1rem 5rem 1rem;
+  background: radial-gradient(circle at 50% 10%, rgba(56, 189, 248, 0.07) 0%, rgba(13, 18, 23, 0.98) 60%);
+  color: var(--text-main, #e2e8f0);
+  overflow: hidden;
+}
+
+/* Background tuyết rơi Canvas phủ kín */
+.winter-snow-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.85;
+}
+
+.music-page-container {
+  position: relative;
+  z-index: 2;
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+/* Header trang / Tiêu đề chính */
+.music-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 2.2rem;
+  padding-bottom: 1.2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.music-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.music-page-tagline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #38bdf8;
+}
+
+.music-page-title {
+  margin: 0;
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #ffffff 40%, #bae6fd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.music-page-desc {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.music-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.music-back-home-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-main, #e2e8f0);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.music-back-home-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  transform: translateY(-1px);
+}
+
+/* ========================================================
+   BỐ CỤC CHÍNH 2 CỘT
+   ======================================================== */
+.music-content-grid {
+  display: grid;
+  grid-template-columns: 430px 1fr;
+  gap: 2.2rem;
+  align-items: start;
+  transition: all 0.3s ease;
+}
+
+.music-page-wrapper.zen-mode-active .music-content-grid {
+  grid-template-columns: minmax(320px, 640px);
+  justify-content: center;
+}
+
+.music-page-wrapper.zen-mode-active .music-tracklist-container {
+  display: none;
+}
+
+/* ========================================================
+   MUSIC PLAYER CARD (CỘT TRÁI)
+   ======================================================== */
+.music-player-card {
+  position: relative;
+  background: rgba(21, 30, 39, 0.75);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(56, 189, 248, 0.08);
+  border-radius: 24px;
+  padding: 2rem 1.8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.music-player-card:hover {
+  border-color: rgba(56, 189, 248, 0.25);
+  box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.6), 0 0 25px rgba(56, 189, 248, 0.12);
+}
+
+/* Banner Autoplay Policy Alert */
+.music-autoplay-alert {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.18) 0%, rgba(2, 132, 199, 0.12) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: 14px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  cursor: pointer;
+  animation: pulse-glow 2.5s infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 rgba(56, 189, 248, 0); }
+  50% { box-shadow: 0 0 14px rgba(56, 189, 248, 0.28); }
+}
+
+.alert-sparkle {
+  font-size: 1.25rem;
+}
+
+.alert-text {
+  font-size: 0.85rem;
+  color: #bae6fd;
+  flex: 1;
+  line-height: 1.4;
+}
+
+.alert-btn {
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.music-error-notice {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  margin-bottom: 1.2rem;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  font-size: 0.84rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ========================================================
+   VINYL DISC ANIMATION
+   ======================================================== */
+.music-vinyl-wrapper {
+  position: relative;
+  width: 250px;
+  height: 250px;
+  margin: 0.5rem 0 1.8rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.music-vinyl-disc {
+  position: relative;
+  width: 230px;
+  height: 230px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #1a222c 0%, #0c1015 65%, #05070a 100%);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.7), inset 0 0 0 2px rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: spin-vinyl 18s linear infinite;
+}
+
+.music-vinyl-disc.spinning {
+  animation-play-state: running;
+}
+
+.music-vinyl-disc.paused {
+  animation-play-state: paused;
+}
+
+@keyframes spin-vinyl {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.vinyl-groove {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+}
+
+.groove-1 { width: 190px; height: 190px; }
+.groove-2 { width: 150px; height: 150px; }
+.groove-3 { width: 110px; height: 110px; }
+
+.vinyl-center-label {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vinyl-theme-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.vinyl-center-hole {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #090e13;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.vinyl-glow-aura {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.18) 0%, rgba(56, 189, 248, 0) 70%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+.vinyl-glow-aura.active {
+  opacity: 1;
+  animation: glow-breathe 4s ease-in-out infinite alternate;
+}
+
+@keyframes glow-breathe {
+  0% { transform: translate(-50%, -50%) scale(0.96); opacity: 0.6; }
+  100% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+}
+
+.zen-mode-toggle-btn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 9999px;
+  background: rgba(13, 18, 23, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.zen-mode-toggle-btn:hover,
+.zen-mode-toggle-btn.active {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(2, 132, 199, 0.18);
+}
+
+/* ========================================================
+   TRACK METADATA INFO
+   ======================================================== */
+.music-meta-info {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.music-badges-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+}
+
+.music-badge-pill {
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.22rem 0.6rem;
+  border-radius: 9999px;
+  letter-spacing: 0.2px;
+}
+
+.music-badge-pill.theme-badge {
+  background: rgba(56, 189, 248, 0.14);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.music-badge-pill.audio-type-badge {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.music-badge-pill.mood-badge {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+.music-track-title {
+  margin: 0 0 0.4rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.music-track-artist {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.track-album-separator {
+  margin: 0 0.3rem;
+  opacity: 0.5;
+}
+
+.track-album-name {
+  font-style: italic;
+  opacity: 0.85;
+}
+
+/* ========================================================
+   SEEKBAR & PROGRESS
+   ======================================================== */
+.music-progress-suite {
+  width: 100%;
+  margin-bottom: 1.4rem;
+}
+
+.music-progress-times {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+  font-family: monospace, sans-serif;
+}
+
+.music-seekbar-container {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.music-seekbar-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%);
+  border-radius: 9999px;
+  pointer-events: none;
+  transition: width 0.1s linear;
+}
+
+.music-seekbar-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+  z-index: 2;
+}
+
+/* ========================================================
+   CONTROLS SUITE (PLAY / PAUSE / NEXT / PREV)
+   ======================================================== */
+.music-control-suite {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  width: 100%;
+  margin-bottom: 1.6rem;
+}
+
+.control-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.control-btn:hover {
+  color: #f8fafc;
+  transform: scale(1.1);
+}
+
+.control-btn.secondary-btn {
+  font-size: 1rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.control-btn.secondary-btn.active {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+}
+
+.control-btn.nav-btn {
+  font-size: 1.25rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.control-btn.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #38bdf8;
+}
+
+.play-pause-master-btn {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+  color: #ffffff;
+  font-size: 1.45rem;
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.4);
+}
+
+.play-pause-master-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 10px 30px rgba(56, 189, 248, 0.55);
+}
+
+.play-pause-master-btn.is-playing {
+  background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
+}
+
+/* ========================================================
+   VOLUME SLIDER
+   ======================================================== */
+.music-volume-suite {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 280px;
+  padding: 0.5rem 0.8rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.volume-mute-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 0.2rem;
+  transition: color 0.2s ease;
+}
+
+.volume-mute-btn:hover {
+  color: #38bdf8;
+}
+
+.volume-slider-wrapper {
+  position: relative;
+  flex: 1;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.volume-slider-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: #38bdf8;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+
+.volume-slider-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+  z-index: 2;
+}
+
+.volume-percentage-text {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-muted, #94a3b8);
+  font-family: monospace, sans-serif;
+  min-width: 30px;
+  text-align: right;
+}
+
+/* ========================================================
+   MUSIC TRACKLIST CONTAINER (CỘT PHẢI)
+   ======================================================== */
+.music-tracklist-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+}
+
+/* Theme Pills bar */
+.music-theme-pills-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(21, 30, 39, 0.6);
+  backdrop-filter: blur(12px);
+  padding: 0.6rem 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.theme-pills-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted, #94a3b8);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.theme-pills-scroller {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.theme-pills-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.theme-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.theme-pill-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.theme-pill-btn.active {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+.pill-track-count {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.1rem 0.4rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+}
+
+.pill-badge-tiny {
+  font-size: 0.68rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+/* Tracklist Header Card */
+.tracklist-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.2rem 1.4rem;
+  background: rgba(21, 30, 39, 0.65);
+  backdrop-filter: blur(12px);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.tracklist-theme-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tracklist-theme-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.tracklist-count-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Tracklist Items Wrapper */
+.tracklist-items-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tracklist-item-card {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  padding: 1rem 1.2rem;
+  border-radius: 16px;
+  background: rgba(21, 30, 39, 0.5);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tracklist-item-card:hover {
+  background: rgba(27, 39, 51, 0.7);
+  border-color: rgba(56, 189, 248, 0.3);
+  transform: translateX(4px);
+}
+
+.tracklist-item-card.is-active {
+  background: rgba(2, 132, 199, 0.15);
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 6px 20px -4px rgba(2, 132, 199, 0.25);
+}
+
+.track-left-indicator {
+  width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.track-index-num {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-faint, #64748b);
+  font-family: monospace, sans-serif;
+}
+
+.tracklist-item-card.is-active .track-index-num {
+  color: #38bdf8;
+}
+
+/* Equalizer Bars Animation */
+.track-equalizer-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2.5px;
+  height: 18px;
+}
+
+.eq-bar {
+  width: 3px;
+  background: #38bdf8;
+  border-radius: 2px;
+  animation: eq-dance 1s ease-in-out infinite alternate;
+}
+
+.eq-bar.bar-1 { height: 60%; animation-delay: 0.1s; }
+.eq-bar.bar-2 { height: 100%; animation-delay: 0.3s; }
+.eq-bar.bar-3 { height: 40%; animation-delay: 0.2s; }
+.eq-bar.bar-4 { height: 80%; animation-delay: 0.4s; }
+
+@keyframes eq-dance {
+  0% { height: 20%; }
+  100% { height: 100%; }
+}
+
+.track-meta-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.track-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.25rem;
+}
+
+.track-name {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tracklist-item-card.is-active .track-name {
+  color: #38bdf8;
+}
+
+.track-badge-mini {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  letter-spacing: 0.5px;
+}
+
+.track-sub-row {
+  font-size: 0.82rem;
+  color: var(--text-muted, #94a3b8);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.track-dot-sep {
+  opacity: 0.5;
+}
+
+.track-mood-text {
+  color: #fbbf24;
+  font-size: 0.78rem;
+}
+
+.track-right-action {
+  display: flex;
+  align-items: center;
+}
+
+.track-quick-play-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main, #e2e8f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.track-quick-play-btn:hover,
+.track-quick-play-btn.playing {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #38bdf8;
+  transform: scale(1.08);
+}
+
+/* Empty State Card */
+.tracklist-empty-card {
+  padding: 3rem 2rem;
+  text-align: center;
+  background: rgba(21, 30, 39, 0.45);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 0.8rem;
+  opacity: 0.8;
+}
+
+.empty-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-desc {
+  font-size: 0.88rem;
+  color: var(--text-muted, #94a3b8);
+  margin: 0 0 1.5rem 0;
+  max-width: 440px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+}
+
+.empty-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+  color: #ffffff;
+  border: none;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.empty-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(56, 189, 248, 0.4);
+}
+
+/* Vibe & Quote Box */
+.tracklist-vibe-card {
+  display: flex;
+  gap: 1rem;
+  padding: 1.2rem 1.4rem;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.08) 0%, rgba(13, 18, 23, 0.4) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.vibe-icon-quote {
+  font-size: 1.3rem;
+  color: #38bdf8;
+  opacity: 0.8;
+}
+
+.vibe-card-body {
+  flex: 1;
+}
+
+.vibe-quote-text {
+  margin: 0 0 0.45rem 0;
+  font-size: 0.92rem;
+  font-style: italic;
+  color: #e0f2fe;
+  line-height: 1.5;
+}
+
+.vibe-tag-text {
+  font-size: 0.78rem;
+  color: #bae6fd;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* ========================================================
+   RESPONSIVE DESIGN (MOBILE & TABLET)
+   ======================================================== */
+@media (max-width: 992px) {
+  .music-content-grid {
+    grid-template-columns: 1fr;
+    gap: 1.8rem;
+  }
+
+  .music-player-card {
+    max-width: 520px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .music-page-title {
+    font-size: 1.7rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .music-page-wrapper {
+    padding: 1.5rem 0.8rem 4rem 0.8rem;
+  }
+
+  .music-vinyl-wrapper {
+    width: 200px;
+    height: 200px;
+  }
+
+  .music-vinyl-disc {
+    width: 190px;
+    height: 190px;
+  }
+
+  .groove-1 { width: 155px; height: 155px; }
+  .groove-2 { width: 120px; height: 120px; }
+  .groove-3 { width: 90px; height: 90px; }
+
+  .vinyl-center-label {
+    width: 60px;
+    height: 60px;
+  }
+
+  .vinyl-theme-icon {
+    font-size: 1.4rem;
+  }
+
+  .play-pause-master-btn {
+    width: 54px;
+    height: 54px;
+    font-size: 1.25rem;
+  }
+
+  .music-control-suite {
+    gap: 0.75rem;
+  }
+}

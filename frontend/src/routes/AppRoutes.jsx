@@ -5,6 +5,7 @@ import { HomePage } from '../pages/HomePage';
 import { PostDetailPage } from '../pages/PostDetailPage';
 import { CategoryPage } from '../pages/CategoryPage';
 import { UserProfilePage } from '../pages/UserProfilePage';
+import { MusicPage } from '../pages/MusicPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 
 export const AppRoutes = () => {
@@ -12,6 +13,8 @@ export const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<MainLayout />}>
         <Route index element={<HomePage />} />
+        <Route path="music" element={<MusicPage />} />
+        <Route path="music/:themeId" element={<MusicPage />} />
         <Route path="post/:slug" element={<PostDetailPage />} />
         <Route path="category/:categorySlug" element={<CategoryPage />} />
         <Route path="profile/:userId" element={<UserProfilePage />} />

@@ -29,6 +29,7 @@ import { eventService } from '../../services/eventService';
 import { isSoundEnabled, toggleSound, playClickSound, playFestiveEventSound } from '../../utils/soundEffects';
 import { getActiveSeason, setActiveSeason, SEASONS } from '../../utils/seasonUtils';
 import { formatDate } from '../../utils/formatDate';
+import { getPlaylistBySlug } from '../../data/playlists';
 import { IdleWeatherText } from '../common/IdleWeatherText';
 import { NotificationDropdown } from './NotificationDropdown';
 import { notificationService } from '../../services/notificationService';
@@ -96,12 +97,19 @@ export const Header = () => {
   const ambientMenuRef = useRef(null);
 
   // States cho Danh Sách Bản Thu Âm 4 Mùa Chính Chủ
+  const winterPlaylistData = getPlaylistBySlug('winter');
+  const winterOfficialTracks = winterPlaylistData?.tracks || [];
+  const [winterTrackIndex, setWinterTrackIndex] = useState(0);
+
   const [seasonalTracks, setSeasonalTracks] = useState(() => {
-    try {
-      const saved = localStorage.getItem('freedom_seasonal_recordings');
-      if (saved) return JSON.parse(saved);
-    } catch (_) {}
-    return {
+    const defaultWinter = winterOfficialTracks[0] || {
+      title: 'Winter Song 1 (Gió Bấc & Tĩnh Lặng)',
+      artist: 'Freedom Studio 🎙️',
+      src: '/audio/winter/winter-song-1.wav',
+      mood: 'Tĩnh lặng • Sâu lắng',
+    };
+
+    let initial = {
       spring: {
         id: 'spring',
         seasonId: 'spring',
@@ -140,13 +148,27 @@ export const Header = () => {
         seasonId: 'winter',
         name: 'Mùa Đông',
         icon: '❄️',
-        title: 'Đêm Lạnh Bên Dòng Sông (Bản Mộc Acoustic)',
-        artist: 'Chính chủ Freedom 🎙️ (100% bản quyền)',
-        desc: 'Bản nhạc mộc mạc do chính bạn gửi từ video',
-        url: '/audio/midnight-river-song.mp4',
+        title: defaultWinter.title,
+        artist: defaultWinter.artist,
+        desc: defaultWinter.mood || 'Không gian tĩnh lặng, trầm ấm & hoài niệm',
+        url: defaultWinter.src,
         hasUserAudio: true,
       },
     };
+
+    try {
+      const saved = localStorage.getItem('freedom_seasonal_recordings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Gỡ bỏ triệt để file nháp midnight-river-song.mp4 nếu còn tồn đọng trong cache trình duyệt
+        if (parsed.winter && parsed.winter.url && parsed.winter.url.includes('midnight-river-song')) {
+          parsed.winter = initial.winter;
+          localStorage.setItem('freedom_seasonal_recordings', JSON.stringify(parsed));
+        }
+        return { ...initial, ...parsed };
+      }
+    } catch (_) {}
+    return initial;
   });
 
   const [selectedTrackSeason, setSelectedTrackSeason] = useState('winter');
@@ -474,16 +496,42 @@ export const Header = () => {
 
     if (isPlayingRecording) {
       if (recordingAudioRef.current) {
-        recordingAudioRef.current.pause();
+        try {
+          recordingAudioRef.current.pause();
+        } catch (_) {}
       }
       stopEventAmbient();
 
-      const nextTrack = seasonalTracks[seasonId];
-      if (nextTrack?.url) {
-        recordingAudioRef.current.src = nextTrack.url;
-        recordingAudioRef.current.play().catch(() => {});
-        duckAmbientForMusic();
-        setIsPlayingRecording(true);
+      let targetUrl = '';
+      if (seasonId === 'winter') {
+        const curWinter = winterOfficialTracks[winterTrackIndex] || winterOfficialTracks[0];
+        targetUrl = curWinter?.src || '';
+      } else {
+        const nextTrack = seasonalTracks[seasonId];
+        targetUrl = nextTrack?.url || '';
+      }
+
+      if (targetUrl) {
+        if (recordingAudioRef.current) {
+          try {
+            recordingAudioRef.current.src = targetUrl;
+            const playPromise = recordingAudioRef.current.play();
+            if (playPromise !== undefined) {
+              playPromise
+                .then(() => {
+                  duckAmbientForMusic();
+                  setIsPlayingRecording(true);
+                })
+                .catch((err) => {
+                  console.warn('[Header] Play prevented:', err);
+                  setIsPlayingRecording(false);
+                });
+            }
+          } catch (err) {
+            console.warn('[Header] Play exception:', err);
+            setIsPlayingRecording(false);
+          }
+        }
       } else {
         startEventAmbient(seasonId);
         setIsPlayingRecording(true);
@@ -493,28 +541,112 @@ export const Header = () => {
 
   const handleTogglePlayRecording = () => {
     playClickSound();
-    const track = seasonalTracks[selectedTrackSeason] || seasonalTracks.winter;
+    let trackUrl = '';
+    if (selectedTrackSeason === 'winter') {
+      const curWinter = winterOfficialTracks[winterTrackIndex] || winterOfficialTracks[0];
+      trackUrl = curWinter?.src || '';
+    } else {
+      const track = seasonalTracks[selectedTrackSeason] || seasonalTracks.winter;
+      trackUrl = track?.url || '';
+    }
 
     if (isPlayingRecording) {
       if (recordingAudioRef.current) {
-        recordingAudioRef.current.pause();
+        try {
+          recordingAudioRef.current.pause();
+        } catch (_) {}
       }
       stopEventAmbient();
       restoreAmbientFromMusic();
       setIsPlayingRecording(false);
     } else {
-      if (track?.url) {
+      if (trackUrl) {
         if (recordingAudioRef.current) {
-          recordingAudioRef.current.src = track.url;
-          recordingAudioRef.current.play().catch(() => {});
+          try {
+            if (recordingAudioRef.current.getAttribute('src') !== trackUrl) {
+              recordingAudioRef.current.src = trackUrl;
+            }
+            const playPromise = recordingAudioRef.current.play();
+            if (playPromise !== undefined) {
+              playPromise
+                .then(() => {
+                  duckAmbientForMusic();
+                  setIsPlayingRecording(true);
+                })
+                .catch((err) => {
+                  console.warn('[Header] Play prevented by policy:', err);
+                  setIsPlayingRecording(false);
+                });
+            }
+          } catch (err) {
+            console.warn('[Header] Error starting audio:', err);
+            setIsPlayingRecording(false);
+          }
         }
-        duckAmbientForMusic();
-        setIsPlayingRecording(true);
       } else {
         startEventAmbient(selectedTrackSeason);
         setIsPlayingRecording(true);
       }
     }
+  };
+
+  // Chọn và phát một bài hát cụ thể trong danh sách mùa đông
+  const handlePlayWinterTrack = (index) => {
+    playClickSound();
+    if (!winterOfficialTracks || index < 0 || index >= winterOfficialTracks.length) return;
+    const track = winterOfficialTracks[index];
+
+    // Nếu đang phát chính bài này thì toggle tạm dừng
+    if (isPlayingRecording && selectedTrackSeason === 'winter' && winterTrackIndex === index) {
+      if (recordingAudioRef.current) {
+        try {
+          recordingAudioRef.current.pause();
+        } catch (_) {}
+      }
+      stopEventAmbient();
+      restoreAmbientFromMusic();
+      setIsPlayingRecording(false);
+      return;
+    }
+
+    setWinterTrackIndex(index);
+    setSelectedTrackSeason('winter');
+    stopEventAmbient();
+
+    if (recordingAudioRef.current && track?.src) {
+      try {
+        recordingAudioRef.current.src = track.src;
+        const playPromise = recordingAudioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              duckAmbientForMusic();
+              setIsPlayingRecording(true);
+            })
+            .catch((err) => {
+              console.warn('[Header] Play winter track prevented:', err);
+              setIsPlayingRecording(false);
+            });
+        }
+      } catch (err) {
+        console.warn('[Header] Error playing winter track:', err);
+        setIsPlayingRecording(false);
+      }
+    }
+  };
+
+  const handleNextWinterTrack = () => {
+    playClickSound();
+    if (!winterOfficialTracks.length) return;
+    const nextIdx = (winterTrackIndex + 1) % winterOfficialTracks.length;
+    handlePlayWinterTrack(nextIdx);
+  };
+
+  const handlePrevWinterTrack = () => {
+    playClickSound();
+    if (!winterOfficialTracks.length) return;
+    const prevIdx = (winterTrackIndex - 1 + winterOfficialTracks.length) % winterOfficialTracks.length;
+    handlePlayWinterTrack(prevIdx);
   };
 
   const handleUploadCustomRecording = (e) => {
@@ -543,20 +675,89 @@ export const Header = () => {
     });
 
     if (recordingAudioRef.current) {
-      recordingAudioRef.current.src = fileUrl;
-      recordingAudioRef.current.play().catch(() => {});
+      try {
+        recordingAudioRef.current.src = fileUrl;
+        recordingAudioRef.current.play().catch(() => {});
+      } catch (_) {}
     }
     duckAmbientForMusic();
     setIsPlayingRecording(true);
     stopEventAmbient();
   };
 
+  // Tự động chuyển bài tiếp theo khi kết thúc bài hiện tại (Auto-next playlist)
   const handleRecordingEnded = () => {
+    if (selectedTrackSeason === 'winter' && winterOfficialTracks.length > 1) {
+      const nextIdx = (winterTrackIndex + 1) % winterOfficialTracks.length;
+      setWinterTrackIndex(nextIdx);
+      const nextTrack = winterOfficialTracks[nextIdx];
+      if (recordingAudioRef.current && nextTrack?.src) {
+        try {
+          recordingAudioRef.current.src = nextTrack.src;
+          const playPromise = recordingAudioRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                duckAmbientForMusic();
+                setIsPlayingRecording(true);
+              })
+              .catch((err) => {
+                console.warn('[Header] Autoplay next track restricted:', err);
+                setIsPlayingRecording(false);
+                restoreAmbientFromMusic();
+              });
+          }
+        } catch (err) {
+          console.warn('[Header] Error transitioning to next track:', err);
+          setIsPlayingRecording(false);
+          restoreAmbientFromMusic();
+        }
+        return;
+      }
+    }
+
     setIsPlayingRecording(false);
     restoreAmbientFromMusic();
   };
 
-  const currentTrackMeta = seasonalTracks[selectedTrackSeason] || seasonalTracks.winter;
+  // Dọn dẹp audio khi chuyển sang trang /music hoặc khi Header unmount (Quy tắc 3 GEMINI.md)
+  useEffect(() => {
+    if (location.pathname.startsWith('/music')) {
+      if (recordingAudioRef.current && isPlayingRecording) {
+        try {
+          recordingAudioRef.current.pause();
+        } catch (_) {}
+        setIsPlayingRecording(false);
+      }
+    }
+  }, [location.pathname, isPlayingRecording]);
+
+  useEffect(() => {
+    const audio = recordingAudioRef.current;
+    return () => {
+      if (audio) {
+        try {
+          audio.pause();
+          audio.src = '';
+        } catch (_) {}
+      }
+    };
+  }, []);
+
+  const currentWinterTrack = winterOfficialTracks[winterTrackIndex] || winterOfficialTracks[0];
+  const currentTrackMeta = selectedTrackSeason === 'winter' && currentWinterTrack
+    ? {
+        id: 'winter',
+        seasonId: 'winter',
+        name: 'Mùa Đông',
+        icon: '❄️',
+        title: currentWinterTrack.title,
+        artist: currentWinterTrack.artist,
+        desc: currentWinterTrack.mood || 'Không gian tĩnh lặng, trầm ấm & hoài niệm',
+        url: currentWinterTrack.src,
+        hasUserAudio: true,
+      }
+    : (seasonalTracks[selectedTrackSeason] || seasonalTracks.winter);
 
   return (
     <>
@@ -814,18 +1015,18 @@ export const Header = () => {
                         { id: 'winter', icon: '❄️', name: 'Đông' },
                       ].map((s) => {
                         const isCurrentTab = selectedTrackSeason === s.id;
-                        const track = seasonalTracks[s.id];
+                        const hasAudio = s.id === 'winter' ? winterOfficialTracks.length > 0 : Boolean(seasonalTracks[s.id]?.hasUserAudio);
                         return (
                           <button
                             key={s.id}
                             type="button"
                             className={`ambient-season-tab ${isCurrentTab ? 'is-selected' : ''}`}
                             onClick={() => handleSelectRecordingSeason(s.id)}
-                            title={`Bản thu âm ${s.name}: ${track?.title || ''}`}
+                            title={`Bản thu âm ${s.name}`}
                           >
                             <span>{s.icon}</span>
                             <span>{s.name}</span>
-                            {track?.hasUserAudio && <span className="tab-audio-dot" title="Đã có file thu âm" />}
+                            {hasAudio && <span className="tab-audio-dot" title="Đã có file thu âm" />}
                           </button>
                         );
                       })}
@@ -859,7 +1060,18 @@ export const Header = () => {
                         </span>
                       </div>
 
-                      <div className="track-card-action">
+                      <div className="track-card-action" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {selectedTrackSeason === 'winter' && winterOfficialTracks.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={handlePrevWinterTrack}
+                            className="track-play-btn"
+                            style={{ width: '28px', height: '28px', fontSize: '0.72rem', background: 'rgba(255, 255, 255, 0.08)' }}
+                            title="Bài trước"
+                          >
+                            ⏮
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={handleTogglePlayRecording}
@@ -868,38 +1080,174 @@ export const Header = () => {
                         >
                           {isPlayingRecording ? '⏸' : '▶'}
                         </button>
+                        {selectedTrackSeason === 'winter' && winterOfficialTracks.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={handleNextWinterTrack}
+                            className="track-play-btn"
+                            style={{ width: '28px', height: '28px', fontSize: '0.72rem', background: 'rgba(255, 255, 255, 0.08)' }}
+                            title="Bài tiếp theo"
+                          >
+                            ⏭
+                          </button>
+                        )}
                       </div>
                     </div>
 
-                    {/* Nút Tải Lên / Gửi File Thu Âm */}
-                    <div className="ambient-upload-action-row">
-                      <input
-                        type="file"
-                        ref={recordingFileInputRef}
-                        accept="audio/*,.mp4"
-                        style={{ display: 'none' }}
-                        onChange={handleUploadCustomRecording}
-                      />
-                      <button
-                        type="button"
-                        className="ambient-upload-btn"
-                        onClick={() => recordingFileInputRef.current?.click()}
-                        title="Chọn file thu âm của bạn từ máy tính để phát cho mùa này"
-                      >
-                        <span className="upload-btn-icon">📂</span>
-                        <span>Tải lên bản thu cho {currentTrackMeta.name}</span>
-                      </button>
-                    </div>
+                    {/* Danh Sách Bản Thu Âm Mùa Đông Chính Thức Từ playlists.js */}
+                    {selectedTrackSeason === 'winter' && (
+                      <div className="ambient-winter-tracklist" style={{ marginTop: '0.65rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
+                          <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            ❄️ Danh Sách Bản Thu Mùa Đông ({winterOfficialTracks.length} bài)
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                            Tự động chuyển bài
+                          </span>
+                        </div>
 
-                    <div className="ambient-recording-note">
-                      🎙️ <em>Bạn cứ gửi file thu âm qua chat cho tui, tui sẽ gắn chuẩn vào từng mùa nhé!</em>
-                    </div>
+                        {winterOfficialTracks.map((trk, idx) => {
+                          const isThisTrackActive = selectedTrackSeason === 'winter' && winterTrackIndex === idx;
+                          const isThisTrackPlaying = isThisTrackActive && isPlayingRecording;
+
+                          return (
+                            <div
+                              key={trk.id || idx}
+                              onClick={() => handlePlayWinterTrack(idx)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '8px',
+                                padding: '0.5rem 0.75rem',
+                                borderRadius: '10px',
+                                background: isThisTrackActive ? 'rgba(56, 189, 248, 0.14)' : 'rgba(255, 255, 255, 0.04)',
+                                border: isThisTrackActive ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(255, 255, 255, 0.06)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                              }}
+                              className="ambient-winter-track-row"
+                              title={`Bấm để nghe: ${trk.title}`}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                                <span style={{
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  color: isThisTrackActive ? '#38bdf8' : '#64748b',
+                                  fontFamily: 'monospace',
+                                  width: '16px',
+                                  textAlign: 'center',
+                                }}>
+                                  {isThisTrackPlaying ? '▶' : (idx + 1)}
+                                </span>
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{
+                                    fontSize: '0.82rem',
+                                    fontWeight: isThisTrackActive ? 700 : 500,
+                                    color: isThisTrackActive ? '#38bdf8' : '#e2e8f0',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                  }}>
+                                    {trk.title}
+                                  </div>
+                                  <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                                    {trk.mood || trk.badge || 'HQ WAV'}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePlayWinterTrack(idx);
+                                }}
+                                style={{
+                                  width: '28px',
+                                  height: '28px',
+                                  borderRadius: '50%',
+                                  border: 'none',
+                                  background: isThisTrackPlaying ? '#0284c7' : 'rgba(255, 255, 255, 0.08)',
+                                  color: '#ffffff',
+                                  fontSize: '0.75rem',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer',
+                                  flexShrink: 0,
+                                }}
+                                title={isThisTrackPlaying ? 'Tạm dừng' : 'Phát bài này'}
+                              >
+                                {isThisTrackPlaying ? '⏸' : '▶'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Nút Tải Lên / Gửi File Thu Âm (Cho các mùa khác) */}
+                    {selectedTrackSeason !== 'winter' && (
+                      <>
+                        <div className="ambient-upload-action-row">
+                          <input
+                            type="file"
+                            ref={recordingFileInputRef}
+                            accept="audio/*,.mp4"
+                            style={{ display: 'none' }}
+                            onChange={handleUploadCustomRecording}
+                          />
+                          <button
+                            type="button"
+                            className="ambient-upload-btn"
+                            onClick={() => recordingFileInputRef.current?.click()}
+                            title="Chọn file thu âm của bạn từ máy tính để phát cho mùa này"
+                          >
+                            <span className="upload-btn-icon">📂</span>
+                            <span>Tải lên bản thu cho {currentTrackMeta.name}</span>
+                          </button>
+                        </div>
+
+                        <div className="ambient-recording-note">
+                          🎙️ <em>Bạn cứ gửi file thu âm qua chat cho tui, tui sẽ gắn chuẩn vào từng mùa nhé!</em>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Ghi chú Audio Ducking */}
                   <div className="ambient-ducking-tip">
                     💡 <em>Khi bạn mở nhạc cá nhân, âm thanh môi trường sẽ tự động chìm nhẹ để nhường chỗ cho bài hát!</em>
                   </div>
+
+                  {/* Link Spotlight Không Gian Nhạc Mùa Đông */}
+                  <Link
+                    to="/music/winter"
+                    className="ambient-lounge-spotlight-btn"
+                    onClick={() => {
+                      playClickSound();
+                      setIsAmbientMenuOpen(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.65rem 0.85rem',
+                      marginTop: '0.6rem',
+                      borderRadius: '12px',
+                      background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.16) 0%, rgba(2, 132, 199, 0.1) 100%)',
+                      border: '1px solid rgba(56, 189, 248, 0.35)',
+                      color: '#bae6fd',
+                      textDecoration: 'none',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                    }}
+                    title="Mở Không Gian Nhạc Mùa Đông (Winter Chill Lounge)"
+                  >
+                    <span>❄️ Không Gian Nhạc Mùa Đông (Chill Lounge)</span>
+                    <i className="fa-solid fa-arrow-right" style={{ fontSize: '0.75rem' }}></i>
+                  </Link>
                 </div>
               )}
             </div>
@@ -1203,6 +1551,18 @@ export const Header = () => {
                 <i className="fa-solid fa-sun"></i>
               </span>
               <span className="item-label">Small Wins</span>
+            </NavLink>
+
+            {/* Tab Không Gian Nhạc & Playlist Đa Mùa */}
+            <NavLink
+              to="/music"
+              className={({ isActive }) => `dashboard-3d-item tab-music ${isActive ? 'active' : ''}`}
+              title="Dashboard: Không Gian Nhạc & Playlist Mùa Đông (Winter Chill)"
+            >
+              <span className="healing-icon-pill healing-icon-cyan" style={{ width: '28px', height: '28px', fontSize: '0.82rem', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>
+                <i className="fa-solid fa-compact-disc"></i>
+              </span>
+              <span className="item-label">Góc Nhạc</span>
             </NavLink>
 
             {/* Cụm Trạm Chữa Lành Dropdown - Gom gọn 12 công cụ xả áp lực & chăm sóc tâm lý */}
