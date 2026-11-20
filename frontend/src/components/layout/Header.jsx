@@ -175,6 +175,44 @@ export const Header = () => {
   const [isPlayingRecording, setIsPlayingRecording] = useState(false);
   const recordingAudioRef = useRef(null);
   const recordingFileInputRef = useRef(null);
+  const userExplicitPausedRef = useRef(false);
+
+  // Các refs đồng bộ cao độ để tránh race condition & stale closure cho audio playback
+  const winterTrackIndexRef = useRef(0);
+  const winterOfficialTracksRef = useRef(winterOfficialTracks);
+  const selectedTrackSeasonRef = useRef('winter');
+  const isAutoNextRef = useRef(true);
+  const isPlayingRecordingRef = useRef(false);
+  const isSwitchingTrackRef = useRef(false);
+
+  // State tự động chuyển bài cho playlist mùa đông (mặc định Bật, lưu trữ trong localStorage)
+  const [isAutoNext, setIsAutoNext] = useState(() => {
+    try {
+      const saved = localStorage.getItem('freedom_ambient_auto_next');
+      return saved !== null ? saved === 'true' : true;
+    } catch (_) {
+      return true;
+    }
+  });
+
+  // Luôn giữ các refs đồng bộ với các giá trị state mới nhất
+  winterTrackIndexRef.current = winterTrackIndex;
+  winterOfficialTracksRef.current = winterOfficialTracks;
+  selectedTrackSeasonRef.current = selectedTrackSeason;
+  isAutoNextRef.current = isAutoNext;
+  isPlayingRecordingRef.current = isPlayingRecording;
+
+  const handleToggleAutoNext = () => {
+    playClickSound();
+    setIsAutoNext((prev) => {
+      const nextVal = !prev;
+      isAutoNextRef.current = nextVal;
+      try {
+        localStorage.setItem('freedom_ambient_auto_next', String(nextVal));
+      } catch (_) {}
+      return nextVal;
+    });
+  };
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -488,23 +526,104 @@ export const Header = () => {
     }
   };
 
+  // Đồng bộ class mở popover âm thanh lên body để ẩn hiệu ứng chuyển trang 3D & bảng 20/11
+  useEffect(() => {
+    if (isAmbientMenuOpen) {
+      document.body.classList.add('has-ambient-menu-open');
+    } else {
+      document.body.classList.remove('has-ambient-menu-open');
+    }
+    return () => {
+      document.body.classList.remove('has-ambient-menu-open');
+    };
+  }, [isAmbientMenuOpen]);
+
+  // Đồng bộ index bài hát mùa đông đang active từ audio.src thực tế
+  const syncActiveTrackFromAudio = (audioEl) => {
+    const audio = audioEl || recordingAudioRef.current;
+    if (!audio || !audio.src) return;
+    const currentSrc = audio.src || '';
+
+    if (selectedTrackSeasonRef.current === 'winter' && winterOfficialTracksRef.current?.length > 0) {
+      const tracks = winterOfficialTracksRef.current;
+      const matchedIdx = tracks.findIndex((t) => {
+        if (!t.src) return false;
+        return currentSrc.endsWith(t.src) || currentSrc.includes(encodeURI(t.src));
+      });
+      if (matchedIdx !== -1 && matchedIdx !== winterTrackIndexRef.current) {
+        winterTrackIndexRef.current = matchedIdx;
+        setWinterTrackIndex(matchedIdx);
+      }
+    }
+  };
+
+  // Điều khiển an toàn Audio instance duy nhất, tuân thủ Autoplay Policy và đồng bộ trạng thái
+  const pauseAudioSafely = () => {
+    userExplicitPausedRef.current = true;
+    isSwitchingTrackRef.current = false;
+    try {
+      sessionStorage.setItem('freedom_user_explicit_paused', 'true');
+    } catch (_) {}
+
+    const audio = recordingAudioRef.current;
+    if (audio) {
+      try {
+        audio.pause();
+      } catch (err) {
+        console.warn('[HeaderAudio] pause error:', err);
+      }
+    }
+    stopEventAmbient();
+    restoreAmbientFromMusic();
+    setIsPlayingRecording(false);
+  };
+
+  const playAudioSafely = async (targetUrl) => {
+    userExplicitPausedRef.current = false;
+    try {
+      sessionStorage.removeItem('freedom_user_explicit_paused');
+    } catch (_) {}
+
+    const audio = recordingAudioRef.current;
+    if (!audio) return;
+
+    try {
+      const needsLoad = targetUrl && (!audio.src || !audio.src.endsWith(targetUrl));
+      if (needsLoad) {
+        isSwitchingTrackRef.current = true;
+        audio.src = targetUrl;
+        audio.load();
+      }
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        await playPromise;
+        isSwitchingTrackRef.current = false;
+        duckAmbientForMusic();
+        setIsPlayingRecording(true);
+        syncActiveTrackFromAudio(audio);
+      }
+    } catch (err) {
+      console.warn('[HeaderAudio] Play blocked by browser policy:', err);
+      isSwitchingTrackRef.current = false;
+      setIsPlayingRecording(false);
+      restoreAmbientFromMusic();
+    }
+  };
+
   // Điều khiển phát bản thu âm 4 mùa chính chủ
   const handleSelectRecordingSeason = (seasonId) => {
     playClickSound();
+    selectedTrackSeasonRef.current = seasonId;
     setSelectedTrackSeason(seasonId);
     setMelodicSeason(seasonId);
 
-    if (isPlayingRecording) {
-      if (recordingAudioRef.current) {
-        try {
-          recordingAudioRef.current.pause();
-        } catch (_) {}
-      }
-      stopEventAmbient();
+    const audio = recordingAudioRef.current;
+    const isCurrentlyPlaying = audio ? (!audio.paused && !audio.ended) : isPlayingRecording;
 
+    if (isCurrentlyPlaying) {
       let targetUrl = '';
       if (seasonId === 'winter') {
-        const curWinter = winterOfficialTracks[winterTrackIndex] || winterOfficialTracks[0];
+        const curWinter = winterOfficialTracksRef.current[winterTrackIndexRef.current] || winterOfficialTracksRef.current[0];
         targetUrl = curWinter?.src || '';
       } else {
         const nextTrack = seasonalTracks[seasonId];
@@ -512,27 +631,11 @@ export const Header = () => {
       }
 
       if (targetUrl) {
-        if (recordingAudioRef.current) {
-          try {
-            recordingAudioRef.current.src = targetUrl;
-            const playPromise = recordingAudioRef.current.play();
-            if (playPromise !== undefined) {
-              playPromise
-                .then(() => {
-                  duckAmbientForMusic();
-                  setIsPlayingRecording(true);
-                })
-                .catch((err) => {
-                  console.warn('[Header] Play prevented:', err);
-                  setIsPlayingRecording(false);
-                });
-            }
-          } catch (err) {
-            console.warn('[Header] Play exception:', err);
-            setIsPlayingRecording(false);
-          }
-        }
+        playAudioSafely(targetUrl);
       } else {
+        if (audio) {
+          try { audio.pause(); } catch (_) {}
+        }
         startEventAmbient(seasonId);
         setIsPlayingRecording(true);
       }
@@ -541,112 +644,90 @@ export const Header = () => {
 
   const handleTogglePlayRecording = () => {
     playClickSound();
+    const audio = recordingAudioRef.current;
+    const isCurrentlyPlaying = audio ? (!audio.paused && !audio.ended) : isPlayingRecording;
+
+    if (isCurrentlyPlaying) {
+      pauseAudioSafely();
+      return;
+    }
+
     let trackUrl = '';
-    if (selectedTrackSeason === 'winter') {
-      const curWinter = winterOfficialTracks[winterTrackIndex] || winterOfficialTracks[0];
+    if (selectedTrackSeasonRef.current === 'winter') {
+      const curWinter = winterOfficialTracksRef.current[winterTrackIndexRef.current] || winterOfficialTracksRef.current[0];
       trackUrl = curWinter?.src || '';
     } else {
-      const track = seasonalTracks[selectedTrackSeason] || seasonalTracks.winter;
+      const track = seasonalTracks[selectedTrackSeasonRef.current] || seasonalTracks.winter;
       trackUrl = track?.url || '';
     }
 
-    if (isPlayingRecording) {
-      if (recordingAudioRef.current) {
-        try {
-          recordingAudioRef.current.pause();
-        } catch (_) {}
-      }
-      stopEventAmbient();
-      restoreAmbientFromMusic();
-      setIsPlayingRecording(false);
+    if (trackUrl) {
+      playAudioSafely(trackUrl);
     } else {
-      if (trackUrl) {
-        if (recordingAudioRef.current) {
-          try {
-            if (recordingAudioRef.current.getAttribute('src') !== trackUrl) {
-              recordingAudioRef.current.src = trackUrl;
-            }
-            const playPromise = recordingAudioRef.current.play();
-            if (playPromise !== undefined) {
-              playPromise
-                .then(() => {
-                  duckAmbientForMusic();
-                  setIsPlayingRecording(true);
-                })
-                .catch((err) => {
-                  console.warn('[Header] Play prevented by policy:', err);
-                  setIsPlayingRecording(false);
-                });
-            }
-          } catch (err) {
-            console.warn('[Header] Error starting audio:', err);
-            setIsPlayingRecording(false);
-          }
-        }
-      } else {
-        startEventAmbient(selectedTrackSeason);
-        setIsPlayingRecording(true);
-      }
+      startEventAmbient(selectedTrackSeasonRef.current);
+      setIsPlayingRecording(true);
     }
   };
 
   // Chọn và phát một bài hát cụ thể trong danh sách mùa đông
   const handlePlayWinterTrack = (index) => {
     playClickSound();
-    if (!winterOfficialTracks || index < 0 || index >= winterOfficialTracks.length) return;
-    const track = winterOfficialTracks[index];
+    const tracks = winterOfficialTracksRef.current;
+    if (!tracks || index < 0 || index >= tracks.length) return;
+    const track = tracks[index];
+
+    const audio = recordingAudioRef.current;
+    const isCurrentlyPlaying = audio ? (!audio.paused && !audio.ended) : isPlayingRecording;
 
     // Nếu đang phát chính bài này thì toggle tạm dừng
-    if (isPlayingRecording && selectedTrackSeason === 'winter' && winterTrackIndex === index) {
-      if (recordingAudioRef.current) {
-        try {
-          recordingAudioRef.current.pause();
-        } catch (_) {}
-      }
-      stopEventAmbient();
-      restoreAmbientFromMusic();
-      setIsPlayingRecording(false);
+    if (isCurrentlyPlaying && selectedTrackSeasonRef.current === 'winter' && winterTrackIndexRef.current === index) {
+      pauseAudioSafely();
       return;
     }
 
+    winterTrackIndexRef.current = index;
     setWinterTrackIndex(index);
+    selectedTrackSeasonRef.current = 'winter';
     setSelectedTrackSeason('winter');
     stopEventAmbient();
 
-    if (recordingAudioRef.current && track?.src) {
-      try {
-        recordingAudioRef.current.src = track.src;
-        const playPromise = recordingAudioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              duckAmbientForMusic();
-              setIsPlayingRecording(true);
-            })
-            .catch((err) => {
-              console.warn('[Header] Play winter track prevented:', err);
-              setIsPlayingRecording(false);
-            });
-        }
-      } catch (err) {
-        console.warn('[Header] Error playing winter track:', err);
-        setIsPlayingRecording(false);
-      }
+    if (track?.src) {
+      playAudioSafely(track.src);
     }
   };
 
   const handleNextWinterTrack = () => {
     playClickSound();
-    if (!winterOfficialTracks.length) return;
-    const nextIdx = (winterTrackIndex + 1) % winterOfficialTracks.length;
-    handlePlayWinterTrack(nextIdx);
+    const tracks = winterOfficialTracksRef.current;
+    if (!tracks || !tracks.length) return;
+    const currentIdx = winterTrackIndexRef.current;
+    const nextIdx = (currentIdx + 1) % tracks.length;
+    winterTrackIndexRef.current = nextIdx;
+    setWinterTrackIndex(nextIdx);
+    selectedTrackSeasonRef.current = 'winter';
+    setSelectedTrackSeason('winter');
+    stopEventAmbient();
+    const nextTrack = tracks[nextIdx];
+    if (nextTrack?.src) {
+      playAudioSafely(nextTrack.src);
+    }
   };
 
   const handlePrevWinterTrack = () => {
     playClickSound();
-    if (!winterOfficialTracks.length) return;
-    const prevIdx = (winterTrackIndex - 1 + winterOfficialTracks.length) % winterOfficialTracks.length;
-    handlePlayWinterTrack(prevIdx);
+    const tracks = winterOfficialTracksRef.current;
+    if (!tracks || !tracks.length) return;
+    const currentIdx = winterTrackIndexRef.current;
+    const prevIdx = (currentIdx - 1 + tracks.length) % tracks.length;
+    winterTrackIndexRef.current = prevIdx;
+    setWinterTrackIndex(prevIdx);
+    selectedTrackSeasonRef.current = 'winter';
+    setSelectedTrackSeason('winter');
+    stopEventAmbient();
+    const prevTrack = tracks[prevIdx];
+    if (prevTrack?.src) {
+      playAudioSafely(prevTrack.src);
+    }
   };
 
   const handleUploadCustomRecording = (e) => {
@@ -659,9 +740,9 @@ export const Header = () => {
     setSeasonalTracks((prev) => {
       const updated = {
         ...prev,
-        [selectedTrackSeason]: {
-          ...prev[selectedTrackSeason],
-          title: cleanTitle || `Bản thu âm ${prev[selectedTrackSeason]?.name || ''}`,
+        [selectedTrackSeasonRef.current]: {
+          ...prev[selectedTrackSeasonRef.current],
+          title: cleanTitle || `Bản thu âm ${prev[selectedTrackSeasonRef.current]?.name || ''}`,
           artist: 'Chính chủ thu âm 🎙️',
           url: fileUrl,
           hasUserAudio: true,
@@ -675,62 +756,183 @@ export const Header = () => {
     });
 
     if (recordingAudioRef.current) {
-      try {
-        recordingAudioRef.current.src = fileUrl;
-        recordingAudioRef.current.play().catch(() => {});
-      } catch (_) {}
+      playAudioSafely(fileUrl);
     }
-    duckAmbientForMusic();
-    setIsPlayingRecording(true);
     stopEventAmbient();
   };
 
-  // Tự động chuyển bài tiếp theo khi kết thúc bài hiện tại (Auto-next playlist)
+  // Xử lý khi kết thúc bài hiện tại tuân theo cấu hình tự động chuyển bài
   const handleRecordingEnded = () => {
-    if (selectedTrackSeason === 'winter' && winterOfficialTracks.length > 1) {
-      const nextIdx = (winterTrackIndex + 1) % winterOfficialTracks.length;
-      setWinterTrackIndex(nextIdx);
-      const nextTrack = winterOfficialTracks[nextIdx];
-      if (recordingAudioRef.current && nextTrack?.src) {
-        try {
-          recordingAudioRef.current.src = nextTrack.src;
-          const playPromise = recordingAudioRef.current.play();
-          if (playPromise !== undefined) {
-            playPromise
-              .then(() => {
-                duckAmbientForMusic();
-                setIsPlayingRecording(true);
-              })
-              .catch((err) => {
-                console.warn('[Header] Autoplay next track restricted:', err);
-                setIsPlayingRecording(false);
-                restoreAmbientFromMusic();
-              });
-          }
-        } catch (err) {
-          console.warn('[Header] Error transitioning to next track:', err);
-          setIsPlayingRecording(false);
-          restoreAmbientFromMusic();
+    const isAuto = isAutoNextRef.current;
+    if (isAuto) {
+      if (selectedTrackSeasonRef.current === 'winter' && winterOfficialTracksRef.current?.length > 1) {
+        const tracks = winterOfficialTracksRef.current;
+        const currentIdx = winterTrackIndexRef.current;
+        const nextIdx = (currentIdx + 1) % tracks.length;
+        winterTrackIndexRef.current = nextIdx;
+        setWinterTrackIndex(nextIdx);
+        const nextTrack = tracks[nextIdx];
+        if (nextTrack?.src) {
+          playAudioSafely(nextTrack.src);
+          return;
         }
-        return;
       }
     }
 
+    // Khi TẮT tự động chuyển bài hoặc bài đơn lẻ: dừng phát, giữ nguyên bài đang chọn, chuyển nút về Play
+    const audio = recordingAudioRef.current;
+    if (audio) {
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch (_) {}
+    }
+    isSwitchingTrackRef.current = false;
     setIsPlayingRecording(false);
     restoreAmbientFromMusic();
   };
 
+  // Đồng bộ trạng thái isPlayingRecording theo sự kiện thực tế của audio element (play, playing, timeupdate -> true; pause, ended, error -> false)
+  useEffect(() => {
+    const audio = recordingAudioRef.current;
+    if (!audio) return;
+
+    const handleAudioPlay = () => {
+      syncActiveTrackFromAudio(audio);
+      setIsPlayingRecording(true);
+      duckAmbientForMusic();
+    };
+
+    const handleAudioPlaying = () => {
+      isSwitchingTrackRef.current = false;
+      syncActiveTrackFromAudio(audio);
+      setIsPlayingRecording(true);
+      duckAmbientForMusic();
+    };
+
+    const handleAudioTimeUpdate = () => {
+      if (!audio.paused && !audio.ended) {
+        if (!isPlayingRecordingRef.current) {
+          setIsPlayingRecording(true);
+        }
+      }
+      syncActiveTrackFromAudio(audio);
+    };
+
+    const handleAudioPause = () => {
+      if (isSwitchingTrackRef.current) {
+        // Đang trong quá trình đổi track (audio.src thay đổi), bỏ qua pause tạm thời
+        return;
+      }
+      if (audio && !audio.paused) return;
+      setIsPlayingRecording(false);
+      restoreAmbientFromMusic();
+    };
+
+    const handleAudioEnded = () => {
+      handleRecordingEnded();
+    };
+
+    const handleAudioError = (e) => {
+      console.warn('[HeaderAudio] Audio playback error:', e);
+      isSwitchingTrackRef.current = false;
+      setIsPlayingRecording(false);
+      restoreAmbientFromMusic();
+    };
+
+    audio.addEventListener('play', handleAudioPlay);
+    audio.addEventListener('playing', handleAudioPlaying);
+    audio.addEventListener('timeupdate', handleAudioTimeUpdate);
+    audio.addEventListener('pause', handleAudioPause);
+    audio.addEventListener('ended', handleAudioEnded);
+    audio.addEventListener('error', handleAudioError);
+
+    return () => {
+      audio.removeEventListener('play', handleAudioPlay);
+      audio.removeEventListener('playing', handleAudioPlaying);
+      audio.removeEventListener('timeupdate', handleAudioTimeUpdate);
+      audio.removeEventListener('pause', handleAudioPause);
+      audio.removeEventListener('ended', handleAudioEnded);
+      audio.removeEventListener('error', handleAudioError);
+    };
+  }, []);
+
+  // Autoplay thông minh khi vào web: tự động phát winter-song-1.wav, nếu bị chặn thì chờ tương tác đầu tiên
+  useEffect(() => {
+    if (location.pathname.startsWith('/music')) return;
+
+    const explicitlyPaused = sessionStorage.getItem('freedom_user_explicit_paused') === 'true';
+    if (explicitlyPaused || userExplicitPausedRef.current) return;
+
+    const initialTrack = winterOfficialTracks[0];
+    if (!initialTrack?.src) return;
+
+    const audio = recordingAudioRef.current;
+    if (!audio) return;
+
+    if (!audio.src || !audio.src.endsWith(initialTrack.src)) {
+      audio.src = initialTrack.src;
+    }
+
+    const onFirstUserGesture = () => {
+      window.removeEventListener('pointerdown', onFirstUserGesture);
+      window.removeEventListener('keydown', onFirstUserGesture);
+      window.removeEventListener('click', onFirstUserGesture);
+
+      if (!userExplicitPausedRef.current && sessionStorage.getItem('freedom_user_explicit_paused') !== 'true') {
+        const audioEl = recordingAudioRef.current;
+        if (audioEl && audioEl.paused) {
+          audioEl.play()
+            .then(() => {
+              setIsPlayingRecording(true);
+              duckAmbientForMusic();
+            })
+            .catch((e) => {
+              console.warn('[HeaderAudio] Gesture trigger play error:', e);
+              setIsPlayingRecording(false);
+            });
+        }
+      }
+    };
+
+    const attemptAutoplay = async () => {
+      if (userExplicitPausedRef.current) return;
+      try {
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+          setIsPlayingRecording(true);
+          duckAmbientForMusic();
+        }
+      } catch (err) {
+        console.info('[HeaderAudio] Autoplay blocked by policy on load, waiting for first user interaction.');
+        setIsPlayingRecording(false);
+        window.addEventListener('pointerdown', onFirstUserGesture, { once: true });
+        window.addEventListener('keydown', onFirstUserGesture, { once: true });
+        window.addEventListener('click', onFirstUserGesture, { once: true });
+      }
+    };
+
+    attemptAutoplay();
+
+    return () => {
+      window.removeEventListener('pointerdown', onFirstUserGesture);
+      window.removeEventListener('keydown', onFirstUserGesture);
+      window.removeEventListener('click', onFirstUserGesture);
+    };
+  }, []);
+
   // Dọn dẹp audio khi chuyển sang trang /music hoặc khi Header unmount (Quy tắc 3 GEMINI.md)
   useEffect(() => {
     if (location.pathname.startsWith('/music')) {
-      if (recordingAudioRef.current && isPlayingRecording) {
+      if (recordingAudioRef.current) {
         try {
           recordingAudioRef.current.pause();
         } catch (_) {}
         setIsPlayingRecording(false);
       }
     }
-  }, [location.pathname, isPlayingRecording]);
+  }, [location.pathname]);
 
   useEffect(() => {
     const audio = recordingAudioRef.current;
@@ -743,6 +945,10 @@ export const Header = () => {
       }
     };
   }, []);
+
+  const audioEl = recordingAudioRef.current;
+  const isAudioActuallyPlaying = audioEl ? (!audioEl.paused && !audioEl.ended) : false;
+  const isEffectivePlaying = isAudioActuallyPlaying || isPlayingRecording;
 
   const currentWinterTrack = winterOfficialTracks[winterTrackIndex] || winterOfficialTracks[0];
   const currentTrackMeta = selectedTrackSeason === 'winter' && currentWinterTrack
@@ -889,7 +1095,7 @@ export const Header = () => {
             <div className="header-ambient-sound-wrap" ref={ambientMenuRef} style={{ position: 'relative' }}>
               <button
                 type="button"
-                className={`header-ambient-btn ${ambientState.isWeatherSoundActive || ambientState.isEventSoundActive ? 'is-active' : ''}`}
+                className={`header-ambient-btn ${ambientState.isWeatherSoundActive || ambientState.isEventSoundActive || isEffectivePlaying ? 'is-active' : ''}`}
                 onClick={() => {
                   playClickSound();
                   setIsAmbientMenuOpen((prev) => !prev);
@@ -898,10 +1104,10 @@ export const Header = () => {
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: ambientState.isWeatherSoundActive || ambientState.isEventSoundActive
+                  background: ambientState.isWeatherSoundActive || ambientState.isEventSoundActive || isEffectivePlaying
                     ? 'linear-gradient(135deg, #0d9488, #059669)'
                     : 'rgba(255, 255, 255, 0.08)',
-                  border: ambientState.isWeatherSoundActive || ambientState.isEventSoundActive
+                  border: ambientState.isWeatherSoundActive || ambientState.isEventSoundActive || isEffectivePlaying
                     ? '1.5px solid #2dd4bf'
                     : '1px solid rgba(255, 255, 255, 0.2)',
                   color: '#ffffff',
@@ -912,12 +1118,14 @@ export const Header = () => {
                   fontSize: '0.88rem',
                   position: 'relative',
                   transition: 'all 0.2s ease',
-                  boxShadow: ambientState.isWeatherSoundActive || ambientState.isEventSoundActive
+                  boxShadow: ambientState.isWeatherSoundActive || ambientState.isEventSoundActive || isEffectivePlaying
                     ? '0 2px 10px rgba(13, 148, 136, 0.4)'
                     : 'none',
                 }}
                 title={
-                  ambientState.isCombined
+                  isEffectivePlaying
+                    ? `Đang phát bản nhạc: ${currentTrackMeta.title}`
+                    : ambientState.isCombined
                     ? 'Đang phát Hòa âm Kết hợp (Thời tiết 4 mùa + Sự kiện lễ hội)'
                     : ambientState.isWeatherSoundActive
                     ? `Đang phát Âm thanh Thời tiết ${activeSeason.name}`
@@ -928,9 +1136,9 @@ export const Header = () => {
                 aria-label="Âm thanh môi trường duy trì"
               >
                 <span>
-                  {ambientState.isCombined ? '🎶' : ambientState.isWeatherSoundActive ? activeSeason.icon : ambientState.isEventSoundActive ? '🎊' : '🔈'}
+                  {ambientState.isCombined ? '🎶' : ambientState.isWeatherSoundActive ? activeSeason.icon : ambientState.isEventSoundActive ? '🎊' : isEffectivePlaying ? '🎧' : '🔈'}
                 </span>
-                {(ambientState.isWeatherSoundActive || ambientState.isEventSoundActive) && (
+                {(ambientState.isWeatherSoundActive || ambientState.isEventSoundActive || isEffectivePlaying) && (
                   <span
                     style={{
                       position: 'absolute',
@@ -947,8 +1155,11 @@ export const Header = () => {
                 )}
               </button>
 
-              {/* Audio player phát bản thu âm chính chủ 4 mùa */}
-              <audio ref={recordingAudioRef} onEnded={handleRecordingEnded} preload="auto" />
+              {/* Audio player phát bản thu âm chính chủ 4 mùa - Lắng nghe sự kiện qua useEffect trung tâm */}
+              <audio
+                ref={recordingAudioRef}
+                preload="auto"
+              />
 
               {/* Popover Tùy Chọn Âm Thanh Môi Trường & Playlist Thu Âm 4 Mùa */}
               {isAmbientMenuOpen && (
@@ -1033,12 +1244,12 @@ export const Header = () => {
                     </div>
 
                     {/* Thẻ Chi Tiết & Mini Player Của Mùa Đang Chọn */}
-                    <div className={`ambient-track-card ${isPlayingRecording ? 'is-playing' : ''}`}>
+                    <div className={`ambient-track-card ${isEffectivePlaying ? 'is-playing' : ''}`}>
                       <div className="track-card-visual">
-                        <div className={`track-disc ${isPlayingRecording ? 'spinning' : ''}`}>
+                        <div className={`track-disc ${isEffectivePlaying ? 'spinning' : ''}`}>
                           <span>{currentTrackMeta.icon}</span>
                         </div>
-                        {isPlayingRecording && (
+                        {isEffectivePlaying && (
                           <div className="track-sound-waves">
                             <span className="wave-bar bar-1" />
                             <span className="wave-bar bar-2" />
@@ -1060,14 +1271,14 @@ export const Header = () => {
                         </span>
                       </div>
 
-                      <div className="track-card-action" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div className="track-card-controls-cluster">
                         {selectedTrackSeason === 'winter' && winterOfficialTracks.length > 1 && (
                           <button
                             type="button"
                             onClick={handlePrevWinterTrack}
-                            className="track-play-btn"
-                            style={{ width: '28px', height: '28px', fontSize: '0.72rem', background: 'rgba(255, 255, 255, 0.08)' }}
+                            className="track-nav-mini-btn"
                             title="Bài trước"
+                            aria-label="Bài trước"
                           >
                             ⏮
                           </button>
@@ -1075,18 +1286,23 @@ export const Header = () => {
                         <button
                           type="button"
                           onClick={handleTogglePlayRecording}
-                          className={`track-play-btn ${isPlayingRecording ? 'is-playing-btn' : ''}`}
-                          title={isPlayingRecording ? 'Tạm dừng bản nhạc' : 'Phát bản nhạc mùa này'}
+                          className={`track-play-btn ${isEffectivePlaying ? 'is-playing-btn' : ''}`}
+                          title={isEffectivePlaying ? 'Tạm dừng bản nhạc (Pause)' : 'Phát bản nhạc mùa này (Play)'}
+                          aria-label={isEffectivePlaying ? 'Tạm dừng' : 'Phát'}
                         >
-                          {isPlayingRecording ? '⏸' : '▶'}
+                          {isEffectivePlaying ? (
+                            <i className="fa-solid fa-pause" style={{ fontSize: '0.92rem' }}></i>
+                          ) : (
+                            <i className="fa-solid fa-play" style={{ marginLeft: '2px', fontSize: '0.88rem' }}></i>
+                          )}
                         </button>
                         {selectedTrackSeason === 'winter' && winterOfficialTracks.length > 1 && (
                           <button
                             type="button"
                             onClick={handleNextWinterTrack}
-                            className="track-play-btn"
-                            style={{ width: '28px', height: '28px', fontSize: '0.72rem', background: 'rgba(255, 255, 255, 0.08)' }}
+                            className="track-nav-mini-btn"
                             title="Bài tiếp theo"
+                            aria-label="Bài tiếp theo"
                           >
                             ⏭
                           </button>
@@ -1096,62 +1312,45 @@ export const Header = () => {
 
                     {/* Danh Sách Bản Thu Âm Mùa Đông Chính Thức Từ playlists.js */}
                     {selectedTrackSeason === 'winter' && (
-                      <div className="ambient-winter-tracklist" style={{ marginTop: '0.65rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
-                          <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      <div className="ambient-winter-tracklist">
+                        <div className="ambient-winter-track-head">
+                          <span className="ambient-winter-track-badge">
                             ❄️ Danh Sách Bản Thu Mùa Đông ({winterOfficialTracks.length} bài)
                           </span>
-                          <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                            Tự động chuyển bài
-                          </span>
+                          <button
+                            type="button"
+                            onClick={handleToggleAutoNext}
+                            className={`ambient-auto-next-toggle ${isAutoNext ? 'is-active' : ''}`}
+                            title={isAutoNext ? 'Tự động chuyển bài: Đang BẬT (Hết bài tự chuyển sang bài kế tiếp). Bấm để tắt.' : 'Tự động chuyển bài: Đang TẮT (Hết bài sẽ dừng lại). Bấm để bật.'}
+                            aria-label={isAutoNext ? 'Tự động chuyển bài đang Bật' : 'Tự động chuyển bài đang Tắt'}
+                          >
+                            <span className="auto-next-indicator">
+                              <i className={`fa-solid ${isAutoNext ? 'fa-toggle-on' : 'fa-toggle-off'}`}></i>
+                            </span>
+                            <span className="auto-next-text">Tự chuyển bài: <strong>{isAutoNext ? 'Bật' : 'Tắt'}</strong></span>
+                          </button>
                         </div>
 
                         {winterOfficialTracks.map((trk, idx) => {
                           const isThisTrackActive = selectedTrackSeason === 'winter' && winterTrackIndex === idx;
-                          const isThisTrackPlaying = isThisTrackActive && isPlayingRecording;
+                          const isThisTrackPlaying = isThisTrackActive && isEffectivePlaying;
 
                           return (
                             <div
                               key={trk.id || idx}
                               onClick={() => handlePlayWinterTrack(idx)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: '8px',
-                                padding: '0.5rem 0.75rem',
-                                borderRadius: '10px',
-                                background: isThisTrackActive ? 'rgba(56, 189, 248, 0.14)' : 'rgba(255, 255, 255, 0.04)',
-                                border: isThisTrackActive ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(255, 255, 255, 0.06)',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                              }}
-                              className="ambient-winter-track-row"
+                              className={`ambient-winter-track-row ${isThisTrackActive ? 'is-active' : ''}`}
                               title={`Bấm để nghe: ${trk.title}`}
                             >
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
-                                <span style={{
-                                  fontSize: '0.74rem',
-                                  fontWeight: 700,
-                                  color: isThisTrackActive ? '#38bdf8' : '#64748b',
-                                  fontFamily: 'monospace',
-                                  width: '16px',
-                                  textAlign: 'center',
-                                }}>
-                                  {isThisTrackPlaying ? '▶' : (idx + 1)}
+                                <span className="track-row-index">
+                                  {isThisTrackPlaying ? '♫' : (idx + 1)}
                                 </span>
                                 <div style={{ minWidth: 0, flex: 1 }}>
-                                  <div style={{
-                                    fontSize: '0.82rem',
-                                    fontWeight: isThisTrackActive ? 700 : 500,
-                                    color: isThisTrackActive ? '#38bdf8' : '#e2e8f0',
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                  }}>
+                                  <div className="track-row-title">
                                     {trk.title}
                                   </div>
-                                  <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                                  <div className="track-row-mood">
                                     {trk.mood || trk.badge || 'HQ WAV'}
                                   </div>
                                 </div>
@@ -1163,23 +1362,15 @@ export const Header = () => {
                                   e.stopPropagation();
                                   handlePlayWinterTrack(idx);
                                 }}
-                                style={{
-                                  width: '28px',
-                                  height: '28px',
-                                  borderRadius: '50%',
-                                  border: 'none',
-                                  background: isThisTrackPlaying ? '#0284c7' : 'rgba(255, 255, 255, 0.08)',
-                                  color: '#ffffff',
-                                  fontSize: '0.75rem',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  cursor: 'pointer',
-                                  flexShrink: 0,
-                                }}
-                                title={isThisTrackPlaying ? 'Tạm dừng' : 'Phát bài này'}
+                                className={`track-row-play-btn ${isThisTrackPlaying ? 'is-active-btn' : ''}`}
+                                title={isThisTrackPlaying ? 'Tạm dừng (Pause)' : 'Phát bài này (Play)'}
+                                aria-label={isThisTrackPlaying ? 'Tạm dừng' : 'Phát'}
                               >
-                                {isThisTrackPlaying ? '⏸' : '▶'}
+                                {isThisTrackPlaying ? (
+                                  <i className="fa-solid fa-pause" style={{ fontSize: '0.68rem' }}></i>
+                                ) : (
+                                  <i className="fa-solid fa-play" style={{ marginLeft: '1px', fontSize: '0.68rem' }}></i>
+                                )}
                               </button>
                             </div>
                           );
@@ -1228,20 +1419,6 @@ export const Header = () => {
                     onClick={() => {
                       playClickSound();
                       setIsAmbientMenuOpen(false);
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0.65rem 0.85rem',
-                      marginTop: '0.6rem',
-                      borderRadius: '12px',
-                      background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.16) 0%, rgba(2, 132, 199, 0.1) 100%)',
-                      border: '1px solid rgba(56, 189, 248, 0.35)',
-                      color: '#bae6fd',
-                      textDecoration: 'none',
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
                     }}
                     title="Mở Không Gian Nhạc Mùa Đông (Winter Chill Lounge)"
                   >

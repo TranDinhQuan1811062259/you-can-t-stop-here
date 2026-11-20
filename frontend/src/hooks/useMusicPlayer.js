@@ -77,12 +77,14 @@ export const useMusicPlayer = (tracks = []) => {
     setIsLoading(true);
 
     const prevSrc = audio.getAttribute('src');
-    if (prevSrc !== currentTrack.src) {
+    const needsLoad = !prevSrc || !audio.src || !audio.src.endsWith(currentTrack.src);
+    if (needsLoad) {
       audio.src = currentTrack.src;
       audio.load();
     }
 
-    if (isPlaying) {
+    const isCurrentlyPlaying = !audio.paused || isPlaying;
+    if (isCurrentlyPlaying) {
       try {
         const playPromise = audio.play();
         if (playPromise !== undefined) {
@@ -118,6 +120,9 @@ export const useMusicPlayer = (tracks = []) => {
 
     const handleTimeUpdate = () => {
       setCurrentTime(audio.currentTime || 0);
+      if (!audio.paused && !isPlaying) {
+        setIsPlaying(true);
+      }
     };
 
     const handleWaiting = () => {
@@ -134,7 +139,15 @@ export const useMusicPlayer = (tracks = []) => {
       duckAmbientForMusic();
     };
 
+    const handlePlaying = () => {
+      setIsPlaying(true);
+      setIsAutoplayBlocked(false);
+      duckAmbientForMusic();
+    };
+
     const handlePause = () => {
+      // Chỉ set false khi audio thực tế paused (tránh race condition khi load src mới)
+      if (audio && !audio.paused) return;
       setIsPlaying(false);
       restoreAmbientFromMusic();
     };
@@ -161,6 +174,7 @@ export const useMusicPlayer = (tracks = []) => {
     audio.addEventListener('waiting', handleWaiting);
     audio.addEventListener('canplay', handleCanPlay);
     audio.addEventListener('play', handlePlay);
+    audio.addEventListener('playing', handlePlaying);
     audio.addEventListener('pause', handlePause);
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('error', handleError);
@@ -171,6 +185,7 @@ export const useMusicPlayer = (tracks = []) => {
       audio.removeEventListener('waiting', handleWaiting);
       audio.removeEventListener('canplay', handleCanPlay);
       audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('playing', handlePlaying);
       audio.removeEventListener('pause', handlePause);
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
@@ -182,13 +197,21 @@ export const useMusicPlayer = (tracks = []) => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
-    if (isPlaying) {
-      audio.pause();
+    // Kiểm tra trực tiếp audio.paused theo sự kiện thực tế của audio
+    const isCurrentlyPlaying = !audio.paused;
+
+    if (isCurrentlyPlaying) {
+      try {
+        audio.pause();
+      } catch (err) {
+        console.warn('[useMusicPlayer] pause error:', err);
+      }
       setIsPlaying(false);
       restoreAmbientFromMusic();
     } else {
       try {
-        if (!audio.src || audio.getAttribute('src') !== currentTrack.src) {
+        const needsLoad = !audio.src || !audio.src.endsWith(currentTrack.src);
+        if (needsLoad) {
           audio.src = currentTrack.src;
           audio.load();
         }
@@ -207,14 +230,52 @@ export const useMusicPlayer = (tracks = []) => {
         }
       }
     }
-  }, [isPlaying, currentTrack]);
+  }, [currentTrack]);
 
-  // Chọn bài cụ thể
+  // Chọn bài cụ thể (nếu đang phát chính bài đó thì bấm lại để tạm dừng)
   const playTrack = useCallback((index) => {
     if (!tracks || index < 0 || index >= tracks.length) return;
+    const audio = audioRef.current;
+
+    if (index === currentTrackIndex) {
+      togglePlay();
+      return;
+    }
+
+    const nextTrack = tracks[index];
     setCurrentTrackIndex(index);
     setIsPlaying(true);
-  }, [tracks]);
+    setIsAutoplayBlocked(false);
+
+    if (audio && nextTrack?.src) {
+      try {
+        const needsLoad = !audio.src || !audio.src.endsWith(nextTrack.src);
+        if (needsLoad) {
+          audio.src = nextTrack.src;
+          audio.load();
+        }
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsPlaying(true);
+              setIsAutoplayBlocked(false);
+              duckAmbientForMusic();
+            })
+            .catch((err) => {
+              console.warn('[useMusicPlayer] playTrack play error:', err);
+              setIsPlaying(false);
+              if (err.name === 'NotAllowedError') {
+                setIsAutoplayBlocked(true);
+              }
+            });
+        }
+      } catch (err) {
+        console.warn('[useMusicPlayer] playTrack exception:', err);
+        setIsPlaying(false);
+      }
+    }
+  }, [tracks, currentTrackIndex, togglePlay]);
 
   // Chuyển bài kế tiếp
   const handleNextTrack = useCallback(() => {

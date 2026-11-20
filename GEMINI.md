@@ -13,7 +13,7 @@ freedom-web/
 ├── .agent/                     # Hệ thống AI Agent workflows & rules
 │   ├── rules/
 │   │   └── project-rules.md    # Bản sao quy tắc dự án
-│   └── workflows/              # Các lệnh workflow chuyên trách (/planner, /builder, ...)
+│   └── workflows/              # Các lệnh workflow chuyên trách (/planner, /builder, /ideator, ...)
 ├── frontend/                   # Ứng dụng Client Single Page Application (SPA)
 │   ├── public/                 # Static assets (audio mp3, ambient sound, images, models)
 │   ├── src/
@@ -61,9 +61,9 @@ freedom-web/
 
 ---
 
-## ⛔ 2. Bốn Quy Tắc Bất Khả Xâm Phạm Cho Mọi AI Agent
+## ⛔ 2. Năm Quy Tắc Bất Khả Xâm Phạm Cho Mọi AI Agent
 
-Bất kỳ AI Agent nào (Planner, Builder, Reviewer, UI-Polish, Audio-Engineer, Debugger) khi thao tác trên repository đều phải tuân thủ nghiêm ngặt 4 quy tắc sau:
+Bất kỳ AI Agent nào (Planner, Builder, Reviewer, UI-Polish, Audio-Engineer, Debugger, Ideator) khi thao tác trên repository đều phải tuân thủ nghiêm ngặt 5 quy tắc sau:
 
 ### Quy tắc 1: Chuẩn Đặt Tên & Đường Dẫn File Linux / Vercel (100% Case-Sensitivity)
 - **Tên file & thư mục mới**:
@@ -113,6 +113,15 @@ Bất kỳ AI Agent nào (Planner, Builder, Reviewer, UI-Polish, Audio-Engineer,
     ```
   - Cung cấp trạng thái fallback trực quan (icon âm thanh có gạch chéo, tooltip mời bấm để nghe) thay vì để lỗi làm crash ứng dụng.
 
+### Quy tắc 5: Tư Duy Chủ Động Có Kiểm Soát (Proactive Mindset)
+- **Chủ động quan sát & phát hiện điểm cải tiến**:
+  - Trong suốt quá trình đọc code, kiểm tra hệ thống hoặc thực thi nhiệm vụ, nếu phát hiện bất kỳ lỗi tiềm ẩn nào (edge cases, race condition, memory leak), điểm nghẽn UX (trải nghiệm chưa mượt mà, thiếu tương tác/visual feedback, giật lag), file thừa/code rác không còn sử dụng, hoặc các điểm kỹ thuật có thể nâng tầm trải nghiệm âm thanh - thị giác của dự án, agent **phải chủ động chỉ ra ngay** cho người dùng.
+- **Đề xuất 2–3 bước/ý tưởng tiếp theo (Next-Step Recommendations)**:
+  - Ở cuối mỗi phản hồi, agent luôn chủ động đề xuất ngắn gọn **2–3 bước hoặc ý tưởng tiếp theo đáng giá nhất** kèm lý do cụ thể (giải thích rõ vì sao nên làm và mang lại lợi ích gì cho hệ thống).
+- **Ranh giới an toàn tuyệt đối (Strict Non-Destructive Boundary)**:
+  - Toàn bộ các phát hiện và ý tưởng bổ sung **chỉ dừng lại ở mức đề xuất, phân tích và gợi ý giải pháp**.
+  - ❌ **Tuyệt đối cấm**: Tự ý chỉnh sửa code, xóa file, cài thêm package hoặc thay đổi logic ngoài phạm vi yêu cầu cụ thể của phiên làm việc khi chưa có sự xác nhận/phê duyệt rõ ràng từ người dùng.
+
 ---
 
 ## 🚀 3. Danh Mục Các Lệnh Workflow Trong Repo (`.agent/workflows/`)
@@ -125,6 +134,7 @@ Bất kỳ AI Agent nào (Planner, Builder, Reviewer, UI-Polish, Audio-Engineer,
 | `/ui-polish` | `ui-polish.md` | **Chuyên Gia UI/UX & Micro-interactions** | Tối ưu giao diện dark/minimalist, responsive mobile/desktop, hiệu ứng chuyển động mượt mà. |
 | `/audio-engineer` | `audio-engineer.md` | **Kỹ Sư Âm Thanh Web & TTS Pipeline** | Xử lý Web Audio, playlist, preload, crossfade, khắc phục lỗi thiếu file & autoplay chặn. |
 | `/debugger` | `debugger.md` | **Bác Sĩ Bắt Bệnh & Sửa Lỗi Tận Gốc** | Đọc log terminal/console, chẩn đoán nguyên nhân gốc rễ, sửa lỗi phẫu thuật tối giản. |
+| `/ideator` | `ideator.md` | **Creative Partner & Product Architect** | Quét bối cảnh dự án, audit tìm "khoảng trống" UX/âm nhạc/dấu ấn cá nhân và đề xuất ý tưởng theo 3 tầng (Quick Wins, Signature Features, Roadmap). |
 
 ---
 
