@@ -2,14 +2,12 @@
  * =========================================================================
  * 📧 DỊCH VỤ GỬI EMAIL XÁC THỰC BẢO MẬT (YOU CAN'T STOP HERE)
  * =========================================================================
- * 👉 CÁCH GỬI THƯ THẬT 100% VÀO GMAIL CHÍNH THỨC CỦA BẠN:
- * 
- * BẠN CÓ THỂ ĐIỀN TRỰC TIẾP VÀO 2 DÒNG DƯỚI ĐÂY (NGAY DÒNG 16 - 17):
- *    1. Link lấy Mật khẩu ứng dụng 16 ký tự: https://myaccount.google.com/apppasswords
- *    2. Điền Gmail và Mật khẩu 16 ký tự vào:
+ * Cấu hình bảo mật: Toàn bộ thông tin tài khoản và mật khẩu ứng dụng Gmail
+ * được đọc trực tiếp từ biến môi trường (process.env.EMAIL_USER, process.env.EMAIL_PASS)
+ * Tuyệt đối không hardcode credentials trong mã nguồn.
  */
-export const DIRECT_GMAIL_USER = 'anthonyq012025@gmail.com';     // Gmail chính thức
-export const DIRECT_GMAIL_APP_PASS = 'ddiz rcxk dzgh xkkx';        // Mật khẩu ứng dụng 16 ký tự Google
+export const DIRECT_GMAIL_USER = (process.env.EMAIL_USER || process.env.MAIL_USER || '').trim();
+export const DIRECT_GMAIL_APP_PASS = (process.env.EMAIL_PASS || process.env.MAIL_APP_PASS || '').replace(/\s+/g, '');
 
 import nodemailer from 'nodemailer';
 
@@ -21,8 +19,8 @@ let cachedTransporter = null;
 const getTransporter = async () => {
   if (cachedTransporter) return cachedTransporter;
 
-  const emailUser = (DIRECT_GMAIL_USER || process.env.EMAIL_USER || process.env.MAIL_USER || '').trim();
-  const emailPass = (DIRECT_GMAIL_APP_PASS || process.env.EMAIL_PASS || process.env.MAIL_APP_PASS || '').replace(/\s+/g, '');
+  const emailUser = (process.env.EMAIL_USER || process.env.MAIL_USER || DIRECT_GMAIL_USER || '').trim();
+  const emailPass = (process.env.EMAIL_PASS || process.env.MAIL_APP_PASS || DIRECT_GMAIL_APP_PASS || '').replace(/\s+/g, '');
 
   // Sử dụng cấu hình Gmail SMTP trực tiếp qua cổng 465 (SSL)
   if (emailUser && emailPass && emailPass !== 'xxxx' && !emailPass.includes('xxxx')) {
@@ -315,7 +313,7 @@ export const sendTimeCapsuleConfirmationEmail = async ({
 
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
     const senderName = process.env.MAIL_FROM_NAME || "You Can't Stop Here";
-    const senderEmail = (DIRECT_GMAIL_USER || process.env.EMAIL_USER || 'no-reply@youcantstophere.vn').trim();
+    const senderEmail = (process.env.EMAIL_USER || process.env.MAIL_USER || 'no-reply@youcantstophere.vn').trim();
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -407,7 +405,7 @@ export const sendTimeCapsuleUnlockedEmail = async ({ toEmail, title, content, cr
     const transporter = await getTransporter();
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
     const senderName = process.env.MAIL_FROM_NAME || "You Can't Stop Here";
-    const senderEmail = (DIRECT_GMAIL_USER || process.env.EMAIL_USER || 'no-reply@youcantstophere.vn').trim();
+    const senderEmail = (process.env.EMAIL_USER || process.env.MAIL_USER || 'no-reply@youcantstophere.vn').trim();
 
     const htmlContent = `
       <!DOCTYPE html>

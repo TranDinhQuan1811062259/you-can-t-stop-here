@@ -3,6 +3,7 @@ import Post from '../models/Post.js';
 import Category from '../models/Category.js';
 import { isDbConnected } from '../config/db.js';
 import { signToken } from '../utils/token.js';
+import { hashPassword } from '../utils/hash.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { sendOtpEmail } from '../services/emailService.js';
 import { generateOtp, sendRegistrationOtp, sendOtpEmail as sendMailerOtp } from '../services/mailer.js';
@@ -17,6 +18,20 @@ import {
 
 // Cache OTP trong bộ nhớ (Hết hạn sau 5 phút)
 const otpStore = new Map();
+
+// Tự động dọn dẹp các mã OTP đã hết hạn sau mỗi 5 phút để tránh rò rỉ RAM
+const otpStoreCleanupInterval = setInterval(() => {
+  const now = Date.now();
+  for (const [key, record] of otpStore.entries()) {
+    if (record?.expiresAt && now > record.expiresAt) {
+      otpStore.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
+
+if (otpStoreCleanupInterval.unref) {
+  otpStoreCleanupInterval.unref();
+}
 
 // Danh sách tài khoản sẵn có (Đồng bộ trực tiếp từ ổ cứng db_store.json)
 const store = loadStore();
@@ -34,19 +49,22 @@ export const register = async (req, res) => {
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const assignedRole = cleanEmail === 'anthonyq012025@gmail.com' || cleanEmail.startsWith('admin@') ? 'admin' : 'user';
+    const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
+    const assignedRole = cleanEmail === adminEmail ? 'admin' : 'user';
 
     // 1. Sinh mã OTP 6 chữ số ngẫu nhiên & thiết lập hạn sử dụng 5 phút
     const otpCode = generateOtp();
     const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
+    const hashedPassword = await hashPassword(password);
 
-    // Lưu cache OTP trong bộ nhớ (kèm thông tin họ tên, mật khẩu đăng ký)
+    // Lưu cache OTP trong bộ nhớ (CHỈ lưu mật khẩu đã băm an toàn, KHÔNG lưu plain-text)
     otpStore.set(cleanEmail, {
       code: otpCode,
       expiresAt: otpExpires.getTime(),
       type: 'email',
+      attempts: 0,
       name: name.trim(),
-      password,
+      passwordHash: hashedPassword,
       jobTitle: jobTitle ? jobTitle.trim() : 'Thành viên cộng đồng',
     });
 
@@ -73,6 +91,7 @@ export const register = async (req, res) => {
         existingUser.jobTitle = jobTitle || existingUser.jobTitle;
         existingUser.otpCode = otpCode;
         existingUser.otpExpires = otpExpires;
+        existingUser.otpAttempts = 0;
         await existingUser.save();
         registeredUser = existingUser;
       } else {
@@ -89,11 +108,13 @@ export const register = async (req, res) => {
           isVerified: false,
           otpCode,
           otpExpires,
+          otpAttempts: 0,
         });
       }
     }
 
     // 2. Gửi mã OTP 6 số qua Gmail thật bằng Nodemailer
+    req.otpDispatched = true;
     try {
       await sendRegistrationOtp(cleanEmail, otpCode);
       console.log(`[AUTH] ✉️ Đã gửi mã OTP đăng ký [${otpCode}] tới hòm thư: ${cleanEmail}`);
@@ -107,7 +128,7 @@ export const register = async (req, res) => {
         email: cleanEmail,
         requiresOtp: true,
         expiresAt: otpExpires,
-        debugOtp: process.env.NODE_ENV !== 'production' ? otpCode : undefined,
+        debugOtp: (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') ? otpCode : undefined,
       },
       status: 201,
     });
@@ -142,7 +163,7 @@ export const login = async (req, res) => {
       });
 
       if (user) {
-        const isMatch = (await user.comparePassword(password)) || password === '123456';
+        const isMatch = await user.comparePassword(password);
         if (isMatch) {
           const token = await signToken({
             id: user._id,
@@ -194,10 +215,8 @@ export const login = async (req, res) => {
       );
     if (found) {
       let isMatch =
-        password === '123456' ||
-        password === found.rawPassword ||
-        password === 'password123' ||
-        password === found.password;
+        Boolean(found.rawPassword && password === found.rawPassword) ||
+        Boolean(found.password && password === found.password);
 
       if (!isMatch && found.password) {
         try {
@@ -234,49 +253,8 @@ export const login = async (req, res) => {
       }
     }
 
-    if (password === '123456') {
-      const isAdm = cleanInput.includes('admin') || cleanInput === 'anthonyq012025@gmail.com' || cleanPhone === '0901234567';
-      const existingInStore = findUserInStore(cleanInput) || findUserInStore(cleanPhone);
-
-      const targetName = existingInStore?.name || (isAdm ? 'Trần Đình Quân' : (cleanInput.includes('@') ? (cleanInput.split('@')[0].charAt(0).toUpperCase() + cleanInput.split('@')[0].slice(1)) : `Thành viên (${cleanPhone})`));
-
-      const fallbackUser = {
-        ...(existingInStore || {}),
-        _id: existingInStore?._id || `u_${Date.now()}`,
-        name: targetName,
-        email: existingInStore?.email || (cleanInput.includes('@') ? cleanInput : `${cleanPhone}@phone.cantstophere.com`),
-        phone: existingInStore?.phone || cleanPhone,
-        role: existingInStore?.role || (isAdm ? 'admin' : 'user'),
-        jobTitle: existingInStore?.jobTitle || (isAdm ? 'System Admin & Lead Dev' : 'Thành viên cộng đồng'),
-        avatar: existingInStore?.avatar !== undefined ? existingInStore.avatar : (isAdm ? adminAvatar : ''),
-        customLayout: existingInStore?.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
-        profileMusic: existingInStore?.profileMusic || {
-          enabled: true,
-          title: 'Lofi Chill - Đêm muộn ở văn phòng',
-          artist: 'Freedom Chill Beat',
-          sourceType: 'preset',
-          presetId: 'lofi_night',
-          url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
-        },
-      };
-      saveUserToStore(fallbackUser);
-
-      const token = await signToken({
-        id: fallbackUser._id,
-        role: fallbackUser.role,
-        name: fallbackUser.name,
-        email: fallbackUser.email,
-        jobTitle: fallbackUser.jobTitle,
-      });
-
-      return sendSuccess(res, {
-        message: 'Đăng nhập thành công với mật khẩu mặc định 123456! (Đã lưu bền vững)',
-        data: { ...fallbackUser, token },
-      });
-    }
-
     return sendError(res, {
-      message: 'Email, Số điện thoại hoặc mật khẩu không chính xác. Mẹo: Mật khẩu mặc định là 123456',
+      message: 'Email, Số điện thoại hoặc mật khẩu không chính xác',
       status: 401,
     });
   } catch (error) {
@@ -314,8 +292,8 @@ export const socialLogin = async (req, res) => {
       ? email.toLowerCase().trim()
       : `${cleanProvider}_${providerId || Date.now()}@social.cantstophere.com`;
 
-    const assignedRole =
-      cleanEmail === 'anthonyq012025@gmail.com' || cleanEmail.startsWith('admin@') ? 'admin' : 'user';
+    const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
+    const assignedRole = cleanEmail === adminEmail ? 'admin' : 'user';
 
     // 🛡️ BẢO MẬT GOOGLE VÀ TÀI KHOẢN ADMIN: Bắt buộc xác thực mã OTP gửi về Email chính chủ
     const submittedOtp = req.body.otpCode ? String(req.body.otpCode).trim() : '';
@@ -323,10 +301,11 @@ export const socialLogin = async (req, res) => {
 
     if (requiresOtpCheck) {
       if (!submittedOtp) {
+        req.otpDispatched = true;
         // Chưa có mã OTP -> Sinh mã OTP 6 số và gửi qua Gmail chính chủ
         const generatedCode = generateOtp();
         const expiresAt = Date.now() + 5 * 60 * 1000;
-        otpStore.set(cleanEmail, { code: generatedCode, expiresAt, type: 'email' });
+        otpStore.set(cleanEmail, { code: generatedCode, expiresAt, type: 'email', attempts: 0 });
 
         if (isDbConnected) {
           try {
@@ -334,6 +313,7 @@ export const socialLogin = async (req, res) => {
             if (dbU) {
               dbU.otpCode = generatedCode;
               dbU.otpExpires = new Date(expiresAt);
+              dbU.otpAttempts = 0;
               await dbU.save();
             }
           } catch (_) {}
@@ -360,7 +340,7 @@ export const socialLogin = async (req, res) => {
             provider: cleanProvider,
             expiresAt,
             previewUrl: mailPreview,
-            debugOtp: process.env.NODE_ENV !== 'production' ? generatedCode : undefined,
+            debugOtp: (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') ? generatedCode : undefined,
           },
         });
       }
@@ -391,9 +371,35 @@ export const socialLogin = async (req, res) => {
       }
 
       if (!isValidOtp) {
+        const currentAttempts = Math.max(cachedOtp?.attempts || 0, 0) + 1;
+        if (cachedOtp) {
+          cachedOtp.attempts = currentAttempts;
+        }
+
+        if (currentAttempts >= 5) {
+          otpStore.delete(cleanEmail);
+          if (isDbConnected) {
+            try {
+              const dbU = await User.findOne({ email: cleanEmail });
+              if (dbU) {
+                dbU.otpCode = null;
+                dbU.otpExpires = null;
+                dbU.otpAttempts = 0;
+                await dbU.save();
+              }
+            } catch (_) {}
+          }
+          return sendError(res, {
+            message: 'Mã OTP đã bị vô hiệu hóa do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới!',
+            status: 400,
+          });
+        }
+
+        const remainingAttempts = 5 - currentAttempts;
         return sendError(res, {
-          message: 'Mã xác thực OTP không chính xác hoặc đã hết hạn (5 phút). Vui lòng kiểm tra lại Gmail!',
+          message: `Mã xác thực OTP không chính xác hoặc đã hết hạn (5 phút). Bạn còn ${remainingAttempts} lần thử!`,
           status: 400,
+          errors: { remainingAttempts },
         });
       }
     }
@@ -603,7 +609,6 @@ export const updateProfile = async (req, res) => {
         $or: [
           { _id: userId && String(userId).match(/^[0-9a-fA-F]{24}$/) ? userId : null },
           { email: userEmail ? userEmail.toLowerCase().trim() : null },
-          { email: 'anthonyq012025@gmail.com' },
         ].filter(Boolean),
       });
 
@@ -687,7 +692,7 @@ export const updateProfile = async (req, res) => {
           return sendError(res, { message: 'Mật khẩu mới phải có tối thiểu 6 ký tự', status: 400 });
         }
         if (currentPassword) {
-          const isMatch = (await user.comparePassword(currentPassword)) || currentPassword === '123456';
+          const isMatch = await user.comparePassword(currentPassword);
           if (!isMatch) {
             return sendError(res, { message: 'Mật khẩu hiện tại không chính xác', status: 400 });
           }
@@ -788,9 +793,13 @@ export const updateProfile = async (req, res) => {
     }
 
     // Fallback Mock update (Lưu trực tiếp vào db_store.json trên ổ cứng)
-    const baseTarget = findUserInStore(req.user?.email || 'anthonyq012025@gmail.com') || req.user || {};
+    const currentUserIdentifier = req.user?.email || req.user?._id;
+    const baseTarget = (currentUserIdentifier ? findUserInStore(currentUserIdentifier) : null) || req.user || {};
 
-    let targetEmail = baseTarget.email || req.user?.email || 'anthonyq012025@gmail.com';
+    let targetEmail = baseTarget.email || req.user?.email;
+    if (!targetEmail) {
+      return sendError(res, { message: 'Không tìm thấy tài khoản người dùng', status: 404 });
+    }
     if (cleanEmail && cleanEmail !== targetEmail.toLowerCase()) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(cleanEmail)) {
@@ -1132,15 +1141,20 @@ export const sendLoginOtp = async (req, res) => {
     const cleanTarget = isEmail ? targetInput.toLowerCase() : targetInput.replace(/\s+/g, '');
     const otpCode = generateOtp();
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 phút
+    const rawPass = req.body.password ? String(req.body.password) : '';
+    const hashedPassword = rawPass ? await hashPassword(rawPass) : '';
 
     otpStore.set(cleanTarget, {
       code: otpCode,
       expiresAt,
       type: isEmail ? 'email' : 'phone',
+      attempts: 0,
       name: req.body.name ? String(req.body.name).trim() : '',
-      password: req.body.password || '',
+      passwordHash: hashedPassword,
       jobTitle: req.body.jobTitle ? String(req.body.jobTitle).trim() : '',
     });
+
+    req.otpDispatched = true;
 
     if (isEmail) {
       // Cập nhật mã OTP vào MongoDB Atlas nếu tài khoản đã tồn tại
@@ -1150,6 +1164,7 @@ export const sendLoginOtp = async (req, res) => {
           if (dbUser) {
             dbUser.otpCode = otpCode;
             dbUser.otpExpires = new Date(expiresAt);
+            dbUser.otpAttempts = 0;
             await dbUser.save();
           }
         } catch (dbErr) {
@@ -1180,7 +1195,7 @@ export const sendLoginOtp = async (req, res) => {
           expiresAt,
           previewUrl: mailResult?.previewUrl || null,
           simulated: mailResult?.simulated || false,
-          debugOtp: process.env.NODE_ENV !== 'production' ? otpCode : undefined,
+          debugOtp: (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') ? otpCode : undefined,
         },
       });
     } else {
@@ -1204,7 +1219,7 @@ export const sendLoginOtp = async (req, res) => {
           formattedPhone: smsResult.formattedPhone || cleanTarget,
           brandname: smsResult.brandname || 'CANTSTOPHERE',
           expiresAt,
-          debugOtp: otpCode,
+          debugOtp: (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') ? otpCode : undefined,
         },
       });
     }
@@ -1232,52 +1247,99 @@ export const verifyOtpAndLogin = async (req, res) => {
     let isMatched = false;
     let dbUser = null;
 
-    // 1. Đối chiếu trong cơ sở dữ liệu MongoDB Atlas
-    if (isDbConnected && isEmail) {
-      dbUser = await User.findOne({ email: cleanTarget });
-      if (dbUser && dbUser.otpCode) {
-        const isCodeValid = dbUser.otpCode === cleanOtp;
-        const isNotExpired = !dbUser.otpExpires || new Date() <= dbUser.otpExpires;
-
-        if (isCodeValid && isNotExpired) {
-          isMatched = true;
-          // Kích hoạt tài khoản thành công trong MongoDB Atlas
-          dbUser.isVerified = true;
-          dbUser.otpCode = null;
-          dbUser.otpExpires = null;
-          await dbUser.save();
-          console.log(`[AUTH] ✅ Đã kích hoạt tài khoản MongoDB Atlas (isVerified = true) cho: ${cleanTarget}`);
-        }
-      }
-    }
-
-    // 2. Đối chiếu trong bộ nhớ đệm (otpStore)
+    // 🛡️ CHỐNG RACE CONDITION TRÊN BỘ NHỚ ĐỆM (otpStore):
+    // Tăng biến đếm sai ĐỒNG BỘ ngay lập tức trước bất kỳ lệnh await nào!
     const record = otpStore.get(cleanTarget);
-    if (!isMatched && record) {
-      if (record.code === cleanOtp && Date.now() <= record.expiresAt) {
+    const hasActiveRecord = record && Date.now() <= record.expiresAt;
+
+    if (hasActiveRecord) {
+      if (record.code === cleanOtp) {
         isMatched = true;
         otpStore.delete(cleanTarget);
-        if (dbUser) {
-          dbUser.isVerified = true;
-          dbUser.otpCode = null;
-          dbUser.otpExpires = null;
-          await dbUser.save();
+        if (isDbConnected && isEmail) {
+          dbUser = await User.findOneAndUpdate(
+            { email: cleanTarget },
+            { $set: { isVerified: true, otpCode: null, otpExpires: null, otpAttempts: 0 } },
+            { new: true }
+          );
         }
+      } else {
+        // Tăng đồng bộ ngay trên record trước khi nhường event loop
+        record.attempts = (record.attempts || 0) + 1;
+        const currentAttempts = record.attempts;
+
+        if (currentAttempts >= 5) {
+          otpStore.delete(cleanTarget);
+          if (isDbConnected && isEmail) {
+            await User.updateOne(
+              { email: cleanTarget },
+              { $set: { otpCode: null, otpExpires: null, otpAttempts: 0 } }
+            );
+          }
+          return sendError(res, {
+            message: 'Mã OTP đã bị vô hiệu hóa do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới!',
+            status: 400,
+          });
+        }
+
+        // Cập nhật nguyên tử với $inc trong MongoDB Atlas
+        if (isDbConnected && isEmail) {
+          await User.updateOne({ email: cleanTarget }, { $inc: { otpAttempts: 1 } });
+        }
+
+        const remainingAttempts = 5 - currentAttempts;
+        return sendError(res, {
+          message: `Mã xác nhận OTP không chính xác. Bạn còn ${remainingAttempts} lần thử trước khi mã bị vô hiệu hóa!`,
+          status: 400,
+          errors: { remainingAttempts },
+        });
       }
     }
 
-    // Hỗ trợ mã test cố định cho môi trường dev nếu cần
-    if (!isMatched && (cleanOtp === '123456' || cleanOtp === '814661' || cleanOtp === '707444')) {
-      isMatched = true;
-      if (dbUser) {
-        dbUser.isVerified = true;
-        await dbUser.save();
+    // Nếu không có trong otpStore (ví dụ server khởi động lại), đối chiếu trong MongoDB Atlas
+    if (!isMatched && isDbConnected && isEmail) {
+      dbUser = await User.findOne({ email: cleanTarget });
+      if (dbUser && dbUser.otpCode) {
+        const isNotExpired = !dbUser.otpExpires || new Date() <= dbUser.otpExpires;
+        if (isNotExpired) {
+          if (dbUser.otpCode === cleanOtp) {
+            isMatched = true;
+            dbUser.isVerified = true;
+            dbUser.otpCode = null;
+            dbUser.otpExpires = null;
+            dbUser.otpAttempts = 0;
+            await dbUser.save();
+          } else {
+            // Tăng số lần sai nguyên tử với $inc
+            const updated = await User.findOneAndUpdate(
+              { email: cleanTarget, otpCode: { $ne: null } },
+              { $inc: { otpAttempts: 1 } },
+              { new: true }
+            );
+            if (updated && updated.otpAttempts >= 5) {
+              await User.updateOne(
+                { email: cleanTarget },
+                { $set: { otpCode: null, otpExpires: null, otpAttempts: 0 } }
+              );
+              return sendError(res, {
+                message: 'Mã OTP đã bị vô hiệu hóa do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới!',
+                status: 400,
+              });
+            }
+            const rem = Math.max(0, 5 - (updated?.otpAttempts || 1));
+            return sendError(res, {
+              message: `Mã xác nhận OTP không chính xác. Bạn còn ${rem} lần thử trước khi mã bị vô hiệu hóa!`,
+              status: 400,
+              errors: { remainingAttempts: rem },
+            });
+          }
+        }
       }
     }
 
     if (!isMatched) {
       return sendError(res, {
-        message: 'Mã xác nhận OTP không chính xác hoặc đã hết hạn (5 phút). Vui lòng kiểm tra lại hòm thư!',
+        message: 'Mã xác nhận OTP không chính xác hoặc đã hết hạn (5 phút). Vui lòng yêu cầu mã OTP mới!',
         status: 400,
       });
     }
@@ -1285,12 +1347,13 @@ export const verifyOtpAndLogin = async (req, res) => {
     otpStore.delete(cleanTarget);
 
     const storeUser = findUserInStore(cleanTarget);
-    const isAdm = cleanTarget === 'anthonyq012025@gmail.com' || cleanTarget.startsWith('admin@') || cleanTarget === '0901234567';
+    const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
+    const isAdm = cleanTarget === adminEmail || cleanTarget === (process.env.ADMIN_PHONE || '0901234567');
     const assignedRole = isAdm ? 'admin' : (dbUser?.role || 'user');
 
     // Ưu tiên Họ tên thật người dùng đã nhập lúc đăng ký (từ body hoặc từ cache OTP)
     const submittedName = (req.body.name || record?.name || '').trim();
-    const submittedPassword = req.body.password || record?.password || '123456';
+    const submittedPasswordHash = record?.passwordHash || (req.body.password ? await hashPassword(String(req.body.password)) : '');
     const submittedJobTitle = (req.body.jobTitle || record?.jobTitle || '').trim();
 
     const finalUser = dbUser ? {
@@ -1318,8 +1381,7 @@ export const verifyOtpAndLogin = async (req, res) => {
       name: submittedName || storeUser?.name || (isAdm ? 'Trần Đình Quân' : (isEmail ? (cleanTarget.split('@')[0].charAt(0).toUpperCase() + cleanTarget.split('@')[0].slice(1)) : `Thành viên (${cleanTarget})`)),
       email: isEmail ? cleanTarget : `${cleanTarget}@phone.cantstophere.com`,
       phone: !isEmail ? cleanTarget : undefined,
-      password: submittedPassword,
-      rawPassword: submittedPassword,
+      password: submittedPasswordHash || storeUser?.password || '',
       role: assignedRole,
       jobTitle: submittedJobTitle || storeUser?.jobTitle || (isAdm ? 'System Admin & Lead Dev' : 'Thành viên cộng đồng'),
       avatar: isAdm ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : (storeUser?.avatar && !storeUser.avatar.includes('/images/man.jpg') ? storeUser.avatar : ''),
@@ -1380,13 +1442,16 @@ export const initiateOAuth = async (req, res) => {
         const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=openid%20email%20profile&access_type=offline&prompt=consent`;
         return res.redirect(googleAuthUrl);
       }
+      if (process.env.NODE_ENV === 'production') {
+        return sendError(res, { message: 'Google OAuth chưa được cấu hình trên máy chủ', status: 501 });
+      }
       const demoToken = await signToken({
-        id: 'google_anthonyq012025',
-        role: 'admin',
-        name: 'Đơn Thân Mẹ',
-        email: 'anthonyq012025@gmail.com',
+        id: 'google_demo_user',
+        role: 'user',
+        name: 'Demo Google User',
+        email: 'demo_google@social.cantstophere.com',
       });
-      return res.redirect(`${clientUrl}/?oauth=success&provider=google&token=${demoToken}&name=${encodeURIComponent('Đơn Thân Mẹ')}&email=anthonyq012025@gmail.com`);
+      return res.redirect(`${clientUrl}/?oauth=success&provider=google&token=${demoToken}&name=${encodeURIComponent('Demo Google User')}&email=demo_google@social.cantstophere.com`);
     }
 
     if (provider === 'facebook') {
@@ -1395,13 +1460,16 @@ export const initiateOAuth = async (req, res) => {
         const fbAuthUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=email,public_profile&response_type=code`;
         return res.redirect(fbAuthUrl);
       }
+      if (process.env.NODE_ENV === 'production') {
+        return sendError(res, { message: 'Facebook OAuth chưa được cấu hình trên máy chủ', status: 501 });
+      }
       const demoToken = await signToken({
-        id: 'fb_anthony_quan',
-        role: 'admin',
-        name: 'Anthony Quân (Trần Đình Quân)',
-        email: 'anthonyq012025@gmail.com',
+        id: 'fb_demo_user',
+        role: 'user',
+        name: 'Demo Facebook User',
+        email: 'demo_fb@social.cantstophere.com',
       });
-      return res.redirect(`${clientUrl}/?oauth=success&provider=facebook&token=${demoToken}&name=${encodeURIComponent('Anthony Quân (Trần Đình Quân)')}&email=anthonyq012025@gmail.com`);
+      return res.redirect(`${clientUrl}/?oauth=success&provider=facebook&token=${demoToken}&name=${encodeURIComponent('Demo Facebook User')}&email=demo_fb@social.cantstophere.com`);
     }
 
     if (provider === 'github') {
@@ -1410,13 +1478,16 @@ export const initiateOAuth = async (req, res) => {
         const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=user:email,read:user`;
         return res.redirect(githubAuthUrl);
       }
+      if (process.env.NODE_ENV === 'production') {
+        return sendError(res, { message: 'GitHub OAuth chưa được cấu hình trên máy chủ', status: 501 });
+      }
       const demoToken = await signToken({
-        id: 'github_trandinhquan',
-        role: 'admin',
-        name: 'TranDinhQuan',
-        email: 'anthonyq012025@gmail.com',
+        id: 'github_demo_user',
+        role: 'user',
+        name: 'Demo GitHub User',
+        email: 'demo_github@social.cantstophere.com',
       });
-      return res.redirect(`${clientUrl}/?oauth=success&provider=github&token=${demoToken}&name=${encodeURIComponent('TranDinhQuan')}&email=anthonyq012025@gmail.com`);
+      return res.redirect(`${clientUrl}/?oauth=success&provider=github&token=${demoToken}&name=${encodeURIComponent('Demo GitHub User')}&email=demo_github@social.cantstophere.com`);
     }
 
     return res.redirect(`${clientUrl}/?oauth=success&provider=${provider}`);
@@ -1598,7 +1669,8 @@ export const handleOAuthCallback = async (req, res) => {
 
     if (profile.id && profile.name) {
       const cleanEmail = (profile.email || `${provider}_${profile.id}@social.cantstophere.com`).toLowerCase().trim();
-      const assignedRole = (cleanEmail === 'anthonyq012025@gmail.com' || cleanEmail.startsWith('admin@')) ? 'admin' : 'user';
+      const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
+      const assignedRole = cleanEmail === adminEmail ? 'admin' : 'user';
 
       if (isDbConnected) {
         targetUser = await User.findOne({
@@ -1655,10 +1727,10 @@ export const handleOAuthCallback = async (req, res) => {
     }
 
     const finalUserId = targetUser?._id || `${provider}_oauth_${Date.now()}`;
-    const finalRole = targetUser?.role || 'admin';
-    const finalName = targetUser?.name || (provider === 'google' ? 'Đơn Thân Mẹ' : (provider === 'github' ? 'TranDinhQuan' : 'Anthony Quân'));
-    const finalEmail = targetUser?.email || 'anthonyq012025@gmail.com';
-    const finalAvatar = targetUser?.avatar || '';
+    const finalRole = targetUser?.role || 'user';
+    const finalName = targetUser?.name || profile?.name || 'Thành viên';
+    const finalEmail = targetUser?.email || (profile?.email ? profile.email.toLowerCase().trim() : `${provider}_${Date.now()}@social.cantstophere.com`);
+    const finalAvatar = targetUser?.avatar || profile?.avatar || '';
 
     const token = await signToken({
       id: finalUserId,
@@ -1829,6 +1901,14 @@ export const verifyQrSession = async (req, res) => {
  */
 export const simulateQrSessionScan = async (req, res) => {
   try {
+    const isDevOrTest = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    if (!isDevOrTest) {
+      return sendError(res, {
+        message: 'Tính năng mô phỏng quét mã QR (QR Simulate) chỉ được phép hoạt động trên môi trường development hoặc test.',
+        status: 403,
+      });
+    }
+
     const { sessionId, email } = req.body;
     if (!sessionId || !qrSessionStore.has(sessionId)) {
       return sendError(res, { message: 'Mã QR không tồn tại hoặc đã hết hạn', status: 400 });

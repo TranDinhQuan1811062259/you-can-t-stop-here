@@ -45,6 +45,10 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    otpAttempts: {
+      type: Number,
+      default: 0,
+    },
     authProvider: {
       type: String,
       enum: ['local', 'google', 'facebook', 'x', 'linkedin', 'github'],

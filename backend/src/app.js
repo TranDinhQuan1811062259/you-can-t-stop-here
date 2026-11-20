@@ -14,6 +14,9 @@ const imagesDir = path.join(__dirname, '../../frontend/public/images');
 
 const app = express();
 
+// Hỗ trợ reverse proxy (Vercel, Render, Nginx) để xác định chính xác IP client cho rate limiter
+app.set('trust proxy', 1);
+
 // Middlewares & CORS hỗ trợ linh hoạt cổng local
 app.use(cors({
   origin: (origin, callback) => {
@@ -32,9 +35,10 @@ app.use(cors({
   credentials: true,
 }));
 
-// Hỗ trợ upload ảnh và dữ liệu tài liệu lớn tới 50MB
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Giới hạn kích thước payload JSON và form urlencoded tối đa 2MB (chống DOS và cạn kiệt RAM).
+// Lưu ý: Các tệp tải lên (ảnh, tài liệu, âm thanh) được xử lý riêng qua Multer multipart streaming.
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));

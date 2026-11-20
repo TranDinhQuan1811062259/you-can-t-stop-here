@@ -130,25 +130,62 @@ async function synthesizeWithEdge(targetVoice, text, voiceOptions = {}, maxRetri
  */
 export const synthesizeVietnameseSpeech = async (req, res) => {
   try {
-    const rawText = req.query.text || req.body?.text || '';
-    const rawGender = (req.query.gender || req.body?.gender || 'female').toLowerCase();
-    const gender = rawGender.includes('nam') || rawGender === 'male' ? 'male' : 'female';
-    const lang = (req.query.lang || req.body?.lang || 'vi').toLowerCase();
-    const region = (req.query.region || req.body?.region || 'north').toLowerCase();
-    const mood = (req.query.mood || req.body?.mood || 'auto').toLowerCase();
+    const rawText = req.query.text !== undefined ? req.query.text : req.body?.text;
+
+    // 🛡️ BẢO VỆ CHỐNG DOS & QUÁ TẢI BỘ NHỚ:
+    // 1. Kiểm tra trường text bắt buộc là chuỗi ký tự
+    if (typeof rawText !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Nội dung cần đọc (text) không hợp lệ hoặc không phải định dạng chuỗi.',
+      });
+    }
+
+    // 2. Giới hạn độ dài tối đa 2.000 ký tự NGAY TỪ ĐẦU trước khi chạy bất kỳ regex, trim hay xử lý chuỗi nào
+    const MAX_TEXT_LENGTH = 2000;
+    if (rawText.length > MAX_TEXT_LENGTH) {
+      return res.status(400).json({
+        success: false,
+        message: `Độ dài văn bản vượt quá giới hạn cho phép (tối đa ${MAX_TEXT_LENGTH.toLocaleString('vi-VN')} ký tự mỗi lượt đọc).`,
+      });
+    }
+
+    const trimmedRawText = rawText.trim();
+    if (!trimmedRawText) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nội dung cần đọc không được để trống.',
+      });
+    }
+
+    const rawGender = (req.query.gender || req.body?.gender || 'female');
+    const genderStr = typeof rawGender === 'string' ? rawGender.toLowerCase() : 'female';
+    const gender = genderStr.includes('nam') || genderStr === 'male' ? 'male' : 'female';
+
+    const rawLang = req.query.lang || req.body?.lang;
+    const lang = typeof rawLang === 'string' ? rawLang.toLowerCase() : 'vi';
+
+    const rawRegion = req.query.region || req.body?.region;
+    const region = typeof rawRegion === 'string' ? rawRegion.toLowerCase() : 'north';
+
+    const rawMood = req.query.mood || req.body?.mood;
+    const mood = typeof rawMood === 'string' ? rawMood.toLowerCase() : 'auto';
 
     // Làm sạch emoji và ký tự đặc biệt ở đầu/cuối câu
-    const cleanText = rawText
+    const cleanText = trimmedRawText
       .replace(/^[✨🌙☕🌿🌧️💡🍂🕯️🌊🌌❤️🩹\s\-\:]+/, '')
       .replace(/[✨🌙☕🌿🌧️💡🍂🕯️🌊🌌❤️🩹\s]+$/g, '')
       .trim();
 
     if (!cleanText) {
-      return res.status(400).json({ success: false, message: 'Nội dung cần đọc không được để trống' });
+      return res.status(400).json({
+        success: false,
+        message: 'Nội dung cần đọc không được để trống.',
+      });
     }
 
     // Giới hạn độ dài mỗi lượt đọc
-    const truncatedText = cleanText.slice(0, 350);
+    const truncatedText = cleanText.slice(0, MAX_TEXT_LENGTH);
 
     // Xác định giọng đọc theo Ngôn ngữ và Giới tính
     const langVoiceMap = MULTI_LANG_VOICES[lang] || MULTI_LANG_VOICES.vi;
@@ -189,7 +226,7 @@ export const synthesizeVietnameseSpeech = async (req, res) => {
     if (!audioBuffer) {
       engine = 'Google-TTS-Fallback';
       const googleLang = GOOGLE_LANG_FALLBACK[lang] || 'vi';
-      const base64Audio = await googleTTS.getAudioBase64(truncatedText, {
+      const base64Audio = await googleTTS.getAudioBase64(truncatedText.slice(0, 200), {
         lang: googleLang,
         slow: region === 'central' || mood === 'melancholic',
         host: 'https://translate.google.com',

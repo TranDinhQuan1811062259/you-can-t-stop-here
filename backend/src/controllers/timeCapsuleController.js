@@ -276,17 +276,63 @@ export const timeCapsuleController = {
     }
   },
 
-  // Xóa hộp thời gian
+  // Xóa hộp thời gian (Kiểm tra quyền chống IDOR)
   deleteCapsule: async (req, res) => {
     try {
       const { id } = req.params;
       const isMongo = checkDbReady();
 
+      if (id === 'capsule_welcome_demo') {
+        return sendError(res, {
+          message: 'Không thể xóa hộp thời gian chào mừng mặc định của hệ thống!',
+          status: 403,
+        });
+      }
+
+      let mongoCapsule = null;
+      if (isMongo) {
+        try {
+          mongoCapsule = await TimeCapsule.findById(id);
+        } catch (_) {}
+      }
+
+      const local = getStoreCapsules();
+      const localCapsule = local.find((c) => String(c._id) === String(id));
+      const targetCapsule = mongoCapsule || localCapsule;
+
+      if (!targetCapsule) {
+        return sendError(res, { message: 'Không tìm thấy hộp thời gian để xóa', status: 404 });
+      }
+
+      // 🛡️ BẢO VỆ CHỐNG IDOR: Chỉ chủ sở hữu hoặc Quản trị viên mới được phép xóa
+      const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
+      const isAdmin = req.user?.role === 'admin' || (req.user?.email && req.user.email.toLowerCase().trim() === adminEmail);
+
+      const currentUserId = req.user?._id ? String(req.user._id) : '';
+      const currentUserEmail = (req.user?.email || '').trim().toLowerCase();
+      const guestId = req.headers['x-guest-id'] || req.query.guestId || req.body?.guestId;
+
+      const capsuleUserId = targetCapsule.user ? String(targetCapsule.user._id || targetCapsule.user) : (targetCapsule.userId ? String(targetCapsule.userId) : '');
+      const capsuleEmail = (targetCapsule.notifyEmail || '').trim().toLowerCase();
+      const capsuleGuestId = targetCapsule.guestId || '';
+
+      const isOwner = Boolean(
+        (currentUserId && capsuleUserId && currentUserId === capsuleUserId) ||
+        (currentUserEmail && capsuleEmail && currentUserEmail === capsuleEmail) ||
+        (guestId && capsuleGuestId && guestId === capsuleGuestId)
+      );
+
+      if (!isAdmin && !isOwner) {
+        return sendError(res, {
+          message: 'Bạn không có quyền xóa hộp thời gian này! Chỉ chủ sở hữu hoặc quản trị viên mới được phép.',
+          status: 403,
+        });
+      }
+
       if (isMongo) {
         await TimeCapsule.findByIdAndDelete(id);
       }
 
-      const local = getStoreCapsules();
       const updated = local.filter((c) => String(c._id) !== String(id));
       saveStoreCapsules(updated);
 

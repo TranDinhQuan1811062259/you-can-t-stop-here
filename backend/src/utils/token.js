@@ -107,16 +107,5 @@ export const verifyToken = async (token) => {
     }
   } catch (_) {}
 
-  // 4. Fallback đặc biệt CHỈ DÀNH RIÊNG cho token mock có chứa tiền tố admin rõ ràng
-  if (typeof token === 'string' && (token.startsWith('token_admin_') || token === 'admin_secret_token')) {
-    return {
-      id: '6aec5b46ee112662b33c0e32',
-      name: 'Đơn Thân Mẹ',
-      email: 'anthonyq012025@gmail.com',
-      role: 'admin',
-      jobTitle: 'System Admin & Lead Dev',
-    };
-  }
-
   throw new Error('Token không hợp lệ hoặc đã hết hạn');
 };

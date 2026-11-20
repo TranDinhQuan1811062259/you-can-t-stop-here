@@ -16,6 +16,11 @@ import {
   simulateQrSessionScan,
 } from '../controllers/authController.js';
 import { protect, optionalProtect } from '../middlewares/authMiddleware.js';
+import {
+  authLimiter,
+  otpSendLimiter,
+  otpTargetCooldownLimiter,
+} from '../middlewares/rateLimiter.js';
 
 const router = express.Router();
 
@@ -27,14 +32,24 @@ router.get('/oauth/:provider/callback', handleOAuthCallback);
 router.get('/qr/generate', generateQrSession);
 router.get('/qr/status/:sessionId', checkQrSessionStatus);
 router.post('/qr/verify', protect, verifyQrSession);
-router.post('/qr/simulate', simulateQrSessionScan);
+// Endpoint mô phỏng quét QR dành riêng cho môi trường development/testing (Áp dụng Fail-Closed)
+router.post('/qr/simulate', (req, res, next) => {
+  const isDevOrTest = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+  if (!isDevOrTest) {
+    return res.status(403).json({
+      success: false,
+      message: 'Tính năng mô phỏng quét mã QR (QR Simulate) chỉ được phép hoạt động trên môi trường development hoặc test.',
+    });
+  }
+  next();
+}, simulateQrSessionScan);
 
-// Xác thực & Tài khoản
-router.post('/register', register);
-router.post('/login', login);
-router.post('/send-otp', sendLoginOtp);
-router.post('/verify-otp', verifyOtpAndLogin);
-router.post('/social-login', socialLogin);
+// Xác thực & Tài khoản (Bảo vệ bởi Rate Limiting & Cooldown chống Brute-force & Spam bom mail)
+router.post('/register', otpTargetCooldownLimiter, otpSendLimiter, register);
+router.post('/login', authLimiter, login);
+router.post('/send-otp', otpTargetCooldownLimiter, otpSendLimiter, sendLoginOtp);
+router.post('/verify-otp', authLimiter, verifyOtpAndLogin);
+router.post('/social-login', authLimiter, otpTargetCooldownLimiter, socialLogin);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 router.get('/user/:id', optionalProtect, getUserProfile);

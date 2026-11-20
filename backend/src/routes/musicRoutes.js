@@ -1,5 +1,6 @@
 import express from 'express';
 import { getMusicMetadata, getMusicPresets } from '../controllers/musicController.js';
+import { musicMetadataLimiter } from '../middlewares/rateLimiter.js';
 
 const router = express.Router();
 
@@ -7,7 +8,7 @@ const router = express.Router();
 router.get('/presets', getMusicPresets);
 
 // GET /api/music/metadata?url=...
-router.get('/metadata', getMusicMetadata);
+router.get('/metadata', musicMetadataLimiter, getMusicMetadata);
 
 export default router;
 

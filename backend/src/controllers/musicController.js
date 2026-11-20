@@ -101,6 +101,110 @@ const extractSpotifyId = (url) => {
 };
 
 /**
+ * Danh sách tên miền nguồn phát nhạc được chấp nhận hợp lệ
+ */
+const ALLOWED_MUSIC_HOSTS = new Set([
+  // Spotify
+  'open.spotify.com',
+  'spotify.com',
+  'www.spotify.com',
+  // YouTube
+  'youtube.com',
+  'www.youtube.com',
+  'm.youtube.com',
+  'music.youtube.com',
+  'youtu.be',
+  // TikTok
+  'tiktok.com',
+  'www.tiktok.com',
+  'm.tiktok.com',
+  'vt.tiktok.com',
+  // SoundCloud
+  'soundcloud.com',
+  'www.soundcloud.com',
+  'm.soundcloud.com',
+  // CDN media tĩnh
+  'res.cloudinary.com',
+  'cdn.pixabay.com',
+]);
+
+/**
+ * Kiểm tra hostname có thuộc danh sách an toàn không
+ */
+const isAllowedMusicHost = (hostname) => {
+  if (!hostname) return false;
+  const host = hostname.toLowerCase().trim();
+  if (ALLOWED_MUSIC_HOSTS.has(host)) return true;
+  return (
+    host.endsWith('.spotify.com') ||
+    host.endsWith('.youtube.com') ||
+    host.endsWith('.tiktok.com') ||
+    host.endsWith('.soundcloud.com')
+  );
+};
+
+/**
+ * Kiểm tra và ngăn chặn các địa chỉ IP nội bộ, localhost, link-local, cloud metadata
+ */
+const isPrivateOrInternalHost = (host) => {
+  if (!host) return true;
+  const lower = host.toLowerCase().trim();
+
+  // Chặn localhost, loopback, mDNS, internal names
+  if (
+    lower === 'localhost' ||
+    lower === '127.0.0.1' ||
+    lower === '0.0.0.0' ||
+    lower === '::1' ||
+    lower.endsWith('.local') ||
+    lower.endsWith('.internal') ||
+    lower.endsWith('.localhost') ||
+    lower.includes('metadata') ||
+    lower.includes('169.254')
+  ) {
+    return true;
+  }
+
+  // Chặn IPv4 dạng số thập phân (10.x, 172.16-31.x, 192.168.x, 127.x, 169.254.x, 0.x)
+  const ipv4Match = lower.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4Match) {
+    return true; // Chặn mọi IP raw trực tiếp
+  }
+
+  // Chặn IPv6
+  if (lower.includes(':') || lower.startsWith('[') || lower.endsWith(']')) {
+    return true;
+  }
+
+  return false;
+};
+
+/**
+ * Đọc tối đa maxBytes từ response stream để chống cạn kiệt bộ nhớ (OOM attack)
+ */
+const readLimitedText = async (response, maxBytes = 200 * 1024) => {
+  if (response.body && typeof response.body.getReader === 'function') {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let totalBytes = 0;
+    let text = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.length;
+      text += decoder.decode(value, { stream: true });
+      if (totalBytes >= maxBytes) {
+        await reader.cancel();
+        break;
+      }
+    }
+    return text;
+  }
+  const rawText = await response.text();
+  return rawText.slice(0, maxBytes);
+};
+
+/**
  * Trích xuất Metadata bài hát từ URL (YouTube, Spotify, TikTok, SoundCloud, v.v.)
  */
 export const getMusicMetadata = async (req, res) => {
@@ -110,14 +214,53 @@ export const getMusicMetadata = async (req, res) => {
       return sendError(res, { message: 'Vui lòng cung cấp URL bài hát hợp lệ.', status: 400 });
     }
 
-    const cleanUrl = targetUrl.trim();
+    const trimmedUrl = targetUrl.trim();
+
+    // 🛡️ BẢO VỆ CHỐNG TẤN CÔNG SSRF:
+    // 1. Phân tích cú pháp URL bằng new URL(...)
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(trimmedUrl);
+    } catch (_) {
+      return sendError(res, { message: 'Định dạng URL không hợp lệ hoặc không thể phân tích cú pháp.', status: 400 });
+    }
+
+    // 2. Kiểm tra giao thức bắt buộc là HTTPS
+    if (parsedUrl.protocol !== 'https:') {
+      return sendError(res, { message: 'Giao thức không an toàn. Chỉ chấp nhận các liên kết bảo mật có giao thức HTTPS.', status: 400 });
+    }
+
+    // 🛡️ Chặn port khác 443 (chống quét cổng nội bộ qua SSRF)
+    if (parsedUrl.port && parsedUrl.port !== '443') {
+      return sendError(res, { message: 'Cổng kết nối không an toàn. Chỉ chấp nhận cổng mặc định 443 cho giao thức HTTPS.', status: 400 });
+    }
+
+    const hostname = parsedUrl.hostname.toLowerCase();
+
+    // 3. Ngăn chặn triệt để IP nội bộ, localhost, link-local, cloud metadata
+    if (isPrivateOrInternalHost(hostname)) {
+      return sendError(res, { message: 'Địa chỉ IP hoặc tên miền mạng nội bộ không được phép truy cập.', status: 400 });
+    }
+
+    // 4. Kiểm tra danh sách whitelist các nguồn nhạc được hỗ trợ
+    if (!isAllowedMusicHost(hostname)) {
+      return sendError(res, {
+        message: 'Nền tảng âm nhạc không được hỗ trợ hoặc tên miền không nằm trong danh sách an toàn. Chỉ hỗ trợ Spotify, YouTube, TikTok hoặc SoundCloud.',
+        status: 400,
+      });
+    }
+
+    const cleanUrl = parsedUrl.toString();
 
     // 1. YouTube
-    if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
+    if (hostname === 'youtu.be' || hostname.endsWith('.youtube.com') || hostname === 'youtube.com') {
       const ytId = extractYouTubeId(cleanUrl);
       try {
         const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json`;
-        const fetchRes = await fetch(oembedUrl);
+        const fetchRes = await fetch(oembedUrl, {
+          redirect: 'error',
+          signal: AbortSignal.timeout(4000),
+        });
         if (fetchRes.ok) {
           const data = await fetchRes.json();
           let rawTitle = data.title || '';
@@ -166,23 +309,28 @@ export const getMusicMetadata = async (req, res) => {
     }
 
     // 2. Spotify
-    if (cleanUrl.includes('spotify.com')) {
+    if (hostname === 'spotify.com' || hostname.endsWith('.spotify.com')) {
       const spotifyId = extractSpotifyId(cleanUrl);
       try {
         const oembedUrl = `https://open.spotify.com/oembed?url=${encodeURIComponent(cleanUrl)}`;
-        const fetchRes = await fetch(oembedUrl);
+        const fetchRes = await fetch(oembedUrl, {
+          redirect: 'error',
+          signal: AbortSignal.timeout(4000),
+        });
         if (fetchRes.ok) {
           const data = await fetchRes.json();
           let title = cleanSongTitle(data.title || 'Spotify Track');
           let artist = 'Spotify Artist';
 
-          // Cào nhanh meta tag để lấy tên nghệ sĩ chính xác
+          // Cào nhanh meta tag để lấy tên nghệ sĩ chính xác (tối đa 200KB HTML)
           try {
             const pageRes = await fetch(cleanUrl, {
               headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+              redirect: 'error',
+              signal: AbortSignal.timeout(4000),
             });
             if (pageRes.ok) {
-              const html = await pageRes.text();
+              const html = await readLimitedText(pageRes, 200 * 1024);
               const musMatch = html.match(/name="music:musician_description"\s+content="([^"]+)"/i);
               if (musMatch && musMatch[1]) {
                 artist = musMatch[1].trim();
@@ -225,10 +373,13 @@ export const getMusicMetadata = async (req, res) => {
     }
 
     // 3. TikTok
-    if (cleanUrl.includes('tiktok.com')) {
+    if (hostname === 'tiktok.com' || hostname.endsWith('.tiktok.com')) {
       try {
         const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(cleanUrl)}`;
-        const fetchRes = await fetch(oembedUrl);
+        const fetchRes = await fetch(oembedUrl, {
+          redirect: 'error',
+          signal: AbortSignal.timeout(4000),
+        });
         if (fetchRes.ok) {
           const data = await fetchRes.json();
           return sendSuccess(res, {

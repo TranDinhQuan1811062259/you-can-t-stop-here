@@ -1063,6 +1063,45 @@ export const updatePost = async (req, res) => {
     const store = loadStore();
     store.posts = store.posts || [];
     const idx = store.posts.findIndex((p) => String(p._id) === String(id) || p.slug === id);
+    const postInStore = idx !== -1 ? store.posts[idx] : null;
+
+    let dbPost = null;
+    if (checkDbReady()) {
+      try {
+        const mongoQuery = String(id).match(/^[0-9a-fA-F]{24}$/) ? { _id: id } : { slug: id };
+        dbPost = await Post.findOne(mongoQuery);
+      } catch (err) {}
+    }
+
+    const targetPost = dbPost || postInStore;
+    if (!targetPost) {
+      return sendError(res, { message: 'Không tìm thấy bài viết để cập nhật', status: 404 });
+    }
+
+    // 🛡️ BẢO VỆ CHỐNG IDOR: Kiểm tra quyền chủ sở hữu hoặc Quản trị viên (Admin)
+    const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
+    const isAdmin = req.user?.role === 'admin' || (req.user?.email && req.user.email.toLowerCase().trim() === adminEmail);
+    const currentUserId = req.user?._id ? String(req.user._id) : '';
+    const currentUserName = (req.user?.name || '').trim().toLowerCase();
+    const currentUserEmail = (req.user?.email || '').trim().toLowerCase();
+
+    const postUserId = targetPost.user ? String(targetPost.user._id || targetPost.user) : '';
+    const postAuthor = (targetPost.author || '').trim().toLowerCase();
+    const postUserEmail = (targetPost.user?.email || '').trim().toLowerCase();
+
+    const isOwner = Boolean(
+      (currentUserId && postUserId && currentUserId === postUserId) ||
+      (currentUserName && postAuthor && currentUserName === postAuthor) ||
+      (currentUserEmail && postAuthor && currentUserEmail.split('@')[0] === postAuthor) ||
+      (currentUserEmail && postUserEmail && currentUserEmail === postUserEmail)
+    );
+
+    if (!isAdmin && !isOwner) {
+      return sendError(res, {
+        message: 'Bạn không có quyền chỉnh sửa bài viết này! Chỉ tác giả hoặc quản trị viên mới được phép.',
+        status: 403,
+      });
+    }
 
     let updatedPostObj = null;
 
