@@ -129,6 +129,11 @@ export const MusicTrackList = ({
                     <strong className="track-name" title={track.title}>
                       {track.title}
                     </strong>
+                    {track.storyNote && (
+                      <span className="track-story-badge" title="Bài hát có lời tâm sự của tác giả">
+                        💌 Tâm sự
+                      </span>
+                    )}
                     {track.badge && (
                       <span className="track-badge-mini">{track.badge}</span>
                     )}

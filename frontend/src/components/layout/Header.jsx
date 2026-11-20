@@ -24,6 +24,7 @@ import { LateNightTeaLoungeModal } from '../wellness/LateNightTeaLoungeModal';
 import { BrainDumpDeclutterModal } from '../wellness/BrainDumpDeclutterModal';
 import { MoodWeatherForecastModal } from '../wellness/MoodWeatherForecastModal';
 import { FocusSleepCocoonModal } from '../wellness/FocusSleepCocoonModal';
+import { TrackStoryModal } from '../music/TrackStoryModal';
 import { postService, getCachedPosts, removeVietnameseTones } from '../../services/postService';
 import { eventService } from '../../services/eventService';
 import { isSoundEnabled, toggleSound, playClickSound, playFestiveEventSound } from '../../utils/soundEffects';
@@ -211,6 +212,74 @@ export const Header = () => {
         localStorage.setItem('freedom_ambient_auto_next', String(nextVal));
       } catch (_) {}
       return nextVal;
+    });
+  };
+
+  // States cho Mini-Scrubber, Volume & Story Modal trong Popup Header
+  const [recordingCurrentTime, setRecordingCurrentTime] = useState(0);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [recordingVolume, setRecordingVolume] = useState(() => {
+    try {
+      const saved = localStorage.getItem('freedom_music_player_volume');
+      return saved !== null ? Math.max(0, Math.min(1, parseFloat(saved))) : 0.45;
+    } catch (_) {
+      return 0.45;
+    }
+  });
+  const [isRecordingMuted, setIsRecordingMuted] = useState(false);
+  const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
+
+  // Định dạng mm:ss cho Mini-Scrubber Header
+  const formatRecordingTime = (seconds) => {
+    if (!seconds || isNaN(seconds) || seconds < 0) return '00:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  // Cập nhật âm lượng cho recordingAudioRef
+  useEffect(() => {
+    if (recordingAudioRef.current) {
+      recordingAudioRef.current.volume = isRecordingMuted ? 0 : recordingVolume;
+    }
+  }, [recordingVolume, isRecordingMuted]);
+
+  // Xử lý tua thời lượng bài thu trong Header
+  const handleRecordingSeek = (e) => {
+    const val = parseFloat(e.target.value);
+    setRecordingCurrentTime(val);
+    const audio = recordingAudioRef.current;
+    if (audio) {
+      try {
+        audio.currentTime = val;
+      } catch (_) {}
+    }
+  };
+
+  // Xử lý thay đổi âm lượng bài thu trong Header
+  const handleRecordingVolumeChange = (e) => {
+    const val = parseFloat(e.target.value);
+    setRecordingVolume(val);
+    setIsRecordingMuted(false);
+    const audio = recordingAudioRef.current;
+    if (audio) {
+      audio.volume = val;
+    }
+    try {
+      localStorage.setItem('freedom_music_player_volume', String(val));
+    } catch (_) {}
+  };
+
+  // Bật / tắt tiếng bài thu trong Header
+  const handleToggleRecordingMute = () => {
+    playClickSound();
+    setIsRecordingMuted((prev) => {
+      const nextMuted = !prev;
+      const audio = recordingAudioRef.current;
+      if (audio) {
+        audio.volume = nextMuted ? 0 : recordingVolume;
+      }
+      return nextMuted;
     });
   };
 
@@ -798,6 +867,7 @@ export const Header = () => {
     if (!audio) return;
 
     const handleAudioPlay = () => {
+      if (audio.duration && !isNaN(audio.duration)) setRecordingDuration(audio.duration);
       syncActiveTrackFromAudio(audio);
       setIsPlayingRecording(true);
       duckAmbientForMusic();
@@ -805,18 +875,31 @@ export const Header = () => {
 
     const handleAudioPlaying = () => {
       isSwitchingTrackRef.current = false;
+      if (audio.duration && !isNaN(audio.duration)) setRecordingDuration(audio.duration);
       syncActiveTrackFromAudio(audio);
       setIsPlayingRecording(true);
       duckAmbientForMusic();
     };
 
     const handleAudioTimeUpdate = () => {
+      if (audio) {
+        setRecordingCurrentTime(audio.currentTime || 0);
+        if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
+          setRecordingDuration(audio.duration);
+        }
+      }
       if (!audio.paused && !audio.ended) {
         if (!isPlayingRecordingRef.current) {
           setIsPlayingRecording(true);
         }
       }
       syncActiveTrackFromAudio(audio);
+    };
+
+    const handleAudioLoadedMetadata = () => {
+      if (audio && audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
+        setRecordingDuration(audio.duration);
+      }
     };
 
     const handleAudioPause = () => {
@@ -843,6 +926,7 @@ export const Header = () => {
     audio.addEventListener('play', handleAudioPlay);
     audio.addEventListener('playing', handleAudioPlaying);
     audio.addEventListener('timeupdate', handleAudioTimeUpdate);
+    audio.addEventListener('loadedmetadata', handleAudioLoadedMetadata);
     audio.addEventListener('pause', handleAudioPause);
     audio.addEventListener('ended', handleAudioEnded);
     audio.addEventListener('error', handleAudioError);
@@ -851,6 +935,7 @@ export const Header = () => {
       audio.removeEventListener('play', handleAudioPlay);
       audio.removeEventListener('playing', handleAudioPlaying);
       audio.removeEventListener('timeupdate', handleAudioTimeUpdate);
+      audio.removeEventListener('loadedmetadata', handleAudioLoadedMetadata);
       audio.removeEventListener('pause', handleAudioPause);
       audio.removeEventListener('ended', handleAudioEnded);
       audio.removeEventListener('error', handleAudioError);
@@ -1245,69 +1330,156 @@ export const Header = () => {
 
                     {/* Thẻ Chi Tiết & Mini Player Của Mùa Đang Chọn */}
                     <div className={`ambient-track-card ${isEffectivePlaying ? 'is-playing' : ''}`}>
-                      <div className="track-card-visual">
-                        <div className={`track-disc ${isEffectivePlaying ? 'spinning' : ''}`}>
-                          <span>{currentTrackMeta.icon}</span>
-                        </div>
-                        {isEffectivePlaying && (
-                          <div className="track-sound-waves">
-                            <span className="wave-bar bar-1" />
-                            <span className="wave-bar bar-2" />
-                            <span className="wave-bar bar-3" />
-                            <span className="wave-bar bar-4" />
+                      <div className="ambient-track-main-row">
+                        <div className="track-card-visual">
+                          <div className={`track-disc ${isEffectivePlaying ? 'spinning' : ''}`}>
+                            <span>{currentTrackMeta.icon}</span>
                           </div>
-                        )}
-                      </div>
-
-                      <div className="track-card-info">
-                        <div className="track-title-row">
-                          <strong className="track-title" title={currentTrackMeta.title}>
-                            {currentTrackMeta.title}
-                          </strong>
-                        </div>
-                        <span className="track-artist">{currentTrackMeta.artist}</span>
-                        <span className={`track-status-tag ${currentTrackMeta.hasUserAudio ? 'ready' : 'pending'}`}>
-                          {currentTrackMeta.hasUserAudio ? '✓ Đã có bản thu âm mộc' : '⏳ Đang chờ bản thu của bạn'}
-                        </span>
-                      </div>
-
-                      <div className="track-card-controls-cluster">
-                        {selectedTrackSeason === 'winter' && winterOfficialTracks.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={handlePrevWinterTrack}
-                            className="track-nav-mini-btn"
-                            title="Bài trước"
-                            aria-label="Bài trước"
-                          >
-                            ⏮
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={handleTogglePlayRecording}
-                          className={`track-play-btn ${isEffectivePlaying ? 'is-playing-btn' : ''}`}
-                          title={isEffectivePlaying ? 'Tạm dừng bản nhạc (Pause)' : 'Phát bản nhạc mùa này (Play)'}
-                          aria-label={isEffectivePlaying ? 'Tạm dừng' : 'Phát'}
-                        >
-                          {isEffectivePlaying ? (
-                            <i className="fa-solid fa-pause" style={{ fontSize: '0.92rem' }}></i>
-                          ) : (
-                            <i className="fa-solid fa-play" style={{ marginLeft: '2px', fontSize: '0.88rem' }}></i>
+                          {isEffectivePlaying && (
+                            <div className="track-sound-waves">
+                              <span className="wave-bar bar-1" />
+                              <span className="wave-bar bar-2" />
+                              <span className="wave-bar bar-3" />
+                              <span className="wave-bar bar-4" />
+                            </div>
                           )}
-                        </button>
-                        {selectedTrackSeason === 'winter' && winterOfficialTracks.length > 1 && (
+                        </div>
+
+                        <div className="track-card-info">
+                          <div className="track-title-row">
+                            <strong className="track-title" title={currentTrackMeta.title}>
+                              {currentTrackMeta.title}
+                            </strong>
+                          </div>
+                          <span className="track-artist">{currentTrackMeta.artist}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                            <span className={`track-status-tag ${currentTrackMeta.hasUserAudio ? 'ready' : 'pending'}`}>
+                              {currentTrackMeta.hasUserAudio ? '✓ Đã có bản thu' : '⏳ Chờ bản thu'}
+                            </span>
+                            {selectedTrackSeason === 'winter' && (winterOfficialTracks[winterTrackIndex] || winterOfficialTracks[0])?.storyNote && (
+                              <button
+                                type="button"
+                                className="ambient-story-pill-btn"
+                                onClick={() => {
+                                  playClickSound();
+                                  setIsStoryModalOpen(true);
+                                }}
+                                title="Đọc tâm sự mộc mạc của tác giả khi thu âm bản nhạc này"
+                              >
+                                💌 Tâm sự
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="track-card-controls-cluster">
+                          {selectedTrackSeason === 'winter' && winterOfficialTracks.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={handlePrevWinterTrack}
+                              className="track-nav-mini-btn"
+                              title="Bài trước"
+                              aria-label="Bài trước"
+                            >
+                              ⏮
+                            </button>
+                          )}
                           <button
                             type="button"
-                            onClick={handleNextWinterTrack}
-                            className="track-nav-mini-btn"
-                            title="Bài tiếp theo"
-                            aria-label="Bài tiếp theo"
+                            onClick={handleTogglePlayRecording}
+                            className={`track-play-btn ${isEffectivePlaying ? 'is-playing-btn' : ''}`}
+                            title={isEffectivePlaying ? 'Tạm dừng bản nhạc (Pause)' : 'Phát bản nhạc mùa này (Play)'}
+                            aria-label={isEffectivePlaying ? 'Tạm dừng' : 'Phát'}
                           >
-                            ⏭
+                            {isEffectivePlaying ? (
+                              <i className="fa-solid fa-pause" style={{ fontSize: '0.92rem' }}></i>
+                            ) : (
+                              <i className="fa-solid fa-play" style={{ marginLeft: '2px', fontSize: '0.88rem' }}></i>
+                            )}
                           </button>
-                        )}
+                          {selectedTrackSeason === 'winter' && winterOfficialTracks.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={handleNextWinterTrack}
+                              className="track-nav-mini-btn"
+                              title="Bài tiếp theo"
+                              aria-label="Bài tiếp theo"
+                            >
+                              ⏭
+                            </button>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Mini Scrubber & Volume Suite (Hạng mục 2: Tinh gọn, thẩm mỹ) */}
+                      {currentTrackMeta.hasUserAudio && (
+                        <div className="ambient-mini-player-suite">
+                          {/* Dòng 1: Mini Scrubber (mm:ss hiện tại / slider / mm:ss tổng) */}
+                          <div className="ambient-mini-scrubber-row">
+                            <span className="mini-scrubber-time">{formatRecordingTime(recordingCurrentTime)}</span>
+                            <div className="mini-scrubber-bar-wrap">
+                              <input
+                                type="range"
+                                min={0}
+                                max={recordingDuration || 100}
+                                step={0.5}
+                                value={recordingCurrentTime}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={handleRecordingSeek}
+                                className="mini-scrubber-input"
+                                aria-label="Tua thời lượng bản thu"
+                              />
+                              <div
+                                className="mini-scrubber-fill"
+                                style={{
+                                  width: `${recordingDuration > 0 ? (recordingCurrentTime / recordingDuration) * 100 : 0}%`,
+                                }}
+                              />
+                            </div>
+                            <span className="mini-scrubber-time total">{formatRecordingTime(recordingDuration)}</span>
+                          </div>
+
+                          {/* Dòng 2: Thanh âm lượng gọn gàng */}
+                          <div className="ambient-mini-volume-row">
+                            <button
+                              type="button"
+                              className="mini-volume-mute-btn"
+                              onClick={handleToggleRecordingMute}
+                              title={isRecordingMuted ? 'Bật tiếng' : 'Tắt tiếng'}
+                            >
+                              <i
+                                className={`fa-solid ${
+                                  isRecordingMuted || recordingVolume === 0
+                                    ? 'fa-volume-xmark'
+                                    : recordingVolume < 0.5
+                                    ? 'fa-volume-low'
+                                    : 'fa-volume-high'
+                                }`}
+                              ></i>
+                            </button>
+                            <div className="mini-volume-slider-wrap">
+                              <input
+                                type="range"
+                                min={0}
+                                max={1}
+                                step={0.02}
+                                value={isRecordingMuted ? 0 : recordingVolume}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={handleRecordingVolumeChange}
+                                className="mini-volume-slider-input"
+                                aria-label="Chỉnh âm lượng bản thu"
+                              />
+                              <div
+                                className="mini-volume-slider-fill"
+                                style={{ width: `${(isRecordingMuted ? 0 : recordingVolume) * 100}%` }}
+                              />
+                            </div>
+                            <span className="mini-volume-val-text">
+                              {isRecordingMuted ? '0%' : `${Math.round(recordingVolume * 100)}%`}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Danh Sách Bản Thu Âm Mùa Đông Chính Thức Từ playlists.js */}
@@ -2282,6 +2454,13 @@ export const Header = () => {
       <FocusSleepCocoonModal
         isOpen={isFocusCocoonOpen}
         onClose={() => setIsFocusCocoonOpen(false)}
+      />
+
+      {/* Modal Bưu Thiếp Tâm Sự Sau Bản Thu Mùa Đông */}
+      <TrackStoryModal
+        isOpen={isStoryModalOpen}
+        onClose={() => setIsStoryModalOpen(false)}
+        track={winterOfficialTracks[winterTrackIndex] || winterOfficialTracks[0]}
       />
 
       {/* Modal Xác Nhận Đăng Xuất An Toàn & Tinh Tế (Thay thế hoàn toàn window.confirm) */}

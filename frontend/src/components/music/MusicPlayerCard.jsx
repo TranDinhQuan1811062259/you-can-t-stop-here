@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { playClickSound } from '../../utils/soundEffects';
+import { TrackStoryModal } from './TrackStoryModal';
 
 /**
  * Định dạng số giây thành chuỗi mm:ss
@@ -32,6 +33,7 @@ export const MusicPlayerCard = ({
     isMuted,
     loopMode,
     isShuffle,
+    isWavMaster,
     togglePlay,
     nextTrack,
     prevTrack,
@@ -40,8 +42,11 @@ export const MusicPlayerCard = ({
     toggleMute,
     cycleLoopMode,
     toggleShuffle,
+    toggleAudioQuality,
     dismissAutoplayBlocked,
   } = player;
+
+  const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
@@ -121,11 +126,42 @@ export const MusicPlayerCard = ({
           <span className="music-badge-pill theme-badge">
             {theme?.badge || 'Mùa Đông ❄️'}
           </span>
-          {currentTrack?.badge && (
-            <span className="music-badge-pill audio-type-badge">
-              <i className="fa-solid fa-wave-square"></i> {currentTrack.badge}
-            </span>
+
+          {/* Nút bật/tắt Dual-Source Audio (Studio WAV Master vs Fast Stream) */}
+          <button
+            type="button"
+            className={`music-badge-pill quality-toggle-pill ${isWavMaster ? 'is-master' : 'is-stream'}`}
+            onClick={() => {
+              playClickSound();
+              toggleAudioQuality();
+            }}
+            title={
+              isWavMaster
+                ? 'Đang phát: Studio WAV Master (Lossless chất lượng phòng thu). Bấm để đổi sang Fast Stream.'
+                : 'Đang phát: Fast Stream (Tối ưu tải nhanh 4G). Bấm để đổi sang Studio WAV Master.'
+            }
+          >
+            <i className={`fa-solid ${isWavMaster ? 'fa-gem' : 'fa-bolt'}`}></i>
+            <span>{isWavMaster ? 'Studio WAV Master' : 'Fast Stream 4G'}</span>
+          </button>
+
+          {/* Nút mở Thẻ Tâm Sự Sau Bản Thu */}
+          {currentTrack?.storyNote && (
+            <button
+              type="button"
+              className="music-badge-pill story-note-pill"
+              onClick={() => {
+                playClickSound();
+                setIsStoryModalOpen(true);
+              }}
+              title="Đọc tâm sự mộc mạc của tác giả khi thu âm bản nhạc này"
+            >
+              <i className="fa-solid fa-envelope-open-text"></i>
+              <span>Tâm sự sau bản thu</span>
+              <span className="story-pill-dot" />
+            </button>
           )}
+
           {currentTrack?.mood && (
             <span className="music-badge-pill mood-badge">
               {currentTrack.mood}
@@ -294,6 +330,13 @@ export const MusicPlayerCard = ({
           {isMuted ? '0%' : `${Math.round(volume * 100)}%`}
         </span>
       </div>
+
+      {/* Modal Bưu Thiếp Tâm Sự Sau Bản Thu */}
+      <TrackStoryModal
+        isOpen={isStoryModalOpen}
+        onClose={() => setIsStoryModalOpen(false)}
+        track={currentTrack}
+      />
     </div>
   );
 };

@@ -19,6 +19,16 @@ export const useMusicPlayer = (tracks = []) => {
   const [loopMode, setLoopMode] = useState('all'); // 'all' | 'one' | 'none'
   const [isShuffle, setIsShuffle] = useState(false);
 
+  // Kiến trúc Dual-Source: Studio WAV Master (Lossless Hi-Fi) vs Fast Stream (4G / Nhẹ máy)
+  const [isWavMaster, setIsWavMaster] = useState(() => {
+    try {
+      const saved = localStorage.getItem('freedom_audio_quality_wav');
+      return saved !== null ? saved === 'true' : true;
+    } catch (_) {
+      return true;
+    }
+  });
+
   // Lưu âm lượng an toàn trong localStorage (mặc định 45%)
   const [volume, setVolume] = useState(() => {
     try {
@@ -34,6 +44,16 @@ export const useMusicPlayer = (tracks = []) => {
 
   const audioRef = useRef(null);
   const currentTrack = tracks && tracks.length > 0 ? tracks[currentTrackIndex] || tracks[0] : null;
+
+  // Lấy đường dẫn nguồn âm thanh mục tiêu theo tùy chọn chất lượng (Dual-Source)
+  const getTargetTrackSrc = useCallback((track, preferWav) => {
+    if (!track) return '';
+    const useWav = preferWav !== undefined ? preferWav : isWavMaster;
+    if (useWav) {
+      return track.wavSrc || track.src || '';
+    }
+    return track.streamUrl || track.wavSrc || track.src || '';
+  }, [isWavMaster]);
 
   // Khởi tạo đối tượng Audio một lần duy nhất
   useEffect(() => {
@@ -64,7 +84,7 @@ export const useMusicPlayer = (tracks = []) => {
     }
   }, [volume, isMuted]);
 
-  // Nạp bài hát khi đổi track
+  // Nạp bài hát khi đổi track hoặc đổi chất lượng
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack || !currentTrack.src) {
@@ -76,10 +96,11 @@ export const useMusicPlayer = (tracks = []) => {
     setAudioError(null);
     setIsLoading(true);
 
+    const targetSrc = getTargetTrackSrc(currentTrack);
     const prevSrc = audio.getAttribute('src');
-    const needsLoad = !prevSrc || !audio.src || !audio.src.endsWith(currentTrack.src);
+    const needsLoad = !prevSrc || !audio.src || !audio.src.endsWith(targetSrc);
     if (needsLoad) {
-      audio.src = currentTrack.src;
+      audio.src = targetSrc;
       audio.load();
     }
 
@@ -162,6 +183,20 @@ export const useMusicPlayer = (tracks = []) => {
     };
 
     const handleError = (e) => {
+      // Cơ chế Auto-Fallback cho Dual-Source:
+      // Nếu đang thử phát streamUrl (.mp3) mà gặp lỗi (chưa có file nén trên host), tự động fallback về .wav gốc!
+      const currentSrc = audio?.src || '';
+      const fallbackSrc = currentTrack?.wavSrc || currentTrack?.src;
+      if (!isWavMaster && fallbackSrc && currentTrack?.streamUrl && (currentSrc.includes('mp3') || currentSrc.includes(encodeURI(currentTrack.streamUrl)))) {
+        console.info('[useMusicPlayer] Stream file unavailable, smoothly falling back to Studio WAV:', fallbackSrc);
+        audio.src = fallbackSrc;
+        audio.load();
+        if (isPlaying) {
+          audio.play().catch(() => {});
+        }
+        return;
+      }
+
       console.warn('[useMusicPlayer] Audio playback error on:', currentTrack?.src, e);
       setIsLoading(false);
       setIsPlaying(false);
@@ -210,9 +245,10 @@ export const useMusicPlayer = (tracks = []) => {
       restoreAmbientFromMusic();
     } else {
       try {
-        const needsLoad = !audio.src || !audio.src.endsWith(currentTrack.src);
+        const targetSrc = getTargetTrackSrc(currentTrack);
+        const needsLoad = !audio.src || !audio.src.endsWith(targetSrc);
         if (needsLoad) {
-          audio.src = currentTrack.src;
+          audio.src = targetSrc;
           audio.load();
         }
         const playPromise = audio.play();
@@ -249,9 +285,10 @@ export const useMusicPlayer = (tracks = []) => {
 
     if (audio && nextTrack?.src) {
       try {
-        const needsLoad = !audio.src || !audio.src.endsWith(nextTrack.src);
+        const targetSrc = getTargetTrackSrc(nextTrack);
+        const needsLoad = !audio.src || !audio.src.endsWith(targetSrc);
         if (needsLoad) {
-          audio.src = nextTrack.src;
+          audio.src = targetSrc;
           audio.load();
         }
         const playPromise = audio.play();
@@ -361,6 +398,46 @@ export const useMusicPlayer = (tracks = []) => {
     setIsShuffle((prev) => !prev);
   }, []);
 
+  // Chuyển đổi chất lượng âm thanh (Dual-Source: Studio WAV Master vs Fast Stream)
+  const toggleAudioQuality = useCallback(() => {
+    setIsWavMaster((prev) => {
+      const nextWav = !prev;
+      try {
+        localStorage.setItem('freedom_audio_quality_wav', String(nextWav));
+      } catch (_) {}
+
+      const audio = audioRef.current;
+      if (audio && currentTrack) {
+        const nextSrc = getTargetTrackSrc(currentTrack, nextWav);
+        if (nextSrc && !audio.src.endsWith(nextSrc)) {
+          const savedTime = audio.currentTime || 0;
+          const wasPlaying = !audio.paused;
+          audio.src = nextSrc;
+          audio.load();
+          if (savedTime > 0) {
+            const handleRestoreTime = () => {
+              try {
+                if (audio.duration && !isNaN(audio.duration)) {
+                  audio.currentTime = Math.min(savedTime, audio.duration);
+                } else {
+                  audio.currentTime = savedTime;
+                }
+              } catch (_) {}
+            };
+            audio.addEventListener('loadedmetadata', handleRestoreTime, { once: true });
+            try {
+              audio.currentTime = savedTime;
+            } catch (_) {}
+          }
+          if (wasPlaying) {
+            audio.play().catch((err) => console.warn('[useMusicPlayer] Quality switch play error:', err));
+          }
+        }
+      }
+      return nextWav;
+    });
+  }, [currentTrack, getTargetTrackSrc]);
+
   // Bỏ chặn autoplay khi người dùng bấm tương tác
   const dismissAutoplayBlocked = useCallback(() => {
     setIsAutoplayBlocked(false);
@@ -380,6 +457,7 @@ export const useMusicPlayer = (tracks = []) => {
     isMuted,
     loopMode,
     isShuffle,
+    isWavMaster,
     togglePlay,
     playTrack,
     nextTrack: handleNextTrack,
@@ -389,6 +467,7 @@ export const useMusicPlayer = (tracks = []) => {
     toggleMute,
     cycleLoopMode,
     toggleShuffle,
+    toggleAudioQuality,
     dismissAutoplayBlocked,
   };
 };

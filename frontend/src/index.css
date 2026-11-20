@@ -16829,10 +16829,219 @@ body.theme-dark .ambient-season-tab:hover,
   border-radius: 14px;
   padding: 12px 14px;
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   margin-bottom: 12px;
   transition: all 0.25s ease;
+}
+
+.ambient-track-main-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.ambient-story-pill-btn {
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: #6366f1;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+body.theme-dark .ambient-story-pill-btn,
+[data-theme="dark"] .ambient-story-pill-btn,
+.mode-dark .ambient-story-pill-btn {
+  background: rgba(129, 140, 248, 0.18);
+  border-color: rgba(129, 140, 248, 0.4);
+  color: #a5b4fc;
+}
+
+.ambient-story-pill-btn:hover {
+  background: rgba(99, 102, 241, 0.25);
+  transform: translateY(-1px);
+}
+
+/* Suite Mini Scrubber & Volume trong Popup Header */
+.ambient-mini-player-suite {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(203, 213, 225, 0.5);
+}
+
+body.theme-dark .ambient-mini-player-suite,
+[data-theme="dark"] .ambient-mini-player-suite,
+.mode-dark .ambient-mini-player-suite {
+  border-top-color: rgba(51, 65, 85, 0.6);
+}
+
+.ambient-mini-scrubber-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mini-scrubber-time {
+  font-size: 0.68rem;
+  font-family: monospace, sans-serif;
+  font-weight: 700;
+  color: #64748b;
+  min-width: 32px;
+}
+
+body.theme-dark .mini-scrubber-time,
+[data-theme="dark"] .mini-scrubber-time,
+.mode-dark .mini-scrubber-time {
+  color: #94a3b8;
+}
+
+.mini-scrubber-time.total {
+  text-align: right;
+}
+
+.mini-scrubber-bar-wrap {
+  position: relative;
+  flex: 1;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.mini-scrubber-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+  z-index: 2;
+}
+
+.mini-scrubber-fill {
+  position: absolute;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #6366f1, #38bdf8);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.mini-scrubber-bar-wrap::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(203, 213, 225, 0.4);
+  border-radius: 4px;
+}
+
+body.theme-dark .mini-scrubber-bar-wrap::before,
+[data-theme="dark"] .mini-scrubber-bar-wrap::before,
+.mode-dark .mini-scrubber-bar-wrap::before {
+  background: rgba(51, 65, 85, 0.6);
+}
+
+.ambient-mini-volume-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mini-volume-mute-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.78rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s ease;
+}
+
+body.theme-dark .mini-volume-mute-btn,
+[data-theme="dark"] .mini-volume-mute-btn,
+.mode-dark .mini-volume-mute-btn {
+  color: #94a3b8;
+}
+
+.mini-volume-mute-btn:hover {
+  color: #10b981;
+}
+
+.mini-volume-slider-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 140px;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.mini-volume-slider-wrap::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: rgba(203, 213, 225, 0.4);
+  border-radius: 3px;
+}
+
+body.theme-dark .mini-volume-slider-wrap::before,
+[data-theme="dark"] .mini-volume-slider-wrap::before,
+.mode-dark .mini-volume-slider-wrap::before {
+  background: rgba(51, 65, 85, 0.6);
+}
+
+.mini-volume-slider-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+  z-index: 2;
+}
+
+.mini-volume-slider-fill {
+  position: absolute;
+  left: 0;
+  height: 3px;
+  background: #10b981;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.mini-volume-val-text {
+  font-size: 0.66rem;
+  font-family: monospace, sans-serif;
+  font-weight: 700;
+  color: #64748b;
+  min-width: 26px;
+  text-align: right;
+}
+
+body.theme-dark .mini-volume-val-text,
+[data-theme="dark"] .mini-volume-val-text,
+.mode-dark .mini-volume-val-text {
+  color: #94a3b8;
 }
 
 body.theme-dark .ambient-track-card,
