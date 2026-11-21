@@ -610,6 +610,36 @@ export const Header = () => {
     };
   }, []);
 
+  // Thông báo bảo mật nổi (Toast) khi thu hồi phiên hoặc đăng xuất tất cả thiết bị
+  const [securityNotice, setSecurityNotice] = useState(null);
+
+  useEffect(() => {
+    let timerId = null;
+    const showNotice = (msg) => {
+      setSecurityNotice(msg);
+      if (timerId) clearTimeout(timerId);
+      timerId = setTimeout(() => setSecurityNotice(null), 5000);
+    };
+
+    const handleNoticeEvent = (e) => {
+      showNotice(e.detail || '✓ Đã thu hồi toàn bộ phiên đăng nhập trên tất cả thiết bị thành công!');
+    };
+
+    try {
+      const stored = sessionStorage.getItem('freedom_logout_notice');
+      if (stored) {
+        sessionStorage.removeItem('freedom_logout_notice');
+        showNotice(stored);
+      }
+    } catch (_) {}
+
+    window.addEventListener('freedom_logout_notice', handleNoticeEvent);
+    return () => {
+      if (timerId) clearTimeout(timerId);
+      window.removeEventListener('freedom_logout_notice', handleNoticeEvent);
+    };
+  }, []);
+
   const toggleNav = () => setIsNavOpen((prev) => !prev);
   const closeNav = () => setIsNavOpen(false);
 
@@ -1096,6 +1126,50 @@ export const Header = () => {
 
   return (
     <>
+      {securityNotice && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '72px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 99999,
+            background: 'rgba(15, 23, 42, 0.95)',
+            color: '#ffffff',
+            padding: '10px 22px',
+            borderRadius: '999px',
+            fontSize: '0.86rem',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            boxShadow: '0 10px 32px rgba(0, 0, 0, 0.4), 0 0 16px rgba(239, 68, 68, 0.25)',
+            border: '1.5px solid rgba(239, 68, 68, 0.5)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            animation: 'fadeIn 0.22s ease',
+          }}
+        >
+          <span style={{ fontSize: '1.05rem', color: '#f87171' }}>⚡</span>
+          <span>{securityNotice}</span>
+          <button
+            type="button"
+            onClick={() => setSecurityNotice(null)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              padding: '0 0 0 8px',
+              lineHeight: 1,
+            }}
+            title="Đóng thông báo"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       <header className={`site-header season-accent-${activeSeason.id}`}>
         <div className="container header-container">
           {/* Logo & Brand Name + Seasonal Weather Pill */}

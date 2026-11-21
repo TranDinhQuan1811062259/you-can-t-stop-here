@@ -1,4 +1,12 @@
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const dataDir = path.join(__dirname, '../../data');
+const revokedTokensFilePath = path.join(dataDir, 'revoked_tokens.json');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'you_cant_stop_here_secret_key_2026_super_secure';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || `${JWT_SECRET}_refresh_v1`;
@@ -18,18 +26,67 @@ const base64UrlDecode = (str) => {
 };
 
 /**
+ * Đọc danh sách token đã thu hồi từ đĩa cứng (Khôi phục phiên khi restart máy chủ)
+ */
+const loadRevokedTokensFromDisk = () => {
+  try {
+    if (fs.existsSync(revokedTokensFilePath)) {
+      const raw = fs.readFileSync(revokedTokensFilePath, 'utf8');
+      const data = JSON.parse(raw);
+      if (Array.isArray(data)) {
+        const now = Date.now();
+        const map = new Map();
+        for (const item of data) {
+          if (item?.token && item.expiresAt && item.expiresAt > now) {
+            map.set(String(item.token), Number(item.expiresAt));
+          }
+        }
+        return map;
+      }
+    }
+  } catch (err) {
+    // Fail-safe: Sử dụng bộ nhớ RAM nếu gặp sự cố đọc file
+  }
+  return new Map();
+};
+
+/**
+ * Ghi danh sách token đã thu hồi xuống đĩa cứng (Lưu trữ bền vững)
+ */
+const saveRevokedTokensToDisk = (store) => {
+  try {
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    const arr = [];
+    const now = Date.now();
+    for (const [token, expiresAt] of store.entries()) {
+      if (expiresAt > now) {
+        arr.push({ token, expiresAt });
+      }
+    }
+    fs.writeFileSync(revokedTokensFilePath, JSON.stringify(arr, null, 2), 'utf8');
+  } catch (_) {}
+};
+
+/**
  * Kho lưu trữ Token bị thu hồi (Revoked Token Store / Blacklist)
  * Lưu: token -> expiresAt (timestamp miliseconds)
  */
-const revokedTokenStore = new Map();
+const revokedTokenStore = loadRevokedTokensFromDisk();
 
 // Tự động dọn dẹp các token đã quá hạn trong danh sách thu hồi mỗi 15 phút
 const cleanupRevokedTokensInterval = setInterval(() => {
   const now = Date.now();
+  let changed = false;
   for (const [t, exp] of revokedTokenStore.entries()) {
     if (now > exp) {
       revokedTokenStore.delete(t);
+      changed = true;
     }
+  }
+  if (changed) {
+    saveRevokedTokensToDisk(revokedTokenStore);
   }
 }, 15 * 60 * 1000);
 
@@ -38,12 +95,13 @@ if (cleanupRevokedTokensInterval.unref) {
 }
 
 /**
- * Thu hồi một Refresh Token (Revoke Session)
+ * Thu hồi một Refresh Token (Revoke Session - Đồng bộ tức thời xuống đĩa)
  */
 export const revokeToken = (token, maxAgeSeconds = 7 * 24 * 60 * 60) => {
   if (!token) return;
   const expiresAt = Date.now() + maxAgeSeconds * 1000;
   revokedTokenStore.set(String(token), expiresAt);
+  saveRevokedTokensToDisk(revokedTokenStore);
 };
 
 /**

@@ -522,6 +522,11 @@ export const AuthProvider = ({ children }) => {
       await authService.logoutAll();
     } catch (_) {}
     await logout(false);
+    try {
+      const noticeMsg = '✓ Đã thu hồi toàn bộ phiên đăng nhập trên tất cả thiết bị thành công!';
+      sessionStorage.setItem('freedom_logout_notice', noticeMsg);
+      window.dispatchEvent(new CustomEvent('freedom_logout_notice', { detail: noticeMsg }));
+    } catch (_) {}
   };
 
   const openLoginModal = () => {

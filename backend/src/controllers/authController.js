@@ -635,6 +635,26 @@ export const updateProfile = async (req, res) => {
     const userId = req.user?._id;
     const userEmail = req.user?.email;
 
+    // Giới hạn độ dài input an toàn (Phòng chống ReDoS và nghẽn CPU bcrypt)
+    if (newPassword && (newPassword.length < 6 || newPassword.length > 128)) {
+      return sendError(res, { message: 'Mật khẩu mới phải từ 6 đến 128 ký tự', status: 400 });
+    }
+    if (currentPassword && currentPassword.length > 128) {
+      return sendError(res, { message: 'Mật khẩu hiện tại không hợp lệ', status: 400 });
+    }
+    if (name && name.length > 100) {
+      return sendError(res, { message: 'Họ tên tối đa 100 ký tự', status: 400 });
+    }
+    if (email && email.length > 150) {
+      return sendError(res, { message: 'Email tối đa 150 ký tự', status: 400 });
+    }
+    if (jobTitle && jobTitle.length > 100) {
+      return sendError(res, { message: 'Chức danh tối đa 100 ký tự', status: 400 });
+    }
+    if (bio && bio.length > 500) {
+      return sendError(res, { message: 'Tiểu sử tối đa 500 ký tự', status: 400 });
+    }
+
     const cleanEmail = email ? email.trim().toLowerCase() : null;
 
     if (isDbConnected) {
@@ -1610,12 +1630,16 @@ export const handleOAuthCallback = async (req, res) => {
       if (code && appId && appSecret) {
         try {
           const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${appId}&client_secret=${appSecret}&redirect_uri=${encodeURIComponent(callbackUrl)}&code=${code}`;
-          const tokenRes = await fetch(tokenUrl);
+          const tokenRes = await fetch(tokenUrl, {
+            signal: AbortSignal.timeout(10000),
+          });
           const tokenData = await tokenRes.json();
 
           if (tokenData.access_token) {
             const profileUrl = `https://graph.facebook.com/v19.0/me?fields=id,name,email,picture.width(500).height(500)&access_token=${tokenData.access_token}`;
-            const userRes = await fetch(profileUrl);
+            const userRes = await fetch(profileUrl, {
+              signal: AbortSignal.timeout(10000),
+            });
             const fbUser = await userRes.json();
 
             profile.id = fbUser.id;
@@ -1654,6 +1678,7 @@ export const handleOAuthCallback = async (req, res) => {
               code,
               redirect_uri: callbackUrl,
             }),
+            signal: AbortSignal.timeout(10000),
           });
           const tokenData = await tokenRes.json();
 
@@ -1664,6 +1689,7 @@ export const handleOAuthCallback = async (req, res) => {
                 'User-Agent': 'Freedom-Web-App',
                 'Accept': 'application/vnd.github+json',
               },
+              signal: AbortSignal.timeout(10000),
             });
             const ghUser = await userRes.json();
 
@@ -1675,6 +1701,7 @@ export const handleOAuthCallback = async (req, res) => {
                     'Authorization': `Bearer ${tokenData.access_token}`,
                     'User-Agent': 'Freedom-Web-App',
                   },
+                  signal: AbortSignal.timeout(10000),
                 });
                 const emailsData = await emailsRes.json();
                 if (Array.isArray(emailsData)) {
@@ -1718,12 +1745,14 @@ export const handleOAuthCallback = async (req, res) => {
               redirect_uri: callbackUrl,
               grant_type: 'authorization_code',
             }),
+            signal: AbortSignal.timeout(10000),
           });
           const tokenData = await tokenRes.json();
 
           if (tokenData.access_token) {
             const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
               headers: { Authorization: `Bearer ${tokenData.access_token}` },
+              signal: AbortSignal.timeout(10000),
             });
             const gUser = await userRes.json();
 
@@ -2063,9 +2092,9 @@ export const simulateQrSessionScan = async (req, res) => {
 export const refreshToken = async (req, res) => {
   try {
     const { refreshToken: tokenInput } = req.body;
-    if (!tokenInput) {
+    if (!tokenInput || typeof tokenInput !== 'string' || tokenInput.length > 2048) {
       return sendError(res, {
-        message: 'Vui lòng cung cấp refresh token để làm mới phiên làm việc',
+        message: 'Refresh token không hợp lệ hoặc vượt quá độ dài cho phép',
         status: 400,
       });
     }
@@ -2152,7 +2181,7 @@ export const refreshToken = async (req, res) => {
 export const logout = async (req, res) => {
   try {
     const { refreshToken: tokenInput } = req.body;
-    if (tokenInput) {
+    if (tokenInput && typeof tokenInput === 'string' && tokenInput.length <= 2048) {
       revokeToken(tokenInput);
     }
     return sendSuccess(res, {

@@ -967,7 +967,7 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
                     <span>🛡️</span> Phiên đăng nhập & Bảo mật
                   </div>
                   <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '3px' }}>
-                    Đang đăng nhập: <strong style={{ color: '#1e293b' }}>{user?.email || user?.name}</strong> • Thiết bị này
+                    Đang đăng nhập: <strong style={{ color: '#1e293b' }}>{user?.email || user?.name}</strong> • Phiên bản: <span style={{ padding: '1px 6px', borderRadius: '4px', background: '#fee2e2', color: '#991b1b', fontWeight: 700 }}>v{user?.tokenVersion !== undefined ? user.tokenVersion : 0}</span>
                   </div>
                 </div>
 

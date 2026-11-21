@@ -51,8 +51,8 @@ router.post('/qr/simulate', (req, res, next) => {
 router.post('/register', otpTargetCooldownLimiter, otpSendLimiter, register);
 router.post('/login', authLimiter, login);
 router.post('/refresh-token', authLimiter, refreshToken);
-router.post('/logout', optionalProtect, logout);
-router.post('/logout-all', protect, logoutAll);
+router.post('/logout', authLimiter, optionalProtect, logout);
+router.post('/logout-all', authLimiter, protect, logoutAll);
 router.post('/send-otp', otpTargetCooldownLimiter, otpSendLimiter, sendLoginOtp);
 router.post('/verify-otp', authLimiter, verifyOtpAndLogin);
 router.post('/social-login', authLimiter, otpTargetCooldownLimiter, socialLogin);

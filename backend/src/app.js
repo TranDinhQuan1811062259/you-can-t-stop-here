@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import morgan from 'morgan';
 import path from 'path';
 import fs from 'fs';
@@ -18,6 +19,48 @@ const app = express();
 
 // Hỗ trợ reverse proxy (Vercel, Render, Nginx) để xác định chính xác IP client cho rate limiter
 app.set('trust proxy', 1);
+
+// Cấu hình bảo mật HTTP Headers qua Helmet (CSP, Anti-Clickjacking, No-Sniff, XSS)
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'", "https:"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        scriptSrcAttr: ["'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdnjs.cloudflare.com'],
+        styleSrcElem: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdnjs.cloudflare.com'],
+        fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com', 'https://cdnjs.cloudflare.com'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+        mediaSrc: ["'self'", 'data:', 'blob:', 'https:'],
+        connectSrc: ["'self'", 'blob:', 'data:', 'https:', 'wss:', 'ws:'],
+        frameSrc: [
+          "'self'",
+          'https://www.youtube.com',
+          'https://www.youtube-nocookie.com',
+          'https://open.spotify.com',
+          'https://w.soundcloud.com',
+          'https://*.youtube.com',
+          'https://*.spotify.com',
+          'https://*.soundcloud.com',
+        ],
+        workerSrc: ["'self'", 'blob:'],
+        childSrc: ["'self'", 'blob:'],
+        manifestSrc: ["'self'"],
+      },
+    },
+    // Chống Clickjacking: Ngăn chặn trang bị nhúng vào iframe ngoài nguồn gốc (hỗ trợ legacy browsers song song với frameAncestors)
+    frameguard: { action: 'sameorigin' },
+    // Tắt COEP để không chặn tải audio/media/textures từ các nguồn CDN ngoài (Pixabay, Cloudinary) trong Web Audio API và Three.js
+    crossOriginEmbedderPolicy: false,
+    // Cho phép chia sẻ tài nguyên tĩnh (ảnh uploads, audio) sang frontend client nếu chạy khác port trong môi trường dev
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 // Middlewares & CORS hỗ trợ linh hoạt cổng local
 app.use(cors({
