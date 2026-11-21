@@ -188,7 +188,7 @@ export const PostCard = ({ post }) => {
           />
         </Link>
 
-        {/* Thanh Huy Hiệu Trên Đầu Ảnh (Category + Chế độ xem + Không gian) - Rộng rãi, không bị đè */}
+        {/* Thanh Huy Hiệu Trên Đầu Ảnh (Category + Chế độ xem bên trái; Không gian + Cảnh báo bên phải) - Giữ dáng pill ngang, chống bóp méo & cắt chữ */}
         <div className="card-top-badges-bar">
           <div className="card-badges-left">
             <Link
@@ -196,9 +196,8 @@ export const PostCard = ({ post }) => {
               className="card-category-badge"
               title={`Thể loại: ${categoryName} (Bấm để xem tất cả bài viết cùng chủ đề)`}
               onClick={(e) => e.stopPropagation()}
-              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
             >
-              <span>{categoryIcon}</span>
+              <span className="category-icon">{categoryIcon}</span>
               <span className="card-category-badge-text">{categoryName}</span>
             </Link>
             <span
@@ -206,45 +205,39 @@ export const PostCard = ({ post }) => {
               title={post.visibility === 'friends' ? 'Chế độ: Chỉ bạn bè mới xem được' : 'Chế độ: Công khai cho tất cả'}
             >
               {post.visibility === 'friends' ? (
-                <i className="fa-solid fa-user-group" style={{ fontSize: '0.75rem' }}></i>
+                <i className="fa-solid fa-user-group" style={{ fontSize: '0.72rem' }}></i>
               ) : (
-                <i className="fa-solid fa-globe" style={{ fontSize: '0.75rem' }}></i>
+                <i className="fa-solid fa-globe" style={{ fontSize: '0.72rem' }}></i>
               )}
             </span>
+          </div>
+
+          <div className="card-badges-right">
             {hasAtmosphere && (
               <span
                 className="card-atmosphere-badge"
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '3px 8px',
-                  borderRadius: '12px',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  background: 'rgba(15, 23, 42, 0.85)',
-                  backdropFilter: 'blur(6px)',
                   color: customAccentColor,
-                  border: `1px solid ${customAccentColor}60`,
+                  borderColor: `${customAccentColor}60`,
                   boxShadow: `0 2px 8px ${customAccentColor}25`,
                 }}
                 title={`Không gian bài viết: ${themeMeta.name}`}
               >
-                <span>{themeMeta.icon}</span>
-                <span>{themeMeta.badgeText}</span>
+                <span className="atmosphere-icon">{themeMeta.icon}</span>
+                <span className="atmosphere-text">{themeMeta.badgeText}</span>
+              </span>
+            )}
+
+            {/* Huy hiệu cảnh báo bài nhạy cảm Chính Trị (nếu có) */}
+            {post.isFlagged && (
+              <span
+                className="card-flagged-badge"
+                title={post.flagReason || 'Bài viết chứa yếu tố nhạy cảm Chính Trị'}
+              >
+                ⚠️ Nhạy Cảm
               </span>
             )}
           </div>
-
-          {/* Huy hiệu cảnh báo bài nhạy cảm Chính Trị (nếu có) */}
-          {post.isFlagged && (
-            <span
-              className="card-flagged-badge"
-              title={post.flagReason || 'Bài viết chứa yếu tố nhạy cảm Chính Trị'}
-            >
-              ⚠️ Nhạy Cảm
-            </span>
-          )}
         </div>
 
         {/* Nút Nghe A.I Đọc Bài Viết Cảm Xúc - Đặt riêng ở góc dưới bên phải ảnh, thoáng đãng không bị cắt chữ */}

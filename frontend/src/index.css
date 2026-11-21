@@ -2448,23 +2448,6 @@ body.theme-dark .hero-quick-feat-pill,
   transform: scale(1.05);
 }
 
-.card-category-badge {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  background: var(--bg-glass);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: var(--pastel-sage);
-  border: 1px solid var(--pastel-sage-border);
-  font-size: 0.76rem;
-  font-weight: 700;
-  padding: 5px 12px;
-  border-radius: var(--radius-full);
-  letter-spacing: 0.3px;
-  box-shadow: var(--shadow-sm);
-}
-
 .card-content {
   padding: 22px;
   display: flex;
@@ -11593,40 +11576,69 @@ body.theme-light .floating-region-select {
   gap: 8px;
   z-index: 3;
   pointer-events: none;
+  width: calc(100% - 20px);
+  box-sizing: border-box;
 }
 
 .card-top-badges-bar > * {
   pointer-events: auto;
 }
 
+/* Cụm huy hiệu bên trái (Category + Chế độ xem) */
 .card-badges-left {
   display: flex;
   align-items: center;
   gap: 6px;
-  max-width: 88%;
   min-width: 0;
+  flex: 1 1 auto;
+  max-width: calc(100% - 85px);
 }
 
-/* Category Badge bên trái - Hiển thị tên danh mục đầy đủ, sang trọng */
+/* Cụm huy hiệu bên phải (Không gian + Cảnh báo) */
+.card-badges-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0 !important;
+  margin-left: auto;
+  min-width: max-content;
+}
+
+/* Category Badge bên trái - Hiển thị tên danh mục đầy đủ, sang trọng, không bị cắt ngắn vô lý */
 .card-category-badge {
   position: static !important;
-  max-width: 210px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  flex-shrink: 0 !important;
+  max-width: 200px !important;
   white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  display: inline-block !important;
   background: rgba(15, 23, 42, 0.88) !important;
   backdrop-filter: blur(8px) !important;
   -webkit-backdrop-filter: blur(8px) !important;
   color: #2dd4bf !important;
-  border: 1px solid rgba(45, 212, 191, 0.35) !important;
+  border: 1px solid rgba(45, 212, 191, 0.4) !important;
   font-size: 0.74rem !important;
   font-weight: 700 !important;
   padding: 4px 10px !important;
   border-radius: 999px !important;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  text-decoration: none !important;
   transition: all 0.2s ease;
+  line-height: 1.2 !important;
+}
+
+.card-category-badge:hover {
+  transform: translateY(-1px);
+  border-color: #5eead4 !important;
+  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.4) !important;
+}
+
+.card-category-badge .category-icon {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  line-height: 1;
 }
 
 .card-category-badge span,
@@ -11634,7 +11646,17 @@ body.theme-light .floating-region-select {
   color: #2dd4bf !important;
 }
 
-/* Category Badge trong Chế độ Ngày (Light Mode) - Nổi bật, chữ xanh ngọc đậm trên nền trắng đục cao cấp */
+.card-category-badge .card-category-badge-text {
+  display: inline-block !important;
+  max-width: 155px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  vertical-align: middle;
+  line-height: 1.2;
+}
+
+/* Category Badge trong Chế độ Ngày (Light Mode) */
 body.theme-light .card-category-badge,
 [data-theme="light"] .card-category-badge,
 .mode-light .card-category-badge {
@@ -11654,19 +11676,23 @@ body.theme-light .card-category-badge .card-category-badge-text,
   font-weight: 700 !important;
 }
 
+/* Visibility Pill - Nút tròn tinh gọn 24x24px, không chiếm diện tích ngang */
 .card-visibility-pill {
   flex-shrink: 0 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 3px 8px !important;
-  border-radius: 999px !important;
-  font-size: 0.72rem !important;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  font-size: 0.7rem !important;
   font-weight: 700 !important;
   backdrop-filter: blur(8px) !important;
   -webkit-backdrop-filter: blur(8px) !important;
   background: rgba(15, 23, 42, 0.82) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
   color: #e2e8f0 !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
 }
@@ -11692,16 +11718,66 @@ body.theme-light .card-visibility-pill.is-friends,
   border-color: rgba(217, 119, 6, 0.35) !important;
 }
 
+/* Atmosphere Badge bên phải - Giữ dáng pill ngang chuẩn, cấm tuyệt đối rớt dọc */
+.card-atmosphere-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 3px 9px !important;
+  border-radius: 999px !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  background: rgba(15, 23, 42, 0.88) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  max-width: 150px !important;
+  letter-spacing: 0.2px;
+  line-height: 1.2 !important;
+}
+
+.card-atmosphere-badge .atmosphere-icon {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.card-atmosphere-badge .atmosphere-text {
+  display: inline-block;
+  max-width: 105px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+body.theme-light .card-atmosphere-badge,
+[data-theme="light"] .card-atmosphere-badge,
+.mode-light .card-atmosphere-badge {
+  background: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Flagged Badge bên phải - Dáng pill ngang, cấm tuyệt đối bóp méo hay rớt dọc */
 .card-top-badges-bar .card-flagged-badge {
   background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
   color: #ffffff !important;
-  padding: 4px 8px !important;
+  padding: 3px 9px !important;
   border-radius: 999px !important;
-  font-size: 0.68rem !important;
+  font-size: 0.7rem !important;
   font-weight: 800 !important;
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.45) !important;
   white-space: nowrap !important;
   flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  line-height: 1.2 !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  letter-spacing: 0.2px;
 }
 
 /* NÚT NGHE A.I ĐẶT Ở GÓC DƯỚI BÊN PHẢI ẢNH BÌA - Thiết kế Glassmorphism chuẩn cao cấp */
@@ -11717,9 +11793,9 @@ body.theme-light .card-visibility-pill.is-friends,
   background: rgba(15, 23, 42, 0.88) !important;
   color: #2dd4bf !important;
   border: 1.5px solid rgba(45, 212, 191, 0.45) !important;
-  padding: 5px 12px !important;
+  padding: 4px 10px !important;
   border-radius: 999px !important;
-  font-size: 0.74rem !important;
+  font-size: 0.72rem !important;
   font-weight: 700 !important;
   cursor: pointer !important;
   display: inline-flex !important;
@@ -11730,6 +11806,43 @@ body.theme-light .card-visibility-pill.is-friends,
   -webkit-backdrop-filter: blur(8px) !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+/* Responsive Tự Động Co Gọn Trên Màn Hình Di Động Hẹp */
+@media (max-width: 480px) {
+  .card-category-badge {
+    max-width: 155px !important;
+    padding: 3px 8px !important;
+  }
+  .card-category-badge .card-category-badge-text {
+    max-width: 105px !important;
+  }
+  .card-atmosphere-badge {
+    max-width: 120px !important;
+    padding: 3px 7px !important;
+  }
+  .card-atmosphere-badge .atmosphere-text {
+    max-width: 75px !important;
+  }
+  .card-badges-left {
+    max-width: calc(100% - 75px);
+  }
+}
+
+@media (max-width: 360px) {
+  .card-category-badge {
+    max-width: 130px !important;
+  }
+  .card-category-badge .card-category-badge-text {
+    max-width: 80px !important;
+  }
+  .card-atmosphere-badge .atmosphere-text {
+    display: none !important; /* Chỉ hiện icon trên màn hình siêu hẹp < 360px */
+  }
+  .card-atmosphere-badge {
+    padding: 3px 6px !important;
+  }
 }
 
 body.theme-light .card-audio-mood-btn,

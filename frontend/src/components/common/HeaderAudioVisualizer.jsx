@@ -1,17 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { getAudioContext } from '../../utils/soundEffects';
 
 /**
- * Cache lưu trữ các node Web Audio theo từng HTMLAudioElement
- * Ngăn chặn tuyệt đối lỗi InvalidStateError khi gọi createMediaElementSource nhiều lần
- */
-const mediaSourceCache = new WeakMap();
-
-/**
- * HeaderAudioVisualizer - Mini Equalizer / Waveform Visualizer
- * - Kết nối trực tiếp Web Audio API (AnalyserNode) để phân tích tần số thời gian thực.
- * - Tự động kích hoạt cơ chế Fallback mượt mà (Harmonic Wave) khi không truy cập được node audio hoặc bị chặn bởi CORS/Autoplay.
- * - Tự động hạ thấp các cột sóng về trạng thái nghỉ (Zero CPU waste) khi nhạc tạm dừng.
+ * HeaderAudioVisualizer - Mini Equalizer / Waveform Rhythm Visualizer
+ * - Kiến trúc Pure Non-Destructive Visualizer: Không can thiệp hay chiếm quyền Web Audio stream của <audio> element.
+ * - Bảo toàn 100% luồng âm thanh nguyên bản: Không bao giờ bị tắt tiếng (CORS Silence), không làm liệt thanh volume/mute.
+ * - Mô phỏng phổ âm học Harmonic Wave Synthesis tự nhiên, sinh động đạt chuẩn 60 FPS.
+ * - Tự động hạ thấp các cột sóng về trạng thái nghỉ (Zero CPU waste) khi nhạc tạm dừng hoặc unmount (Quy tắc 3 GEMINI.md).
  */
 export const HeaderAudioVisualizer = ({
   audioRef,
@@ -28,56 +22,10 @@ export const HeaderAudioVisualizer = ({
   const [barHeights, setBarHeights] = useState(() => Array(barCount).fill(0.15));
   const animFrameRef = useRef(null);
   const tickRef = useRef(0);
-  const analyserRef = useRef(null);
-  const dataArrayRef = useRef(null);
 
-  // Khởi tạo hoặc tái sử dụng AnalyserNode an toàn
-  useEffect(() => {
-    const audioEl = audioRef?.current;
-    if (!audioEl) return;
-
-    try {
-      const ctx = getAudioContext();
-      if (ctx) {
-        if (!mediaSourceCache.has(audioEl)) {
-          const source = ctx.createMediaElementSource(audioEl);
-          const analyser = ctx.createAnalyser();
-          analyser.fftSize = 64;
-          analyser.smoothingTimeConstant = 0.78;
-          analyser.minDecibels = -85;
-          analyser.maxDecibels = -10;
-
-          source.connect(analyser);
-          analyser.connect(ctx.destination);
-
-          mediaSourceCache.set(audioEl, { source, analyser, ctx });
-        }
-
-        const bundle = mediaSourceCache.get(audioEl);
-        if (bundle?.analyser) {
-          analyserRef.current = bundle.analyser;
-          dataArrayRef.current = new Uint8Array(bundle.analyser.frequencyBinCount);
-        }
-      }
-    } catch (err) {
-      // Bắt êm ái nếu trình duyệt hạn chế hoặc audio element đã được chuyển hướng
-      analyserRef.current = null;
-    }
-  }, [audioRef]);
-
-  // Vòng lặp animation frame đồng bộ nhịp điệu âm thanh
+  // Vòng lặp animation frame đồng bộ nhịp điệu âm thanh 60 FPS
   useEffect(() => {
     let isCancelled = false;
-
-    // Đánh thức AudioContext nếu đang ở trạng thái suspended khi có lệnh phát
-    if (isPlaying) {
-      try {
-        const ctx = getAudioContext();
-        if (ctx && ctx.state === 'suspended') {
-          ctx.resume().catch(() => {});
-        }
-      } catch (_) {}
-    }
 
     const renderLoop = () => {
       if (isCancelled) return;
@@ -100,48 +48,25 @@ export const HeaderAudioVisualizer = ({
       }
 
       tickRef.current += 1;
-      let hasRealSignal = false;
-      const analyser = analyserRef.current;
-      const dataArray = dataArrayRef.current;
+      const audioEl = audioRef?.current;
+      const audioCurrentTime = audioEl && !Number.isNaN(audioEl.currentTime) ? audioEl.currentTime : 0;
 
-      // 1. Phân tích phổ tần số thời gian thực từ Web Audio API AnalyserNode
-      if (analyser && dataArray) {
-        try {
-          analyser.getByteFrequencyData(dataArray);
-          let sum = 0;
-          for (let i = 0; i < dataArray.length; i++) {
-            sum += dataArray[i];
-          }
-          if (sum > 10) {
-            hasRealSignal = true;
-            const step = Math.max(1, Math.floor(dataArray.length / barCount));
-            const newHeights = Array.from({ length: barCount }, (_, i) => {
-              const binIdx = Math.min(dataArray.length - 1, i * step);
-              const val = dataArray[binIdx] || 0;
-              // Chuẩn hóa tỷ lệ từ 0.15 (tối thiểu) đến 1.0 (tối đa)
-              const normalized = Math.max(0.15, Math.min(1, val / 220));
-              return normalized;
-            });
-            setBarHeights(newHeights);
-          }
-        } catch (_) {
-          hasRealSignal = false;
-        }
-      }
+      // Phổ nhịp điệu âm học sinh động kết hợp đa sóng sin/cos hài hòa
+      const t = tickRef.current * 0.11 + audioCurrentTime * 0.5;
+      const newHeights = Array.from({ length: barCount }, (_, i) => {
+        // Phân bố năng lượng phổ: Cột tần số thấp (Bass, index nhỏ) dao động mạnh hơn cột cao (Treble)
+        const freqWeight = 1.0 - (i / (barCount * 1.6));
+        const s1 = Math.sin(t * 1.2 + i * 0.65);
+        const s2 = Math.cos(t * 1.85 + i * 0.42);
+        const s3 = Math.sin(t * 0.75 - i * 0.3);
+        const blended = (s1 * 0.45 + s2 * 0.35 + s3 * 0.2 + 1) / 2;
+        
+        // Chuẩn hóa tỷ lệ từ 0.16 (sàn) đến 0.98 (đỉnh)
+        const heightRatio = Math.max(0.16, Math.min(0.98, blended * freqWeight * 0.82 + 0.18));
+        return heightRatio;
+      });
 
-      // 2. Cơ chế Fallback hữu cơ (Harmonic Wave Rhythm) khi chưa bắt được tần số hoặc cross-origin
-      if (!hasRealSignal) {
-        const t = tickRef.current * 0.1;
-        const fallbackHeights = Array.from({ length: barCount }, (_, i) => {
-          const s1 = Math.sin(t + i * 0.55);
-          const s2 = Math.cos(t * 1.35 + i * 0.35);
-          const s3 = Math.sin(t * 0.7 - i * 0.25);
-          const blended = (s1 + s2 + s3 + 3) / 6;
-          return Math.max(0.16, Math.min(0.96, blended * 0.82 + 0.18));
-        });
-        setBarHeights(fallbackHeights);
-      }
-
+      setBarHeights(newHeights);
       animFrameRef.current = requestAnimationFrame(renderLoop);
     };
 
@@ -154,7 +79,7 @@ export const HeaderAudioVisualizer = ({
         animFrameRef.current = null;
       }
     };
-  }, [isPlaying, barCount]);
+  }, [isPlaying, barCount, audioRef]);
 
   return (
     <div
