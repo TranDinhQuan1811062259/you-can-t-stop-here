@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ChatProvider } from './context/ChatContext';
+import { MusicProvider } from './context/MusicContext';
 import { AppRoutes } from './routes/AppRoutes';
 
 function App() {
@@ -9,7 +10,9 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <ChatProvider>
-          <AppRoutes />
+          <MusicProvider>
+            <AppRoutes />
+          </MusicProvider>
         </ChatProvider>
       </AuthProvider>
     </BrowserRouter>

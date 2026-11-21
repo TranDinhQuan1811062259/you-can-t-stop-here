@@ -1,0 +1,767 @@
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { getPlaylistBySlug, getAllPlaylists, getTrackAudioSrc } from '../data/playlists';
+import {
+  startWeatherAmbient,
+  duckAmbientForMusic,
+  restoreAmbientFromMusic,
+  resumeAmbientAudioContext,
+  startEventAmbient,
+  stopEventAmbient,
+  setMelodicSeason,
+} from '../utils/ambientSoundEngine';
+
+const MusicContext = createContext(null);
+
+export const useMusic = () => {
+  const context = useContext(MusicContext);
+  if (!context) {
+    throw new Error('useMusic must be used within a MusicProvider');
+  }
+  return context;
+};
+
+export const MusicProvider = ({ children }) => {
+  const [themeSlug, setThemeSlug] = useState('winter');
+  const allThemes = getAllPlaylists();
+  const currentTheme = getPlaylistBySlug(themeSlug);
+  const tracks = currentTheme?.tracks || [];
+
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [audioError, setAudioError] = useState(null);
+  const [isAutoplayBlocked, setIsAutoplayBlocked] = useState(false);
+  const [loopMode, setLoopMode] = useState('all'); // 'all' | 'one' | 'none'
+  const [isShuffle, setIsShuffle] = useState(false);
+
+  // Dual-Source: Studio WAV Master (Lossless Hi-Fi) vs Fast Stream (4G)
+  const [isWavMaster, setIsWavMaster] = useState(() => {
+    try {
+      const saved = localStorage.getItem('freedom_audio_quality_wav');
+      return saved !== null ? saved === 'true' : true;
+    } catch (_) {
+      return true;
+    }
+  });
+
+  // Âm lượng lưu trong localStorage (mặc định 45%)
+  const [volume, setVolumeState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('freedom_music_player_volume');
+      return saved !== null ? Math.max(0, Math.min(1, parseFloat(saved))) : 0.45;
+    } catch (_) {
+      return 0.45;
+    }
+  });
+
+  const [isMuted, setIsMuted] = useState(false);
+  const prevVolumeRef = useRef(volume);
+
+  // Quản lý 4 mùa của bản thu âm Header
+  const [selectedTrackSeason, setSelectedTrackSeason] = useState('winter');
+  const [seasonalTracks, setSeasonalTracks] = useState(() => {
+    const defaultWinter = tracks[0] || {
+      title: 'Winter Song 1 (Gió Bấc & Tĩnh Lặng)',
+      artist: 'Freedom Studio 🎙️',
+      src: '/audio/winter/winter-song-1.wav',
+      mood: 'Tĩnh lặng • Sâu lắng',
+    };
+
+    const initial = {
+      spring: {
+        id: 'spring',
+        seasonId: 'spring',
+        name: 'Mùa Xuân',
+        icon: '🌸',
+        title: 'Thì Thầm Mầm Non & Nắng Ấm',
+        artist: 'Chính chủ Freedom 🎙️',
+        desc: 'Khúc giao mùa đâm chồi, chuông phong linh & hy vọng',
+        url: '',
+        hasUserAudio: false,
+      },
+      summer: {
+        id: 'summer',
+        seasonId: 'summer',
+        name: 'Mùa Hạ',
+        icon: '☀️',
+        title: 'Bản Tình Ca Biển Chiều',
+        artist: 'Chính chủ Freedom 🎙️',
+        desc: 'Hợp âm hoàng hôn ấm áp & tiếng sóng biển rì rào',
+        url: '',
+        hasUserAudio: false,
+      },
+      autumn: {
+        id: 'autumn',
+        seasonId: 'autumn',
+        name: 'Mùa Thu',
+        icon: '🍁',
+        title: 'Giai Điệu Lá Vàng Lắng Đọng',
+        artist: 'Chính chủ Freedom 🎙️',
+        desc: 'Khúc acoustic guitar hoài niệm & êm đềm',
+        url: '',
+        hasUserAudio: false,
+      },
+      winter: {
+        id: 'winter',
+        seasonId: 'winter',
+        name: 'Mùa Đông',
+        icon: '❄️',
+        title: defaultWinter.title,
+        artist: defaultWinter.artist,
+        desc: defaultWinter.mood || 'Không gian tĩnh lặng, trầm ấm & hoài niệm',
+        url: defaultWinter.src,
+        hasUserAudio: true,
+      },
+    };
+
+    try {
+      const saved = localStorage.getItem('freedom_seasonal_recordings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.winter && parsed.winter.url && parsed.winter.url.includes('midnight-river-song')) {
+          parsed.winter = initial.winter;
+          localStorage.setItem('freedom_seasonal_recordings', JSON.stringify(parsed));
+        }
+        return { ...initial, ...parsed };
+      }
+    } catch (_) {}
+    return initial;
+  });
+
+  const audioRef = useRef(null);
+  const userExplicitPausedRef = useRef(false);
+  const isSwitchingTrackRef = useRef(false);
+
+  const currentTrack = tracks && tracks.length > 0 ? tracks[currentTrackIndex] || tracks[0] : null;
+
+  // Lấy URL nguồn âm thanh theo chất lượng (Dual-Source)
+  const getTargetTrackSrc = useCallback((track, preferWav) => {
+    if (!track) return '';
+    const useWav = preferWav !== undefined ? preferWav : isWavMaster;
+    return getTrackAudioSrc(track, useWav);
+  }, [isWavMaster]);
+
+  // Đồng bộ âm lượng vào audio element
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : volume;
+    }
+  }, [volume, isMuted]);
+
+  // Đồng bộ bài hát hiện tại từ audio.src nếu có sự thay đổi ngoại vi
+  const syncActiveTrackFromAudio = useCallback((audioEl) => {
+    const audio = audioEl || audioRef.current;
+    if (!audio || !audio.src) return;
+    const currentSrc = audio.src || '';
+
+    if (selectedTrackSeason === 'winter' && tracks.length > 0) {
+      const matchedIdx = tracks.findIndex((t) => {
+        if (!t.src) return false;
+        return currentSrc.endsWith(t.src) || currentSrc.includes(encodeURI(t.src));
+      });
+      if (matchedIdx !== -1 && matchedIdx !== currentTrackIndex) {
+        setCurrentTrackIndex(matchedIdx);
+      }
+    }
+  }, [selectedTrackSeason, tracks, currentTrackIndex]);
+
+  // Hành động Play / Pause bọc try/catch an toàn (Quy tắc 4 GEMINI.md)
+  const togglePlay = useCallback(async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const isCurrentlyPlaying = !audio.paused;
+
+    if (isCurrentlyPlaying) {
+      userExplicitPausedRef.current = true;
+      try {
+        sessionStorage.setItem('freedom_user_explicit_paused', 'true');
+      } catch (_) {}
+
+      try {
+        audio.pause();
+      } catch (err) {
+        console.warn('[MusicContext] pause error:', err);
+      }
+      setIsPlaying(false);
+      restoreAmbientFromMusic();
+    } else {
+      userExplicitPausedRef.current = false;
+      try {
+        sessionStorage.removeItem('freedom_user_explicit_paused');
+      } catch (_) {}
+
+      let targetSrc = '';
+      if (selectedTrackSeason === 'winter') {
+        const trk = tracks[currentTrackIndex] || tracks[0];
+        targetSrc = getTargetTrackSrc(trk);
+      } else {
+        const sTrack = seasonalTracks[selectedTrackSeason];
+        targetSrc = sTrack?.url || '';
+      }
+
+      if (targetSrc) {
+        const needsLoad = !audio.src || !audio.src.endsWith(targetSrc);
+        if (needsLoad) {
+          isSwitchingTrackRef.current = true;
+          audio.src = targetSrc;
+          audio.load();
+        }
+
+        try {
+          const playPromise = audio.play();
+          if (playPromise !== undefined) {
+            await playPromise;
+            isSwitchingTrackRef.current = false;
+            setIsPlaying(true);
+            setIsAutoplayBlocked(false);
+            duckAmbientForMusic();
+            syncActiveTrackFromAudio(audio);
+          }
+        } catch (err) {
+          console.warn('[MusicContext] Play toggle blocked by policy:', err);
+          isSwitchingTrackRef.current = false;
+          setIsPlaying(false);
+          if (err.name === 'NotAllowedError') {
+            setIsAutoplayBlocked(true);
+          }
+          restoreAmbientFromMusic();
+        }
+      } else {
+        startEventAmbient(selectedTrackSeason);
+        setIsPlaying(true);
+      }
+    }
+  }, [tracks, currentTrackIndex, selectedTrackSeason, seasonalTracks, getTargetTrackSrc, syncActiveTrackFromAudio]);
+
+  // Chọn bài cụ thể trong playlist
+  const playTrack = useCallback((index) => {
+    if (!tracks || index < 0 || index >= tracks.length) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (index === currentTrackIndex && isPlaying) {
+      togglePlay();
+      return;
+    }
+
+    const nextTrack = tracks[index];
+    setCurrentTrackIndex(index);
+    setSelectedTrackSeason('winter');
+    stopEventAmbient();
+    userExplicitPausedRef.current = false;
+    try {
+      sessionStorage.removeItem('freedom_user_explicit_paused');
+    } catch (_) {}
+
+    const targetSrc = getTargetTrackSrc(nextTrack);
+    if (targetSrc) {
+      isSwitchingTrackRef.current = true;
+      audio.src = targetSrc;
+      audio.load();
+
+      try {
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              isSwitchingTrackRef.current = false;
+              setIsPlaying(true);
+              setIsAutoplayBlocked(false);
+              duckAmbientForMusic();
+            })
+            .catch((err) => {
+              console.warn('[MusicContext] playTrack error:', err);
+              isSwitchingTrackRef.current = false;
+              setIsPlaying(false);
+              if (err.name === 'NotAllowedError') {
+                setIsAutoplayBlocked(true);
+              }
+              restoreAmbientFromMusic();
+            });
+        }
+      } catch (err) {
+        console.warn('[MusicContext] playTrack exception:', err);
+        isSwitchingTrackRef.current = false;
+        setIsPlaying(false);
+      }
+    }
+  }, [tracks, currentTrackIndex, isPlaying, getTargetTrackSrc, togglePlay]);
+
+  // Chuyển bài kế tiếp
+  const nextTrack = useCallback(() => {
+    if (!tracks || tracks.length === 0) return;
+    if (isShuffle && tracks.length > 1) {
+      let randomIndex = currentTrackIndex;
+      while (randomIndex === currentTrackIndex) {
+        randomIndex = Math.floor(Math.random() * tracks.length);
+      }
+      playTrack(randomIndex);
+    } else {
+      const nextIdx = (currentTrackIndex + 1) % tracks.length;
+      playTrack(nextIdx);
+    }
+  }, [tracks, currentTrackIndex, isShuffle, playTrack]);
+
+  // Lùi về bài trước
+  const prevTrack = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio && audio.currentTime > 3) {
+      audio.currentTime = 0;
+      setCurrentTime(0);
+      return;
+    }
+    if (!tracks || tracks.length === 0) return;
+    const prevIdx = (currentTrackIndex - 1 + tracks.length) % tracks.length;
+    playTrack(prevIdx);
+  }, [tracks, currentTrackIndex, playTrack]);
+
+  // Tua thời lượng
+  const seekTo = useCallback((seconds) => {
+    const audio = audioRef.current;
+    if (!audio || !isFinite(seconds)) return;
+    const clamped = Math.max(0, Math.min(seconds, audio.duration || 0));
+    audio.currentTime = clamped;
+    setCurrentTime(clamped);
+  }, []);
+
+  // Thay đổi âm lượng
+  const changeVolume = useCallback((newVolume) => {
+    const clamped = Math.max(0, Math.min(1, newVolume));
+    setVolumeState(clamped);
+    setIsMuted(clamped === 0);
+    try {
+      localStorage.setItem('freedom_music_player_volume', String(clamped));
+    } catch (_) {}
+  }, []);
+
+  // Bật / tắt Mute
+  const toggleMute = useCallback(() => {
+    if (isMuted) {
+      setIsMuted(false);
+      setVolumeState(prevVolumeRef.current > 0 ? prevVolumeRef.current : 0.45);
+    } else {
+      prevVolumeRef.current = volume;
+      setIsMuted(true);
+    }
+  }, [isMuted, volume]);
+
+  // Vòng lặp Loop
+  const cycleLoopMode = useCallback(() => {
+    setLoopMode((prev) => (prev === 'all' ? 'one' : prev === 'one' ? 'none' : 'all'));
+  }, []);
+
+  // Bật / tắt Shuffle
+  const toggleShuffle = useCallback(() => {
+    setIsShuffle((prev) => !prev);
+  }, []);
+
+  // Chuyển chất lượng âm thanh (Dual-Source)
+  const toggleAudioQuality = useCallback(() => {
+    setIsWavMaster((prev) => {
+      const nextWav = !prev;
+      try {
+        localStorage.setItem('freedom_audio_quality_wav', String(nextWav));
+      } catch (_) {}
+
+      const audio = audioRef.current;
+      if (audio && currentTrack) {
+        const nextSrc = getTargetTrackSrc(currentTrack, nextWav);
+        if (nextSrc && !audio.src.endsWith(nextSrc)) {
+          const savedTime = audio.currentTime || 0;
+          const wasPlaying = !audio.paused;
+          audio.src = nextSrc;
+          audio.load();
+          if (savedTime > 0) {
+            const handleRestoreTime = () => {
+              try {
+                if (audio.duration && !isNaN(audio.duration)) {
+                  audio.currentTime = Math.min(savedTime, audio.duration);
+                } else {
+                  audio.currentTime = savedTime;
+                }
+              } catch (_) {}
+            };
+            audio.addEventListener('loadedmetadata', handleRestoreTime, { once: true });
+            try {
+              audio.currentTime = savedTime;
+            } catch (_) {}
+          }
+          if (wasPlaying) {
+            audio.play().catch((err) => console.warn('[MusicContext] Quality switch play error:', err));
+          }
+        }
+      }
+      return nextWav;
+    });
+  }, [currentTrack, getTargetTrackSrc]);
+
+  // Đổi chủ đề Playlist (Góc Nhạc)
+  const switchTheme = useCallback((newSlug) => {
+    if (!newSlug || newSlug === themeSlug) return;
+    setThemeSlug(newSlug);
+    const newTheme = getPlaylistBySlug(newSlug);
+    if (newTheme?.tracks && newTheme.tracks.length > 0) {
+      setCurrentTrackIndex(0);
+      const nextTrack = newTheme.tracks[0];
+      const targetSrc = getTargetTrackSrc(nextTrack);
+      const audio = audioRef.current;
+      if (audio && targetSrc) {
+        const wasPlaying = !audio.paused;
+        audio.src = targetSrc;
+        audio.load();
+        if (wasPlaying) {
+          audio.play().catch((err) => console.warn('[MusicContext] Theme switch play error:', err));
+        }
+      }
+    } else {
+      // Chủ đề chưa có nhạc
+      setCurrentTrackIndex(0);
+      if (audioRef.current) {
+        try {
+          audioRef.current.pause();
+        } catch (_) {}
+      }
+      setIsPlaying(false);
+      restoreAmbientFromMusic();
+    }
+  }, [themeSlug, getTargetTrackSrc]);
+
+  // Điều khiển mùa cho bản thu âm Header (Xuân, Hạ, Thu, Đông)
+  const selectRecordingSeason = useCallback((seasonId) => {
+    setSelectedTrackSeason(seasonId);
+    setMelodicSeason(seasonId);
+
+    const audio = audioRef.current;
+    const isCurrentlyPlaying = audio ? (!audio.paused && !audio.ended) : isPlaying;
+
+    if (isCurrentlyPlaying) {
+      let targetUrl = '';
+      if (seasonId === 'winter') {
+        const curWinter = tracks[currentTrackIndex] || tracks[0];
+        targetUrl = getTargetTrackSrc(curWinter);
+      } else {
+        const nextTrack = seasonalTracks[seasonId];
+        targetUrl = nextTrack?.url || '';
+      }
+
+      if (targetUrl) {
+        isSwitchingTrackRef.current = true;
+        audio.src = targetUrl;
+        audio.load();
+        audio.play()
+          .then(() => {
+            isSwitchingTrackRef.current = false;
+            setIsPlaying(true);
+            duckAmbientForMusic();
+          })
+          .catch(() => {
+            isSwitchingTrackRef.current = false;
+            setIsPlaying(false);
+            restoreAmbientFromMusic();
+          });
+      } else {
+        if (audio) {
+          try { audio.pause(); } catch (_) {}
+        }
+        startEventAmbient(seasonId);
+        setIsPlaying(true);
+      }
+    }
+  }, [tracks, currentTrackIndex, seasonalTracks, isPlaying, getTargetTrackSrc]);
+
+  // Tải lên bản thu âm cá nhân 4 mùa
+  const uploadCustomRecording = useCallback((file) => {
+    if (!file) return;
+    const fileUrl = URL.createObjectURL(file);
+    const cleanTitle = file.name.replace(/\.[^/.]+$/, '');
+
+    setSeasonalTracks((prev) => {
+      const updated = {
+        ...prev,
+        [selectedTrackSeason]: {
+          ...prev[selectedTrackSeason],
+          title: cleanTitle || `Bản thu âm ${prev[selectedTrackSeason]?.name || ''}`,
+          artist: 'Chính chủ thu âm 🎙️',
+          url: fileUrl,
+          hasUserAudio: true,
+          desc: 'File thu âm do bạn tải lên từ thiết bị',
+        },
+      };
+      try {
+        localStorage.setItem('freedom_seasonal_recordings', JSON.stringify(updated));
+      } catch (_) {}
+      return updated;
+    });
+
+    const audio = audioRef.current;
+    if (audio) {
+      isSwitchingTrackRef.current = true;
+      audio.src = fileUrl;
+      audio.load();
+      audio.play()
+        .then(() => {
+          isSwitchingTrackRef.current = false;
+          setIsPlaying(true);
+          duckAmbientForMusic();
+        })
+        .catch(() => {
+          isSwitchingTrackRef.current = false;
+          setIsPlaying(false);
+        });
+    }
+    stopEventAmbient();
+  }, [selectedTrackSeason]);
+
+  // Bỏ chặn autoplay khi người dùng bấm tương tác
+  const dismissAutoplayBlocked = useCallback(() => {
+    setIsAutoplayBlocked(false);
+    togglePlay();
+  }, [togglePlay]);
+
+  // Đăng ký toàn bộ sự kiện của Audio element (Chỉ 1 lần duy nhất trên toàn hệ thống)
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleLoadedMetadata = () => {
+      if (audio.duration && !isNaN(audio.duration)) {
+        setDuration(audio.duration);
+      }
+      setIsLoading(false);
+    };
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime || 0);
+      if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
+        setDuration(audio.duration);
+      }
+      if (!audio.paused && !audio.ended && !isPlaying) {
+        setIsPlaying(true);
+      }
+      syncActiveTrackFromAudio(audio);
+    };
+
+    const handleWaiting = () => {
+      setIsLoading(true);
+    };
+
+    const handleCanPlay = () => {
+      setIsLoading(false);
+    };
+
+    const handlePlay = () => {
+      setIsPlaying(true);
+      setIsAutoplayBlocked(false);
+      duckAmbientForMusic();
+    };
+
+    const handlePlaying = () => {
+      isSwitchingTrackRef.current = false;
+      setIsPlaying(true);
+      setIsAutoplayBlocked(false);
+      duckAmbientForMusic();
+    };
+
+    const handlePause = () => {
+      if (isSwitchingTrackRef.current) return;
+      if (audio && !audio.paused) return;
+      setIsPlaying(false);
+      restoreAmbientFromMusic();
+    };
+
+    const handleEnded = () => {
+      if (loopMode === 'one') {
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+        return;
+      }
+      if (loopMode === 'none' && currentTrackIndex + 1 >= tracks.length) {
+        setIsPlaying(false);
+        restoreAmbientFromMusic();
+        return;
+      }
+      nextTrack();
+    };
+
+    const handleError = (e) => {
+      const currentSrc = audio?.src || '';
+      const fallbackSrc = currentTrack?.wavSrc || currentTrack?.src;
+      if (!isWavMaster && fallbackSrc && currentTrack?.streamUrl && (currentSrc.includes('mp3') || currentSrc.includes(encodeURI(currentTrack.streamUrl)))) {
+        console.info('[MusicContext] Stream file unavailable, falling back to Studio WAV:', fallbackSrc);
+        audio.src = fallbackSrc;
+        audio.load();
+        if (isPlaying) {
+          audio.play().catch(() => {});
+        }
+        return;
+      }
+
+      console.warn('[MusicContext] Audio playback error on:', currentTrack?.src, e);
+      isSwitchingTrackRef.current = false;
+      setIsLoading(false);
+      setIsPlaying(false);
+      setAudioError('Không thể phát tệp âm thanh này hoặc định dạng chưa được hỗ trợ.');
+      restoreAmbientFromMusic();
+    };
+
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('waiting', handleWaiting);
+    audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('play', handlePlay);
+    audio.addEventListener('playing', handlePlaying);
+    audio.addEventListener('pause', handlePause);
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('error', handleError);
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('waiting', handleWaiting);
+      audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('playing', handlePlaying);
+      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError);
+    };
+  }, [tracks, currentTrackIndex, loopMode, isShuffle, isWavMaster, currentTrack, isPlaying, nextTrack, syncActiveTrackFromAudio]);
+
+  // =========================================================================
+  // TỰ ĐỘNG KÍCH HOẠT HIỆU ỨNG MÙA ĐÔNG & NHẠC (SAFE AUTOPLAY POLICY)
+  // =========================================================================
+  useEffect(() => {
+    // 1. Tự động kích hoạt âm thanh hiệu ứng mùa đông (tiếng gió bấc & bếp lửa)
+    try {
+      startWeatherAmbient('winter');
+    } catch (_) {}
+
+    const explicitlyPaused = sessionStorage.getItem('freedom_user_explicit_paused') === 'true';
+    if (explicitlyPaused || userExplicitPausedRef.current) return;
+
+    const initialTrack = tracks[0];
+    if (!initialTrack) return;
+
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const targetSrc = getTargetTrackSrc(initialTrack);
+    if (!audio.src || !audio.src.endsWith(targetSrc)) {
+      audio.src = targetSrc;
+    }
+
+    // Callback lắng nghe cử chỉ tương tác đầu tiên của người dùng nếu browser chặn autoplay
+    const onFirstUserGesture = async () => {
+      window.removeEventListener('pointerdown', onFirstUserGesture);
+      window.removeEventListener('keydown', onFirstUserGesture);
+      window.removeEventListener('click', onFirstUserGesture);
+      window.removeEventListener('touchstart', onFirstUserGesture);
+
+      // Đánh thức Web Audio Context của hiệu ứng môi trường
+      try {
+        await resumeAmbientAudioContext();
+        startWeatherAmbient('winter');
+      } catch (_) {}
+
+      // Phát nhạc nếu người dùng chưa bấm dừng thủ công
+      if (!userExplicitPausedRef.current && sessionStorage.getItem('freedom_user_explicit_paused') !== 'true') {
+        const audioEl = audioRef.current;
+        if (audioEl && audioEl.paused) {
+          try {
+            await audioEl.play();
+            setIsPlaying(true);
+            setIsAutoplayBlocked(false);
+            duckAmbientForMusic();
+          } catch (e) {
+            console.warn('[MusicAutoplay] User gesture play restricted:', e);
+            setIsPlaying(false);
+          }
+        }
+      }
+    };
+
+    const attemptAutoplay = async () => {
+      try {
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+          setIsPlaying(true);
+          setIsAutoplayBlocked(false);
+          duckAmbientForMusic();
+        }
+      } catch (err) {
+        console.info('[MusicAutoplay] Autoplay restricted on load, awaiting first user interaction.');
+        setIsPlaying(false);
+        setIsAutoplayBlocked(true);
+        window.addEventListener('pointerdown', onFirstUserGesture, { once: true });
+        window.addEventListener('keydown', onFirstUserGesture, { once: true });
+        window.addEventListener('click', onFirstUserGesture, { once: true });
+        window.addEventListener('touchstart', onFirstUserGesture, { once: true });
+      }
+    };
+
+    attemptAutoplay();
+
+    return () => {
+      window.removeEventListener('pointerdown', onFirstUserGesture);
+      window.removeEventListener('keydown', onFirstUserGesture);
+      window.removeEventListener('click', onFirstUserGesture);
+      window.removeEventListener('touchstart', onFirstUserGesture);
+    };
+  }, []);
+
+  const value = {
+    // State
+    themeSlug,
+    currentTheme,
+    allThemes,
+    tracks,
+    currentTrackIndex,
+    currentTrack,
+    isPlaying,
+    isLoading,
+    audioError,
+    isAutoplayBlocked,
+    currentTime,
+    duration,
+    volume,
+    isMuted,
+    loopMode,
+    isShuffle,
+    isWavMaster,
+    audioRef,
+    selectedTrackSeason,
+    seasonalTracks,
+
+    // Actions
+    togglePlay,
+    playTrack,
+    nextTrack,
+    prevTrack,
+    seekTo,
+    changeVolume,
+    toggleMute,
+    cycleLoopMode,
+    toggleShuffle,
+    toggleAudioQuality,
+    switchTheme,
+    selectRecordingSeason,
+    uploadCustomRecording,
+    dismissAutoplayBlocked,
+  };
+
+  return (
+    <MusicContext.Provider value={value}>
+      {children}
+      {/* Audio element duy nhất trên toàn ứng dụng */}
+      <audio
+        ref={audioRef}
+        preload="auto"
+        style={{ display: 'none' }}
+      />
+    </MusicContext.Provider>
+  );
+};

@@ -15,9 +15,16 @@ export const MusicPage = () => {
   const navigate = useNavigate();
 
   const allThemes = getAllPlaylists();
-  const currentTheme = getPlaylistBySlug(themeId || 'winter');
+  const player = useMusicPlayer();
+  const currentTheme = player.currentTheme || getPlaylistBySlug(themeId || 'winter');
 
-  const player = useMusicPlayer(currentTheme.tracks);
+  // Đồng bộ theme theo tham số URL nếu có thay đổi
+  useEffect(() => {
+    const targetSlug = themeId || 'winter';
+    if (targetSlug !== player.currentTheme?.slug) {
+      player.switchTheme(targetSlug);
+    }
+  }, [themeId]);
   const [isZenMode, setIsZenMode] = useState(false);
 
   // Cập nhật tiêu đề tab trình duyệt

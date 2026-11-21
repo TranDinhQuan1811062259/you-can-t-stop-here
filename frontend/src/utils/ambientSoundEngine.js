@@ -892,6 +892,19 @@ export const restoreAmbientFromMusic = () => {
   combinedMasterGain.gain.linearRampToValueAtTime(0.7, now + 2.0);
 };
 
+/**
+ * Đánh thức AudioContext an toàn khi có cử chỉ tương tác đầu tiên của người dùng (Quy tắc 4 GEMINI.md)
+ */
+export const resumeAmbientAudioContext = async () => {
+  const ctx = getAudioContext();
+  if (ctx && ctx.state === 'suspended') {
+    try {
+      await ctx.resume();
+    } catch (_) {}
+  }
+  return ctx;
+};
+
 export const getAmbientState = () => {
   return {
     isWeatherSoundActive,
