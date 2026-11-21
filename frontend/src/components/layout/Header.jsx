@@ -1,30 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { Link, NavLink, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { AuthModal } from '../auth/AuthModal';
-import { CreatePostModal } from '../blog/CreatePostModal';
-import { EditProfileModal } from '../auth/EditProfileModal';
-import { AdminModerationModal } from '../admin/AdminModerationModal';
-import { FestiveEventManagerModal } from '../admin/FestiveEventManagerModal';
-import { FestiveShowcaseModal } from '../common/FestiveShowcaseModal';
-import { StressReliefModal } from '../wellness/StressReliefModal';
-import { TimeCapsuleModal } from '../wellness/TimeCapsuleModal';
-import { LateNightRadioModal } from '../wellness/LateNightRadioModal';
-import { GratitudeJarModal } from '../wellness/GratitudeJarModal';
-import { StickyNoteWallModal } from '../wellness/StickyNoteWallModal';
-import { EmergencyCalmModal } from '../wellness/EmergencyCalmModal';
-import { CozyWorkCafeModal } from '../wellness/CozyWorkCafeModal';
-import { MoodPixelTrackerModal } from '../wellness/MoodPixelTrackerModal';
-import { RantAndBurnModal } from '../wellness/RantAndBurnModal';
-import { MidnightDriftBottleModal } from '../wellness/MidnightDriftBottleModal';
-import { WorkplaceMoodRadarModal } from '../wellness/WorkplaceMoodRadarModal';
-import { AnonymousWhisperWall } from '../wellness/AnonymousWhisperWall';
-import { MentalFirstAidModal } from '../wellness/MentalFirstAidModal';
-import { LateNightTeaLoungeModal } from '../wellness/LateNightTeaLoungeModal';
-import { BrainDumpDeclutterModal } from '../wellness/BrainDumpDeclutterModal';
-import { MoodWeatherForecastModal } from '../wellness/MoodWeatherForecastModal';
-import { FocusSleepCocoonModal } from '../wellness/FocusSleepCocoonModal';
-import { TrackStoryModal } from '../music/TrackStoryModal';
 import { postService, getCachedPosts, removeVietnameseTones } from '../../services/postService';
 import { eventService } from '../../services/eventService';
 import { isSoundEnabled, toggleSound, playClickSound, playFestiveEventSound } from '../../utils/soundEffects';
@@ -33,6 +9,65 @@ import { formatDate } from '../../utils/formatDate';
 import { getPlaylistBySlug } from '../../data/playlists';
 import { IdleWeatherText } from '../common/IdleWeatherText';
 import { NotificationDropdown } from './NotificationDropdown';
+import { HeaderAudioVisualizer } from '../common/HeaderAudioVisualizer';
+
+// =============================================================================
+// TỐI ƯU CODE-SPLITTING: LAZY LOAD CÁC MODAL LỚN ĐỂ GIẢM KÍCH THƯỚC BUNDLE CHÍNH
+// =============================================================================
+const AuthModal = lazy(() => import('../auth/AuthModal').then((m) => ({ default: m.AuthModal || m.default })));
+const CreatePostModal = lazy(() => import('../blog/CreatePostModal').then((m) => ({ default: m.CreatePostModal || m.default })));
+const EditProfileModal = lazy(() => import('../auth/EditProfileModal').then((m) => ({ default: m.EditProfileModal || m.default })));
+const AdminModerationModal = lazy(() => import('../admin/AdminModerationModal').then((m) => ({ default: m.AdminModerationModal || m.default })));
+const FestiveEventManagerModal = lazy(() => import('../admin/FestiveEventManagerModal').then((m) => ({ default: m.FestiveEventManagerModal || m.default })));
+const FestiveShowcaseModal = lazy(() => import('../common/FestiveShowcaseModal').then((m) => ({ default: m.FestiveShowcaseModal || m.default })));
+const StressReliefModal = lazy(() => import('../wellness/StressReliefModal').then((m) => ({ default: m.StressReliefModal || m.default })));
+const TimeCapsuleModal = lazy(() => import('../wellness/TimeCapsuleModal').then((m) => ({ default: m.TimeCapsuleModal || m.default })));
+const LateNightRadioModal = lazy(() => import('../wellness/LateNightRadioModal').then((m) => ({ default: m.LateNightRadioModal || m.default })));
+const GratitudeJarModal = lazy(() => import('../wellness/GratitudeJarModal').then((m) => ({ default: m.GratitudeJarModal || m.default })));
+const StickyNoteWallModal = lazy(() => import('../wellness/StickyNoteWallModal').then((m) => ({ default: m.StickyNoteWallModal || m.default })));
+const EmergencyCalmModal = lazy(() => import('../wellness/EmergencyCalmModal').then((m) => ({ default: m.EmergencyCalmModal || m.default })));
+const CozyWorkCafeModal = lazy(() => import('../wellness/CozyWorkCafeModal').then((m) => ({ default: m.CozyWorkCafeModal || m.default })));
+const MoodPixelTrackerModal = lazy(() => import('../wellness/MoodPixelTrackerModal').then((m) => ({ default: m.MoodPixelTrackerModal || m.default })));
+const RantAndBurnModal = lazy(() => import('../wellness/RantAndBurnModal').then((m) => ({ default: m.RantAndBurnModal || m.default })));
+const MidnightDriftBottleModal = lazy(() => import('../wellness/MidnightDriftBottleModal').then((m) => ({ default: m.MidnightDriftBottleModal || m.default })));
+const WorkplaceMoodRadarModal = lazy(() => import('../wellness/WorkplaceMoodRadarModal').then((m) => ({ default: m.WorkplaceMoodRadarModal || m.default })));
+const AnonymousWhisperWall = lazy(() => import('../wellness/AnonymousWhisperWall').then((m) => ({ default: m.AnonymousWhisperWall || m.default })));
+const MentalFirstAidModal = lazy(() => import('../wellness/MentalFirstAidModal').then((m) => ({ default: m.MentalFirstAidModal || m.default })));
+const LateNightTeaLoungeModal = lazy(() => import('../wellness/LateNightTeaLoungeModal').then((m) => ({ default: m.LateNightTeaLoungeModal || m.default })));
+const BrainDumpDeclutterModal = lazy(() => import('../wellness/BrainDumpDeclutterModal').then((m) => ({ default: m.BrainDumpDeclutterModal || m.default })));
+const MoodWeatherForecastModal = lazy(() => import('../wellness/MoodWeatherForecastModal').then((m) => ({ default: m.MoodWeatherForecastModal || m.default })));
+const FocusSleepCocoonModal = lazy(() => import('../wellness/FocusSleepCocoonModal').then((m) => ({ default: m.FocusSleepCocoonModal || m.default })));
+const TrackStoryModal = lazy(() => import('../music/TrackStoryModal').then((m) => ({ default: m.TrackStoryModal || m.default })));
+
+// Fallback spinner siêu nhẹ khi tải chunk modal
+const ModalLoadingFallback = () => (
+  <div
+    style={{
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(10, 15, 30, 0.65)',
+      backdropFilter: 'blur(6px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 99999,
+      pointerEvents: 'none',
+      animation: 'fadeIn 0.15s ease',
+    }}
+    aria-hidden="true"
+  >
+    <div
+      style={{
+        width: '32px',
+        height: '32px',
+        borderRadius: '50%',
+        border: '3px solid rgba(255, 255, 255, 0.12)',
+        borderTopColor: '#38bdf8',
+        animation: 'spin 0.8s linear infinite',
+      }}
+    />
+  </div>
+);
 import { notificationService } from '../../services/notificationService';
 import {
   startWeatherAmbient,
@@ -56,6 +91,7 @@ export const Header = () => {
     isProfileModalOpen,
     openProfileModal,
     closeProfileModal,
+    isAuthModalOpen,
   } = useAuth();
 
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -73,6 +109,14 @@ export const Header = () => {
   const [isWellnessOpen, setIsWellnessOpen] = useState(false);
   const [isTimeCapsuleOpen, setIsTimeCapsuleOpen] = useState(false);
   const [isRadioOpen, setIsRadioOpen] = useState(false);
+  const [hasLoadedRadio, setHasLoadedRadio] = useState(false);
+
+  // Kích hoạt nạp chunk Radio khi mở lần đầu, giữ nguyên khi thu nhỏ mini mode
+  useEffect(() => {
+    if (isRadioOpen) {
+      setHasLoadedRadio(true);
+    }
+  }, [isRadioOpen]);
   const [isGratitudeJarOpen, setIsGratitudeJarOpen] = useState(false);
   const [isStickyWallOpen, setIsStickyWallOpen] = useState(false);
   const [isEmergencyCalmOpen, setIsEmergencyCalmOpen] = useState(false);
@@ -1177,7 +1221,59 @@ export const Header = () => {
             )}
 
             {/* Cụm Điều Khiển Âm Thanh Môi Trường Duy Trì (Ambient Soundscape Engine) */}
-            <div className="header-ambient-sound-wrap" ref={ambientMenuRef} style={{ position: 'relative' }}>
+            <div className="header-ambient-sound-wrap" ref={ambientMenuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {/* Mini Waveform Pill trực tiếp trên Header khi đang phát nhạc */}
+              {isEffectivePlaying && (
+                <div
+                  className="header-live-waveform-pill"
+                  onClick={() => {
+                    playClickSound();
+                    setIsAmbientMenuOpen((prev) => !prev);
+                  }}
+                  title={`Đang phát: ${currentTrackMeta.title} (Bấm để mở trình phát)`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    height: '28px',
+                    padding: '0 8px 0 10px',
+                    borderRadius: '999px',
+                    background: 'rgba(13, 148, 136, 0.2)',
+                    border: '1px solid rgba(45, 212, 191, 0.45)',
+                    backdropFilter: 'blur(8px)',
+                    cursor: 'pointer',
+                    animation: 'fadeIn 0.25s ease',
+                    transition: 'all 0.2s ease',
+                  }}
+                  role="button"
+                  aria-label={`Đang phát nhạc: ${currentTrackMeta.title}`}
+                >
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      color: '#2dd4bf',
+                      letterSpacing: '0.3px',
+                      maxWidth: '90px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {currentTrackMeta.title}
+                  </span>
+                  <HeaderAudioVisualizer
+                    audioRef={recordingAudioRef}
+                    isPlaying={isEffectivePlaying}
+                    barCount={5}
+                    height={13}
+                    barWidth={2}
+                    barGap={1.5}
+                    activeColor="#2dd4bf"
+                  />
+                </div>
+              )}
+
               <button
                 type="button"
                 className={`header-ambient-btn ${ambientState.isWeatherSoundActive || ambientState.isEventSoundActive || isEffectivePlaying ? 'is-active' : ''}`}
@@ -1336,11 +1432,16 @@ export const Header = () => {
                             <span>{currentTrackMeta.icon}</span>
                           </div>
                           {isEffectivePlaying && (
-                            <div className="track-sound-waves">
-                              <span className="wave-bar bar-1" />
-                              <span className="wave-bar bar-2" />
-                              <span className="wave-bar bar-3" />
-                              <span className="wave-bar bar-4" />
+                            <div className="track-sound-waves" style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', padding: '2px 3px' }}>
+                              <HeaderAudioVisualizer
+                                audioRef={recordingAudioRef}
+                                isPlaying={isEffectivePlaying}
+                                barCount={4}
+                                height={12}
+                                barWidth={2.5}
+                                barGap={1.5}
+                                activeColor="#6366f1"
+                              />
                             </div>
                           )}
                         </div>
@@ -1414,6 +1515,34 @@ export const Header = () => {
                       {/* Mini Scrubber & Volume Suite (Hạng mục 2: Tinh gọn, thẩm mỹ) */}
                       {currentTrackMeta.hasUserAudio && (
                         <div className="ambient-mini-player-suite">
+                          {/* Dải Sóng Âm Phổ Tần Số Web Audio API Trực Tiếp */}
+                          <div
+                            className="ambient-mini-spectrum-row"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '2px 4px 6px 4px',
+                            }}
+                          >
+                            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.5px' }}>
+                              AUDIO SPECTRUM
+                            </span>
+                            <HeaderAudioVisualizer
+                              audioRef={recordingAudioRef}
+                              isPlaying={isEffectivePlaying}
+                              barCount={16}
+                              height={16}
+                              barWidth={2.5}
+                              barGap={2}
+                              activeColor="#38bdf8"
+                              idleColor="rgba(255, 255, 255, 0.15)"
+                            />
+                            <span style={{ fontSize: '0.68rem', color: isEffectivePlaying ? '#4ade80' : '#94a3b8', fontWeight: 700 }}>
+                              {isEffectivePlaying ? 'LIVE ●' : 'PAUSED'}
+                            </span>
+                          </div>
+
                           {/* Dòng 1: Mini Scrubber (mm:ss hiện tại / slider / mm:ss tổng) */}
                           <div className="ambient-mini-scrubber-row">
                             <span className="mini-scrubber-time">{formatRecordingTime(recordingCurrentTime)}</span>
@@ -2312,156 +2441,248 @@ export const Header = () => {
       </header>
 
       {/* Auth Modal (Login / Register Popup) */}
-      <AuthModal />
+      {isAuthModalOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <AuthModal />
+        </Suspense>
+      )}
 
       {/* Create Post Modal */}
-      <CreatePostModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onPostCreated={handlePostCreated}
-      />
+      {isCreateOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <CreatePostModal
+            isOpen={isCreateOpen}
+            onClose={() => setIsCreateOpen(false)}
+            onPostCreated={handlePostCreated}
+          />
+        </Suspense>
+      )}
 
       {/* Edit Profile Modal */}
-      <EditProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={closeProfileModal}
-      />
+      {isProfileModalOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <EditProfileModal
+            isOpen={isProfileModalOpen}
+            onClose={closeProfileModal}
+          />
+        </Suspense>
+      )}
 
       {/* Admin Moderation Modal (Kiểm duyệt bài viết nhạy cảm Chính Trị) */}
-      {user?.role === 'admin' && (
-        <AdminModerationModal
-          isOpen={isModerationOpen}
-          onClose={() => setIsModerationOpen(false)}
-        />
+      {user?.role === 'admin' && isModerationOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <AdminModerationModal
+            isOpen={isModerationOpen}
+            onClose={() => setIsModerationOpen(false)}
+          />
+        </Suspense>
       )}
 
       {/* Festive Showcase Modal (Không gian chào mừng sự kiện 30/4, 2/9, 8/3 với đồ họa bay dẻo dẻo) */}
-      <FestiveShowcaseModal
-        isOpen={isShowcaseModalOpen}
-        onClose={() => setIsShowcaseModalOpen(false)}
-        event={activeFestiveEvent}
-        onOpenAdminManager={() => setIsEventManagerOpen(true)}
-        user={user}
-      />
+      {isShowcaseModalOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <FestiveShowcaseModal
+            isOpen={isShowcaseModalOpen}
+            onClose={() => setIsShowcaseModalOpen(false)}
+            event={activeFestiveEvent}
+            onOpenAdminManager={() => setIsEventManagerOpen(true)}
+            user={user}
+          />
+        </Suspense>
+      )}
 
       {/* Admin Festive Event Manager Modal (Quản lý các sự kiện lễ hội 30/4, 2/9, 8/3, 1/6, Tết...) */}
-      {user?.role === 'admin' && (
-        <FestiveEventManagerModal
-          isOpen={isEventManagerOpen}
-          onClose={() => setIsEventManagerOpen(false)}
-          onEventUpdated={fetchFestiveEvent}
-        />
+      {user?.role === 'admin' && isEventManagerOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <FestiveEventManagerModal
+            isOpen={isEventManagerOpen}
+            onClose={() => setIsEventManagerOpen(false)}
+            onEventUpdated={fetchFestiveEvent}
+          />
+        </Suspense>
       )}
 
       {/* Trạm Xả Stress & Máy Xé Giấy Deadline & Bài Tập Thở 4-7-8 */}
-      <StressReliefModal
-        isOpen={isWellnessOpen}
-        onClose={() => setIsWellnessOpen(false)}
-      />
+      {isWellnessOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <StressReliefModal
+            isOpen={isWellnessOpen}
+            onClose={() => setIsWellnessOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Chiếc Hộp Thời Gian (Capsule of Tomorrow) */}
-      <TimeCapsuleModal
-        isOpen={isTimeCapsuleOpen}
-        onClose={() => setIsTimeCapsuleOpen(false)}
-      />
+      {isTimeCapsuleOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <TimeCapsuleModal
+            isOpen={isTimeCapsuleOpen}
+            onClose={() => setIsTimeCapsuleOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Trạm Radio Đêm Muộn Lo-Fi 24/7 (Late Night Lo-Fi Room) */}
-      <LateNightRadioModal
-        isOpen={isRadioOpen}
-        onClose={() => setIsRadioOpen(false)}
-      />
+      {hasLoadedRadio && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <LateNightRadioModal
+            isOpen={isRadioOpen}
+            onClose={() => setIsRadioOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Chiếc Lọ Biết Ơn Cuối Ngày (Daily Gratitude Jar) */}
-      <GratitudeJarModal
-        isOpen={isGratitudeJarOpen}
-        onClose={() => setIsGratitudeJarOpen(false)}
-      />
+      {isGratitudeJarOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <GratitudeJarModal
+            isOpen={isGratitudeJarOpen}
+            onClose={() => setIsGratitudeJarOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Trạm Gửi Gắm Yêu Thương Ẩn Danh (The Sticky-Note Wall) */}
-      <StickyNoteWallModal
-        isOpen={isStickyWallOpen}
-        onClose={() => setIsStickyWallOpen(false)}
-      />
+      {isStickyWallOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <StickyNoteWallModal
+            isOpen={isStickyWallOpen}
+            onClose={() => setIsStickyWallOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Nút Cứu Trợ Khẩn Cấp "Cần Bình Tĩnh Ngay" (Grounding 5-4-3-2-1) */}
-      <EmergencyCalmModal
-        isOpen={isEmergencyCalmOpen}
-        onClose={() => setIsEmergencyCalmOpen(false)}
-      />
+      {isEmergencyCalmOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <EmergencyCalmModal
+            isOpen={isEmergencyCalmOpen}
+            onClose={() => setIsEmergencyCalmOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Tiệm Cà Phê Mưa & Pomodoro Tập Trung (Cozy Cafe & Rainy Desk) */}
-      <CozyWorkCafeModal
-        isOpen={isCozyCafeOpen}
-        onClose={() => setIsCozyCafeOpen(false)}
-      />
+      {isCozyCafeOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <CozyWorkCafeModal
+            isOpen={isCozyCafeOpen}
+            onClose={() => setIsCozyCafeOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Nhật Ký Cảm Xúc 365 Ngày (Emotional Pixel Tracker) */}
-      <MoodPixelTrackerModal
-        isOpen={isMoodPixelOpen}
-        onClose={() => setIsMoodPixelOpen(false)}
-      />
+      {isMoodPixelOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <MoodPixelTrackerModal
+            isOpen={isMoodPixelOpen}
+            onClose={() => setIsMoodPixelOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Lò Đốt Muộn Phiền (Rant & Burn - Sọt rác cảm xúc kỹ thuật số) */}
-      <RantAndBurnModal
-        isOpen={isRantAndBurnOpen}
-        onClose={() => setIsRantAndBurnOpen(false)}
-        onOpenCafe={() => setIsCozyCafeOpen(true)}
-      />
+      {isRantAndBurnOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <RantAndBurnModal
+            isOpen={isRantAndBurnOpen}
+            onClose={() => setIsRantAndBurnOpen(false)}
+            onOpenCafe={() => setIsCozyCafeOpen(true)}
+          />
+        </Suspense>
+      )}
 
       {/* Chiếc Máy Đánh Chữ Nửa Đêm & Chai Thư Trôi Sông */}
-      <MidnightDriftBottleModal
-        isOpen={isDriftBottleOpen}
-        onClose={() => setIsDriftBottleOpen(false)}
-      />
+      {isDriftBottleOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <MidnightDriftBottleModal
+            isOpen={isDriftBottleOpen}
+            onClose={() => setIsDriftBottleOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Radar Bản Đồ Cảm Xúc Công Sở Thời Gian Thực */}
-      <WorkplaceMoodRadarModal
-        isOpen={isMoodRadarOpen}
-        onClose={() => setIsMoodRadarOpen(false)}
-      />
+      {isMoodRadarOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <WorkplaceMoodRadarModal
+            isOpen={isMoodRadarOpen}
+            onClose={() => setIsMoodRadarOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Bức Tường Thì Thầm 10 Giây & Voice Hugs */}
-      <AnonymousWhisperWall
-        isOpen={isWhisperWallOpen}
-        onClose={() => setIsWhisperWallOpen(false)}
-      />
+      {isWhisperWallOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <AnonymousWhisperWall
+            isOpen={isWhisperWallOpen}
+            onClose={() => setIsWhisperWallOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Hộp Thuốc Cứu Thương Cho Tâm Trí */}
-      <MentalFirstAidModal
-        isOpen={isMentalFirstAidOpen}
-        onClose={() => setIsMentalFirstAidOpen(false)}
-      />
+      {isMentalFirstAidOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <MentalFirstAidModal
+            isOpen={isMentalFirstAidOpen}
+            onClose={() => setIsMentalFirstAidOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Quán Trà Nửa Đêm Ẩn Danh */}
-      <LateNightTeaLoungeModal
-        isOpen={isTeaLoungeOpen}
-        onClose={() => setIsTeaLoungeOpen(false)}
-      />
+      {isTeaLoungeOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <LateNightTeaLoungeModal
+            isOpen={isTeaLoungeOpen}
+            onClose={() => setIsTeaLoungeOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Chiếc Bàn Tháo Gỡ Cuộn Rối */}
-      <BrainDumpDeclutterModal
-        isOpen={isDeclutterOpen}
-        onClose={() => setIsDeclutterOpen(false)}
-      />
+      {isDeclutterOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <BrainDumpDeclutterModal
+            isOpen={isDeclutterOpen}
+            onClose={() => setIsDeclutterOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Bản Tin Thời Tiết Nội Tâm Đầu Ngày */}
-      <MoodWeatherForecastModal
-        isOpen={isMoodWeatherOpen}
-        onClose={() => setIsMoodWeatherOpen(false)}
-      />
+      {isMoodWeatherOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <MoodWeatherForecastModal
+            isOpen={isMoodWeatherOpen}
+            onClose={() => setIsMoodWeatherOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Kén Tập Trung & Ngủ Sâu */}
-      <FocusSleepCocoonModal
-        isOpen={isFocusCocoonOpen}
-        onClose={() => setIsFocusCocoonOpen(false)}
-      />
+      {isFocusCocoonOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <FocusSleepCocoonModal
+            isOpen={isFocusCocoonOpen}
+            onClose={() => setIsFocusCocoonOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Modal Bưu Thiếp Tâm Sự Sau Bản Thu Mùa Đông */}
-      <TrackStoryModal
-        isOpen={isStoryModalOpen}
-        onClose={() => setIsStoryModalOpen(false)}
-        track={winterOfficialTracks[winterTrackIndex] || winterOfficialTracks[0]}
-      />
+      {isStoryModalOpen && (
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <TrackStoryModal
+            isOpen={isStoryModalOpen}
+            onClose={() => setIsStoryModalOpen(false)}
+            track={winterOfficialTracks[winterTrackIndex] || winterOfficialTracks[0]}
+          />
+        </Suspense>
+      )}
 
       {/* Modal Xác Nhận Đăng Xuất An Toàn & Tinh Tế (Thay thế hoàn toàn window.confirm) */}
       {isLogoutConfirmOpen && (

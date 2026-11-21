@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
 import { uploadService } from '../../services/uploadService';
 import { getActiveTheme, applyTheme } from '../../utils/themeUtils';
-import { isSoundEnabled, toggleSound } from '../../utils/soundEffects';
+import { isSoundEnabled, toggleSound, playClickSound } from '../../utils/soundEffects';
 import { VoiceCloningModal } from '../blog/VoiceCloningModal';
 import {
   MUSIC_PRESETS,
@@ -80,15 +80,24 @@ const AUDIO_PROFILE_OPTIONS = [
 ];
 
 export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
-  const { user, updateUserProfile, profileModalTab, logout } = useAuth();
+  const { user, updateUserProfile, profileModalTab, logout, logoutAll } = useAuth();
   const [activeTab, setActiveTab] = useState('info'); // 'info' | 'layout' | 'music'
   const [previewPlayingId, setPreviewPlayingId] = useState(null);
   const previewAudioRef = useRef(null);
 
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [logoutConfirmMode, setLogoutConfirmMode] = useState('single'); // 'single' | 'all'
+  const [isLoggingOutAll, setIsLoggingOutAll] = useState(false);
 
   const handleLogout = () => {
-    playClickSound();
+    if (playClickSound) playClickSound();
+    setLogoutConfirmMode('single');
+    setIsLogoutConfirmOpen(true);
+  };
+
+  const handleLogoutAll = () => {
+    if (playClickSound) playClickSound();
+    setLogoutConfirmMode('all');
     setIsLogoutConfirmOpen(true);
   };
 
@@ -962,31 +971,64 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    background: '#ef4444',
-                    color: '#ffffff',
-                    border: 'none',
-                    fontWeight: 600,
-                    fontSize: '0.82rem',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 6px rgba(239, 68, 68, 0.25)',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#dc2626'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#ef4444'; }}
-                  title="Đăng xuất khỏi thiết bị này"
-                >
-                  <span>🚪</span>
-                  <span>Đăng xuất tài khoản</span>
-                </button>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      background: '#ffffff',
+                      color: '#dc2626',
+                      border: '1px solid #fca5a5',
+                      fontWeight: 600,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#fef2f2'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff'; }}
+                    title="Đăng xuất khỏi thiết bị này"
+                  >
+                    <span>🚪</span>
+                    <span>Đăng xuất thiết bị này</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleLogoutAll}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      fontWeight: 600,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(239, 68, 68, 0.25)',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                    title="Thu hồi toàn bộ phiên đăng nhập trên mọi thiết bị và trình duyệt"
+                  >
+                    <span>⚡</span>
+                    <span>Đăng xuất tất cả thiết bị</span>
+                  </button>
+                </div>
               </div>
             </>
           )}
@@ -1964,16 +2006,21 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
                   width: '64px',
                   height: '64px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                  background: logoutConfirmMode === 'all'
+                    ? 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)'
+                    : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                  border: logoutConfirmMode === 'all' ? '2px solid #f87171' : 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   margin: '0 auto 16px',
                   fontSize: '2rem',
-                  boxShadow: '0 8px 20px rgba(239, 68, 68, 0.22)',
+                  boxShadow: logoutConfirmMode === 'all'
+                    ? '0 8px 24px rgba(220, 38, 38, 0.3)'
+                    : '0 8px 20px rgba(239, 68, 68, 0.22)',
                 }}
               >
-                🚪
+                {logoutConfirmMode === 'all' ? '⚡' : '🚪'}
               </div>
 
               <h3
@@ -1985,7 +2032,9 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
                   fontFamily: 'Be Vietnam Pro, sans-serif',
                 }}
               >
-                Xác Nhận Đăng Xuất?
+                {logoutConfirmMode === 'all'
+                  ? 'Thu Hồi & Đăng Xuất Tất Cả Thiết Bị?'
+                  : 'Xác Nhận Đăng Xuất?'}
               </h3>
 
               <p
@@ -1996,14 +2045,23 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
                   lineHeight: 1.55,
                 }}
               >
-                Bạn có chắc chắn muốn đăng xuất khỏi tài khoản <strong style={{ color: '#0f172a' }}>"{user?.name || user?.email}"</strong> trên thiết bị này không? Mọi dữ liệu và bài viết của bạn vẫn được lưu giữ an toàn.
+                {logoutConfirmMode === 'all' ? (
+                  <>
+                    Hành động này sẽ nâng phiên bản xác thực và <strong>thu hồi toàn bộ phiên đăng nhập</strong> của tài khoản <strong style={{ color: '#0f172a' }}>"{user?.name || user?.email}"</strong> trên mọi điện thoại, máy tính và trình duyệt. Bạn sẽ cần đăng nhập lại trên các thiết bị đó.
+                  </>
+                ) : (
+                  <>
+                    Bạn có chắc chắn muốn đăng xuất khỏi tài khoản <strong style={{ color: '#0f172a' }}>"{user?.name || user?.email}"</strong> trên thiết bị này không? Mọi dữ liệu và bài viết của bạn vẫn được lưu giữ an toàn.
+                  </>
+                )}
               </p>
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button
                   type="button"
+                  disabled={isLoggingOutAll}
                   onClick={() => {
-                    playClickSound();
+                    if (playClickSound) playClickSound();
                     setIsLogoutConfirmOpen(false);
                   }}
                   style={{
@@ -2015,16 +2073,21 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
                     color: '#475569',
                     fontWeight: 700,
                     fontSize: '0.88rem',
-                    cursor: 'pointer',
+                    cursor: isLoggingOutAll ? 'not-allowed' : 'pointer',
+                    opacity: isLoggingOutAll ? 0.6 : 1,
                     transition: 'all 0.18s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#f1f5f9';
-                    e.currentTarget.style.borderColor = '#94a3b8';
+                    if (!isLoggingOutAll) {
+                      e.currentTarget.style.background = '#f1f5f9';
+                      e.currentTarget.style.borderColor = '#94a3b8';
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#ffffff';
-                    e.currentTarget.style.borderColor = '#cbd5e1';
+                    if (!isLoggingOutAll) {
+                      e.currentTarget.style.background = '#ffffff';
+                      e.currentTarget.style.borderColor = '#cbd5e1';
+                    }
                   }}
                 >
                   Hủy bỏ
@@ -2032,35 +2095,86 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    playClickSound();
-                    setIsLogoutConfirmOpen(false);
-                    if (onClose) onClose();
-                    if (logout) logout();
+                  disabled={isLoggingOutAll}
+                  onClick={async () => {
+                    if (playClickSound) playClickSound();
+                    if (logoutConfirmMode === 'all') {
+                      setIsLoggingOutAll(true);
+                      try {
+                        if (logoutAll) {
+                          await logoutAll();
+                        } else if (logout) {
+                          await logout();
+                        }
+                      } finally {
+                        setIsLoggingOutAll(false);
+                        setIsLogoutConfirmOpen(false);
+                        if (onClose) onClose();
+                      }
+                    } else {
+                      setIsLogoutConfirmOpen(false);
+                      if (onClose) onClose();
+                      if (logout) logout();
+                    }
                   }}
                   style={{
                     flex: 1,
                     padding: '11px 18px',
                     borderRadius: '12px',
                     border: 'none',
-                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    background: logoutConfirmMode === 'all'
+                      ? 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)'
+                      : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                     color: '#ffffff',
                     fontWeight: 800,
                     fontSize: '0.88rem',
-                    cursor: 'pointer',
+                    cursor: isLoggingOutAll ? 'not-allowed' : 'pointer',
                     boxShadow: '0 4px 14px rgba(239, 68, 68, 0.35)',
                     transition: 'all 0.18s ease',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow = '0 6px 18px rgba(239, 68, 68, 0.45)';
+                    if (!isLoggingOutAll) {
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 6px 18px rgba(239, 68, 68, 0.45)';
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 14px rgba(239, 68, 68, 0.35)';
+                    if (!isLoggingOutAll) {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(239, 68, 68, 0.35)';
+                    }
                   }}
                 >
-                  🚪 Đăng xuất ngay
+                  {isLoggingOutAll ? (
+                    <>
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          width: '14px',
+                          height: '14px',
+                          border: '2px solid rgba(255,255,255,0.4)',
+                          borderTopColor: '#ffffff',
+                          borderRadius: '50%',
+                          animation: 'spin 0.6s linear infinite',
+                        }}
+                      />
+                      <span>Đang thu hồi...</span>
+                    </>
+                  ) : logoutConfirmMode === 'all' ? (
+                    <>
+                      <span>⚡</span>
+                      <span>Thu hồi & Đăng xuất tất cả</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>🚪</span>
+                      <span>Đăng xuất ngay</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

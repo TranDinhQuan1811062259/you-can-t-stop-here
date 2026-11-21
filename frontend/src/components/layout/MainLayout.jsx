@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, Suspense, lazy } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { RouteLoadingFallback } from '../common/RouteLoadingFallback';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { useAuth } from '../../context/AuthContext';
@@ -9,15 +10,17 @@ import { CursorAura } from '../common/CursorAura';
 import { initGlobalSoundEffects, isSoundEnabled, toggleSound, playClickSound } from '../../utils/soundEffects';
 import { getActiveTheme, toggleTheme, applyTheme, getThemeSchedule, initThemeWatcher } from '../../utils/themeUtils';
 import { getActiveSeason } from '../../utils/seasonUtils';
-import { CreatePostModal } from '../blog/CreatePostModal';
 import { DraggableWritePostButton } from '../blog/DraggableWritePostButton';
 import { GoogleOneTapPrompt } from '../auth/GoogleOneTapPrompt';
 import { FloatingSmsAlert } from '../common/FloatingSmsAlert';
 import { SecurityBellNotification } from '../common/SecurityBellNotification';
 import { FloatingAiAudioPlayer } from '../blog/FloatingAiAudioPlayer';
-import { ThemeScheduleModal } from '../common/ThemeScheduleModal';
 import { FloatingFestiveMascot } from '../common/FloatingFestiveMascot';
 import { PageTransitionWrapper } from '../common/PageTransitionWrapper';
+
+// Tối ưu Code-Splitting: Lazy load các modal toàn cục để giảm kích thước bundle MainLayout
+const CreatePostModal = lazy(() => import('../blog/CreatePostModal').then((m) => ({ default: m.CreatePostModal || m.default })));
+const ThemeScheduleModal = lazy(() => import('../common/ThemeScheduleModal').then((m) => ({ default: m.ThemeScheduleModal || m.default })));
 import { PwaInstallPrompt } from '../common/PwaInstallPrompt';
 import { IdleWeatherSvgFilters } from '../common/IdleWeatherSvgFilters';
 import { DeskCompanionPet } from '../wellness/DeskCompanionPet';
@@ -329,7 +332,9 @@ export const MainLayout = () => {
 
       <main style={{ flexGrow: 1, position: 'relative', zIndex: 1, overflowX: 'clip' }}>
         <PageTransitionWrapper>
-          <Outlet />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <Outlet />
+          </Suspense>
         </PageTransitionWrapper>
       </main>
 
@@ -498,17 +503,25 @@ export const MainLayout = () => {
       </div>
 
       {/* Modal Cài Đặt Chuyển Đổi Ngày / Đêm Theo Giờ */}
-      <ThemeScheduleModal
-        isOpen={isThemeScheduleOpen}
-        onClose={() => setIsThemeScheduleOpen(false)}
-      />
+      {isThemeScheduleOpen && (
+        <Suspense fallback={null}>
+          <ThemeScheduleModal
+            isOpen={isThemeScheduleOpen}
+            onClose={() => setIsThemeScheduleOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Modal Viết Tâm Sự Toàn Cục */}
-      <CreatePostModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onPostCreated={() => window.location.reload()}
-      />
+      {isCreateOpen && (
+        <Suspense fallback={null}>
+          <CreatePostModal
+            isOpen={isCreateOpen}
+            onClose={() => setIsCreateOpen(false)}
+            onPostCreated={() => window.location.reload()}
+          />
+        </Suspense>
+      )}
 
       {/* Google One Tap Sign-In Prompt (Gợi ý đăng nhập 1 chạm khi người dùng truy cập trang) */}
       {!isAuthenticated && <GoogleOneTapPrompt />}

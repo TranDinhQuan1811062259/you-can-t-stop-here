@@ -2,7 +2,13 @@ import User from '../models/User.js';
 import Post from '../models/Post.js';
 import Category from '../models/Category.js';
 import { isDbConnected } from '../config/db.js';
-import { signToken } from '../utils/token.js';
+import {
+  signToken,
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+  revokeToken,
+} from '../utils/token.js';
 import { hashPassword } from '../utils/hash.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { sendOtpEmail } from '../services/emailService.js';
@@ -165,13 +171,19 @@ export const login = async (req, res) => {
       if (user) {
         const isMatch = await user.comparePassword(password);
         if (isMatch) {
-          const token = await signToken({
+          const tokenVersion = user.tokenVersion !== undefined ? user.tokenVersion : 0;
+          const token = await signAccessToken({
             id: user._id,
             role: user.role,
             name: user.name,
             email: user.email,
             phone: user.phone || '',
             jobTitle: user.jobTitle,
+            tokenVersion,
+          });
+          const refreshToken = await signRefreshToken({
+            id: user._id,
+            tokenVersion,
           });
 
           return sendSuccess(res, {
@@ -198,6 +210,7 @@ export const login = async (req, res) => {
               socialLinks: user.socialLinks || {},
               authProvider: user.authProvider || 'local',
               token,
+              refreshToken,
             },
           });
         }
@@ -226,12 +239,18 @@ export const login = async (req, res) => {
 
       // Nếu tài khoản đã tồn tại trong store, cho phép đăng nhập đúng danh tính
       if (isMatch || !found.password || found.rawPassword === undefined) {
-        const token = await signToken({
+        const tokenVersion = found.tokenVersion !== undefined ? found.tokenVersion : 0;
+        const token = await signAccessToken({
           id: found._id,
           role: found.role || 'user',
           name: found.name,
           email: found.email,
           jobTitle: found.jobTitle,
+          tokenVersion,
+        });
+        const refreshToken = await signRefreshToken({
+          id: found._id,
+          tokenVersion,
         });
 
         return sendSuccess(res, {
@@ -248,6 +267,7 @@ export const login = async (req, res) => {
               url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
             },
             token,
+            refreshToken,
           },
         });
       }
@@ -492,12 +512,18 @@ export const socialLogin = async (req, res) => {
         });
       }
 
-      const token = await signToken({
+      const tokenVersion = user.tokenVersion !== undefined ? user.tokenVersion : 0;
+      const token = await signAccessToken({
         id: user._id,
         role: user.role,
         name: user.name,
         email: user.email,
         jobTitle: user.jobTitle,
+        tokenVersion,
+      });
+      const refreshToken = await signRefreshToken({
+        id: user._id,
+        tokenVersion,
       });
 
       const responseData = {
@@ -521,6 +547,7 @@ export const socialLogin = async (req, res) => {
         socialLinks: user.socialLinks || {},
         authProvider: user.authProvider,
         token,
+        refreshToken,
       };
 
       // Lưu bền vững vào db_store.json trên ổ cứng
@@ -570,16 +597,22 @@ export const socialLogin = async (req, res) => {
 
     saveUserToStore(mockUser);
 
-    const token = await signToken({
+    const tokenVersion = mockUser.tokenVersion !== undefined ? mockUser.tokenVersion : 0;
+    const token = await signAccessToken({
       id: mockUser._id,
       role: mockUser.role,
       name: mockUser.name,
       email: mockUser.email,
+      tokenVersion,
+    });
+    const refreshToken = await signRefreshToken({
+      id: mockUser._id,
+      tokenVersion,
     });
 
     return sendSuccess(res, {
       message: `Đăng nhập thành công với ${cleanProvider.toUpperCase()}! (Đã lưu bền vững trên ổ cứng)`,
-      data: { ...mockUser, token },
+      data: { ...mockUser, token, refreshToken },
     });
   } catch (error) {
     return sendError(res, { message: error.message, status: 500 });
@@ -686,7 +719,7 @@ export const updateProfile = async (req, res) => {
         };
       }
 
-      // Xử lý đổi mật khẩu nếu có
+      // Xử lý đổi mật khẩu nếu có (Đồng thời nâng tokenVersion để thu hồi các phiên cũ)
       if (newPassword) {
         if (newPassword.length < 6) {
           return sendError(res, { message: 'Mật khẩu mới phải có tối thiểu 6 ký tự', status: 400 });
@@ -698,6 +731,7 @@ export const updateProfile = async (req, res) => {
           }
         }
         user.password = newPassword;
+        user.tokenVersion = (user.tokenVersion || 0) + 1;
       }
 
       await user.save();
@@ -763,12 +797,18 @@ export const updateProfile = async (req, res) => {
         authProvider: user.authProvider || 'local',
       });
 
-      const freshToken = await signToken({
+      const tokenVersion = user.tokenVersion !== undefined ? user.tokenVersion : 0;
+      const freshToken = await signAccessToken({
         id: user._id,
         role: user.role,
         name: user.name,
         email: user.email,
         jobTitle: user.jobTitle,
+        tokenVersion,
+      });
+      const freshRefreshToken = await signRefreshToken({
+        id: user._id,
+        tokenVersion,
       });
 
       return sendSuccess(res, {
@@ -788,6 +828,7 @@ export const updateProfile = async (req, res) => {
           socialLinks: user.socialLinks,
           authProvider: user.authProvider || 'local',
           token: freshToken,
+          refreshToken: freshRefreshToken,
         },
       });
     }
@@ -815,6 +856,27 @@ export const updateProfile = async (req, res) => {
       targetEmail = cleanEmail;
     }
 
+    let fallbackTokenVersion = baseTarget.tokenVersion !== undefined ? baseTarget.tokenVersion : 0;
+    let newHashedPassword = undefined;
+    if (newPassword) {
+      if (newPassword.length < 6) {
+        return sendError(res, { message: 'Mật khẩu mới phải có tối thiểu 6 ký tự', status: 400 });
+      }
+      if (currentPassword && (baseTarget.password || baseTarget.rawPassword)) {
+        let isMatch = currentPassword === baseTarget.password || currentPassword === baseTarget.rawPassword;
+        if (!isMatch && baseTarget.password) {
+          try {
+            isMatch = await comparePassword(currentPassword, baseTarget.password);
+          } catch (_) {}
+        }
+        if (!isMatch) {
+          return sendError(res, { message: 'Mật khẩu hiện tại không chính xác', status: 400 });
+        }
+      }
+      newHashedPassword = await hashPassword(newPassword);
+      fallbackTokenVersion += 1;
+    }
+
     const updatedUser = {
       ...baseTarget,
       _id: baseTarget._id || req.user?._id || 'u_admin_1',
@@ -836,6 +898,8 @@ export const updateProfile = async (req, res) => {
         url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
       },
       socialLinks: socialLinks || baseTarget.socialLinks || {},
+      tokenVersion: fallbackTokenVersion,
+      ...(newHashedPassword ? { password: newHashedPassword, rawPassword: newPassword } : {}),
     };
 
     // Ghi đè vào db_store.json trên ổ cứng ngay lập tức
@@ -866,12 +930,17 @@ export const updateProfile = async (req, res) => {
       saveStore(store);
     }
 
-    const freshToken = await signToken({
+    const freshToken = await signAccessToken({
       id: updatedUser._id,
       role: updatedUser.role,
       name: updatedUser.name,
       email: updatedUser.email,
       jobTitle: updatedUser.jobTitle,
+      tokenVersion: fallbackTokenVersion,
+    });
+    const freshRefreshToken = await signRefreshToken({
+      id: updatedUser._id,
+      tokenVersion: fallbackTokenVersion,
     });
 
     return sendSuccess(res, {
@@ -879,6 +948,7 @@ export const updateProfile = async (req, res) => {
       data: {
         ...updatedUser,
         token: freshToken,
+        refreshToken: freshRefreshToken,
       },
     });
   } catch (error) {
@@ -1405,11 +1475,17 @@ export const verifyOtpAndLogin = async (req, res) => {
       alertSms = await sendLoginAlertSms(cleanTarget, finalUser.name, deviceName);
     }
 
-    const token = await signToken({
+    const tokenVersion = finalUser.tokenVersion !== undefined ? finalUser.tokenVersion : 0;
+    const token = await signAccessToken({
       id: finalUser._id,
       role: finalUser.role,
       name: finalUser.name,
       email: finalUser.email,
+      tokenVersion,
+    });
+    const refreshToken = await signRefreshToken({
+      id: finalUser._id,
+      tokenVersion,
     });
 
     return sendSuccess(res, {
@@ -1419,6 +1495,7 @@ export const verifyOtpAndLogin = async (req, res) => {
       data: {
         ...finalUser,
         token,
+        refreshToken,
         alertSms: alertSms ? alertSms.content : null,
       },
     });
@@ -1732,14 +1809,20 @@ export const handleOAuthCallback = async (req, res) => {
     const finalEmail = targetUser?.email || (profile?.email ? profile.email.toLowerCase().trim() : `${provider}_${Date.now()}@social.cantstophere.com`);
     const finalAvatar = targetUser?.avatar || profile?.avatar || '';
 
-    const token = await signToken({
+    const tokenVersion = targetUser?.tokenVersion !== undefined ? targetUser.tokenVersion : 0;
+    const token = await signAccessToken({
       id: finalUserId,
       role: finalRole,
       name: finalName,
       email: finalEmail,
+      tokenVersion,
+    });
+    const refreshToken = await signRefreshToken({
+      id: finalUserId,
+      tokenVersion,
     });
 
-    return res.redirect(`${clientUrl}/?oauth=success&provider=${provider}&token=${token}&name=${encodeURIComponent(finalName)}&email=${encodeURIComponent(finalEmail)}&avatar=${encodeURIComponent(finalAvatar)}`);
+    return res.redirect(`${clientUrl}/?oauth=success&provider=${provider}&token=${token}&refreshToken=${refreshToken}&name=${encodeURIComponent(finalName)}&email=${encodeURIComponent(finalEmail)}&avatar=${encodeURIComponent(finalAvatar)}`);
   } catch (err) {
     console.error(`[OAuth Callback Error] provider: ${provider}`, err);
     return res.redirect(`${clientUrl}/?oauth=error&message=${encodeURIComponent(err.message || 'Lỗi xử lý callback OAuth')}`);
@@ -1826,6 +1909,7 @@ export const checkQrSessionStatus = async (req, res) => {
         data: {
           status: 'authenticated',
           token: session.token,
+          refreshToken: session.refreshToken,
           user: session.user,
         },
       });
@@ -1864,17 +1948,24 @@ export const verifyQrSession = async (req, res) => {
       return sendError(res, { message: 'Bạn cần đăng nhập tài khoản trên thiết bị này trước khi xác nhận', status: 401 });
     }
 
+    const tokenVersion = user.tokenVersion !== undefined ? user.tokenVersion : 0;
     // Cấp token mới cho thiết bị web máy tính
-    const webToken = await signToken({
+    const webToken = await signAccessToken({
       id: user._id,
       role: user.role,
       name: user.name,
       email: user.email,
       jobTitle: user.jobTitle,
+      tokenVersion,
+    });
+    const webRefreshToken = await signRefreshToken({
+      id: user._id,
+      tokenVersion,
     });
 
     session.status = 'authenticated';
     session.token = webToken;
+    session.refreshToken = webRefreshToken;
     session.user = {
       _id: user._id,
       name: user.name,
@@ -1927,16 +2018,23 @@ export const simulateQrSessionScan = async (req, res) => {
       ? users.find((u) => u.email.toLowerCase() === email.toLowerCase()) || users[0]
       : users[0];
 
-    const webToken = await signToken({
+    const tokenVersion = targetUser.tokenVersion !== undefined ? targetUser.tokenVersion : 0;
+    const webToken = await signAccessToken({
       id: targetUser._id,
       role: targetUser.role || 'admin',
       name: targetUser.name,
       email: targetUser.email,
       jobTitle: targetUser.jobTitle,
+      tokenVersion,
+    });
+    const webRefreshToken = await signRefreshToken({
+      id: targetUser._id,
+      tokenVersion,
     });
 
     session.status = 'authenticated';
     session.token = webToken;
+    session.refreshToken = webRefreshToken;
     session.user = {
       _id: targetUser._id,
       name: targetUser.name,
@@ -1955,6 +2053,153 @@ export const simulateQrSessionScan = async (req, res) => {
     });
   } catch (error) {
     return sendError(res, { message: error.message, status: 500 });
+  }
+};
+
+/**
+ * Làm mới Access Token ngầm bằng Refresh Token (Silent Refresh Token)
+ * Hỗ trợ xoay vòng Refresh Token (Token Rotation) và Fail-Closed khi có bất thường.
+ */
+export const refreshToken = async (req, res) => {
+  try {
+    const { refreshToken: tokenInput } = req.body;
+    if (!tokenInput) {
+      return sendError(res, {
+        message: 'Vui lòng cung cấp refresh token để làm mới phiên làm việc',
+        status: 400,
+      });
+    }
+
+    let decoded;
+    try {
+      decoded = await verifyRefreshToken(tokenInput);
+    } catch (err) {
+      return sendError(res, {
+        message: err.message || 'Refresh token không hợp lệ hoặc đã hết hạn, vui lòng đăng nhập lại',
+        status: 401,
+      });
+    }
+
+    let user = null;
+    if (isDbConnected && decoded.id && String(decoded.id).match(/^[0-9a-fA-F]{24}$/)) {
+      user = await User.findById(decoded.id).select('-password');
+    }
+
+    if (!user) {
+      const store = loadStore();
+      user = (store.users || []).find((u) => String(u._id || u.id) === String(decoded.id));
+    }
+
+    if (!user) {
+      return sendError(res, {
+        message: 'Không tìm thấy thông tin tài khoản tương ứng với phiên làm việc',
+        status: 401,
+      });
+    }
+
+    const currentVersion = user.tokenVersion !== undefined ? user.tokenVersion : 0;
+    if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== currentVersion) {
+      return sendError(res, {
+        message: 'Phiên đăng nhập đã bị thu hồi hoặc đổi mật khẩu. Vui lòng đăng nhập lại!',
+        status: 401,
+      });
+    }
+
+    // Token Rotation: Thu hồi Refresh Token cũ và cấp mới cặp Access + Refresh Token
+    revokeToken(tokenInput);
+
+    const newAccessToken = await signAccessToken({
+      id: user._id,
+      role: user.role || 'user',
+      name: user.name,
+      email: user.email,
+      phone: user.phone || '',
+      jobTitle: user.jobTitle,
+      tokenVersion: currentVersion,
+    });
+
+    const newRefreshToken = await signRefreshToken({
+      id: user._id,
+      tokenVersion: currentVersion,
+    });
+
+    return sendSuccess(res, {
+      message: 'Làm mới token xác thực thành công',
+      data: {
+        token: newAccessToken,
+        refreshToken: newRefreshToken,
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role || 'user',
+          jobTitle: user.jobTitle,
+          avatar: user.avatar,
+        },
+      },
+    });
+  } catch (error) {
+    return sendError(res, {
+      message: error.message || 'Lỗi xử lý làm mới phiên đăng nhập',
+      status: 500,
+    });
+  }
+};
+
+/**
+ * Đăng xuất tài khoản hiện tại & Thu hồi Refresh Token (Revoke Session)
+ */
+export const logout = async (req, res) => {
+  try {
+    const { refreshToken: tokenInput } = req.body;
+    if (tokenInput) {
+      revokeToken(tokenInput);
+    }
+    return sendSuccess(res, {
+      message: 'Đăng xuất tài khoản thành công',
+    });
+  } catch (error) {
+    return sendError(res, {
+      message: error.message || 'Lỗi khi đăng xuất tài khoản',
+      status: 500,
+    });
+  }
+};
+
+/**
+ * Đăng xuất khỏi TẤT CẢ các thiết bị (Logout All Sessions)
+ * Tăng tokenVersion lên 1 để vô hiệu hóa tức thời toàn bộ token trên mọi thiết bị
+ */
+export const logoutAll = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const userEmail = req.user?.email;
+
+    if (isDbConnected && userId && String(userId).match(/^[0-9a-fA-F]{24}$/)) {
+      await User.findByIdAndUpdate(userId, { $inc: { tokenVersion: 1 } });
+    }
+
+    const store = loadStore();
+    if (store.users) {
+      const u = store.users.find(
+        (user) =>
+          String(user._id || user.id) === String(userId) ||
+          (userEmail && user.email?.toLowerCase() === userEmail.toLowerCase())
+      );
+      if (u) {
+        u.tokenVersion = (u.tokenVersion || 0) + 1;
+        saveStore(store);
+      }
+    }
+
+    return sendSuccess(res, {
+      message: 'Đã thu hồi phiên đăng nhập trên toàn bộ thiết bị thành công. Vui lòng đăng nhập lại.',
+    });
+  } catch (error) {
+    return sendError(res, {
+      message: error.message || 'Lỗi khi thu hồi phiên trên toàn bộ thiết bị',
+      status: 500,
+    });
   }
 };
 

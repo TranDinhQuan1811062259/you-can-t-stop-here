@@ -49,6 +49,10 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
     authProvider: {
       type: String,
       enum: ['local', 'google', 'facebook', 'x', 'linkedin', 'github'],

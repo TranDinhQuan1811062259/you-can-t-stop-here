@@ -23,6 +23,38 @@ export default defineConfig({
       '@': path.resolve(projectRoot, './src'),
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('three')) {
+              return 'vendor-three';
+            }
+            if (
+              id.includes('react') ||
+              id.includes('react-dom') ||
+              id.includes('react-router-dom')
+            ) {
+              return 'vendor-react';
+            }
+            if (id.includes('axios') || id.includes('dompurify')) {
+              return 'vendor-utils';
+            }
+            return 'vendor-misc';
+          }
+          if (
+            id.includes('Soldier3DCanvas') ||
+            id.includes('Tank3DCanvas') ||
+            id.includes('SoldiersParade29')
+          ) {
+            return 'feature-3d-canvas';
+          }
+        },
+      },
+    },
+  },
   server: {
     port: 3000,
     strictPort: false,

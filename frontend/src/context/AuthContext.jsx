@@ -52,7 +52,7 @@ export const ensureAdminPrivileges = (userData) => {
 /**
  * Lưu đồng bộ toàn bộ session vào các khóa localStorage
  */
-const syncAuthStorage = (user, token) => {
+const syncAuthStorage = (user, token, refreshToken) => {
   try {
     if (user) {
       const safeUser = ensureAdminPrivileges(user);
@@ -70,6 +70,14 @@ const syncAuthStorage = (user, token) => {
     } else {
       localStorage.removeItem('token');
       localStorage.removeItem('freedom_token');
+    }
+
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('freedom_refresh_token', refreshToken);
+    } else if (refreshToken === null || user === null) {
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('freedom_refresh_token');
     }
   } catch (e) {
     console.warn('[Auth] Lỗi lưu storage:', e);
@@ -110,6 +118,7 @@ export const AuthProvider = ({ children }) => {
       const urlParams = new URLSearchParams(window.location.search);
       const oauthStatus = urlParams.get('oauth');
       const oauthToken = urlParams.get('token');
+      const oauthRefreshToken = urlParams.get('refreshToken');
       const oauthProvider = urlParams.get('provider');
       const oauthName = urlParams.get('name');
       const oauthEmail = urlParams.get('email');
@@ -135,7 +144,7 @@ export const AuthProvider = ({ children }) => {
 
         setToken(oauthToken);
         setUser(safeUser);
-        syncAuthStorage(safeUser, oauthToken);
+        syncAuthStorage(safeUser, oauthToken, oauthRefreshToken);
 
         window.dispatchEvent(new Event('profile_updated'));
         window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
@@ -195,17 +204,18 @@ export const AuthProvider = ({ children }) => {
       const res = await authService.login(credentials);
       const rawData = res?.data?.data || res?.data || {};
       const receivedToken = rawData.token || res?.token || `token_${Date.now()}_freedom`;
-      const { token: _t, ...extractedUser } = rawData;
+      const receivedRefreshToken = rawData.refreshToken || res?.refreshToken || null;
+      const { token: _t, refreshToken: _rt, ...extractedUser } = rawData;
       const safeUser = ensureAdminPrivileges(extractedUser);
 
       setToken(receivedToken);
       setUser(safeUser);
-      syncAuthStorage(safeUser, receivedToken);
+      syncAuthStorage(safeUser, receivedToken, receivedRefreshToken);
       setIsAuthModalOpen(false);
 
       window.dispatchEvent(new Event('profile_updated'));
       window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
-      return { data: { token: receivedToken, ...safeUser } };
+      return { data: { token: receivedToken, refreshToken: receivedRefreshToken, ...safeUser } };
     } catch (err) {
       console.warn('[Auth] Lỗi đăng nhập backend, kích hoạt cơ chế dự phòng an toàn:', err);
 
@@ -284,17 +294,18 @@ export const AuthProvider = ({ children }) => {
       const res = await authService.verifyOtp({ email: target, identifier: target, otpCode });
       const rawData = res?.data?.data || res?.data || {};
       const receivedToken = rawData.token || `token_otp_${Date.now()}`;
-      const { token: _t, alertSms, ...extractedUser } = rawData;
+      const receivedRefreshToken = rawData.refreshToken || null;
+      const { token: _t, refreshToken: _rt, alertSms, ...extractedUser } = rawData;
       const safeUser = ensureAdminPrivileges(extractedUser);
 
       setToken(receivedToken);
       setUser(safeUser);
-      syncAuthStorage(safeUser, receivedToken);
+      syncAuthStorage(safeUser, receivedToken, receivedRefreshToken);
       setIsAuthModalOpen(false);
 
       window.dispatchEvent(new Event('profile_updated'));
       window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
-      return { data: { token: receivedToken, ...safeUser } };
+      return { data: { token: receivedToken, refreshToken: receivedRefreshToken, ...safeUser } };
     } catch (err) {
       console.warn('[Auth] Lỗi loginWithOtp backend, kích hoạt dự phòng:', err);
       let savedSnapshot = null;
@@ -394,17 +405,18 @@ export const AuthProvider = ({ children }) => {
       }
 
       const receivedToken = rawData.token || res?.token || `token_${Date.now()}_social`;
-      const { token: _t, ...extractedUser } = rawData;
+      const receivedRefreshToken = rawData.refreshToken || res?.refreshToken || null;
+      const { token: _t, refreshToken: _rt, ...extractedUser } = rawData;
       const safeUser = ensureAdminPrivileges(extractedUser);
 
       setToken(receivedToken);
       setUser(safeUser);
-      syncAuthStorage(safeUser, receivedToken);
+      syncAuthStorage(safeUser, receivedToken, receivedRefreshToken);
       setIsAuthModalOpen(false);
 
       window.dispatchEvent(new Event('profile_updated'));
       window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
-      return { data: { token: receivedToken, ...safeUser } };
+      return { data: { token: receivedToken, refreshToken: receivedRefreshToken, ...safeUser } };
     } catch (err) {
       console.warn('[Auth] Lỗi socialLogin backend:', err);
 
@@ -454,10 +466,14 @@ export const AuthProvider = ({ children }) => {
    * Cập nhật thông tin cá nhân của người dùng
    */
   const updateUserProfile = (updatedUser) => {
-    const { token: newToken, ...restUserData } = updatedUser;
+    const { token: newToken, refreshToken: newRefreshToken, ...restUserData } = updatedUser;
     setUser((prev) => {
       const merged = ensureAdminPrivileges({ ...(prev || {}), ...restUserData });
-      syncAuthStorage(merged, newToken || token);
+      syncAuthStorage(
+        merged,
+        newToken || token,
+        newRefreshToken || localStorage.getItem('refreshToken') || localStorage.getItem('freedom_refresh_token')
+      );
       return merged;
     });
 
@@ -469,22 +485,43 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
-   * Đăng xuất an toàn và triệt để
+   * Đăng xuất an toàn và triệt để, đồng thời thu hồi phiên Refresh Token tại máy chủ
    */
-  const logout = () => {
+  const logout = async (callApi = true) => {
+    const activeRefreshToken =
+      localStorage.getItem('refreshToken') || localStorage.getItem('freedom_refresh_token');
+
+    if (callApi && activeRefreshToken) {
+      try {
+        await authService.logout({ refreshToken: activeRefreshToken });
+      } catch (_) {}
+    }
+
     setUser(null);
     setToken(null);
-    syncAuthStorage(null, null);
+    syncAuthStorage(null, null, null);
     try {
       localStorage.removeItem('user');
       localStorage.removeItem('token');
       localStorage.removeItem('freedom_token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('freedom_refresh_token');
       localStorage.removeItem('freedom_persisted_profile');
       sessionStorage.removeItem('token');
       sessionStorage.removeItem('user');
     } catch (_) {}
     window.dispatchEvent(new Event('profile_updated'));
     window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
+  };
+
+  /**
+   * Đăng xuất khỏi TẤT CẢ các thiết bị (Logout All Devices)
+   */
+  const logoutAll = async () => {
+    try {
+      await authService.logoutAll();
+    } catch (_) {}
+    await logout(false);
   };
 
   const openLoginModal = () => {
@@ -527,6 +564,7 @@ export const AuthProvider = ({ children }) => {
         socialLogin,
         updateUserProfile,
         logout,
+        logoutAll,
         setUser,
         setToken,
         isAuthModalOpen,

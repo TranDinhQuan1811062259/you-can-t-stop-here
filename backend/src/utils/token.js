@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'you_cant_stop_here_secret_key_2026_super_secure';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || `${JWT_SECRET}_refresh_v1`;
 
 // Base64Url helpers
 const base64UrlEncode = (str) =>
@@ -17,14 +18,51 @@ const base64UrlDecode = (str) => {
 };
 
 /**
- * Tạo token JWT (Tự động dùng thư viện jsonwebtoken nếu có, hoặc dùng native crypto nếu chưa cài)
+ * Kho lưu trữ Token bị thu hồi (Revoked Token Store / Blacklist)
+ * Lưu: token -> expiresAt (timestamp miliseconds)
  */
-export const signToken = async (payload, expiresInSeconds = 30 * 24 * 60 * 60) => {
+const revokedTokenStore = new Map();
+
+// Tự động dọn dẹp các token đã quá hạn trong danh sách thu hồi mỗi 15 phút
+const cleanupRevokedTokensInterval = setInterval(() => {
+  const now = Date.now();
+  for (const [t, exp] of revokedTokenStore.entries()) {
+    if (now > exp) {
+      revokedTokenStore.delete(t);
+    }
+  }
+}, 15 * 60 * 1000);
+
+if (cleanupRevokedTokensInterval.unref) {
+  cleanupRevokedTokensInterval.unref();
+}
+
+/**
+ * Thu hồi một Refresh Token (Revoke Session)
+ */
+export const revokeToken = (token, maxAgeSeconds = 7 * 24 * 60 * 60) => {
+  if (!token) return;
+  const expiresAt = Date.now() + maxAgeSeconds * 1000;
+  revokedTokenStore.set(String(token), expiresAt);
+};
+
+/**
+ * Kiểm tra xem token đã bị thu hồi hay chưa
+ */
+export const isTokenRevoked = (token) => {
+  if (!token) return true;
+  return revokedTokenStore.has(String(token));
+};
+
+/**
+ * Ký JWT tổng quát với secret tùy chọn
+ */
+const signJwtGeneric = async (payload, secret, expiresInSeconds) => {
   try {
     const jwtModule = await import('jsonwebtoken');
     const jwt = jwtModule.default || jwtModule;
     if (typeof jwt.sign === 'function') {
-      return jwt.sign(payload, JWT_SECRET, { expiresIn: `${expiresInSeconds}s` });
+      return jwt.sign(payload, secret, { expiresIn: `${expiresInSeconds}s` });
     }
   } catch (err) {}
 
@@ -37,7 +75,7 @@ export const signToken = async (payload, expiresInSeconds = 30 * 24 * 60 * 60) =
   const encodedPayload = base64UrlEncode(JSON.stringify(fullPayload));
 
   const signature = crypto
-    .createHmac('sha256', JWT_SECRET)
+    .createHmac('sha256', secret)
     .update(`${encodedHeader}.${encodedPayload}`)
     .digest('base64')
     .replace(/=/g, '')
@@ -48,20 +86,57 @@ export const signToken = async (payload, expiresInSeconds = 30 * 24 * 60 * 60) =
 };
 
 /**
- * Xác minh token JWT (Tự động dùng jsonwebtoken hoặc native crypto, hỗ trợ fallback token an toàn)
+ * Tạo Access Token ngắn hạn (Mặc định 15 phút = 900 giây)
+ */
+export const signAccessToken = async (payload, expiresInSeconds = 15 * 60) => {
+  const cleanPayload = { ...payload, tokenType: 'access' };
+  return signJwtGeneric(cleanPayload, JWT_SECRET, expiresInSeconds);
+};
+
+/**
+ * Tạo Refresh Token dài hạn (Mặc định 7 ngày = 604800 giây)
+ */
+export const signRefreshToken = async (payload, expiresInSeconds = 7 * 24 * 60 * 60) => {
+  const refreshPayload = {
+    id: payload.id || payload._id,
+    tokenVersion: payload.tokenVersion !== undefined ? payload.tokenVersion : 0,
+    tokenType: 'refresh',
+  };
+  return signJwtGeneric(refreshPayload, JWT_REFRESH_SECRET, expiresInSeconds);
+};
+
+/**
+ * Tạo token JWT tương thích ngược (Mặc định tạo Access Token 15 phút)
+ */
+export const signToken = async (payload, expiresInSeconds = 15 * 60) => {
+  return signAccessToken(payload, expiresInSeconds);
+};
+
+/**
+ * Xác minh Access Token JWT
  */
 export const verifyToken = async (token) => {
   if (!token) throw new Error('Token không tồn tại');
+  if (isTokenRevoked(token)) {
+    throw new Error('Token đã bị thu hồi');
+  }
 
   // 1. Thử qua thư viện jsonwebtoken nếu có
   try {
     const jwtModule = await import('jsonwebtoken');
     const jwt = jwtModule.default || jwtModule;
     if (typeof jwt.verify === 'function') {
-      return jwt.verify(token, JWT_SECRET);
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (decoded.tokenType === 'refresh') {
+        throw new Error('Loại token không hợp lệ cho truy cập API');
+      }
+      return decoded;
     }
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
+      throw err;
+    }
+    if (err.message === 'Loại token không hợp lệ cho truy cập API') {
       throw err;
     }
   }
@@ -84,10 +159,15 @@ export const verifyToken = async (token) => {
         if (payload.exp && Date.now() / 1000 > payload.exp) {
           throw new Error('Token đã hết hạn');
         }
+        if (payload.tokenType === 'refresh') {
+          throw new Error('Loại token không hợp lệ cho truy cập API');
+        }
         return payload;
       }
     } catch (cryptoErr) {
-      if (cryptoErr.message === 'Token đã hết hạn') throw cryptoErr;
+      if (cryptoErr.message === 'Token đã hết hạn' || cryptoErr.message === 'Loại token không hợp lệ cho truy cập API') {
+        throw cryptoErr;
+      }
     }
   }
 
@@ -103,9 +183,70 @@ export const verifyToken = async (token) => {
         email: matchedUser.email,
         role: matchedUser.role || 'user',
         jobTitle: matchedUser.jobTitle || 'Thành viên cộng đồng',
+        tokenVersion: matchedUser.tokenVersion !== undefined ? matchedUser.tokenVersion : 0,
       };
     }
   } catch (_) {}
 
   throw new Error('Token không hợp lệ hoặc đã hết hạn');
+};
+
+/**
+ * Xác minh Refresh Token JWT
+ */
+export const verifyRefreshToken = async (token) => {
+  if (!token) throw new Error('Refresh token không tồn tại');
+  if (isTokenRevoked(token)) {
+    throw new Error('Refresh token đã bị thu hồi hoặc đã được làm mới');
+  }
+
+  // 1. jsonwebtoken
+  try {
+    const jwtModule = await import('jsonwebtoken');
+    const jwt = jwtModule.default || jwtModule;
+    if (typeof jwt.verify === 'function') {
+      const decoded = jwt.verify(token, JWT_REFRESH_SECRET);
+      if (decoded.tokenType !== 'refresh') {
+        throw new Error('Token không phải là refresh token hợp lệ');
+      }
+      return decoded;
+    }
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      throw new Error('Refresh token đã hết hạn, vui lòng đăng nhập lại');
+    }
+    if (err.message?.includes('refresh token')) {
+      throw err;
+    }
+  }
+
+  // 2. Native crypto fallback
+  const parts = String(token).split('.');
+  if (parts.length === 3) {
+    try {
+      const [encodedHeader, encodedPayload, signature] = parts;
+      const expectedSignature = crypto
+        .createHmac('sha256', JWT_REFRESH_SECRET)
+        .update(`${encodedHeader}.${encodedPayload}`)
+        .digest('base64')
+        .replace(/=/g, '')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_');
+
+      if (signature === expectedSignature) {
+        const payload = JSON.parse(base64UrlDecode(encodedPayload));
+        if (payload.exp && Date.now() / 1000 > payload.exp) {
+          throw new Error('Refresh token đã hết hạn, vui lòng đăng nhập lại');
+        }
+        if (payload.tokenType !== 'refresh') {
+          throw new Error('Token không phải là refresh token hợp lệ');
+        }
+        return payload;
+      }
+    } catch (cryptoErr) {
+      throw cryptoErr;
+    }
+  }
+
+  throw new Error('Refresh token không hợp lệ hoặc đã hết hạn');
 };

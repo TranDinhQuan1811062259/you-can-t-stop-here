@@ -42,7 +42,19 @@ export const protect = async (req, res, next) => {
           role: isAdm ? 'admin' : (decoded.role || 'user'),
           jobTitle: decoded.jobTitle || (isAdm ? 'System Admin & Lead Dev' : 'Người đi làm'),
           avatar: isAdm ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : (decoded.avatar || ''),
+          tokenVersion: decoded.tokenVersion !== undefined ? decoded.tokenVersion : 0,
         };
+      }
+
+      // Kiểm tra phiên đăng nhập có bị thu hồi qua tokenVersion (ví dụ sau khi đổi mật khẩu hoặc logout-all)
+      if (req.user && decoded.tokenVersion !== undefined) {
+        const currentVersion = req.user.tokenVersion !== undefined ? req.user.tokenVersion : 0;
+        if (decoded.tokenVersion !== currentVersion) {
+          return sendError(res, {
+            message: 'Phiên đăng nhập đã bị thu hồi hoặc đổi mật khẩu. Vui lòng đăng nhập lại!',
+            status: 401,
+          });
+        }
       }
 
       return next();
@@ -108,7 +120,15 @@ export const optionalProtect = async (req, res, next) => {
           email: decoded.email || '',
           role: decoded.role || 'user',
           jobTitle: decoded.jobTitle || 'Người đi làm',
+          tokenVersion: decoded.tokenVersion !== undefined ? decoded.tokenVersion : 0,
         };
+      }
+
+      if (req.user && decoded.tokenVersion !== undefined) {
+        const currentVersion = req.user.tokenVersion !== undefined ? req.user.tokenVersion : 0;
+        if (decoded.tokenVersion !== currentVersion) {
+          req.user = null;
+        }
       }
     } catch (e) {
       // Bỏ qua lỗi token cho route tùy chọn

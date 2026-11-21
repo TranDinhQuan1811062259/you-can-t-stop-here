@@ -706,7 +706,8 @@
       "allowStrangerNotifications": true,
       "authProvider": "facebook",
       "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhZWM1YjQ2ZWUxMTI2NjJiMzNjMGUzMiIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiLEkMahbiBUaMOibiBN4bq5IiwiZW1haWwiOiJhbnRob255cTAxMjAyNUBnbWFpbC5jb20iLCJqb2JUaXRsZSI6IlN5c3RlbSBBZG1pbiAmIExlYWQgRGV2IiwiaWF0IjoxNzk0MDQyODg4LCJleHAiOjE3OTY2MzQ4ODh9.mFCSvEym_UsFO-M46ikk-4hnkN3-Hlv7c3-LM3HKFao",
-      "isVerified": true
+      "isVerified": true,
+      "tokenVersion": 1
     },
     {
       "_id": "u_admin_2",

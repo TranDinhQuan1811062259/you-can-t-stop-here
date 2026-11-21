@@ -7,6 +7,15 @@ export const authService = {
   // Đăng nhập
   login: (credentials) => apiClient.post('/auth/login', credentials),
 
+  // Làm mới Access Token ngầm (Silent Refresh Token)
+  refreshToken: (data) => apiClient.post('/auth/refresh-token', data),
+
+  // Đăng xuất tài khoản và thu hồi phiên làm việc hiện tại
+  logout: (data) => apiClient.post('/auth/logout', data || {}),
+
+  // Thu hồi phiên đăng nhập trên TẤT CẢ các thiết bị
+  logoutAll: () => apiClient.post('/auth/logout-all'),
+
   // Gửi mã xác nhận OTP qua Email
   sendOtp: (data) => apiClient.post('/auth/send-otp', data),
 

@@ -14,6 +14,9 @@ import {
   checkQrSessionStatus,
   verifyQrSession,
   simulateQrSessionScan,
+  refreshToken,
+  logout,
+  logoutAll,
 } from '../controllers/authController.js';
 import { protect, optionalProtect } from '../middlewares/authMiddleware.js';
 import {
@@ -47,6 +50,9 @@ router.post('/qr/simulate', (req, res, next) => {
 // Xác thực & Tài khoản (Bảo vệ bởi Rate Limiting & Cooldown chống Brute-force & Spam bom mail)
 router.post('/register', otpTargetCooldownLimiter, otpSendLimiter, register);
 router.post('/login', authLimiter, login);
+router.post('/refresh-token', authLimiter, refreshToken);
+router.post('/logout', optionalProtect, logout);
+router.post('/logout-all', protect, logoutAll);
 router.post('/send-otp', otpTargetCooldownLimiter, otpSendLimiter, sendLoginOtp);
 router.post('/verify-otp', authLimiter, verifyOtpAndLogin);
 router.post('/social-login', authLimiter, otpTargetCooldownLimiter, socialLogin);
