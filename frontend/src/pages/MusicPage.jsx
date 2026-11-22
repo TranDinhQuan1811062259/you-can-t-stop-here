@@ -40,8 +40,8 @@ export const MusicPage = () => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Bỏ qua nếu đang gõ văn bản trong input/textarea
-      const tag = e.target.tagName?.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) {
+      const tag = e.target?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) {
         return;
       }
 

@@ -136,6 +136,22 @@ export const MusicProvider = ({ children }) => {
 
   const currentTrack = tracks && tracks.length > 0 ? tracks[currentTrackIndex] || tracks[0] : null;
 
+  // Refs lưu giữ trạng thái mới nhất cho các callback sự kiện Audio (Tránh re-bind listener liên tục)
+  const tracksRef = useRef(tracks);
+  tracksRef.current = tracks;
+  const currentTrackIndexRef = useRef(currentTrackIndex);
+  currentTrackIndexRef.current = currentTrackIndex;
+  const currentTrackRef = useRef(currentTrack);
+  currentTrackRef.current = currentTrack;
+  const loopModeRef = useRef(loopMode);
+  loopModeRef.current = loopMode;
+  const isShuffleRef = useRef(isShuffle);
+  isShuffleRef.current = isShuffle;
+  const isWavMasterRef = useRef(isWavMaster);
+  isWavMasterRef.current = isWavMaster;
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+
   // Lấy URL nguồn âm thanh theo chất lượng (Dual-Source)
   const getTargetTrackSrc = useCallback((track, preferWav) => {
     if (!track) return '';
@@ -221,6 +237,9 @@ export const MusicProvider = ({ children }) => {
             syncActiveTrackFromAudio(audio);
           }
         } catch (err) {
+          if (err?.name === 'AbortError') {
+            return;
+          }
           console.warn('[MusicContext] Play toggle blocked by policy:', err);
           isSwitchingTrackRef.current = false;
           setIsPlaying(false);
@@ -273,6 +292,9 @@ export const MusicProvider = ({ children }) => {
               duckAmbientForMusic();
             })
             .catch((err) => {
+              if (err?.name === 'AbortError') {
+                return;
+              }
               console.warn('[MusicContext] playTrack error:', err);
               isSwitchingTrackRef.current = false;
               setIsPlaying(false);
@@ -283,6 +305,7 @@ export const MusicProvider = ({ children }) => {
             });
         }
       } catch (err) {
+        if (err?.name === 'AbortError') return;
         console.warn('[MusicContext] playTrack exception:', err);
         isSwitchingTrackRef.current = false;
         setIsPlaying(false);
@@ -290,20 +313,26 @@ export const MusicProvider = ({ children }) => {
     }
   }, [tracks, currentTrackIndex, isPlaying, getTargetTrackSrc, togglePlay]);
 
+  // Ref callback cho nextTrack để handleEnded gọi ổn định
+  const nextTrackRef = useRef(null);
+
   // Chuyển bài kế tiếp
   const nextTrack = useCallback(() => {
-    if (!tracks || tracks.length === 0) return;
-    if (isShuffle && tracks.length > 1) {
-      let randomIndex = currentTrackIndex;
-      while (randomIndex === currentTrackIndex) {
-        randomIndex = Math.floor(Math.random() * tracks.length);
+    const curTracks = tracksRef.current;
+    if (!curTracks || curTracks.length === 0) return;
+    const curIdx = currentTrackIndexRef.current;
+    if (isShuffleRef.current && curTracks.length > 1) {
+      let randomIndex = curIdx;
+      while (randomIndex === curIdx) {
+        randomIndex = Math.floor(Math.random() * curTracks.length);
       }
       playTrack(randomIndex);
     } else {
-      const nextIdx = (currentTrackIndex + 1) % tracks.length;
+      const nextIdx = (curIdx + 1) % curTracks.length;
       playTrack(nextIdx);
     }
-  }, [tracks, currentTrackIndex, isShuffle, playTrack]);
+  }, [playTrack]);
+  nextTrackRef.current = nextTrack;
 
   // Lùi về bài trước
   const prevTrack = useCallback(() => {
@@ -390,7 +419,10 @@ export const MusicProvider = ({ children }) => {
             } catch (_) {}
           }
           if (wasPlaying) {
-            audio.play().catch((err) => console.warn('[MusicContext] Quality switch play error:', err));
+            audio.play().catch((err) => {
+              if (err?.name === 'AbortError') return;
+              console.warn('[MusicContext] Quality switch play error:', err);
+            });
           }
         }
       }
@@ -413,7 +445,10 @@ export const MusicProvider = ({ children }) => {
         audio.src = targetSrc;
         audio.load();
         if (wasPlaying) {
-          audio.play().catch((err) => console.warn('[MusicContext] Theme switch play error:', err));
+          audio.play().catch((err) => {
+            if (err?.name === 'AbortError') return;
+            console.warn('[MusicContext] Theme switch play error:', err);
+          });
         }
       }
     } else {
@@ -457,7 +492,8 @@ export const MusicProvider = ({ children }) => {
             setIsPlaying(true);
             duckAmbientForMusic();
           })
-          .catch(() => {
+          .catch((err) => {
+            if (err?.name === 'AbortError') return;
             isSwitchingTrackRef.current = false;
             setIsPlaying(false);
             restoreAmbientFromMusic();
@@ -507,7 +543,8 @@ export const MusicProvider = ({ children }) => {
           setIsPlaying(true);
           duckAmbientForMusic();
         })
-        .catch(() => {
+        .catch((err) => {
+          if (err?.name === 'AbortError') return;
           isSwitchingTrackRef.current = false;
           setIsPlaying(false);
         });
@@ -538,10 +575,9 @@ export const MusicProvider = ({ children }) => {
       if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
         setDuration(audio.duration);
       }
-      if (!audio.paused && !audio.ended && !isPlaying) {
+      if (!audio.paused && !audio.ended && !isPlayingRef.current) {
         setIsPlaying(true);
       }
-      syncActiveTrackFromAudio(audio);
     };
 
     const handleWaiting = () => {
@@ -573,33 +609,39 @@ export const MusicProvider = ({ children }) => {
     };
 
     const handleEnded = () => {
-      if (loopMode === 'one') {
+      const mode = loopModeRef.current;
+      const curIdx = currentTrackIndexRef.current;
+      const curTracks = tracksRef.current;
+      if (mode === 'one') {
         audio.currentTime = 0;
         audio.play().catch(() => {});
         return;
       }
-      if (loopMode === 'none' && currentTrackIndex + 1 >= tracks.length) {
+      if (mode === 'none' && curIdx + 1 >= (curTracks?.length || 0)) {
         setIsPlaying(false);
         restoreAmbientFromMusic();
         return;
       }
-      nextTrack();
+      if (nextTrackRef.current) {
+        nextTrackRef.current();
+      }
     };
 
     const handleError = (e) => {
       const currentSrc = audio?.src || '';
-      const fallbackSrc = currentTrack?.wavSrc || currentTrack?.src;
-      if (!isWavMaster && fallbackSrc && currentTrack?.streamUrl && (currentSrc.includes('mp3') || currentSrc.includes(encodeURI(currentTrack.streamUrl)))) {
+      const cTrack = currentTrackRef.current;
+      const fallbackSrc = cTrack?.wavSrc || cTrack?.src;
+      if (!isWavMasterRef.current && fallbackSrc && cTrack?.streamUrl && (currentSrc.includes('mp3') || currentSrc.includes(encodeURI(cTrack.streamUrl)))) {
         console.info('[MusicContext] Stream file unavailable, falling back to Studio WAV:', fallbackSrc);
         audio.src = fallbackSrc;
         audio.load();
-        if (isPlaying) {
+        if (isPlayingRef.current) {
           audio.play().catch(() => {});
         }
         return;
       }
 
-      console.warn('[MusicContext] Audio playback error on:', currentTrack?.src, e);
+      console.warn('[MusicContext] Audio playback error on:', cTrack?.src, e);
       isSwitchingTrackRef.current = false;
       setIsLoading(false);
       setIsPlaying(false);
@@ -628,7 +670,7 @@ export const MusicProvider = ({ children }) => {
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
     };
-  }, [tracks, currentTrackIndex, loopMode, isShuffle, isWavMaster, currentTrack, isPlaying, nextTrack, syncActiveTrackFromAudio]);
+  }, []);
 
   // =========================================================================
   // TỰ ĐỘNG KÍCH HOẠT HIỆU ỨNG MÙA ĐÔNG & NHẠC (SAFE AUTOPLAY POLICY)
@@ -676,6 +718,7 @@ export const MusicProvider = ({ children }) => {
             setIsAutoplayBlocked(false);
             duckAmbientForMusic();
           } catch (e) {
+            if (e?.name === 'AbortError') return;
             console.warn('[MusicAutoplay] User gesture play restricted:', e);
             setIsPlaying(false);
           }
@@ -693,6 +736,7 @@ export const MusicProvider = ({ children }) => {
           duckAmbientForMusic();
         }
       } catch (err) {
+        if (err?.name === 'AbortError') return;
         console.info('[MusicAutoplay] Autoplay restricted on load, awaiting first user interaction.');
         setIsPlaying(false);
         setIsAutoplayBlocked(true);
