@@ -1027,6 +1027,49 @@
   }
 }
 
+@media (max-width: 420px) {
+  .music-page-wrapper {
+    padding: 1.2rem 0.5rem 3.5rem 0.5rem !important;
+  }
+
+  .music-vinyl-wrapper {
+    width: 170px !important;
+    height: 170px !important;
+  }
+
+  .music-vinyl-disc {
+    width: 160px !important;
+    height: 160px !important;
+  }
+
+  .groove-1 { width: 130px !important; height: 130px !important; }
+  .groove-2 { width: 100px !important; height: 100px !important; }
+  .groove-3 { width: 75px !important; height: 75px !important; }
+
+  .vinyl-center-label {
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  .vinyl-theme-icon {
+    font-size: 1.15rem !important;
+  }
+
+  .play-pause-master-btn {
+    width: 48px !important;
+    height: 48px !important;
+    font-size: 1.1rem !important;
+  }
+
+  .music-control-suite {
+    gap: 0.5rem !important;
+  }
+
+  .scrubber-track-bar {
+    height: 6px !important;
+  }
+}
+
 /* ========================================================
    DUAL-SOURCE QUALITY BADGE & STORY PILL STYLES
    ======================================================== */

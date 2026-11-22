@@ -28,8 +28,13 @@ export const WinterSnowAtmosphere = ({ density = 35, speed = 0.6, enabled = true
       window.matchMedia &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // Khởi tạo tập hợp hạt tuyết cố định, không cấp phát thêm bộ nhớ trong vòng lặp render
-    const count = prefersReducedMotion ? Math.min(density, 12) : Math.min(density, 60);
+    // Khởi tạo tập hợp hạt tuyết cố định, tối ưu số lượng trên điện thoại/webview để tiết kiệm pin & GPU
+    const isMobile = width <= 640;
+    const count = prefersReducedMotion
+      ? Math.min(density, 10)
+      : isMobile
+      ? Math.min(density, 20)
+      : Math.min(density, 60);
     const effectiveSpeed = prefersReducedMotion ? speed * 0.4 : speed;
     const snowflakes = [];
 

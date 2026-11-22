@@ -218,10 +218,12 @@ body,
 }
 
 html {
+  overflow-x: hidden;
   overflow-x: clip;
   overflow-y: auto;
   scrollbar-gutter: stable;
   width: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -230,11 +232,17 @@ body {
   color: var(--text-main);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
   overflow-x: clip;
   overflow-y: visible !important;
   width: 100%;
   margin: 0;
   padding: 0;
+}
+
+img, video, iframe {
+  max-width: 100%;
+  height: auto;
 }
 
 #root,
@@ -21328,12 +21336,16 @@ body.theme-dark .notif-dropdown-footer,
 
 @media (max-width: 640px) {
   .global-mute-toast-container {
-    bottom: 20px;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    max-width: calc(100vw - 24px);
   }
   .global-mute-toast-pill {
     padding: 8px 14px;
     font-size: 0.8rem;
     gap: 8px;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    overflow: hidden;
   }
 }
 
@@ -21365,6 +21377,162 @@ body.theme-dark .notif-dropdown-footer,
     animation: none !important;
     border-color: #ef4444 !important;
     box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+  }
+}
+
+/* ==========================================================================
+   TỐI ƯU TOÀN DIỆN RESPONSIVE MOBILE (320px - 430px) & IN-APP WEBVIEW
+   (Instagram, Facebook, TikTok, Safari iOS, Android Webview)
+   - Chống tràn ngang 100% (Zero Horizontal Leak)
+   - Thanh Tab Dashboard 3D cuộn ngang cảm ứng mượt mà như Native App
+   - Cụm Nút Khách, Logo và Header co giãn mềm mại, không vỡ layout
+   - Hỗ trợ safe-area-inset (Tai thỏ, Dynamic Island, Home Bar)
+   ========================================================================== */
+
+/* 1. Thanh Dashboard Navigation Hàng 2 Cuộn Ngang Cảm Ứng Mượt Mà */
+@media (max-width: 900px) {
+  .header-dashboard-bar {
+    padding: 6px 6px 8px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none !important;
+  }
+
+  .header-dashboard-bar::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .dashboard-bar-container {
+    justify-content: flex-start !important;
+    overflow-x: visible !important;
+    width: max-content !important;
+    min-width: 100% !important;
+    gap: 6px !important;
+    padding: 2px 6px !important;
+  }
+
+  .dashboard-3d-item {
+    flex-shrink: 0 !important;
+    padding: 6px 14px !important;
+    font-size: 0.82rem !important;
+  }
+}
+
+/* 2. Header Hàng 1 & Các Nút Chức Năng Trên Màn Hình Điện Thoại <= 480px */
+@media (max-width: 480px) {
+  .header-container {
+    padding: 6px 8px !important;
+    gap: 4px !important;
+  }
+
+  .header-brand-wrap {
+    gap: 5px !important;
+  }
+
+  .logo-link {
+    gap: 5px !important;
+  }
+
+  .logo-text,
+  .seasonal-logo-text {
+    font-size: 0.95rem !important;
+    letter-spacing: 0.2px !important;
+  }
+
+  .header-season-pill {
+    padding: 3px 6px !important;
+    border-radius: 999px !important;
+  }
+
+  .header-season-pill .season-chevron {
+    display: none !important;
+  }
+
+  .header-ambient-sound-wrap {
+    gap: 4px !important;
+  }
+
+  .header-guest-btns {
+    gap: 4px !important;
+  }
+
+  .nav-btn-login,
+  .nav-btn-register {
+    padding: 5px 10px !important;
+    font-size: 0.78rem !important;
+    border-radius: 999px !important;
+  }
+
+  /* Modal Dialog Phản Hồi Điện Thoại */
+  .modal-box {
+    padding: 22px 16px !important;
+    margin: 12px !important;
+    border-radius: 18px !important;
+    max-height: calc(100dvh - 32px) !important;
+    overscroll-behavior: contain !important;
+  }
+
+  .modal-tabs {
+    gap: 4px !important;
+  }
+
+  .modal-tab {
+    padding: 8px 10px !important;
+    font-size: 0.82rem !important;
+  }
+
+  .modal-close-btn {
+    top: 10px !important;
+    right: 10px !important;
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  /* Safe-area insets cho popup và thanh công cụ */
+  .google-one-tap-container {
+    top: calc(12px + env(safe-area-inset-top, 0px)) !important;
+    right: 12px !important;
+    left: 12px !important;
+  }
+}
+
+/* 3. Màn Hình Siêu Hẹp (320px - 360px: iPhone SE, Galaxy Fold Màn Ngoài, v.v.) */
+@media (max-width: 360px) {
+  .header-container {
+    padding: 5px 6px !important;
+    gap: 3px !important;
+  }
+
+  .logo-text,
+  .seasonal-logo-text {
+    font-size: 0.82rem !important;
+    letter-spacing: 0px !important;
+  }
+
+  .logo-link .healing-icon-pill {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 0.8rem !important;
+  }
+
+  .header-guest-btns {
+    gap: 3px !important;
+  }
+
+  .nav-btn-login,
+  .nav-btn-register {
+    padding: 4px 7px !important;
+    font-size: 0.72rem !important;
+  }
+
+  .dashboard-3d-item {
+    padding: 5px 10px !important;
+    font-size: 0.78rem !important;
+  }
+
+  .modal-box {
+    padding: 18px 12px !important;
   }
 }
 

@@ -154,7 +154,11 @@ export const getFabPos = (type) => {
   if (typeof window === 'undefined') return { x: 0, y: 0 };
   const key = getFabKey(type);
   const { width: vpWidth, height: vpHeight } = getViewport();
-  const size = FAB_SIZES[type] || { width: 58, height: 58 };
+  const isMobile = vpWidth <= 640;
+  const safeMarginLeft = isMobile ? 12 : MARGIN_LEFT;
+  const safeMarginRight = isMobile ? 12 : MARGIN_RIGHT;
+  const safeMarginBottom = isMobile ? 24 : MARGIN_BOTTOM;
+  const size = getFabDimensions(type);
 
   let currentPos = null;
   try {
@@ -165,74 +169,80 @@ export const getFabPos = (type) => {
         const bounded = ensureInBounds(type, parsed);
 
         // Tự động căn chỉnh bám sát lề nếu vị trí cũ bị lệch sâu vào trong:
-        const rightEdgeX = Math.max(MARGIN_LEFT, vpWidth - size.width - MARGIN_RIGHT);
+        const rightEdgeX = Math.max(safeMarginLeft, vpWidth - size.width - safeMarginRight);
         if (bounded.x > vpWidth / 2) {
-          // Ở nửa phải: tự động chuẩn hóa bám sát mép phải đúng MARGIN_RIGHT (20px)
+          // Ở nửa phải: tự động chuẩn hóa bám sát mép phải đúng safeMarginRight (12px mobile, 32px desktop)
           currentPos = { x: rightEdgeX, y: bounded.y };
         } else {
-          // Ở nửa trái: tự động chuẩn hóa bám sát mép trái đúng MARGIN_LEFT (20px)
-          currentPos = { x: MARGIN_LEFT, y: bounded.y };
+          // Ở nửa trái: tự động chuẩn hóa bám sát mép trái đúng safeMarginLeft (12px mobile, 24px desktop)
+          currentPos = { x: safeMarginLeft, y: bounded.y };
         }
       }
     }
   } catch (e) {}
 
   if (!currentPos) {
-    const writeH = FAB_SIZES.write.height; // 44
-    const chatH = FAB_SIZES.chat.height;   // 58
-    const mascotH = FAB_SIZES.mascot.height; // 86
-    const pwaH = FAB_SIZES.pwa.height;     // 40
+    const writeDim = getFabDimensions('write'); // 48x48 trên mobile, 156x44 trên desktop
+    const chatDim = getFabDimensions('chat');
+    const mascotDim = getFabDimensions('mascot');
+    const pwaDim = getFabDimensions('pwa');
+    const petDim = getFabDimensions('pet');
+
+    const writeH = writeDim.height;
+    const chatH = chatDim.height;
+    const mascotH = mascotDim.height;
+    const pwaH = pwaDim.height;
 
     if (type === 'write') {
-      // 1. Nút Viết tâm sự mặc định: Nằm ở góc dưới cùng bên phải, cách đáy 24px, cách lề phải 20px
+      // 1. Nút Viết tâm sự mặc định: Nằm ở góc dưới cùng bên phải, cách đáy safeMarginBottom, cách lề phải safeMarginRight
       currentPos = {
-        x: Math.max(MARGIN_LEFT, vpWidth - FAB_SIZES.write.width - MARGIN_RIGHT),
-        y: Math.max(MARGIN_TOP, vpHeight - writeH - MARGIN_BOTTOM),
+        x: Math.max(safeMarginLeft, vpWidth - writeDim.width - safeMarginRight),
+        y: Math.max(MARGIN_TOP, vpHeight - writeH - safeMarginBottom),
       };
     } else if (type === 'chat') {
       // 2. Nút Chat mặc định: Nằm ngay phía trên nút Viết tâm sự (khoảng cách đều 16px)
       currentPos = {
-        x: Math.max(MARGIN_LEFT, vpWidth - FAB_SIZES.chat.width - MARGIN_RIGHT),
-        y: Math.max(MARGIN_TOP, vpHeight - writeH - MARGIN_BOTTOM - chatH - FAB_GAP),
+        x: Math.max(safeMarginLeft, vpWidth - chatDim.width - safeMarginRight),
+        y: Math.max(MARGIN_TOP, vpHeight - writeH - safeMarginBottom - chatH - FAB_GAP),
       };
     } else if (type === 'mascot') {
       // 3. Nút Sự kiện lễ hội mặc định: Nằm phía trên nút Chat (khoảng cách đều 16px)
       currentPos = {
-        x: Math.max(MARGIN_LEFT, vpWidth - FAB_SIZES.mascot.width - MARGIN_RIGHT),
-        y: Math.max(MARGIN_TOP, vpHeight - writeH - MARGIN_BOTTOM - chatH - FAB_GAP - mascotH - FAB_GAP),
+        x: Math.max(safeMarginLeft, vpWidth - mascotDim.width - safeMarginRight),
+        y: Math.max(MARGIN_TOP, vpHeight - writeH - safeMarginBottom - chatH - FAB_GAP - mascotH - FAB_GAP),
       };
     } else if (type === 'pwa') {
       // 4. Thanh Cài đặt App mặc định: Nằm phía trên nút Sự kiện lễ hội (khoảng cách đều 16px)
       currentPos = {
-        x: Math.max(MARGIN_LEFT, vpWidth - FAB_SIZES.pwa.width - MARGIN_RIGHT),
-        y: Math.max(MARGIN_TOP, vpHeight - writeH - MARGIN_BOTTOM - chatH - FAB_GAP - mascotH - FAB_GAP - pwaH - FAB_GAP),
+        x: Math.max(safeMarginLeft, vpWidth - pwaDim.width - safeMarginRight),
+        y: Math.max(MARGIN_TOP, vpHeight - writeH - safeMarginBottom - chatH - FAB_GAP - mascotH - FAB_GAP - pwaH - FAB_GAP),
       };
     } else if (type === 'pet') {
       // 5. Bé Thú Cưng Bàn Làm Việc (DeskCompanionPet) mặc định: Bám sát mép phải, phía trên thanh Cài đặt App (khoảng cách đều 16px)
-      const petH = FAB_SIZES.pet.height; // 72
+      const petH = petDim.height;
       currentPos = {
-        x: Math.max(MARGIN_LEFT, vpWidth - FAB_SIZES.pet.width - MARGIN_RIGHT),
+        x: Math.max(safeMarginLeft, vpWidth - petDim.width - safeMarginRight),
         y: Math.max(
           MARGIN_TOP,
-          vpHeight - writeH - MARGIN_BOTTOM - chatH - FAB_GAP - mascotH - FAB_GAP - pwaH - FAB_GAP - petH - FAB_GAP
+          vpHeight - writeH - safeMarginBottom - chatH - FAB_GAP - mascotH - FAB_GAP - pwaH - FAB_GAP - petH - FAB_GAP
         ),
       };
     } else if (type === 'pref') {
-      // Cụm Tiện ích Ngày/Đêm & Âm thanh mặc định: Góc dưới cùng bên trái, cách lề trái 20px, cách đáy 24px
+      // Cụm Tiện ích Ngày/Đêm & Âm thanh mặc định: Góc dưới cùng bên trái, cách lề trái safeMarginLeft, cách đáy safeMarginBottom
       currentPos = {
-        x: MARGIN_LEFT,
-        y: Math.max(MARGIN_TOP, vpHeight - 52 - MARGIN_BOTTOM),
+        x: safeMarginLeft,
+        y: Math.max(MARGIN_TOP, vpHeight - 52 - safeMarginBottom),
       };
     } else if (type === 'radio') {
       // Thanh Mini Radio mặc định: Góc dưới bên trái, phía trên cụm tiện ích pref, cách đáy 90px
       currentPos = {
-        x: MARGIN_LEFT,
+        x: safeMarginLeft,
         y: Math.max(MARGIN_TOP, vpHeight - 46 - 90),
       };
     } else {
       currentPos = {
-        x: Math.max(MARGIN_LEFT, vpWidth - FAB_SIZES.write.width - MARGIN_RIGHT),
-        y: Math.max(MARGIN_TOP, vpHeight - writeH - MARGIN_BOTTOM),
+        x: Math.max(safeMarginLeft, vpWidth - writeDim.width - safeMarginRight),
+        y: Math.max(MARGIN_TOP, vpHeight - writeH - safeMarginBottom),
       };
     }
   }

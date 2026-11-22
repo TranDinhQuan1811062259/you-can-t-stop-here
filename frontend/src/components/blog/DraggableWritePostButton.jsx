@@ -9,6 +9,12 @@ import {
 } from '../../utils/floatingButtonManager';
 
 export const DraggableWritePostButton = ({ onClick }) => {
+  const [screenWidth, setScreenWidth] = useState(() => (
+    typeof document !== 'undefined' && document.documentElement.clientWidth
+      ? document.documentElement.clientWidth
+      : (typeof window !== 'undefined' ? window.innerWidth : 1200)
+  ));
+
   const [btnPos, setBtnPos] = useState(() => {
     const raw = getFabPos('write');
     return resolveAntiCollision('write', raw, true);
@@ -25,13 +31,17 @@ export const DraggableWritePostButton = ({ onClick }) => {
     const handleResize = () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
+        const curW = typeof document !== 'undefined' && document.documentElement.clientWidth
+          ? document.documentElement.clientWidth
+          : window.innerWidth;
+        setScreenWidth(curW);
         setBtnPos((prev) => {
           const bounded = ensureInBounds('write', prev);
           const resolved = resolveAntiCollision('write', bounded, true);
           saveFabPos('write', resolved, false);
           return resolved;
         });
-      }, 150);
+      }, 120);
     };
     window.addEventListener('resize', handleResize);
     return () => {
@@ -158,9 +168,6 @@ export const DraggableWritePostButton = ({ onClick }) => {
     }
   };
 
-  const screenWidth = typeof document !== 'undefined' && document.documentElement.clientWidth
-    ? document.documentElement.clientWidth
-    : (typeof window !== 'undefined' ? window.innerWidth : 1200);
   const isMobile = screenWidth <= 640;
   const isRightSide = btnPos.x > screenWidth / 2;
   const btnWidth = isMobile ? '48px' : '156px';
