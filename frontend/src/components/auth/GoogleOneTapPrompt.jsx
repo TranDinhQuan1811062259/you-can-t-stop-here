@@ -32,16 +32,26 @@ export const GoogleOneTapPrompt = () => {
   const [loadingEmail, setLoadingEmail] = useState(null);
   const [toastMsg, setToastMsg] = useState('');
 
-  // Cập nhật lại danh sách tài khoản đã lưu khi có thay đổi storage
+  // Cập nhật lại danh sách tài khoản đã lưu khi có thay đổi storage hoặc đăng xuất
   useEffect(() => {
     const updateAccounts = () => {
       setSavedAccounts(getSavedGoogleAccounts());
     };
+    const handleAuthChanged = (e) => {
+      // Khi đăng xuất hoặc thu hồi phiên: Ẩn ngay lập tức prompt
+      if (!e?.detail) {
+        setIsVisible(false);
+      }
+      setSavedAccounts(getSavedGoogleAccounts());
+    };
+
     window.addEventListener('storage', updateAccounts);
     window.addEventListener('saved_accounts_updated', updateAccounts);
+    window.addEventListener('freedom_auth_changed', handleAuthChanged);
     return () => {
       window.removeEventListener('storage', updateAccounts);
       window.removeEventListener('saved_accounts_updated', updateAccounts);
+      window.removeEventListener('freedom_auth_changed', handleAuthChanged);
     };
   }, []);
 

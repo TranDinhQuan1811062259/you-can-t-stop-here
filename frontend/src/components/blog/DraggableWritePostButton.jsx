@@ -161,19 +161,22 @@ export const DraggableWritePostButton = ({ onClick }) => {
   const screenWidth = typeof document !== 'undefined' && document.documentElement.clientWidth
     ? document.documentElement.clientWidth
     : (typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const isMobile = screenWidth <= 640;
   const isRightSide = btnPos.x > screenWidth / 2;
+  const btnWidth = isMobile ? '48px' : '156px';
+  const btnHeight = isMobile ? '48px' : '44px';
 
   return (
     <div
       ref={btnRef}
-      className={`draggable-write-post-btn-wrapper ${isDragging ? 'is-dragging' : ''}`}
+      className={`draggable-write-post-btn-wrapper ${isDragging ? 'is-dragging' : ''} ${isMobile ? 'is-mobile-compact' : ''}`}
       style={{
         position: 'fixed',
-        left: isDragging ? `${btnPos.x}px` : (!isRightSide ? '24px' : 'auto'),
-        right: isDragging ? 'auto' : (isRightSide ? '32px' : 'auto'),
+        left: isDragging ? `${btnPos.x}px` : (!isRightSide ? (isMobile ? '12px' : '24px') : 'auto'),
+        right: isDragging ? 'auto' : (isRightSide ? (isMobile ? '12px' : '32px') : 'auto'),
         top: `${btnPos.y}px`,
-        width: '156px',
-        height: '44px',
+        width: btnWidth,
+        height: btnHeight,
         boxSizing: 'border-box',
         bottom: 'auto',
         zIndex: isDragging ? 9998 : 9995,
@@ -189,7 +192,7 @@ export const DraggableWritePostButton = ({ onClick }) => {
       onClick={handleClick}
       title="✍️ Viết bài tâm sự (Bấm để mở khung viết, hoặc giữ và kéo để di chuyển vị trí tùy thích)"
     >
-      <button type="button" className="floating-write-post-btn inner-draggable-btn">
+      <button type="button" className="floating-write-post-btn inner-draggable-btn" aria-label="Viết tâm sự">
         <span className="fab-drag-handle" title="Kéo để di chuyển">
           <i className="fa-solid fa-grip-vertical" style={{ fontSize: '0.75rem', opacity: 0.7 }}></i>
         </span>

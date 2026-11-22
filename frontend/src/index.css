@@ -14837,19 +14837,64 @@ body.theme-light ::-moz-selection,
   text-shadow: none !important;
 }
 
-/* 4. Chống co ép nút Viết Tâm Sự */
-.floating-write-post-btn,
-.inner-draggable-btn {
-  white-space: nowrap !important;
-  word-break: keep-all !important;
-  min-width: max-content !important;
-  flex-shrink: 0 !important;
+/* 4. Chống co ép nút Viết Tâm Sự trên Desktop & Tối ưu dạng nút tròn gọn gàng trên Mobile */
+@media (min-width: 641px) {
+  .floating-write-post-btn,
+  .inner-draggable-btn {
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    min-width: max-content !important;
+    flex-shrink: 0 !important;
+  }
+
+  .floating-write-post-btn .fab-label {
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    min-width: max-content !important;
+  }
 }
 
-.floating-write-post-btn .fab-label {
-  white-space: nowrap !important;
-  word-break: keep-all !important;
-  min-width: max-content !important;
+@media (max-width: 640px) {
+  .draggable-write-post-btn-wrapper,
+  .draggable-write-post-btn-wrapper.is-mobile-compact {
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+  }
+
+  .draggable-write-post-btn-wrapper .fab-label,
+  .draggable-write-post-btn-wrapper .fab-drag-handle {
+    display: none !important;
+  }
+
+  .draggable-write-post-btn-wrapper .floating-write-post-btn,
+  .draggable-write-post-btn-wrapper .inner-draggable-btn {
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
+  }
+
+  .draggable-write-post-btn-wrapper .floating-write-post-btn .fab-icon {
+    font-size: 1.15rem !important;
+    margin: 0 !important;
+  }
+}
+
+@supports (padding: max(0px)) {
+  .draggable-write-post-btn-wrapper,
+  .floating-quick-preferences,
+  .assistive-chat-widget-wrapper,
+  .pwa-install-prompt-wrapper {
+    margin-bottom: max(0px, env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* 5. Chống đè giữa Floating Audio Player và Cụm Chế Độ Ngày/Đêm */
@@ -21289,6 +21334,37 @@ body.theme-dark .notif-dropdown-footer,
     padding: 8px 14px;
     font-size: 0.8rem;
     gap: 8px;
+  }
+}
+
+/* ========================================================
+   OTP INPUT SHAKE & ERROR MICRO-INTERACTION (GPU ACCELERATED)
+   ======================================================== */
+@keyframes otpShakeHorizontal {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  15%, 45%, 75% {
+    transform: translateX(-6px);
+  }
+  30%, 60%, 90% {
+    transform: translateX(6px);
+  }
+}
+
+.otp-input-container.is-shaking,
+.otp-input-field.is-shaking {
+  animation: otpShakeHorizontal 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .otp-input-container.is-shaking,
+  .otp-input-field.is-shaking {
+    animation: none !important;
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
   }
 }
 

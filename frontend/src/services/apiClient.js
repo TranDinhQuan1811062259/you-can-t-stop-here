@@ -24,6 +24,26 @@ apiClient.interceptors.request.use(
 // Quản lý trạng thái Silent Refresh Token và hàng đợi Promise khi nhiều API cùng 401 đồng thời
 let isRefreshing = false;
 let failedQueue = [];
+let lastSessionExpiredNoticeTime = 0;
+
+/**
+ * Phát thông báo phiên đăng nhập hết hạn ra toàn hệ thống (Có Debounce chống spam)
+ */
+export const notifySessionExpired = () => {
+  const now = Date.now();
+  // Chống spam lặp: Nếu có nhiều request cùng nhận lỗi 401 trong 8 giây, chỉ hiển thị đúng 1 lần duy nhất
+  if (now - lastSessionExpiredNoticeTime < 8000) return;
+  lastSessionExpiredNoticeTime = now;
+
+  try {
+    const noticeMsg = 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.';
+    sessionStorage.setItem('freedom_logout_notice', noticeMsg);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('freedom_logout_notice', { detail: noticeMsg }));
+      window.dispatchEvent(new CustomEvent('freedom_session_expired', { detail: { message: noticeMsg } }));
+    }
+  } catch (_) {}
+};
 
 const processQueue = (error, newAccessToken = null) => {
   failedQueue.forEach((promise) => {
@@ -56,8 +76,21 @@ apiClient.interceptors.response.use(
       const storedRefreshToken =
         localStorage.getItem('refreshToken') || localStorage.getItem('freedom_refresh_token');
 
-      // Nếu không có refresh token, không thể làm mới ngầm -> Chuyển xuống reject
+      // Nếu không có refresh token, không thể làm mới ngầm -> Làm sạch session và thông báo nếu trước đó có token
       if (!storedRefreshToken) {
+        const hadActiveSession = Boolean(localStorage.getItem('token') || localStorage.getItem('freedom_token'));
+        if (hadActiveSession) {
+          try {
+            localStorage.removeItem('token');
+            localStorage.removeItem('freedom_token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('freedom_persisted_profile');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+            window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
+            notifySessionExpired();
+          } catch (_) {}
+        }
         return Promise.reject(formatApiError(error));
       }
 
@@ -123,6 +156,7 @@ apiClient.interceptors.response.use(
           sessionStorage.removeItem('token');
           sessionStorage.removeItem('user');
           window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
+          notifySessionExpired();
         } catch (_) {}
 
         return Promise.reject(formatApiError(refreshErr));

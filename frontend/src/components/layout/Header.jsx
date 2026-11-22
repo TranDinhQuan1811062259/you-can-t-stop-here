@@ -85,6 +85,7 @@ const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org
 export const Header = () => {
   const {
     user,
+    token,
     isAuthenticated,
     logout,
     openLoginModal,
@@ -607,9 +608,12 @@ export const Header = () => {
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 99999,
+            maxWidth: 'calc(100vw - 32px)',
+            width: 'max-content',
+            boxSizing: 'border-box',
             background: 'rgba(15, 23, 42, 0.95)',
             color: '#ffffff',
-            padding: '10px 22px',
+            padding: '10px 18px',
             borderRadius: '999px',
             fontSize: '0.86rem',
             fontWeight: 600,
@@ -1379,7 +1383,7 @@ export const Header = () => {
 
           {/* User Profile / Admin / Auth actions (Cực kỳ thoáng đãng ở góc phải hàng 1) */}
           <div className="header-user-wrap">
-            {(isAuthenticated || !!user) ? (
+            {Boolean(isAuthenticated && token && user) ? (
               <div className="header-user-badge">
                 {/* Chuông Thông Báo (Lời mời kết bạn, tin nhắn, tương tác bài viết) */}
                 <div className="header-notif-bell-container" style={{ position: 'relative' }}>

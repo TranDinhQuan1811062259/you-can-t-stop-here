@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { authService } from '../services/authService';
+import { notifySessionExpired } from '../services/apiClient';
 
 const AuthContext = createContext(null);
 
@@ -85,9 +86,21 @@ const syncAuthStorage = (user, token, refreshToken) => {
 };
 
 export const AuthProvider = ({ children }) => {
-  // Khởi tạo state an toàn từ cả 2 nguồn lưu trữ
+  // Khởi tạo state an toàn từ token và profile đã lưu
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem('token') || localStorage.getItem('freedom_token') || null;
+  });
+
   const [user, setUser] = useState(() => {
     try {
+      const activeToken = localStorage.getItem('token') || localStorage.getItem('freedom_token');
+      // 🛡️ NẾU KHÔNG CÓ TOKEN HỢP LỆ: Tuyệt đối KHÔNG nạp snapshot profile mồ côi!
+      // Dọn sạch snapshot cũ để tránh tài khoản khách bị hiển thị nhầm thông tin/avatar của Admin
+      if (!activeToken) {
+        localStorage.removeItem('user');
+        localStorage.removeItem('freedom_persisted_profile');
+        return null;
+      }
       const saved = localStorage.getItem('user') || localStorage.getItem('freedom_persisted_profile');
       if (saved) {
         return ensureAdminPrivileges(JSON.parse(saved));
@@ -96,10 +109,6 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {
       return null;
     }
-  });
-
-  const [token, setToken] = useState(() => {
-    return localStorage.getItem('token') || localStorage.getItem('freedom_token') || null;
   });
 
   const [loading, setLoading] = useState(true);
@@ -129,13 +138,14 @@ export const AuthProvider = ({ children }) => {
         const isFbOrGh = oauthProvider === 'facebook' || oauthProvider === 'github';
         const defaultGhAvatar = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=80';
         const decodedAvatar = oauthAvatar ? decodeURIComponent(oauthAvatar) : '';
+        const isAdm = oauthEmail === 'anthonyq012025@gmail.com' || (oauthEmail && oauthEmail.startsWith('admin@'));
 
         const rawUser = {
           _id: `u_${oauthProvider || 'oauth'}_${Date.now()}`,
           name: oauthName ? decodeURIComponent(oauthName) : (isGoogle ? 'Đơn Thân Mẹ' : 'Anthony Quân (Trần Đình Quân)'),
           email: oauthEmail ? decodeURIComponent(oauthEmail) : 'anthonyq012025@gmail.com',
-          role: (oauthEmail && (oauthEmail === 'anthonyq012025@gmail.com' || oauthEmail.startsWith('admin@'))) ? 'admin' : (isFbOrGh ? 'admin' : 'user'),
-          isAdmin: true,
+          role: isAdm ? 'admin' : (isFbOrGh ? 'admin' : 'user'),
+          isAdmin: isAdm,
           avatar: decodedAvatar || (oauthProvider === 'github' ? defaultGhAvatar : ADMIN_AVATAR),
           jobTitle: oauthProvider === 'github' ? 'Senior Software Engineer' : (oauthProvider === 'facebook' ? 'Content Creator & Connect' : 'System Admin & Lead Dev'),
           authProvider: oauthProvider || 'oauth',
@@ -153,6 +163,19 @@ export const AuthProvider = ({ children }) => {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     } catch (e) {}
+  }, []);
+
+  // Lắng nghe sự kiện đồng bộ trạng thái đăng nhập từ apiClient khi token hết hạn
+  useEffect(() => {
+    const handleAuthChanged = (e) => {
+      const newUser = e?.detail;
+      if (!newUser) {
+        setUser(null);
+        setToken(null);
+      }
+    };
+    window.addEventListener('freedom_auth_changed', handleAuthChanged);
+    return () => window.removeEventListener('freedom_auth_changed', handleAuthChanged);
   }, []);
 
   // Chỉ xác thực token 1 LẦN DUY NHẤT lúc ứng dụng khởi động (Initial Mount)
@@ -179,16 +202,18 @@ export const AuthProvider = ({ children }) => {
           }
         })
         .catch((err) => {
-          // Nếu server trả về 401 Unauthorized thì xóa phiên hết hạn và logout an toàn
-          if (err?.status === 401) {
+          // Nếu server trả về 401 Unauthorized thì xóa phiên hết hạn, logout an toàn và báo toast
+          if (err?.status === 401 || err?.response?.status === 401) {
             console.warn('[Auth] Token máy chủ hết hạn lúc khởi động, thực hiện đăng xuất an toàn');
-            logout();
+            logout(false);
+            notifySessionExpired();
           } else {
             console.log('[Auth] Máy chủ offline hoặc lỗi mạng, giữ nguyên phiên làm việc hiện tại');
           }
         })
         .finally(() => setLoading(false));
     } else {
+      setUser(null);
       setLoading(false);
     }
   }, []);
@@ -197,13 +222,15 @@ export const AuthProvider = ({ children }) => {
    * Đăng nhập bằng Email/SĐT và Mật khẩu (Trực tiếp, An toàn & Bền vững)
    */
   const login = async (credentials) => {
-    const identifier = (credentials.identifier || credentials.email || '').trim();
-    const idLower = identifier.toLowerCase();
-
     try {
       const res = await authService.login(credentials);
       const rawData = res?.data?.data || res?.data || {};
-      const receivedToken = rawData.token || res?.token || `token_${Date.now()}_freedom`;
+      const receivedToken = rawData.token || res?.token || null;
+
+      if (!receivedToken) {
+        throw new Error(res?.data?.message || 'Không nhận được mã xác thực token từ máy chủ!');
+      }
+
       const receivedRefreshToken = rawData.refreshToken || res?.refreshToken || null;
       const { token: _t, refreshToken: _rt, ...extractedUser } = rawData;
       const safeUser = ensureAdminPrivileges(extractedUser);
@@ -217,69 +244,9 @@ export const AuthProvider = ({ children }) => {
       window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
       return { data: { token: receivedToken, refreshToken: receivedRefreshToken, ...safeUser } };
     } catch (err) {
-      console.warn('[Auth] Lỗi đăng nhập backend, kích hoạt cơ chế dự phòng an toàn:', err);
-
-      let savedSnapshot = null;
-      try {
-        const rawSaved = localStorage.getItem('freedom_persisted_profile') || localStorage.getItem('user');
-        if (rawSaved) savedSnapshot = JSON.parse(rawSaved);
-      } catch (e) {}
-
-      const isAdm =
-        idLower.includes('anthony') ||
-        idLower.includes('quan') ||
-        idLower === 'anthonyq012025@gmail.com' ||
-        idLower === 'admin' ||
-        idLower.startsWith('admin@') ||
-        idLower === '0901234567';
-
-      let fallbackUser;
-      if (isAdm) {
-        fallbackUser = {
-          _id: savedSnapshot?._id || '6aec5b46ee112662b33c0e32',
-          name: savedSnapshot?.name || 'Anthony Quân (Trần Đình Quân)',
-          email: identifier.includes('@') ? identifier : 'anthonyq012025@gmail.com',
-          role: 'admin',
-          isAdmin: true,
-          avatar: ADMIN_AVATAR,
-          coverImage: savedSnapshot?.coverImage || 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80',
-          jobTitle: savedSnapshot?.jobTitle || 'System Admin & Lead Dev',
-          bio: savedSnapshot?.bio || 'Tài khoản Quản Trị Viên hệ thống You Can\'t Stop Here. #Admin',
-          phone: savedSnapshot?.phone || '0901234567',
-          gender: 'male',
-          socialLinks: savedSnapshot?.socialLinks || { facebook: 'https://facebook.com/anthony.qill' },
-          avatarFrame: savedSnapshot?.customLayout?.frameStyle || 'gold',
-          customLayout: savedSnapshot?.customLayout || {
-            theme: 'ocean',
-            frameStyle: 'gold',
-            ambientEffect: 'waves',
-            bgColor: '#f8fafc',
-          },
-        };
-      } else {
-        const cleanName = identifier.includes('@') ? identifier.split('@')[0] : identifier;
-        fallbackUser = {
-          _id: savedSnapshot?._id || `user_${Date.now()}`,
-          name: savedSnapshot?.name || (cleanName ? (cleanName.charAt(0).toUpperCase() + cleanName.slice(1)) : 'Thành viên mới'),
-          email: identifier.includes('@') ? identifier : `${identifier || 'user'}@cantstophere.com`,
-          role: 'user',
-          avatar: (savedSnapshot?.avatar && !savedSnapshot.avatar.includes('/images/man.jpg')) ? savedSnapshot.avatar : '',
-          jobTitle: savedSnapshot?.jobTitle || 'Thành viên cộng đồng',
-          bio: savedSnapshot?.bio || 'Thành viên cộng đồng You Can\'t Stop Here',
-        };
-      }
-
-      const safeFallback = ensureAdminPrivileges(fallbackUser);
-      const fallbackToken = `token_${Date.now()}_freedom`;
-
-      setToken(fallbackToken);
-      setUser(safeFallback);
-      syncAuthStorage(safeFallback, fallbackToken);
-      setIsAuthModalOpen(false);
-
-      window.dispatchEvent(new Event('profile_updated'));
-      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeFallback }));
-      return { data: { token: fallbackToken, ...safeFallback } };
+      console.error('[Auth] Đăng nhập backend thất bại:', err);
+      // 🛡️ BẢO MẬT: Tuyệt đối KHÔNG tự sinh session/token giả mạo khi xác thực thất bại
+      throw err;
     }
   };
 
@@ -288,12 +255,16 @@ export const AuthProvider = ({ children }) => {
    */
   const loginWithOtp = async ({ email, identifier, phone, otpCode, remember = true }) => {
     const target = (email || identifier || phone || '').trim();
-    const isEmail = target.includes('@');
 
     try {
       const res = await authService.verifyOtp({ email: target, identifier: target, otpCode });
       const rawData = res?.data?.data || res?.data || {};
-      const receivedToken = rawData.token || `token_otp_${Date.now()}`;
+      const receivedToken = rawData.token || null;
+
+      if (!receivedToken) {
+        throw new Error(res?.data?.message || 'Mã xác nhận OTP không chính xác hoặc đã hết hạn!');
+      }
+
       const receivedRefreshToken = rawData.refreshToken || null;
       const { token: _t, refreshToken: _rt, alertSms, ...extractedUser } = rawData;
       const safeUser = ensureAdminPrivileges(extractedUser);
@@ -307,37 +278,9 @@ export const AuthProvider = ({ children }) => {
       window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
       return { data: { token: receivedToken, refreshToken: receivedRefreshToken, ...safeUser } };
     } catch (err) {
-      console.warn('[Auth] Lỗi loginWithOtp backend, kích hoạt dự phòng:', err);
-      let savedSnapshot = null;
-      try {
-        const rawSaved = localStorage.getItem('freedom_persisted_profile') || localStorage.getItem('user');
-        if (rawSaved) savedSnapshot = JSON.parse(rawSaved);
-      } catch (e) {}
-
-      const isAdm = target.includes('admin') || target === 'anthonyq012025@gmail.com' || target === '0901234567';
-      const fallbackUser = {
-        _id: savedSnapshot?._id || `u_${isEmail ? 'email' : 'phone'}_${Date.now()}`,
-        name: savedSnapshot?.name || (isAdm ? 'Anthony Quân (Trần Đình Quân)' : (isEmail ? target.split('@')[0] : `Thành viên (${target})`)),
-        email: isEmail ? target : `${target}@phone.cantstophere.com`,
-        phone: !isEmail ? target : undefined,
-        role: isAdm ? 'admin' : 'user',
-        isAdmin: isAdm,
-        avatar: isAdm ? ADMIN_AVATAR : ((savedSnapshot?.avatar && !savedSnapshot.avatar.includes('/images/man.jpg')) ? savedSnapshot.avatar : ''),
-        jobTitle: savedSnapshot?.jobTitle || (isAdm ? 'System Admin & Lead Dev' : 'Thành viên cộng đồng'),
-        bio: savedSnapshot?.bio || 'Đăng nhập an toàn qua mã OTP.',
-      };
-
-      const safeUser = ensureAdminPrivileges(fallbackUser);
-      const fallbackToken = `token_otp_${Date.now()}`;
-
-      setToken(fallbackToken);
-      setUser(safeUser);
-      syncAuthStorage(safeUser, fallbackToken);
-      setIsAuthModalOpen(false);
-
-      window.dispatchEvent(new Event('profile_updated'));
-      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
-      return { data: { token: fallbackToken, ...safeUser } };
+      console.error('[Auth] Xác thực OTP thất bại:', err);
+      // 🛡️ BẢO MẬT: Bắt buộc ném lỗi để giao diện AuthModal hiển thị thông báo chính xác cho người dùng!
+      throw err;
     }
   };
 
@@ -348,7 +291,12 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await authService.register(userData);
       const rawData = res?.data?.data || res?.data || {};
-      const receivedToken = rawData.token || res?.token || `token_${Date.now()}_freedom`;
+      const receivedToken = rawData.token || res?.token || null;
+
+      if (!receivedToken) {
+        throw new Error(res?.data?.message || 'Đăng ký tài khoản không thành công!');
+      }
+
       const { token: _t, ...extractedUser } = rawData;
       const safeUser = ensureAdminPrivileges(extractedUser);
 
@@ -361,33 +309,8 @@ export const AuthProvider = ({ children }) => {
       window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
       return { data: { token: receivedToken, ...safeUser } };
     } catch (err) {
-      console.warn('[Auth] Lỗi register backend, kích hoạt dự phòng:', err);
-      const isAnthony =
-        (userData.email && userData.email.includes('anthony')) ||
-        (userData.name && userData.name.includes('Quân'));
-
-      const fallbackUser = {
-        _id: isAnthony ? '6aec5b46ee112662b33c0e32' : `user_${Date.now()}`,
-        name: userData.name || (isAnthony ? 'Anthony Quân (Trần Đình Quân)' : 'Thành viên mới'),
-        email: userData.email || 'anthonyq012025@gmail.com',
-        role: isAnthony ? 'admin' : 'user',
-        isAdmin: isAnthony,
-        avatar: isAnthony ? ADMIN_AVATAR : '',
-        jobTitle: userData.jobTitle || (isAnthony ? 'System Admin & Lead Dev' : 'Thành viên cộng đồng'),
-        bio: 'Thành viên cộng đồng You Can\'t Stop Here',
-      };
-
-      const safeUser = ensureAdminPrivileges(fallbackUser);
-      const receivedToken = `token_${Date.now()}_freedom`;
-
-      setToken(receivedToken);
-      setUser(safeUser);
-      syncAuthStorage(safeUser, receivedToken);
-      setIsAuthModalOpen(false);
-
-      window.dispatchEvent(new Event('profile_updated'));
-      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
-      return { data: { token: receivedToken, ...safeUser } };
+      console.error('[Auth] Đăng ký backend thất bại:', err);
+      throw err;
     }
   };
 
@@ -404,7 +327,11 @@ export const AuthProvider = ({ children }) => {
         return { requiresOtp: true, ...rawData };
       }
 
-      const receivedToken = rawData.token || res?.token || `token_${Date.now()}_social`;
+      const receivedToken = rawData.token || res?.token || null;
+      if (!receivedToken) {
+        throw new Error(res?.data?.message || 'Không nhận được mã xác thực token từ máy chủ!');
+      }
+
       const receivedRefreshToken = rawData.refreshToken || res?.refreshToken || null;
       const { token: _t, refreshToken: _rt, ...extractedUser } = rawData;
       const safeUser = ensureAdminPrivileges(extractedUser);
@@ -418,47 +345,15 @@ export const AuthProvider = ({ children }) => {
       window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
       return { data: { token: receivedToken, refreshToken: receivedRefreshToken, ...safeUser } };
     } catch (err) {
-      console.warn('[Auth] Lỗi socialLogin backend:', err);
+      console.error('[Auth] Social login backend thất bại:', err);
 
-      // Nếu có mã lỗi hoặc yêu cầu OTP từ phía backend
+      // Nếu có yêu cầu mã OTP từ phía backend
       if (err?.response?.data?.data?.requiresOtp || err?.requiresOtp) {
         return { requiresOtp: true, ...(err?.response?.data?.data || {}) };
       }
 
-      // Tuyệt đối không tự động cấp quyền Admin hoặc bỏ qua mã OTP ở fallback
-      const cleanEmail = (socialData.email || '').toLowerCase().trim();
-      const isAdminAccount = cleanEmail === 'anthonyq012025@gmail.com';
-
-      // Nếu là đăng nhập Google hoặc tài khoản Admin nhưng chưa có mã OTP xác thực thì chặn lại
-      if ((socialData.provider === 'google' || isAdminAccount) && !socialData.otpCode) {
-        throw new Error('Đăng nhập bằng Google bắt buộc phải xác thực mã OTP 6 số gửi về Email trước khi được phép vào hệ thống!');
-      }
-
-      const fallbackUser = {
-        _id: `user_${socialData.provider || 'social'}_${Date.now()}`,
-        name: socialData.name || (cleanEmail ? cleanEmail.split('@')[0] : 'Thành viên'),
-        email: cleanEmail || `user_${Date.now()}@social.cantstophere.com`,
-        role: isAdminAccount && socialData.otpCode ? 'admin' : 'user',
-        isAdmin: isAdminAccount && Boolean(socialData.otpCode),
-        avatar: (isAdminAccount && socialData.otpCode) ? ADMIN_AVATAR : ((socialData.avatar && !socialData.avatar.includes('/images/man.jpg')) ? socialData.avatar : ''),
-        jobTitle: socialData.jobTitle || 'Thành viên cộng đồng',
-        coverImage: socialData.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
-        bio: socialData.bio || `Tài khoản kết nối qua ${socialData.provider || 'mạng xã hội'}.`,
-        socialLinks: { [socialData.provider]: socialData.socialUrl || '' },
-        provider: socialData.provider,
-      };
-
-      const safeUser = ensureAdminPrivileges(fallbackUser);
-      const receivedToken = `token_${Date.now()}_social`;
-
-      setToken(receivedToken);
-      setUser(safeUser);
-      syncAuthStorage(safeUser, receivedToken);
-      setIsAuthModalOpen(false);
-
-      window.dispatchEvent(new Event('profile_updated'));
-      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
-      return { data: { token: receivedToken, ...safeUser } };
+      // Ném lỗi để thông báo lên giao diện thay vì tự sinh session giả
+      throw err;
     }
   };
 
@@ -509,6 +404,9 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('freedom_persisted_profile');
       sessionStorage.removeItem('token');
       sessionStorage.removeItem('user');
+      sessionStorage.removeItem('freedom_otp_resend_until');
+      // Chống gợi ý Google One Tap bật lên ngay khi vừa chủ động đăng xuất
+      sessionStorage.setItem('google_onetap_dismissed', 'true');
     } catch (_) {}
     window.dispatchEvent(new Event('profile_updated'));
     window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
@@ -561,7 +459,7 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         token,
-        isAuthenticated: !!user,
+        isAuthenticated: Boolean(user && token),
         loading,
         login,
         loginWithOtp,

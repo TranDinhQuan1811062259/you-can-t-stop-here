@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
 
@@ -15,6 +15,44 @@ export const getEffectiveCover = () => {
     }
   } catch (e) {}
   return 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80';
+};
+
+/**
+ * Quản lý thời gian chờ gửi lại mã OTP (Anti-Spam OTP Cooldown với sessionStorage)
+ * Giữ nguyên thời gian đếm ngược ngay cả khi người dùng đóng và mở lại modal
+ */
+export const getRemainingOtpSeconds = (target = '') => {
+  try {
+    const clean = (target || '').trim().toLowerCase();
+    const specificKey = clean ? `freedom_otp_resend_until_${clean}` : null;
+    const stored = (specificKey && sessionStorage.getItem(specificKey)) || sessionStorage.getItem('freedom_otp_resend_until');
+    if (stored) {
+      const remaining = Math.ceil((Number(stored) - Date.now()) / 1000);
+      return remaining > 0 ? remaining : 0;
+    }
+  } catch (_) {}
+  return 0;
+};
+
+export const setOtpCooldownInSession = (target = '', seconds = 60) => {
+  try {
+    const clean = (target || '').trim().toLowerCase();
+    const expiry = Date.now() + seconds * 1000;
+    sessionStorage.setItem('freedom_otp_resend_until', String(expiry));
+    if (clean) {
+      sessionStorage.setItem(`freedom_otp_resend_until_${clean}`, String(expiry));
+    }
+  } catch (_) {}
+};
+
+export const clearOtpCooldownInSession = (target = '') => {
+  try {
+    const clean = (target || '').trim().toLowerCase();
+    sessionStorage.removeItem('freedom_otp_resend_until');
+    if (clean) {
+      sessionStorage.removeItem(`freedom_otp_resend_until_${clean}`);
+    }
+  } catch (_) {}
 };
 
 const SOCIAL_PROVIDERS = [
@@ -133,7 +171,7 @@ export const AuthModal = () => {
   const [phoneDataForOtp, setPhoneDataForOtp] = useState({ phone: '', maskedPhone: '', formattedPhone: '' });
   const [smsNotification, setSmsNotification] = useState(null);
   const [otpInput, setOtpInput] = useState('');
-  const [otpCountdown, setOtpCountdown] = useState(60);
+  const [otpCountdown, setOtpCountdown] = useState(() => getRemainingOtpSeconds());
   const [sendingOtp, setSendingOtp] = useState(false);
   const [socialPreviewUrl, setSocialPreviewUrl] = useState(null);
   const [pendingRegisterData, setPendingRegisterData] = useState(null);
@@ -141,6 +179,24 @@ export const AuthModal = () => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // 📳 Hiệu ứng rung nhẹ (Shake) phản hồi vi tương tác khi nhập OTP sai hoặc chưa đủ ký tự
+  const [isOtpShaking, setIsOtpShaking] = useState(false);
+  const otpShakeTimerRef = useRef(null);
+
+  const triggerOtpShake = () => {
+    if (otpShakeTimerRef.current) clearTimeout(otpShakeTimerRef.current);
+    setIsOtpShaking(true);
+    otpShakeTimerRef.current = setTimeout(() => {
+      setIsOtpShaking(false);
+    }, 450);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (otpShakeTimerRef.current) clearTimeout(otpShakeTimerRef.current);
+    };
+  }, []);
 
   // State cho luồng ĐĂNG KÝ BẰNG MẠNG XÃ HỘI (Lấy dữ liệu thực từ Google, Facebook, Twitter, v.v.)
   const [socialRegData, setSocialRegData] = useState(null);
@@ -367,16 +423,29 @@ export const AuthModal = () => {
     }
   };
 
-  // Bộ đếm ngược gửi lại mã OTP Email nội bộ
+  // Bộ đếm ngược gửi lại mã OTP Email/SMS (Đồng bộ với sessionStorage để chống spam khi đóng/mở lại modal)
   useEffect(() => {
-    let timer;
-    if (emailOtpStep && otpCountdown > 0) {
-      timer = setInterval(() => {
-        setOtpCountdown((prev) => (prev > 0 ? prev - 1 : 0));
-      }, 1000);
+    let timer = null;
+    if (emailOtpStep) {
+      const target = (pendingRegisterData?.email || loginForm.identifier || phoneInput || '').trim();
+      const currentRem = getRemainingOtpSeconds(target);
+      setOtpCountdown(currentRem);
+
+      if (currentRem > 0) {
+        timer = setInterval(() => {
+          const rem = getRemainingOtpSeconds(target);
+          setOtpCountdown(rem);
+          if (rem <= 0) {
+            clearInterval(timer);
+            clearOtpCooldownInSession(target);
+          }
+        }, 1000);
+      }
     }
-    return () => clearInterval(timer);
-  }, [emailOtpStep, otpCountdown]);
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [emailOtpStep, pendingRegisterData, loginForm.identifier, phoneInput]);
 
   // Lắng nghe sự kiện yêu cầu đăng nhập bằng Google One Tap hoặc chọn tài khoản Google
   useEffect(() => {
@@ -390,8 +459,16 @@ export const AuthModal = () => {
 
       if (email) {
         setLoginForm((prev) => ({ ...prev, identifier: email }));
-        setSuccessMsg(`Đang gửi mã xác thực Google 6 số tới ${email}...`);
         setEmailOtpStep(true);
+
+        const remainingCooldown = getRemainingOtpSeconds(email);
+        if (remainingCooldown > 0) {
+          setOtpCountdown(remainingCooldown);
+          setSuccessMsg(`Mã xác thực Google đã gửi trước đó. Vui lòng nhập mã hoặc chờ ${remainingCooldown}s để gửi lại.`);
+          return;
+        }
+
+        setSuccessMsg(`Đang gửi mã xác thực Google 6 số tới ${email}...`);
         setSendingOtp(true);
         try {
           const res = await authService.sendOtp({
@@ -401,6 +478,7 @@ export const AuthModal = () => {
           });
           const previewUrl = res?.data?.data?.previewUrl || null;
           setSocialPreviewUrl(previewUrl);
+          setOtpCooldownInSession(email, 60);
           setOtpCountdown(60);
           setSuccessMsg(`✓ Đã gửi mã xác thực 6 số đến tài khoản Google: ${email}. Vui lòng nhập mã để đăng nhập.`);
         } catch (err) {
@@ -522,10 +600,23 @@ export const AuthModal = () => {
 
   // Gửi lại mã OTP qua Nodemailer đến Email hoặc SMS đến Số điện thoại
   const handleResendEmailOtp = async () => {
+    if (sendingOtp || loading) return; // 🛡️ Chống double-submit
+
+    const isPhone = otpType === 'phone';
+    const target = isPhone
+      ? (phoneDataForOtp.phone || phoneInput.replace(/\D/g, ''))
+      : (pendingRegisterData?.email || loginForm.identifier).trim();
+
+    const remainingCooldown = getRemainingOtpSeconds(target);
+    if (remainingCooldown > 0) {
+      setErrorMsg(`Vui lòng chờ ${remainingCooldown}s trước khi yêu cầu gửi lại mã OTP mới!`);
+      return;
+    }
+
     setSendingOtp(true);
     setErrorMsg('');
     try {
-      if (otpType === 'phone') {
+      if (isPhone) {
         const cleanPhone = (phoneDataForOtp.phone || phoneInput).replace(/\D/g, '');
         const res = await authService.sendOtp({
           phone: cleanPhone,
@@ -547,6 +638,7 @@ export const AuthModal = () => {
           time: 'Vừa xong',
         });
         setSuccessMsg(`✓ Đã gửi lại tin nhắn SMS chứa mã OTP đến ${formatted}`);
+        setOtpCooldownInSession(cleanPhone, 60);
       } else {
         const targetEmail = (pendingRegisterData?.email || loginForm.identifier).trim();
         if (!targetEmail) return;
@@ -559,6 +651,7 @@ export const AuthModal = () => {
         const previewUrl = res?.data?.data?.previewUrl || null;
         setSocialPreviewUrl(previewUrl);
         setSuccessMsg(`✓ Đã gửi lại mã xác thực mới đến email: ${targetEmail}`);
+        setOtpCooldownInSession(targetEmail, 60);
       }
       setOtpCountdown(60);
     } catch (err) {
@@ -573,6 +666,8 @@ export const AuthModal = () => {
   // Gửi form Email nội bộ (Đăng Nhập hoặc Đăng Ký)
   const handleSubmitInternalForm = async (e) => {
     e.preventDefault();
+    if (loading || sendingOtp) return; // 🛡️ Chống double-submit
+
     setLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
@@ -620,6 +715,16 @@ export const AuthModal = () => {
         };
 
         setPendingRegisterData(regData);
+
+        const remainingCooldown = getRemainingOtpSeconds(cleanEmail);
+        if (remainingCooldown > 0) {
+          setEmailOtpStep(true);
+          setOtpCountdown(remainingCooldown);
+          setSuccessMsg(`Mã xác thực vừa được gửi đến ${cleanEmail}. Vui lòng nhập mã hoặc chờ ${remainingCooldown}s để gửi lại.`);
+          setLoading(false);
+          return;
+        }
+
         setSuccessMsg(`Đang gửi mã xác thực qua email tới ${cleanEmail}...`);
 
         try {
@@ -635,6 +740,7 @@ export const AuthModal = () => {
           setSocialPreviewUrl(previewUrl);
           setSuccessMsg(`✓ Đã gửi mã xác thực 6 số đến email: ${cleanEmail}`);
           setEmailOtpStep(true);
+          setOtpCooldownInSession(cleanEmail, 60);
           setOtpCountdown(60);
         } catch (err) {
           console.error('Lỗi gửi OTP đăng ký:', err);
@@ -652,8 +758,11 @@ export const AuthModal = () => {
   // Xác thực mã OTP (Email hoặc SMS Số điện thoại) và Hoàn tất Đăng ký / Đăng nhập
   const handleVerifyEmailOtpSubmit = async (e) => {
     e?.preventDefault();
+    if (loading) return; // 🛡️ Chống double-submit khi đang gửi request xác thực
+
     const cleanOtp = otpInput.trim();
     if (cleanOtp.length < 6) {
+      triggerOtpShake();
       setErrorMsg(`Vui lòng nhập đủ 6 chữ số mã xác nhận OTP nhận được từ ${otpType === 'phone' ? 'tin nhắn SMS' : 'email'}!`);
       return;
     }
@@ -680,8 +789,12 @@ export const AuthModal = () => {
           });
 
           const rawData = res?.data?.data || res?.data || {};
-          const receivedToken = rawData.token || `token_${Date.now()}_freedom`;
-          const { token: _t, ...extractedUser } = rawData;
+          const receivedToken = rawData.token || null;
+          if (!receivedToken) {
+            throw new Error(res?.data?.message || 'Không nhận được mã xác thực token từ máy chủ!');
+          }
+          const receivedRefreshToken = rawData.refreshToken || null;
+          const { token: _t, refreshToken: _rt, ...extractedUser } = rawData;
           finalRegisteredUser = {
             ...extractedUser,
             name: pendingRegisterData.name, // Đảm bảo giữ đúng Họ tên người dùng đã đặt 100%
@@ -695,11 +808,16 @@ export const AuthModal = () => {
           if (typeof setUser === 'function') setUser(finalRegisteredUser);
           localStorage.setItem('token', receivedToken);
           localStorage.setItem('freedom_token', receivedToken);
+          if (receivedRefreshToken) {
+            localStorage.setItem('refreshToken', receivedRefreshToken);
+            localStorage.setItem('freedom_refresh_token', receivedRefreshToken);
+          }
           localStorage.setItem('user', JSON.stringify(finalRegisteredUser));
           localStorage.setItem('freedom_persisted_profile', JSON.stringify(finalRegisteredUser));
         }
 
         saveGoogleAccountLocally(pendingRegisterData.email, pendingRegisterData.name, '');
+        clearOtpCooldownInSession(pendingRegisterData.email);
 
         setSuccessMsg('✓ Đã xác thực thành công! Hoàn tất tạo tài khoản.');
         setEmailOtpStep(false);
@@ -732,6 +850,8 @@ export const AuthModal = () => {
           saveGoogleAccountLocally(target, userObj?.name, userObj?.avatar);
         }
 
+        clearOtpCooldownInSession(target);
+
         setSuccessMsg('✓ Đăng nhập thành công!');
         setEmailOtpStep(false);
         setSmsNotification(null);
@@ -741,6 +861,7 @@ export const AuthModal = () => {
         }, 500);
       }
     } catch (err) {
+      triggerOtpShake();
       setErrorMsg(err.message || 'Mã xác thực không chính xác hoặc đã hết hạn!');
     } finally {
       setLoading(false);
@@ -749,9 +870,21 @@ export const AuthModal = () => {
 
   // Đăng nhập nhanh bằng mã OTP gửi về Email (cho người dùng quên mật khẩu)
   const handleSwitchToEmailOtpLogin = async () => {
+    if (loading || sendingOtp) return; // 🛡️ Chống double-submit
+
     const emailInput = loginForm.identifier.trim();
     if (!emailInput) {
       setErrorMsg('Vui lòng nhập địa chỉ Email trước để nhận mã xác thực!');
+      return;
+    }
+
+    const remainingCooldown = getRemainingOtpSeconds(emailInput);
+    if (remainingCooldown > 0) {
+      setOtpType('email');
+      setSmsNotification(null);
+      setEmailOtpStep(true);
+      setOtpCountdown(remainingCooldown);
+      setSuccessMsg(`Mã xác thực đã được gửi đến email ${emailInput}. Vui lòng nhập mã hoặc chờ ${remainingCooldown}s để gửi lại.`);
       return;
     }
 
@@ -769,6 +902,7 @@ export const AuthModal = () => {
       setSmsNotification(null);
       setSuccessMsg(`✓ Đã gửi mã OTP đăng nhập đến email: ${emailInput}`);
       setEmailOtpStep(true);
+      setOtpCooldownInSession(emailInput, 60);
       setOtpCountdown(60);
     } catch (err) {
       console.error('Lỗi gửi OTP đăng nhập:', err);
@@ -782,9 +916,20 @@ export const AuthModal = () => {
   // 📱 Xử lý gửi mã xác thực SMS OTP tới Số điện thoại
   const handleSendPhoneOtp = async (e) => {
     e?.preventDefault();
+    if (loading || sendingOtp) return; // 🛡️ Chống double-submit
+
     const cleanPhone = phoneInput.replace(/\D/g, '');
     if (!cleanPhone || cleanPhone.length < 9) {
       setErrorMsg('Vui lòng nhập số điện thoại hợp lệ (Ví dụ: 0901234567)!');
+      return;
+    }
+
+    const remainingCooldown = getRemainingOtpSeconds(cleanPhone);
+    if (remainingCooldown > 0) {
+      setOtpType('phone');
+      setEmailOtpStep(true);
+      setOtpCountdown(remainingCooldown);
+      setSuccessMsg(`Mã xác thực SMS đã được gửi đến SĐT ${cleanPhone}. Vui lòng nhập mã hoặc chờ ${remainingCooldown}s để gửi lại.`);
       return;
     }
 
@@ -814,6 +959,7 @@ export const AuthModal = () => {
       });
       setSuccessMsg(`✓ Đã gửi tin nhắn SMS chứa mã xác nhận 6 số đến SĐT ${formatted}`);
       setEmailOtpStep(true);
+      setOtpCooldownInSession(cleanPhone, 60);
       setOtpCountdown(60);
     } catch (err) {
       console.error('Lỗi gửi SMS OTP:', err);
@@ -1225,14 +1371,16 @@ export const AuthModal = () => {
             </div>
 
             <form onSubmit={handleVerifyEmailOtpSubmit}>
-              <div className="form-group" style={{ marginBottom: '14px' }}>
+              <div className={`form-group otp-input-container ${isOtpShaking ? 'is-shaking' : ''}`} style={{ marginBottom: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <label style={{ fontWeight: 600, color: '#334155', fontSize: '0.85rem' }}>
                     Nhập mã xác thực 6 chữ số *
                   </label>
                   <button
                     type="button"
+                    disabled={loading}
                     onClick={async () => {
+                      if (loading) return;
                       try {
                         const text = await navigator.clipboard.readText();
                         const code = text.replace(/\D/g, '').slice(0, 6);
@@ -1251,7 +1399,8 @@ export const AuthModal = () => {
                       padding: '3px 10px',
                       fontSize: '0.74rem',
                       fontWeight: 700,
-                      cursor: 'pointer',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      opacity: loading ? 0.6 : 1,
                     }}
                   >
                     📋 Dán mã
@@ -1263,24 +1412,28 @@ export const AuthModal = () => {
                   maxLength="6"
                   placeholder="• • • • • •"
                   value={otpInput}
+                  disabled={loading}
                   onChange={(e) => {
                     setOtpInput(e.target.value.replace(/\D/g, ''));
                     setErrorMsg('');
                   }}
                   autoFocus
+                  className={`otp-input-field ${isOtpShaking ? 'is-shaking' : ''}`}
                   style={{
                     textAlign: 'center',
                     fontSize: '1.7rem',
                     letterSpacing: '8px',
                     fontWeight: 800,
-                    color: '#0f766e',
+                    color: isOtpShaking ? '#b91c1c' : '#0f766e',
                     fontFamily: 'monospace',
                     padding: '10px 12px',
                     borderRadius: '10px',
-                    border: '2px solid #0d9488',
-                    background: '#f0fdfa',
+                    border: isOtpShaking ? '2px solid #ef4444' : '2px solid #0d9488',
+                    background: isOtpShaking ? '#fef2f2' : '#f0fdfa',
                     width: '100%',
                     boxSizing: 'border-box',
+                    transition: 'border-color 0.2s, background-color 0.2s, color 0.2s',
+                    opacity: loading ? 0.7 : 1,
                   }}
                 />
               </div>
@@ -1299,15 +1452,15 @@ export const AuthModal = () => {
                 </span>
                 <button
                   type="button"
-                  disabled={otpCountdown > 0 || sendingOtp}
+                  disabled={otpCountdown > 0 || sendingOtp || loading}
                   onClick={handleResendEmailOtp}
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: otpCountdown > 0 ? '#94a3b8' : '#0d9488',
+                    color: (otpCountdown > 0 || sendingOtp || loading) ? '#94a3b8' : '#0d9488',
                     fontWeight: 700,
-                    cursor: otpCountdown > 0 ? 'not-allowed' : 'pointer',
-                    textDecoration: otpCountdown > 0 ? 'none' : 'underline',
+                    cursor: (otpCountdown > 0 || sendingOtp || loading) ? 'not-allowed' : 'pointer',
+                    textDecoration: (otpCountdown > 0 || sendingOtp || loading) ? 'none' : 'underline',
                   }}
                 >
                   {sendingOtp ? 'Đang gửi...' : otpType === 'phone' ? 'Gửi lại mã qua SMS' : 'Gửi lại mã qua Email'}
@@ -1328,6 +1481,7 @@ export const AuthModal = () => {
                   borderRadius: '10px',
                   border: 'none',
                   cursor: loading || otpInput.trim().length < 6 ? 'not-allowed' : 'pointer',
+                  opacity: loading || otpInput.trim().length < 6 ? 0.65 : 1,
                 }}
               >
                 {loading ? 'Đang xác thực...' : 'Xác Nhận & Hoàn Tất'}
@@ -1336,16 +1490,19 @@ export const AuthModal = () => {
               <div style={{ textAlign: 'center', marginTop: '14px' }}>
                 <button
                   type="button"
+                  disabled={loading}
                   onClick={() => {
+                    if (loading) return;
                     setEmailOtpStep(false);
                     setSmsNotification(null);
+                    setErrorMsg('');
                   }}
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#64748b',
+                    color: loading ? '#94a3b8' : '#64748b',
                     fontSize: '0.82rem',
-                    cursor: 'pointer',
+                    cursor: loading ? 'not-allowed' : 'pointer',
                     textDecoration: 'underline',
                   }}
                 >

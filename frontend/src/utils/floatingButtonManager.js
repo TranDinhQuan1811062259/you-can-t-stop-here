@@ -37,6 +37,19 @@ export const FAB_SIZES = {
   pet: { width: 104, height: 76 }, // 70px thú cưng + 6px gap + 28px nút bánh răng/xương + viền/đổ bóng
 };
 
+/**
+ * Lấy kích thước tương thích linh hoạt theo kích thước màn hình
+ * (Trên mobile 320px–640px, nút Viết bài tự co về dạng tròn 48x48px để không che khuất bài viết)
+ */
+export const getFabDimensions = (type) => {
+  if (typeof window === 'undefined') return FAB_SIZES[type] || { width: 58, height: 58 };
+  const { width: vpWidth } = getViewport();
+  if (type === 'write' && vpWidth <= 640) {
+    return { width: 48, height: 48 };
+  }
+  return FAB_SIZES[type] || { width: 58, height: 58 };
+};
+
 export const MARGIN_LEFT = 24;
 export const MARGIN_RIGHT = 32; // Đồng nhất thụt lề phải an toàn 32px, chống cấn thanh cuộn và mép màn hình
 export const MARGIN_TOP = 20;
@@ -88,18 +101,22 @@ export const getMascotBox = () => {
  */
 export const ensureInBounds = (type, pos, dynamicWidth = null) => {
   if (typeof window === 'undefined') return pos;
-  const baseSize = FAB_SIZES[type] || { width: 58, height: 58 };
+  const baseSize = getFabDimensions(type);
   const size = {
     width: dynamicWidth || baseSize.width,
     height: baseSize.height,
   };
   const { width: vpWidth, height: vpHeight } = getViewport();
+  const isMobile = vpWidth <= 640;
+  const safeMarginLeft = isMobile ? 12 : MARGIN_LEFT;
+  const safeMarginRight = isMobile ? 12 : MARGIN_RIGHT;
+  const safeMarginBottom = isMobile ? 20 : MARGIN_BOTTOM;
 
-  const maxX = Math.max(MARGIN_LEFT, vpWidth - size.width - MARGIN_RIGHT);
-  const maxY = Math.max(MARGIN_TOP, vpHeight - size.height - MARGIN_BOTTOM);
+  const maxX = Math.max(safeMarginLeft, vpWidth - size.width - safeMarginRight);
+  const maxY = Math.max(MARGIN_TOP, vpHeight - size.height - safeMarginBottom);
 
   return {
-    x: Math.min(Math.max(MARGIN_LEFT, Math.round(pos.x)), maxX),
+    x: Math.min(Math.max(safeMarginLeft, Math.round(pos.x)), maxX),
     y: Math.min(Math.max(MARGIN_TOP, Math.round(pos.y)), maxY),
   };
 };
@@ -389,20 +406,23 @@ export const resolveAntiCollision = (movingType, candidatePos, keepOnEdge = fals
  */
 export const snapToNearestEdge = (type, pos, dynamicWidth = null) => {
   if (typeof window === 'undefined') return pos;
-  const baseSize = FAB_SIZES[type] || { width: 58, height: 58 };
+  const baseSize = getFabDimensions(type);
   const size = {
     width: dynamicWidth || baseSize.width,
     height: baseSize.height,
   };
   const { width: vpWidth } = getViewport();
+  const isMobile = vpWidth <= 640;
+  const safeMarginLeft = isMobile ? 12 : MARGIN_LEFT;
+  const safeMarginRight = isMobile ? 12 : MARGIN_RIGHT;
   const midX = vpWidth / 2;
 
   // Tính tâm của nút để xác định nghiêng hẳn về bên trái hay bên phải
   const buttonCenterX = pos.x + size.width / 2;
   const snappedX =
     buttonCenterX < midX
-      ? MARGIN_LEFT
-      : Math.max(MARGIN_LEFT, vpWidth - size.width - MARGIN_RIGHT);
+      ? safeMarginLeft
+      : Math.max(safeMarginLeft, vpWidth - size.width - safeMarginRight);
 
   // Đảm bảo toạ độ Y nằm trong phạm vi an toàn
   const candidate = ensureInBounds(type, { x: snappedX, y: pos.y }, size.width);
