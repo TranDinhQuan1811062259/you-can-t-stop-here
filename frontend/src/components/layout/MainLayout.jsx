@@ -260,14 +260,17 @@ export const MainLayout = () => {
     window.addEventListener('freedom_ai_audio_state_change', handleAudioState);
     window.addEventListener('freedom_ai_player_visibility', handleAudioVisibility);
 
+    let backOnlineTimer = null;
     const handleOnline = () => {
       setIsOnline(true);
       setShowBackOnline(true);
-      setTimeout(() => setShowBackOnline(false), 4000);
+      if (backOnlineTimer) clearTimeout(backOnlineTimer);
+      backOnlineTimer = setTimeout(() => setShowBackOnline(false), 4000);
     };
     const handleOffline = () => {
       setIsOnline(false);
       setShowBackOnline(false);
+      if (backOnlineTimer) clearTimeout(backOnlineTimer);
     };
 
     window.addEventListener('online', handleOnline);
@@ -275,6 +278,7 @@ export const MainLayout = () => {
 
     return () => {
       if (cleanupIdleEngine) cleanupIdleEngine();
+      if (backOnlineTimer) clearTimeout(backOnlineTimer);
       window.removeEventListener('freedom_theme_changed', handleThemeChange);
       window.removeEventListener('freedom_season_changed', handleSeasonChange);
       window.removeEventListener('freedom_theme_schedule_changed', handleScheduleChange);

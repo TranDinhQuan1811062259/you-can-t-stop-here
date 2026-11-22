@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { playClickSound } from '../../utils/soundEffects';
 
@@ -31,6 +31,15 @@ export const GoogleOneTapPrompt = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [loadingEmail, setLoadingEmail] = useState(null);
   const [toastMsg, setToastMsg] = useState('');
+  const selectTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (selectTimerRef.current) {
+        clearTimeout(selectTimerRef.current);
+      }
+    };
+  }, []);
 
   // Cập nhật lại danh sách tài khoản đã lưu khi có thay đổi storage hoặc đăng xuất
   useEffect(() => {
@@ -110,7 +119,8 @@ export const GoogleOneTapPrompt = () => {
     setToastMsg(`Đang gửi mã xác thực Google tới ${account.email}...`);
 
     if (openLoginModal) openLoginModal();
-    setTimeout(() => {
+    if (selectTimerRef.current) clearTimeout(selectTimerRef.current);
+    selectTimerRef.current = setTimeout(() => {
       setIsVisible(false);
       setLoadingEmail(null);
       setToastMsg('');

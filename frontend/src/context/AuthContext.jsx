@@ -142,12 +142,12 @@ export const AuthProvider = ({ children }) => {
 
         const rawUser = {
           _id: `u_${oauthProvider || 'oauth'}_${Date.now()}`,
-          name: oauthName ? decodeURIComponent(oauthName) : (isGoogle ? 'Đơn Thân Mẹ' : 'Anthony Quân (Trần Đình Quân)'),
-          email: oauthEmail ? decodeURIComponent(oauthEmail) : 'anthonyq012025@gmail.com',
-          role: isAdm ? 'admin' : (isFbOrGh ? 'admin' : 'user'),
+          name: oauthName ? decodeURIComponent(oauthName) : (isGoogle ? 'Đơn Thân Mẹ' : 'Thành viên cộng đồng'),
+          email: oauthEmail ? decodeURIComponent(oauthEmail) : '',
+          role: isAdm ? 'admin' : 'user',
           isAdmin: isAdm,
-          avatar: decodedAvatar || (oauthProvider === 'github' ? defaultGhAvatar : ADMIN_AVATAR),
-          jobTitle: oauthProvider === 'github' ? 'Senior Software Engineer' : (oauthProvider === 'facebook' ? 'Content Creator & Connect' : 'System Admin & Lead Dev'),
+          avatar: decodedAvatar || (isAdm ? ADMIN_AVATAR : (oauthProvider === 'github' ? defaultGhAvatar : '')),
+          jobTitle: oauthProvider === 'github' ? 'Senior Software Engineer' : (oauthProvider === 'facebook' ? 'Content Creator & Connect' : (isAdm ? 'System Admin & Lead Dev' : 'Người đi làm')),
           authProvider: oauthProvider || 'oauth',
         };
         const safeUser = ensureAdminPrivileges(rawUser);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, ensureAdminPrivileges } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
 
 export const getEffectiveAvatar = () => {
@@ -375,13 +375,14 @@ export const AuthModal = () => {
           setQrStatus('authenticated');
           setSuccessMsg('✓ Quét mã QR thành công! Đang tự động đăng nhập...');
 
-          const safeUser = data.user || {
-            _id: '6aec5b46ee112662b33c0e32',
-            name: 'Anthony Quân (Trần Đình Quân)',
-            email: 'anthonyq012025@gmail.com',
-            role: 'admin',
-            jobTitle: 'System Admin & Lead Dev',
+          const rawUser = data.user || {
+            _id: 'u_' + Date.now(),
+            name: 'Thành viên cộng đồng',
+            email: '',
+            role: 'user',
+            jobTitle: 'Người đi làm',
           };
+          const safeUser = ensureAdminPrivileges(rawUser);
           localStorage.setItem('token', data.token);
           localStorage.setItem('freedom_token', data.token);
           localStorage.setItem('user', JSON.stringify(safeUser));
