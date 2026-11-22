@@ -23,6 +23,7 @@ import {
   authLimiter,
   otpSendLimiter,
   otpTargetCooldownLimiter,
+  socialOtpSendLimiter,
 } from '../middlewares/rateLimiter.js';
 
 const router = express.Router();
@@ -55,7 +56,7 @@ router.post('/logout', authLimiter, optionalProtect, logout);
 router.post('/logout-all', authLimiter, protect, logoutAll);
 router.post('/send-otp', otpTargetCooldownLimiter, otpSendLimiter, sendLoginOtp);
 router.post('/verify-otp', authLimiter, verifyOtpAndLogin);
-router.post('/social-login', authLimiter, otpTargetCooldownLimiter, socialLogin);
+router.post('/social-login', authLimiter, socialOtpSendLimiter, otpTargetCooldownLimiter, socialLogin);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 router.get('/user/:id', optionalProtect, getUserProfile);

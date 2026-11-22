@@ -96,6 +96,7 @@ export const otpTargetCooldownLimiter = (req, res, next) => {
     const elapsedSinceLast = now - record.lastSent;
     if (elapsedSinceLast < COOLDOWN_MS) {
       const waitSeconds = Math.ceil((COOLDOWN_MS - elapsedSinceLast) / 1000);
+      res.setHeader('Retry-After', String(waitSeconds));
       return sendError(res, {
         message: `Mã xác thực OTP vừa được gửi tới bạn. Vui lòng chờ ${waitSeconds} giây trước khi yêu cầu gửi lại!`,
         status: 429,
@@ -107,6 +108,7 @@ export const otpTargetCooldownLimiter = (req, res, next) => {
     if (now - record.windowStart < WINDOW_MS) {
       if (record.count >= MAX_PER_WINDOW) {
         const resetMinutes = Math.ceil((WINDOW_MS - (now - record.windowStart)) / 60000);
+        res.setHeader('Retry-After', String(resetMinutes * 60));
         return sendError(res, {
           message: `Tài khoản này đã nhận quá số lượng mã OTP cho phép (${MAX_PER_WINDOW} lần / 10 phút). Vui lòng thử lại sau ${resetMinutes} phút!`,
           status: 429,
@@ -183,6 +185,41 @@ export const musicMetadataLimiter = rateLimit({
   handler: (req, res) => {
     return sendError(res, {
       message: 'Bạn đã gửi quá nhiều yêu cầu trích xuất thông tin bài hát trong thời gian ngắn. Vui lòng chờ 1 phút rồi thử lại!',
+      status: 429,
+      errors: { retryAfter: 60 },
+    });
+  },
+  skip: () => process.env.NODE_ENV === 'test',
+});
+
+/**
+ * 6. Giới hạn tần suất gửi mã OTP khi đăng nhập qua mạng xã hội (Google OTP hoặc Admin verification)
+ * - Tối đa 5 lần gửi OTP / 1 phút / IP (dùng chung quy chuẩn của otpSendLimiter).
+ * - Chỉ áp dụng khi request KHÔNG có sẵn `otpCode` (tức là bước yêu cầu gửi OTP mới).
+ * - Hoàn toàn không ảnh hưởng tới bước xác thực OTP hoặc đăng nhập mạng xã hội không cần OTP.
+ */
+export const socialOtpSendLimiter = (req, res, next) => {
+  const hasOtpCode = req.body?.otpCode && String(req.body.otpCode).trim().length > 0;
+  if (!hasOtpCode) {
+    return otpSendLimiter(req, res, next);
+  }
+  next();
+};
+
+/**
+ * 7. Giới hạn tần suất đăng ký nhận bản tin định kỳ (Newsletter) theo địa chỉ IP
+ * - Tối đa 5 requests / 1 phút cho mỗi địa chỉ IP.
+ * - Ngăn chặn tấn công spam gửi thư rác chào mừng làm cạn kiệt tài nguyên SMTP Gmail.
+ */
+export const newsletterLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 phút
+  limit: 5, // Tối đa 5 requests mỗi IP / phút
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    res.setHeader('Retry-After', '60');
+    return sendError(res, {
+      message: 'Bạn đã thực hiện đăng ký bản tin quá nhiều lần trong thời gian ngắn. Vui lòng chờ 1 phút rồi thử lại!',
       status: 429,
       errors: { retryAfter: 60 },
     });
