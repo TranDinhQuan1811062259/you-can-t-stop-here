@@ -296,7 +296,7 @@ export const MusicPlayerCard = ({
             playClickSound();
             toggleMute();
           }}
-          title={isMuted ? 'Bật âm thanh' : 'Tắt tiếng'}
+          title={isMuted ? 'Bật âm thanh (M)' : 'Tắt tiếng (M)'}
         >
           <i
             className={`fa-solid ${

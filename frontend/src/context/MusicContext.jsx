@@ -59,14 +59,37 @@ export const MusicProvider = ({ children }) => {
 
   const [isMuted, setIsMuted] = useState(false);
   const prevVolumeRef = useRef(volume);
-  const [muteToast, setMuteToast] = useState({ visible: false, isMuted: false, message: '' });
-  const muteToastTimerRef = useRef(null);
+  const [musicToast, setMusicToast] = useState({
+    visible: false,
+    type: 'mute',
+    message: '',
+    kbd: 'M',
+    icon: 'fa-volume-xmark',
+  });
+  const musicToastTimerRef = useRef(null);
+
+  // Kích hoạt toast phản hồi thao tác phím tắt (chống kẹt / chồng chéo timer)
+  const triggerMusicToast = useCallback(({ type, message, kbd, icon }) => {
+    if (musicToastTimerRef.current) {
+      clearTimeout(musicToastTimerRef.current);
+    }
+    setMusicToast({
+      visible: true,
+      type,
+      message,
+      kbd,
+      icon,
+    });
+    musicToastTimerRef.current = setTimeout(() => {
+      setMusicToast((prev) => ({ ...prev, visible: false }));
+    }, 1500);
+  }, []);
 
   // Dọn dẹp timer toast khi unmount
   useEffect(() => {
     return () => {
-      if (muteToastTimerRef.current) {
-        clearTimeout(muteToastTimerRef.current);
+      if (musicToastTimerRef.current) {
+        clearTimeout(musicToastTimerRef.current);
       }
     };
   }, []);
@@ -196,7 +219,8 @@ export const MusicProvider = ({ children }) => {
   }, [selectedTrackSeason, tracks, currentTrackIndex]);
 
   // Hành động Play / Pause bọc try/catch an toàn (Quy tắc 4 GEMINI.md)
-  const togglePlay = useCallback(async () => {
+  const togglePlay = useCallback(async (options = {}) => {
+    const showToast = options?.showToast === true;
     const audio = audioRef.current;
     if (!audio) return;
 
@@ -215,6 +239,15 @@ export const MusicProvider = ({ children }) => {
       }
       setIsPlaying(false);
       restoreAmbientFromMusic();
+
+      if (showToast) {
+        triggerMusicToast({
+          type: 'pause',
+          message: 'Đã tạm dừng',
+          kbd: 'Space',
+          icon: 'fa-pause',
+        });
+      }
     } else {
       userExplicitPausedRef.current = false;
       try {
@@ -247,6 +280,15 @@ export const MusicProvider = ({ children }) => {
             setIsAutoplayBlocked(false);
             duckAmbientForMusic();
             syncActiveTrackFromAudio(audio);
+
+            if (showToast) {
+              triggerMusicToast({
+                type: 'play',
+                message: 'Đang phát nhạc',
+                kbd: 'Space',
+                icon: 'fa-play',
+              });
+            }
           }
         } catch (err) {
           if (err?.name === 'AbortError') {
@@ -263,9 +305,18 @@ export const MusicProvider = ({ children }) => {
       } else {
         startEventAmbient(selectedTrackSeason);
         setIsPlaying(true);
+
+        if (showToast) {
+          triggerMusicToast({
+            type: 'play',
+            message: 'Đang phát nhạc',
+            kbd: 'Space',
+            icon: 'fa-play',
+          });
+        }
       }
     }
-  }, [tracks, currentTrackIndex, selectedTrackSeason, seasonalTracks, getTargetTrackSrc, syncActiveTrackFromAudio]);
+  }, [tracks, currentTrackIndex, selectedTrackSeason, seasonalTracks, getTargetTrackSrc, syncActiveTrackFromAudio, triggerMusicToast]);
 
   // Chọn bài cụ thể trong playlist
   const playTrack = useCallback((index) => {
@@ -393,13 +444,12 @@ export const MusicProvider = ({ children }) => {
       setMasterMute(false);
 
       if (showToast) {
-        if (muteToastTimerRef.current) {
-          clearTimeout(muteToastTimerRef.current);
-        }
-        setMuteToast({ visible: true, isMuted: false, message: 'Đã bật tiếng' });
-        muteToastTimerRef.current = setTimeout(() => {
-          setMuteToast((prev) => ({ ...prev, visible: false }));
-        }, 1500);
+        triggerMusicToast({
+          type: 'unmute',
+          message: 'Đã bật tiếng',
+          kbd: 'M',
+          icon: 'fa-volume-high',
+        });
       }
     } else {
       prevVolumeRef.current = volume;
@@ -407,51 +457,63 @@ export const MusicProvider = ({ children }) => {
       setMasterMute(true);
 
       if (showToast) {
-        if (muteToastTimerRef.current) {
-          clearTimeout(muteToastTimerRef.current);
-        }
-        setMuteToast({ visible: true, isMuted: true, message: 'Đã tắt tiếng' });
-        muteToastTimerRef.current = setTimeout(() => {
-          setMuteToast((prev) => ({ ...prev, visible: false }));
-        }, 1500);
+        triggerMusicToast({
+          type: 'mute',
+          message: 'Đã tắt tiếng',
+          kbd: 'M',
+          icon: 'fa-volume-xmark',
+        });
       }
     }
-  }, [isMuted, volume]);
+  }, [isMuted, volume, triggerMusicToast]);
 
   // =========================================================================
-  // PHÍM TẮT TOÀN CỤC THÔNG MINH: 'M' ĐỂ BẬT / TẮT TIẾNG (MUTE / UNMUTE)
+  // PHÍM TẮT TOÀN CỤC THÔNG MINH: 'M' (MUTE) & 'SPACE' (PLAY/PAUSE)
   // =========================================================================
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
-      // 1. Chỉ bắt phím M (cả 'm' thường lẫn 'M' hoa)
-      if (e.key !== 'm' && e.key !== 'M') return;
+      const isKeyM = e.key === 'm' || e.key === 'M';
+      const isKeySpace = e.code === 'Space' || e.key === ' ';
+
+      // 1. Chỉ bắt phím M hoặc Space
+      if (!isKeyM && !isKeySpace) return;
 
       // 2. Ràng buộc an toàn: Bỏ qua tuyệt đối nếu người dùng đang nhấn phím tổ hợp (Ctrl, Alt, Meta)
       if (e.ctrlKey || e.altKey || e.metaKey) return;
 
-      // 3. Ràng buộc an toàn UX: Bỏ qua tuyệt đối khi người dùng đang nhập văn bản
+      // 3. Ràng buộc an toàn UX: Bỏ qua tuyệt đối khi người dùng đang nhập văn bản hoặc trong editor
       const target = e.target;
       if (!target) return;
 
       const tag = target.tagName ? target.tagName.toLowerCase() : '';
       const isInput = tag === 'input' || tag === 'textarea' || tag === 'select';
       const isEditable = target.isContentEditable || target.getAttribute?.('contenteditable') === 'true';
-      const isInsideEditor = Boolean(target.closest?.('input, textarea, [contenteditable="true"], .rich-editor, .ql-editor, .w-md-editor'));
+      const isInsideEditor = Boolean(
+        target.closest?.(
+          'input, textarea, select, [contenteditable="true"], .rich-editor, .ql-editor, .w-md-editor, [role="textbox"]'
+        )
+      );
 
       if (isInput || isEditable || isInsideEditor) {
         return;
       }
 
-      // 4. Bật / tắt tiếng an toàn
-      e.preventDefault();
-      toggleMute();
+      // 4. Bật / tắt tiếng an toàn hoặc Play / Pause
+      if (isKeySpace) {
+        // Ngăn trình duyệt tự cuộn trang xuống khi nhấn Space
+        e.preventDefault();
+        togglePlay({ showToast: true });
+      } else if (isKeyM) {
+        e.preventDefault();
+        toggleMute({ showToast: true });
+      }
     };
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => {
       window.removeEventListener('keydown', handleGlobalKeyDown);
     };
-  }, [toggleMute]);
+  }, [toggleMute, togglePlay]);
 
   // Vòng lặp Loop
   const cycleLoopMode = useCallback(() => {
@@ -969,27 +1031,23 @@ export const MusicProvider = ({ children }) => {
         preload="auto"
         style={{ display: 'none' }}
       />
-      {/* Toast phản hồi nhanh khi Bật / Tắt tiếng (Mute / Unmute) */}
+      {/* Toast phản hồi nhanh khi Thao Tác Phím Tắt (Mute / Unmute / Play / Pause) */}
       <div
         className="global-mute-toast-container"
         style={{
-          opacity: muteToast.visible ? 1 : 0,
-          transform: muteToast.visible ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(12px)',
-          visibility: muteToast.visible ? 'visible' : 'hidden',
+          opacity: musicToast.visible ? 1 : 0,
+          transform: musicToast.visible ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(12px)',
+          visibility: musicToast.visible ? 'visible' : 'hidden',
         }}
         aria-live="polite"
         role="status"
       >
-        <div className={`global-mute-toast-pill ${muteToast.isMuted ? 'is-muted' : 'is-unmuted'}`}>
+        <div className={`global-mute-toast-pill is-${musicToast.type}`}>
           <span className="toast-icon">
-            {muteToast.isMuted ? (
-              <i className="fa-solid fa-volume-xmark" aria-hidden="true"></i>
-            ) : (
-              <i className="fa-solid fa-volume-high" aria-hidden="true"></i>
-            )}
+            <i className={`fa-solid ${musicToast.icon}`} aria-hidden="true"></i>
           </span>
-          <span>{muteToast.message}</span>
-          <span className="toast-kbd">M</span>
+          <span>{musicToast.message}</span>
+          <span className="toast-kbd">{musicToast.kbd}</span>
         </div>
       </div>
     </MusicContext.Provider>

@@ -36,27 +36,6 @@ export const MusicPage = () => {
     };
   }, [currentTheme]);
 
-  // Phím tắt Spacebar để Play/Pause tiện lợi
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Bỏ qua nếu đang gõ văn bản trong input/textarea
-      const tag = e.target?.tagName?.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) {
-        return;
-      }
-
-      if (e.code === 'Space') {
-        e.preventDefault();
-        player.togglePlay();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [player.togglePlay]);
-
   // Chuyển chủ đề qua URL
   const handleSelectTheme = (slug) => {
     navigate(`/music/${slug}`);

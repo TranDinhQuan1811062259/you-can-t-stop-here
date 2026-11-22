@@ -777,7 +777,7 @@ export const Header = () => {
                     playClickSound();
                     setIsAmbientMenuOpen((prev) => !prev);
                   }}
-                  title={`Đang phát: ${currentTrackMeta.title} • Phím 'M' để tắt/bật tiếng nhanh (Bấm để mở trình phát)`}
+                  title={`Đang phát: ${currentTrackMeta.title} • Phím 'Space' để Play/Pause • 'M' để tắt/bật tiếng`}
                   role="button"
                   aria-label={`Đang phát nhạc: ${currentTrackMeta.title}`}
                 >
@@ -1006,7 +1006,7 @@ export const Header = () => {
                             type="button"
                             onClick={handleTogglePlayRecording}
                             className={`track-play-btn ${isEffectivePlaying ? 'is-playing-btn' : ''}`}
-                            title={isEffectivePlaying ? 'Tạm dừng bản nhạc (Pause)' : 'Phát bản nhạc mùa này (Play)'}
+                            title={isEffectivePlaying ? 'Tạm dừng bản nhạc (Space)' : 'Phát bản nhạc mùa này (Space)'}
                             aria-label={isEffectivePlaying ? 'Tạm dừng' : 'Phát'}
                           >
                             {isEffectivePlaying ? (

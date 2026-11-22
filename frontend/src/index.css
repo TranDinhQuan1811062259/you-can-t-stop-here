@@ -21251,12 +21251,19 @@ body.theme-dark .notif-dropdown-footer,
   justify-content: center;
 }
 
-.global-mute-toast-pill.is-muted .toast-icon {
+.global-mute-toast-pill.is-muted .toast-icon,
+.global-mute-toast-pill.is-mute .toast-icon {
   color: #f43f5e;
 }
 
-.global-mute-toast-pill.is-unmuted .toast-icon {
+.global-mute-toast-pill.is-unmuted .toast-icon,
+.global-mute-toast-pill.is-unmute .toast-icon,
+.global-mute-toast-pill.is-play .toast-icon {
   color: #10b981;
+}
+
+.global-mute-toast-pill.is-pause .toast-icon {
+  color: #fbbf24;
 }
 
 .global-mute-toast-pill .toast-kbd {
