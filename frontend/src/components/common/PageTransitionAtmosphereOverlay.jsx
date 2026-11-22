@@ -93,6 +93,9 @@ export const PageTransitionAtmosphereOverlay = ({
   const currentType = getAtmosphereType();
 
   useEffect(() => {
+    let fadeTimer = null;
+    let autoCloseTimer = null;
+
     if (isTransitioning) {
       setVisible(true);
       // Phát âm thanh đặc trưng chuyển trang tương ứng
@@ -101,13 +104,21 @@ export const PageTransitionAtmosphereOverlay = ({
         eventId: activeEvent?.id || null,
       });
 
-      const timer = setTimeout(() => {
+      // Thời lượng tối đa cho 1 chu kỳ chuyển cảnh 3D hoàn chỉnh (2.0s)
+      autoCloseTimer = setTimeout(() => {
         setVisible(false);
-      }, 3800); // 3.8s tốc độ chậm rãi, êm ái, thư thái: chạy ra giữa màn hình, dừng lại uy nghiêm rồi fade từ từ biến mất
-      return () => clearTimeout(timer);
-    } else {
-      setVisible(false);
+      }, 2100);
+    } else if (visible) {
+      // Khi isTransitioning chuyển về false (1.6s), giữ thêm 450ms để keyframe fade-out êm ái, chống chớp tắt
+      fadeTimer = setTimeout(() => {
+        setVisible(false);
+      }, 450);
     }
+
+    return () => {
+      if (fadeTimer) clearTimeout(fadeTimer);
+      if (autoCloseTimer) clearTimeout(autoCloseTimer);
+    };
   }, [isTransitioning, activeSeason?.id, activeEvent?.id]);
 
   if (!visible && !isTransitioning) return null;
@@ -499,36 +510,39 @@ export const PageTransitionAtmosphereOverlay = ({
          ========================================================================= */}
       {currentType === 'event_teachers_day_chalk' && (
         <div className="fx-teachers-chalk-container fx-3d-perspective-stage">
-          {/* Bảng đen vân đá 3D đóng khung gỗ */}
-          <div className="fx-blackboard-wash fx-3d-chalkboard-slab" />
+          {/* Bảng đen vân đá 3D đóng khung gỗ sồi chứa trọn vẹn chữ và bụi phấn bên trong */}
+          <div className="fx-blackboard-wash fx-3d-chalkboard-slab">
+            {/* Lớp vân đá bề mặt bảng */}
+            <div className="chalkboard-surface-texture" />
 
-          {/* Chữ phấn viết tay 3D nổi gân phấn */}
-          <div className="fx-chalk-handwriting-wrap fx-3d-chalk-board-content">
-            <div className="chalk-header-tag-3d">✨ 20/11 • NGÀY NHÀ GIÁO VIỆT NAM ✨</div>
-            <div className="chalk-main-quote-3d">
-              <span className="chalk-symbol-3d">📖</span>
-              <span className="chalk-text-3d">Nét Chữ Nết Người • Tri Ân Thầy Cô</span>
-              <span className="chalk-symbol-3d">🖋️</span>
+            {/* Chữ phấn viết tay 3D nổi gân phấn luôn nằm phía trên bề mặt bảng */}
+            <div className="fx-chalk-handwriting-wrap fx-3d-chalk-board-content">
+              <div className="chalk-header-tag-3d">✨ 20/11 • NGÀY NHÀ GIÁO VIỆT NAM ✨</div>
+              <div className="chalk-main-quote-3d">
+                <span className="chalk-symbol-3d">📖</span>
+                <span className="chalk-text-3d">Nét Chữ Nết Người • Tri Ân Thầy Cô</span>
+                <span className="chalk-symbol-3d">🖋️</span>
+              </div>
+              <div className="chalk-sub-text-3d">Người lái đò thầm lặng chở những ước mơ bay xa</div>
             </div>
-            <div className="chalk-sub-text-3d">Người lái đò thầm lặng chở những ước mơ bay xa</div>
-          </div>
 
-          {/* Bụi phấn 3D bay bồng bềnh đa tầng trong chùm sáng */}
-          <div className="fx-chalk-dust-cloud fx-3d-dust-volume">
-            {[...Array(24)].map((_, i) => (
-              <span
-                key={i}
-                className={`chalk-dust-mote-3d mote-${i}`}
-                style={{
-                  left: `${4 + (i * 4) % 92}%`,
-                  top: `${12 + (i * 8) % 78}%`,
-                  animationDelay: `${(i * 0.07).toFixed(2)}s`,
-                  width: `${3 + (i % 4) * 2}px`,
-                  height: `${3 + (i % 4) * 2}px`,
-                  transform: `translateZ(${(i % 5) * 30}px)`,
-                }}
-              />
-            ))}
+            {/* Bụi phấn 3D bay bồng bềnh đa tầng trong chùm sáng */}
+            <div className="fx-chalk-dust-cloud fx-3d-dust-volume">
+              {[...Array(24)].map((_, i) => (
+                <span
+                  key={i}
+                  className={`chalk-dust-mote-3d mote-${i}`}
+                  style={{
+                    left: `${4 + (i * 4) % 92}%`,
+                    top: `${12 + (i * 8) % 78}%`,
+                    animationDelay: `${(i * 0.07).toFixed(2)}s`,
+                    width: `${3 + (i % 4) * 2}px`,
+                    height: `${3 + (i % 4) * 2}px`,
+                    transform: `translateZ(${16 + (i % 5) * 12}px)`,
+                  }}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}
