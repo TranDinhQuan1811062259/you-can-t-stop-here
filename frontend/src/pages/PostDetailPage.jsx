@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { postService } from '../services/postService';
 import { formatDate } from '../utils/formatDate';
@@ -19,6 +19,7 @@ import { IdleWeatherText } from '../components/common/IdleWeatherText';
 import { formatPostContent } from '../utils/contentFormatter';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
+import { playClickSound } from '../utils/soundEffects';
 
 export const PostDetailPage = () => {
   const { slug } = useParams();
@@ -39,6 +40,91 @@ export const PostDetailPage = () => {
   const [adminApproving, setAdminApproving] = useState(false);
   const [isCinemaMode, setIsCinemaMode] = useState(false);
   const [isDeletingPost, setIsDeletingPost] = useState(false);
+
+  // 📖 Thanh tiến trình đọc bài viết (Reading Progress Bar)
+  const [readingProgress, setReadingProgress] = useState(0);
+
+  // 📋 Phản hồi sao chép liên kết nhanh (kèm ref dọn dẹp timer chống rò rỉ)
+  const [copyToast, setCopyToast] = useState(false);
+  const copyToastTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyToastTimeoutRef.current) {
+        clearTimeout(copyToastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Sao chép liên kết bài tâm sự (Hỗ trợ fallback an toàn cho In-App Webview)
+  const handleCopyLink = async () => {
+    playClickSound();
+    const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+    if (!currentUrl) return;
+
+    let copied = false;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(currentUrl);
+        copied = true;
+      }
+    } catch (_) {}
+
+    if (!copied) {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = currentUrl;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        copied = document.execCommand('copy');
+        document.body.removeChild(textarea);
+      } catch (_) {}
+    }
+
+    if (copied) {
+      if (copyToastTimeoutRef.current) {
+        clearTimeout(copyToastTimeoutRef.current);
+      }
+      setCopyToast(true);
+      copyToastTimeoutRef.current = setTimeout(() => {
+        setCopyToast(false);
+      }, 2200);
+    } else {
+      window.prompt('Sao chép liên kết bài tâm sự để chia sẻ:', currentUrl);
+    }
+  };
+
+  // Tính toán tiến trình cuộn đọc bài viết tối ưu hiệu năng (requestAnimationFrame + passive listener)
+  useEffect(() => {
+    let ticking = false;
+    let animId = null;
+
+    const updateReadingProgress = () => {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = docHeight > 0 ? Math.min(1, Math.max(0, scrollTop / docHeight)) : 0;
+      setReadingProgress(ratio);
+      ticking = false;
+    };
+
+    const handleScroll = () => {
+      if (!ticking) {
+        animId = requestAnimationFrame(updateReadingProgress);
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    updateReadingProgress();
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [slug]);
 
   // Xóa bài viết dành riêng cho chính chủ tác giả
   const handleAuthorDelete = async () => {
@@ -332,6 +418,22 @@ export const PostDetailPage = () => {
 
   return (
     <div className="post-detail-wrap">
+      {/* 📖 Thanh tiến trình đọc bài viết (Reading Progress Bar) */}
+      <div className="reading-progress-bar-container" aria-hidden="true">
+        <div
+          className="reading-progress-bar-fill"
+          style={{ transform: `scaleX(${readingProgress})` }}
+        />
+      </div>
+
+      {/* 📋 Toast thông báo sao chép liên kết */}
+      {copyToast && (
+        <div className="copy-link-toast-pill" role="status" aria-live="polite">
+          <i className="fa-solid fa-circle-check" style={{ color: '#10b981', marginRight: '6px' }}></i>
+          <span>✓ Đã sao chép liên kết bài tâm sự!</span>
+        </div>
+      )}
+
       <div className="container">
         {/* Breadcrumb chuẩn đồng bộ */}
         <div className="breadcrumb-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
@@ -346,7 +448,18 @@ export const PostDetailPage = () => {
               <span>{categoryData.name}</span>
             </Link>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Nút Sao Chép Liên Kết Bài Viết */}
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="post-copy-link-btn"
+              title="Sao chép liên kết bài tâm sự này để chia sẻ"
+            >
+              <i className="fa-regular fa-copy"></i>
+              <span>Sao chép link</span>
+            </button>
+
             {/* Nút Kích Hoạt Chế Độ Rạp Phim Chìm Đắm */}
             <button
               type="button"
@@ -914,6 +1027,31 @@ export const PostDetailPage = () => {
                   if (updated.cheersCount !== undefined) setCheers(updated.cheersCount);
                 }}
               />
+
+              {/* 🔗 Cụm nút Chia Sẻ Nhanh & Sao Chép Liên Kết cuối bài */}
+              <div className="post-bottom-share-bar">
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="post-quick-share-btn"
+                  title="Sao chép liên kết chia sẻ câu chuyện"
+                >
+                  <i className="fa-solid fa-link"></i>
+                  <span>Sao chép liên kết</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    playClickSound();
+                    setIsShareOpen(true);
+                  }}
+                  className="post-quick-share-btn secondary"
+                  title="Mở bảng chia sẻ đa kênh"
+                >
+                  <i className="fa-solid fa-share-nodes"></i>
+                  <span>Chia sẻ bài viết</span>
+                </button>
+              </div>
             </article>
 
             {/* 🕯️ Nến Thắp Bình Yên (Gửi Lời Chúc Thầm Lặng) */}

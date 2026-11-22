@@ -16,6 +16,7 @@ import { FloatingSmsAlert } from '../common/FloatingSmsAlert';
 import { SecurityBellNotification } from '../common/SecurityBellNotification';
 import { FloatingAiAudioPlayer } from '../blog/FloatingAiAudioPlayer';
 import { FloatingFestiveMascot } from '../common/FloatingFestiveMascot';
+import { BackToTopButton } from '../common/BackToTopButton';
 import { PageTransitionWrapper } from '../common/PageTransitionWrapper';
 
 // Tối ưu Code-Splitting: Lazy load các modal toàn cục để giảm kích thước bundle MainLayout
@@ -566,6 +567,9 @@ export const MainLayout = () => {
 
       {/* Bé Thú Cưng Bàn Làm Việc (Desk Companion Pet Therapy 🐱) */}
       <DeskCompanionPet />
+
+      {/* Nút Cuộn Nhanh Lên Đầu Trang (Back to Top) */}
+      <BackToTopButton />
 
       {/* SVG Filters cho hiệu ứng Mùa Hè tan chảy & Mùa Đông băng giá */}
       <IdleWeatherSvgFilters />

@@ -21536,6 +21536,249 @@ body.theme-dark .notif-dropdown-footer,
   }
 }
 
+/* ========================================================
+   READING PROGRESS BAR (GPU-ACCELERATED, 0% REFLOW)
+   ======================================================== */
+.reading-progress-bar-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3.5px;
+  z-index: 999999;
+  pointer-events: none;
+  background: transparent;
+}
+
+.reading-progress-bar-fill {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8 0%, #6366f1 50%, #ec4899 100%);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.7);
+  transform-origin: 0% 50%;
+  will-change: transform;
+  transition: transform 0.08s ease-out;
+}
+
+/* ========================================================
+   COPY LINK TOAST PILL & QUICK SHARE BUTTONS
+   ======================================================== */
+.copy-link-toast-pill {
+  position: fixed;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999998;
+  background: rgba(15, 23, 42, 0.94);
+  color: #f8fafc;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4), 0 0 16px rgba(16, 185, 129, 0.25);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  animation: copyToastSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  white-space: nowrap;
+}
+
+@keyframes copyToastSlideUp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 14px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.post-copy-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--text-color, #e2e8f0);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  user-select: none;
+}
+
+.post-copy-link-btn:hover {
+  background: rgba(56, 189, 248, 0.14);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #38bdf8;
+  transform: translateY(-1px);
+}
+
+.post-copy-link-btn:active {
+  transform: translateY(0);
+}
+
+.post-bottom-share-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  flex-wrap: wrap;
+}
+
+.post-quick-share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.14) 0%, rgba(99, 102, 241, 0.18) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.post-quick-share-btn:hover {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(99, 102, 241, 0.3) 100%);
+  border-color: rgba(56, 189, 248, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25);
+}
+
+.post-quick-share-btn.secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-color, #e2e8f0);
+}
+
+.post-quick-share-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+/* ========================================================
+   BACK TO TOP BUTTON (CUỘN LÊN ĐẦU TRANG THÔNG MINH)
+   ======================================================== */
+.back-to-top-btn {
+  position: fixed;
+  right: 28px;
+  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 9994; /* Nằm ngay dưới nút FAB viết bài 9995 */
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), 0 0 10px rgba(99, 102, 241, 0.18);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.2s ease,
+              border-color 0.2s ease;
+  will-change: transform, opacity;
+  user-select: none;
+}
+
+.back-to-top-btn.is-hidden {
+  opacity: 0;
+  transform: translateY(16px) scale(0.85);
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.back-to-top-btn.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.back-to-top-btn:hover {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: rgba(56, 189, 248, 0.55);
+  color: #38bdf8;
+  transform: translateY(-3px) scale(1.06);
+  box-shadow: 0 8px 24px rgba(56, 189, 248, 0.3);
+}
+
+.back-to-top-btn:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.back-to-top-icon {
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* Responsive Mobile (320px–430px & Trình duyệt nhúng): Chống che khuất hoặc đè lên nút FAB */
+@media (max-width: 768px) {
+  .back-to-top-btn {
+    right: 14px;
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+    width: 40px;
+    height: 40px;
+    background: rgba(15, 23, 42, 0.9);
+  }
+  .back-to-top-icon {
+    font-size: 0.88rem;
+  }
+  .post-bottom-share-bar {
+    justify-content: stretch;
+  }
+  .post-quick-share-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reading-progress-bar-fill {
+    transition: none !important;
+  }
+  .back-to-top-btn {
+    transition: opacity 0.1s linear !important;
+    transform: none !important;
+  }
+  .back-to-top-btn.is-visible {
+    transform: none !important;
+  }
+  .back-to-top-btn.is-hidden {
+    transform: none !important;
+  }
+  .copy-link-toast-pill {
+    animation: none !important;
+  }
+}
+
+
 
 
 
