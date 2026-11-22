@@ -21212,6 +21212,80 @@ body.theme-dark .notif-dropdown-footer,
   }
 }
 
+/* ==========================================================================
+   GLOBAL MUTE / UNMUTE TOAST PILL (ZERO REFLOW, AUTO-DISMISS)
+   ========================================================================== */
+.global-mute-toast-container {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999999;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.global-mute-toast-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(19, 26, 34, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #f8fafc;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.global-mute-toast-pill .toast-icon {
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.global-mute-toast-pill.is-muted .toast-icon {
+  color: #f43f5e;
+}
+
+.global-mute-toast-pill.is-unmuted .toast-icon {
+  color: #10b981;
+}
+
+.global-mute-toast-pill .toast-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  padding: 2px 7px;
+  font-size: 0.72rem;
+  font-family: inherit;
+  font-weight: 700;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #cbd5e1;
+}
+
+@media (max-width: 640px) {
+  .global-mute-toast-container {
+    bottom: 20px;
+  }
+  .global-mute-toast-pill {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    gap: 8px;
+  }
+}
+
+
 
 
 

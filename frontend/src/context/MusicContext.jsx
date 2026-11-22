@@ -59,6 +59,17 @@ export const MusicProvider = ({ children }) => {
 
   const [isMuted, setIsMuted] = useState(false);
   const prevVolumeRef = useRef(volume);
+  const [muteToast, setMuteToast] = useState({ visible: false, isMuted: false, message: '' });
+  const muteToastTimerRef = useRef(null);
+
+  // Dọn dẹp timer toast khi unmount
+  useEffect(() => {
+    return () => {
+      if (muteToastTimerRef.current) {
+        clearTimeout(muteToastTimerRef.current);
+      }
+    };
+  }, []);
 
   // Quản lý 4 mùa của bản thu âm Header
   const [selectedTrackSeason, setSelectedTrackSeason] = useState('winter');
@@ -278,6 +289,8 @@ export const MusicProvider = ({ children }) => {
 
     const targetSrc = getTargetTrackSrc(nextTrack);
     if (targetSrc) {
+      setAudioError(null);
+      setIsLoading(true);
       isSwitchingTrackRef.current = true;
       audio.src = targetSrc;
       audio.load();
@@ -369,17 +382,39 @@ export const MusicProvider = ({ children }) => {
     } catch (_) {}
   }, []);
 
-  // Bật / tắt Mute (Đồng bộ toàn diện cả bài nhạc lẫn âm thanh môi trường)
-  const toggleMute = useCallback(() => {
+  // Bật / tắt Mute (Đồng bộ toàn diện cả bài nhạc lẫn âm thanh môi trường và hiển thị Toast phản hồi)
+  const toggleMute = useCallback((options = {}) => {
+    const showToast = options?.showToast !== false;
+
     if (isMuted) {
       setIsMuted(false);
       const restoredVol = prevVolumeRef.current > 0 ? prevVolumeRef.current : 0.45;
       setVolumeState(restoredVol);
       setMasterMute(false);
+
+      if (showToast) {
+        if (muteToastTimerRef.current) {
+          clearTimeout(muteToastTimerRef.current);
+        }
+        setMuteToast({ visible: true, isMuted: false, message: 'Đã bật tiếng' });
+        muteToastTimerRef.current = setTimeout(() => {
+          setMuteToast((prev) => ({ ...prev, visible: false }));
+        }, 1500);
+      }
     } else {
       prevVolumeRef.current = volume;
       setIsMuted(true);
       setMasterMute(true);
+
+      if (showToast) {
+        if (muteToastTimerRef.current) {
+          clearTimeout(muteToastTimerRef.current);
+        }
+        setMuteToast({ visible: true, isMuted: true, message: 'Đã tắt tiếng' });
+        muteToastTimerRef.current = setTimeout(() => {
+          setMuteToast((prev) => ({ ...prev, visible: false }));
+        }, 1500);
+      }
     }
   }, [isMuted, volume]);
 
@@ -440,6 +475,8 @@ export const MusicProvider = ({ children }) => {
       if (audio && currentTrack) {
         const nextSrc = getTargetTrackSrc(currentTrack, nextWav);
         if (nextSrc && !audio.src.endsWith(nextSrc)) {
+          setAudioError(null);
+          setIsLoading(true);
           const savedTime = audio.currentTime || 0;
           const wasPlaying = !audio.paused;
           audio.src = nextSrc;
@@ -609,6 +646,7 @@ export const MusicProvider = ({ children }) => {
         setDuration(audio.duration);
       }
       setIsLoading(false);
+      setAudioError(null);
     };
 
     const handleTimeUpdate = () => {
@@ -627,6 +665,7 @@ export const MusicProvider = ({ children }) => {
 
     const handleCanPlay = () => {
       setIsLoading(false);
+      setAudioError(null);
     };
 
     const handlePlay = () => {
@@ -638,8 +677,17 @@ export const MusicProvider = ({ children }) => {
     const handlePlaying = () => {
       isSwitchingTrackRef.current = false;
       setIsPlaying(true);
+      setIsLoading(false);
+      setAudioError(null);
       setIsAutoplayBlocked(false);
       duckAmbientForMusic();
+    };
+
+    const handleStalled = () => {
+      // Khi stream dữ liệu bị gián đoạn hoặc đứng hình quá lâu
+      if (audio && audio.readyState >= 2) {
+        setIsLoading(false);
+      }
     };
 
     const handlePause = () => {
@@ -694,6 +742,7 @@ export const MusicProvider = ({ children }) => {
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('waiting', handleWaiting);
     audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('stalled', handleStalled);
     audio.addEventListener('play', handlePlay);
     audio.addEventListener('playing', handlePlaying);
     audio.addEventListener('pause', handlePause);
@@ -705,6 +754,7 @@ export const MusicProvider = ({ children }) => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('waiting', handleWaiting);
       audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('stalled', handleStalled);
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('playing', handlePlaying);
       audio.removeEventListener('pause', handlePause);
@@ -919,6 +969,29 @@ export const MusicProvider = ({ children }) => {
         preload="auto"
         style={{ display: 'none' }}
       />
+      {/* Toast phản hồi nhanh khi Bật / Tắt tiếng (Mute / Unmute) */}
+      <div
+        className="global-mute-toast-container"
+        style={{
+          opacity: muteToast.visible ? 1 : 0,
+          transform: muteToast.visible ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(12px)',
+          visibility: muteToast.visible ? 'visible' : 'hidden',
+        }}
+        aria-live="polite"
+        role="status"
+      >
+        <div className={`global-mute-toast-pill ${muteToast.isMuted ? 'is-muted' : 'is-unmuted'}`}>
+          <span className="toast-icon">
+            {muteToast.isMuted ? (
+              <i className="fa-solid fa-volume-xmark" aria-hidden="true"></i>
+            ) : (
+              <i className="fa-solid fa-volume-high" aria-hidden="true"></i>
+            )}
+          </span>
+          <span>{muteToast.message}</span>
+          <span className="toast-kbd">M</span>
+        </div>
+      </div>
     </MusicContext.Provider>
   );
 };
