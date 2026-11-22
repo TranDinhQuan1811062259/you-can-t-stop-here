@@ -9,7 +9,7 @@ import { ErrorMessage } from '../components/common/ErrorMessage';
 import { PostCard } from '../components/blog/PostCard';
 import { ProfileMusicPlayer } from '../components/profile/ProfileMusicPlayer';
 import { Pagination } from '../components/common/Pagination';
-
+import { playClickSound } from '../utils/soundEffects';
 export const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
 
 export const getProfileAvatarSrc = (targetUser) => {
@@ -101,9 +101,23 @@ export const UserProfilePage = () => {
     return (
       <div className="container" style={{ padding: '60px 0', textAlign: 'center' }}>
         <ErrorMessage message={error || 'Không tìm thấy người dùng này.'} />
-        <Link to="/" className="back-home-btn" style={{ marginTop: '20px', display: 'inline-block' }}>
-          &larr; Về trang chủ
-        </Link>
+        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => {
+              playClickSound();
+              fetchProfile();
+            }}
+            className="post-copy-link-btn"
+            style={{ padding: '8px 18px', borderRadius: '12px', fontSize: '0.9rem' }}
+          >
+            <i className="fa-solid fa-rotate-right" style={{ marginRight: '6px' }}></i>
+            Thử tải lại
+          </button>
+          <Link to="/" className="back-home-btn" style={{ display: 'inline-flex', alignItems: 'center' }}>
+            &larr; Về trang chủ
+          </Link>
+        </div>
       </div>
     );
   }

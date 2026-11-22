@@ -292,7 +292,21 @@ export const PostDetailPage = () => {
     return (
       <div className="container" style={{ padding: '80px 0', textAlign: 'center' }}>
         <ErrorMessage message={error || 'Tâm sự không tồn tại.'} />
-        <div style={{ textAlign: 'center', marginTop: '24px' }}>
+        <div style={{ textAlign: 'center', marginTop: '24px', display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => {
+              playClickSound();
+              setLoading(true);
+              setError(null);
+              fetchPostDetail();
+            }}
+            className="post-copy-link-btn"
+            style={{ padding: '8px 18px', borderRadius: '12px', fontSize: '0.9rem' }}
+          >
+            <i className="fa-solid fa-rotate-right" style={{ marginRight: '6px' }}></i>
+            Thử tải lại
+          </button>
           <Link
             to="/"
             className="back-home-btn"
