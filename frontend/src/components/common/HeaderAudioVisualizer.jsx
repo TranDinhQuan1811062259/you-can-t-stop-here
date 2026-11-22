@@ -10,21 +10,36 @@ import React, { useEffect, useRef, useState } from 'react';
 export const HeaderAudioVisualizer = ({
   audioRef,
   isPlaying = false,
-  barCount = 8,
-  height = 16,
+  barCount = 4,
+  height = 14,
   barWidth = 2.5,
   barGap = 2,
-  activeColor = '#38bdf8',
+  activeColor = '#2dd4bf',
   idleColor = 'rgba(255, 255, 255, 0.22)',
+  variant = 'equalizer', // 'equalizer' | 'waveform'
   className = '',
   style = {},
 }) => {
   const [barHeights, setBarHeights] = useState(() => Array(barCount).fill(0.15));
+  const [isTabVisible, setIsTabVisible] = useState(() => (typeof document !== 'undefined' ? !document.hidden : true));
   const animFrameRef = useRef(null);
   const tickRef = useRef(0);
 
-  // Vòng lặp animation frame đồng bộ nhịp điệu âm thanh 60 FPS (Tự động nghỉ khi tab bị ẩn)
+  // Lắng nghe thay đổi hiển thị tab để ngắt toàn bộ animation/CPU khi tab bị ẩn
   useEffect(() => {
+    const handleVisibility = () => {
+      setIsTabVisible(!document.hidden);
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
+
+  // Vòng lặp animation frame đồng bộ nhịp điệu âm thanh 60 FPS (chỉ dùng cho variant 'waveform')
+  useEffect(() => {
+    if (variant === 'equalizer') return;
+
     let isCancelled = false;
 
     const renderLoop = () => {
@@ -94,11 +109,60 @@ export const HeaderAudioVisualizer = ({
         animFrameRef.current = null;
       }
     };
-  }, [isPlaying, barCount, audioRef]);
+  }, [isPlaying, barCount, audioRef, variant]);
 
+  // CHẾ ĐỘ 1: EQUALIZER GPU-ACCELERATED (Biến thiên siêu nhẹ bằng CSS transform: scaleY)
+  if (variant === 'equalizer') {
+    return (
+      <div
+        className={`header-audio-waveform-visualizer variant-equalizer ${isPlaying ? 'is-active' : 'is-idle'} ${className}`}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+          gap: `${barGap}px`,
+          height: `${height}px`,
+          padding: '0 1px',
+          boxSizing: 'border-box',
+          pointerEvents: 'none',
+          userSelect: 'none',
+          ...style,
+        }}
+        aria-hidden="true"
+      >
+        {Array.from({ length: barCount }).map((_, idx) => (
+          <span
+            key={idx}
+            className={`waveform-bar-col bar-${idx}`}
+            style={{
+              display: 'inline-block',
+              width: `${barWidth}px`,
+              height: `${height}px`,
+              borderRadius: '999px',
+              backgroundColor: isPlaying ? activeColor : idleColor,
+              transformOrigin: 'bottom',
+              transform: isPlaying ? undefined : 'scaleY(0.2)',
+              animationName: isPlaying ? 'miniEqPulse' : 'none',
+              animationDuration: `${0.65 + (idx % 3) * 0.15}s`,
+              animationDelay: `${(idx * 0.12).toFixed(2)}s`,
+              animationTimingFunction: 'ease-in-out',
+              animationIterationCount: 'infinite',
+              animationDirection: 'alternate',
+              animationPlayState: isPlaying && isTabVisible ? 'running' : 'paused',
+              willChange: 'transform',
+              transition: 'transform 0.25s ease, background-color 0.25s ease',
+              boxShadow: isPlaying ? `0 0 6px ${activeColor}40` : 'none',
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  // CHẾ ĐỘ 2: WAVEFORM HARMONIC SYNTHESIS
   return (
     <div
-      className={`header-audio-waveform-visualizer ${isPlaying ? 'is-active' : 'is-idle'} ${className}`}
+      className={`header-audio-waveform-visualizer variant-waveform ${isPlaying ? 'is-active' : 'is-idle'} ${className}`}
       style={{
         display: 'inline-flex',
         alignItems: 'flex-end',

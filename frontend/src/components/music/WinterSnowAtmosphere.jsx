@@ -6,10 +6,12 @@ import React, { useEffect, useRef } from 'react';
  * - Lưu requestAnimationFrame và dọn dẹp triệt để bằng cancelAnimationFrame khi unmount.
  * - Tự động tạm dừng render khi tab trình duyệt bị ẩn (Page Visibility API).
  */
-export const WinterSnowAtmosphere = ({ density = 35, speed = 0.6 }) => {
+export const WinterSnowAtmosphere = ({ density = 35, speed = 0.6, enabled = true }) => {
   const canvasRef = useRef(null);
 
   useEffect(() => {
+    if (!enabled) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -20,8 +22,15 @@ export const WinterSnowAtmosphere = ({ density = 35, speed = 0.6 }) => {
     let width = (canvas.width = canvas.offsetWidth || window.innerWidth);
     let height = (canvas.height = canvas.offsetHeight || window.innerHeight);
 
+    // Kiểm tra chế độ giảm chuyển động của hệ điều hành (Chế độ tiết kiệm pin/hỗ trợ thị giác)
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     // Khởi tạo tập hợp hạt tuyết cố định, không cấp phát thêm bộ nhớ trong vòng lặp render
-    const count = Math.min(density, 60);
+    const count = prefersReducedMotion ? Math.min(density, 12) : Math.min(density, 60);
+    const effectiveSpeed = prefersReducedMotion ? speed * 0.4 : speed;
     const snowflakes = [];
 
     for (let i = 0; i < count; i++) {
@@ -30,7 +39,7 @@ export const WinterSnowAtmosphere = ({ density = 35, speed = 0.6 }) => {
         y: Math.random() * height,
         radius: Math.random() * 2.2 + 0.8,
         density: Math.random() * count,
-        baseSpeed: (Math.random() * 0.8 + 0.4) * speed,
+        baseSpeed: (Math.random() * 0.8 + 0.4) * effectiveSpeed,
         swaySpeed: Math.random() * 0.02 + 0.008,
         swayAngle: Math.random() * Math.PI * 2,
         opacity: Math.random() * 0.6 + 0.25,
@@ -105,7 +114,7 @@ export const WinterSnowAtmosphere = ({ density = 35, speed = 0.6 }) => {
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [density, speed]);
+  }, [density, speed, enabled]);
 
   return (
     <canvas

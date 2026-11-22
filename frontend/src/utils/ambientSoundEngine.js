@@ -905,17 +905,50 @@ export const resumeAmbientAudioContext = async () => {
   return ctx;
 };
 
+let isMasterMuted = false;
+let savedMasterGain = 0.7;
+
+/**
+ * Bật/tắt Mute toàn cục cho đồ thị âm thanh Web Audio API môi trường
+ */
+export const setMasterMute = (muted) => {
+  initAudioGraph();
+  const ctx = getAudioContext();
+  if (!ctx || !combinedMasterGain) return;
+  isMasterMuted = Boolean(muted);
+  const now = ctx.currentTime;
+  combinedMasterGain.gain.cancelScheduledValues(now);
+  if (isMasterMuted) {
+    savedMasterGain = combinedMasterGain.gain.value > 0 ? combinedMasterGain.gain.value : 0.7;
+    combinedMasterGain.gain.setValueAtTime(0, now);
+  } else {
+    const target = isMusicDucking ? 0.12 : (savedMasterGain || 0.7);
+    combinedMasterGain.gain.setValueAtTime(target, now);
+  }
+  notifyStateChange();
+};
+
 export const getAmbientState = () => {
   return {
     isWeatherSoundActive,
     isEventSoundActive,
     isCombined: isWeatherSoundActive && isEventSoundActive,
     isMusicDucking,
+    isMasterMuted,
     currentSeasonId,
     currentMelodicSeasonId,
     currentEventId,
   };
 };
+
+// Đảm bảo AudioContext tự động phục hồi khi tab chuyển từ ẩn sang hiện
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+  });
+}
 
 const notifyStateChange = () => {
   if (typeof window !== 'undefined') {

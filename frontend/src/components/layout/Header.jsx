@@ -769,7 +769,7 @@ export const Header = () => {
 
             {/* Cụm Điều Khiển Âm Thanh Môi Trường Duy Trì (Ambient Soundscape Engine) */}
             <div className="header-ambient-sound-wrap" ref={ambientMenuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {/* Mini Waveform Pill trực tiếp trên Header khi đang phát nhạc */}
+              {/* Mini Waveform Pill trực tiếp trên Header khi đang phát nhạc (GPU-accelerated Mini Equalizer) */}
               {isEffectivePlaying && (
                 <div
                   className="header-live-waveform-pill"
@@ -777,46 +777,22 @@ export const Header = () => {
                     playClickSound();
                     setIsAmbientMenuOpen((prev) => !prev);
                   }}
-                  title={`Đang phát: ${currentTrackMeta.title} (Bấm để mở trình phát)`}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    height: '28px',
-                    padding: '0 8px 0 10px',
-                    borderRadius: '999px',
-                    background: 'rgba(13, 148, 136, 0.2)',
-                    border: '1px solid rgba(45, 212, 191, 0.45)',
-                    backdropFilter: 'blur(8px)',
-                    cursor: 'pointer',
-                    animation: 'fadeIn 0.25s ease',
-                    transition: 'all 0.2s ease',
-                  }}
+                  title={`Đang phát: ${currentTrackMeta.title} • Phím 'M' để tắt/bật tiếng nhanh (Bấm để mở trình phát)`}
                   role="button"
                   aria-label={`Đang phát nhạc: ${currentTrackMeta.title}`}
                 >
-                  <span
-                    style={{
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      color: '#2dd4bf',
-                      letterSpacing: '0.3px',
-                      maxWidth: '90px',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
+                  <span className="live-track-title">
                     {currentTrackMeta.title}
                   </span>
                   <HeaderAudioVisualizer
                     audioRef={recordingAudioRef}
                     isPlaying={isEffectivePlaying}
-                    barCount={5}
+                    barCount={4}
                     height={13}
-                    barWidth={2}
+                    barWidth={2.5}
                     barGap={1.5}
                     activeColor="#2dd4bf"
+                    variant="equalizer"
                   />
                 </div>
               )}

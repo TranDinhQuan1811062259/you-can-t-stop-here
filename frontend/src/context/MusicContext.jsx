@@ -8,6 +8,7 @@ import {
   startEventAmbient,
   stopEventAmbient,
   setMelodicSeason,
+  setMasterMute,
 } from '../utils/ambientSoundEngine';
 
 const MusicContext = createContext(null);
@@ -360,22 +361,62 @@ export const MusicProvider = ({ children }) => {
   const changeVolume = useCallback((newVolume) => {
     const clamped = Math.max(0, Math.min(1, newVolume));
     setVolumeState(clamped);
-    setIsMuted(clamped === 0);
+    const nextMuted = clamped === 0;
+    setIsMuted(nextMuted);
+    setMasterMute(nextMuted);
     try {
       localStorage.setItem('freedom_music_player_volume', String(clamped));
     } catch (_) {}
   }, []);
 
-  // Bật / tắt Mute
+  // Bật / tắt Mute (Đồng bộ toàn diện cả bài nhạc lẫn âm thanh môi trường)
   const toggleMute = useCallback(() => {
     if (isMuted) {
       setIsMuted(false);
-      setVolumeState(prevVolumeRef.current > 0 ? prevVolumeRef.current : 0.45);
+      const restoredVol = prevVolumeRef.current > 0 ? prevVolumeRef.current : 0.45;
+      setVolumeState(restoredVol);
+      setMasterMute(false);
     } else {
       prevVolumeRef.current = volume;
       setIsMuted(true);
+      setMasterMute(true);
     }
   }, [isMuted, volume]);
+
+  // =========================================================================
+  // PHÍM TẮT TOÀN CỤC THÔNG MINH: 'M' ĐỂ BẬT / TẮT TIẾNG (MUTE / UNMUTE)
+  // =========================================================================
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      // 1. Chỉ bắt phím M (cả 'm' thường lẫn 'M' hoa)
+      if (e.key !== 'm' && e.key !== 'M') return;
+
+      // 2. Ràng buộc an toàn: Bỏ qua tuyệt đối nếu người dùng đang nhấn phím tổ hợp (Ctrl, Alt, Meta)
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      // 3. Ràng buộc an toàn UX: Bỏ qua tuyệt đối khi người dùng đang nhập văn bản
+      const target = e.target;
+      if (!target) return;
+
+      const tag = target.tagName ? target.tagName.toLowerCase() : '';
+      const isInput = tag === 'input' || tag === 'textarea' || tag === 'select';
+      const isEditable = target.isContentEditable || target.getAttribute?.('contenteditable') === 'true';
+      const isInsideEditor = Boolean(target.closest?.('input, textarea, [contenteditable="true"], .rich-editor, .ql-editor, .w-md-editor'));
+
+      if (isInput || isEditable || isInsideEditor) {
+        return;
+      }
+
+      // 4. Bật / tắt tiếng an toàn
+      e.preventDefault();
+      toggleMute();
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+    };
+  }, [toggleMute]);
 
   // Vòng lặp Loop
   const cycleLoopMode = useCallback(() => {
