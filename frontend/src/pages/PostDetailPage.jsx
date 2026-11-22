@@ -99,6 +99,8 @@ export const PostDetailPage = () => {
 
   // Tính toán tiến trình cuộn đọc bài viết tối ưu hiệu năng (requestAnimationFrame + passive listener)
   useEffect(() => {
+    setReadingProgress(0);
+    setCopyToast(false);
     let ticking = false;
     let animId = null;
 
@@ -123,6 +125,8 @@ export const PostDetailPage = () => {
     return () => {
       window.removeEventListener('scroll', handleScroll);
       if (animId) cancelAnimationFrame(animId);
+      setReadingProgress(0);
+      setCopyToast(false);
     };
   }, [slug]);
 

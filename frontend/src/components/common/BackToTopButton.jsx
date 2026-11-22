@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { playClickSound } from '../../utils/soundEffects';
 
 /**
@@ -10,8 +11,14 @@ import { playClickSound } from '../../utils/soundEffects';
  * - Dọn dẹp scroll listener triệt để khi unmount (Quy tắc 3 GEMINI.md)
  */
 export const BackToTopButton = () => {
+  const location = useLocation();
   const [isVisible, setIsVisible] = useState(false);
   const animFrameRef = useRef(null);
+
+  // Ẩn ngay lập tức nút cuộn lên đầu khi chuyển sang trang/route mới
+  useEffect(() => {
+    setIsVisible(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     let ticking = false;
