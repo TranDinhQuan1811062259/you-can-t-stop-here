@@ -31,12 +31,24 @@ const startServer = async () => {
     }
   });
 
-  // Xử lý tắt server an toàn (Graceful Shutdown)
+  // Xử lý tắt server an toàn (Graceful Shutdown) với fail-safe timeout 5s
   const shutdown = async () => {
     console.log('\n🛑 Đang đóng kết nối Server và MongoDB...');
+
+    // Đặt hạn chót 5 giây để buộc thoát nếu có kết nối keep-alive (chống kẹt tiến trình)
+    const forceExitTimer = setTimeout(() => {
+      console.warn('⚠️ Hết thời gian chờ đóng kết nối, buộc thoát tiến trình!');
+      process.exit(0);
+    }, 5000);
+    if (forceExitTimer.unref) forceExitTimer.unref();
+
     server.close(async () => {
-      const mongoose = (await import('mongoose')).default;
-      await mongoose.connection.close();
+      try {
+        const mongoose = (await import('mongoose')).default;
+        if (mongoose.connection && mongoose.connection.readyState !== 0) {
+          await mongoose.connection.close();
+        }
+      } catch (_) {}
       console.log('✅ Đã tắt an toàn!');
       process.exit(0);
     });

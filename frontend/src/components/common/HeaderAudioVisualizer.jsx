@@ -23,12 +23,17 @@ export const HeaderAudioVisualizer = ({
   const animFrameRef = useRef(null);
   const tickRef = useRef(0);
 
-  // Vòng lặp animation frame đồng bộ nhịp điệu âm thanh 60 FPS
+  // Vòng lặp animation frame đồng bộ nhịp điệu âm thanh 60 FPS (Tự động nghỉ khi tab bị ẩn)
   useEffect(() => {
     let isCancelled = false;
 
     const renderLoop = () => {
       if (isCancelled) return;
+
+      // Tiết kiệm triệt để CPU/pin khi tab trình duyệt đang bị ẩn
+      if (typeof document !== 'undefined' && document.hidden) {
+        return;
+      }
 
       if (!isPlaying) {
         // Nhạc đang tạm dừng: Hạ dần các thanh sóng âm về trạng thái nghỉ tối thiểu
@@ -70,10 +75,20 @@ export const HeaderAudioVisualizer = ({
       animFrameRef.current = requestAnimationFrame(renderLoop);
     };
 
+    const handleVisibilityChange = () => {
+      if (!document.hidden && !isCancelled && isPlaying) {
+        if (!animFrameRef.current) {
+          animFrameRef.current = requestAnimationFrame(renderLoop);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     animFrameRef.current = requestAnimationFrame(renderLoop);
 
     return () => {
       isCancelled = true;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (animFrameRef.current) {
         cancelAnimationFrame(animFrameRef.current);
         animFrameRef.current = null;

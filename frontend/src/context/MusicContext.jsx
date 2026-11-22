@@ -757,6 +757,78 @@ export const MusicProvider = ({ children }) => {
     };
   }, []);
 
+  // =========================================================================
+  // ĐỒNG BỘ MEDIA SESSION API (KHÓA MÀN HÌNH, TAI NGHE & THÔNG BÁO HỆ ĐIỀU HÀNH)
+  // =========================================================================
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+
+    if (currentTrack) {
+      try {
+        navigator.mediaSession.metadata = new window.MediaMetadata({
+          title: currentTrack.title || 'Freedom Chill',
+          artist: currentTrack.artist || 'Freedom Studio 🎙️',
+          album: currentTheme?.title || 'Không Gian Nhạc Freedom',
+          artwork: [
+            {
+              src: '/images/office-night.jpg',
+              sizes: '512x512',
+              type: 'image/jpeg',
+            },
+          ],
+        });
+      } catch (_) {}
+    }
+
+    try {
+      navigator.mediaSession.setActionHandler('play', () => {
+        if (!isPlayingRef.current) togglePlay();
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        if (isPlayingRef.current) togglePlay();
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        prevTrack();
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        nextTrack();
+      });
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (details?.seekTime !== undefined) {
+          seekTo(details.seekTime);
+        }
+      });
+    } catch (_) {}
+  }, [currentTrack, currentTheme, togglePlay, prevTrack, nextTrack, seekTo]);
+
+  // Cập nhật trạng thái PlaybackState của MediaSession
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    } catch (_) {}
+  }, [isPlaying]);
+
+  // =========================================================================
+  // BẢO ĐẢM ÂM THANH MƯỢT MÀ KHI ĐỔI TAB ẨN / HIỆN (VISIBILITYCHANGE)
+  // =========================================================================
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && !document.hidden && isPlayingRef.current) {
+        resumeAmbientAudioContext();
+        const audio = audioRef.current;
+        if (audio && audio.paused && !userExplicitPausedRef.current) {
+          audio.play().catch(() => {});
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   const value = {
     // State
     themeSlug,
