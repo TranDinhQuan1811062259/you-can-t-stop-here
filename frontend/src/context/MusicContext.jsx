@@ -342,9 +342,13 @@ export const MusicProvider = ({ children }) => {
     if (targetSrc) {
       setAudioError(null);
       setIsLoading(true);
-      isSwitchingTrackRef.current = true;
-      audio.src = targetSrc;
-      audio.load();
+      const currentSrc = audio.src || '';
+      const isSameSrc = currentSrc.endsWith(targetSrc) || currentSrc.includes(encodeURI(targetSrc));
+      if (!isSameSrc) {
+        isSwitchingTrackRef.current = true;
+        audio.src = targetSrc;
+        audio.load();
+      }
 
       try {
         const playPromise = audio.play();
