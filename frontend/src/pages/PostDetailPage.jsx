@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { postService } from '../services/postService';
 import { formatDate } from '../utils/formatDate';
@@ -183,20 +183,35 @@ export const PostDetailPage = () => {
     }
   };
 
-  const fetchPostDetail = () => {
+  const isMountedRef = useRef(true);
+  const activeSlugRef = useRef(slug);
+  activeSlugRef.current = slug;
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const fetchPostDetail = useCallback((targetSlug) => {
+    const currentSlug = targetSlug || slug;
     postService
-      .getPostBySlug(slug)
+      .getPostBySlug(currentSlug)
       .then((res) => {
+        if (!isMountedRef.current || activeSlugRef.current !== currentSlug) return;
         setPost(res.data);
         setCheers(res.data.cheersCount || 0);
+        setError(null);
       })
       .catch((err) => {
+        if (!isMountedRef.current || activeSlugRef.current !== currentSlug) return;
         // Dự phòng tải bài viết từ Cache trình duyệt nếu mất kết nối backend tạm thời
         try {
           const cached = localStorage.getItem('freedom_cached_posts');
           if (cached) {
             const list = JSON.parse(cached);
-            const found = list.find((p) => p.slug === slug || p._id === slug);
+            const found = list.find((p) => p.slug === currentSlug || p._id === currentSlug);
             if (found) {
               setPost(found);
               setCheers(found.cheersCount || found.reactionsCount || found.reactionCounts?.total || 0);
@@ -209,23 +224,28 @@ export const PostDetailPage = () => {
         setError(err.message || 'Không tìm thấy bài viết.');
       })
       .finally(() => {
-        setLoading(false);
+        if (isMountedRef.current && activeSlugRef.current === currentSlug) {
+          setLoading(false);
+        }
       });
-  };
+  }, [slug]);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
     setHasCheered(false);
 
-    fetchPostDetail();
+    fetchPostDetail(slug);
 
+    const currentSlug = slug;
     postService
       .getRecentPosts(4)
       .then((res) => {
+        if (!isMountedRef.current || activeSlugRef.current !== currentSlug) return;
         setRecentPosts(res.data || []);
       })
       .catch((err) => {
+        if (!isMountedRef.current || activeSlugRef.current !== currentSlug) return;
         try {
           const cached = localStorage.getItem('freedom_cached_posts');
           if (cached) {
@@ -238,7 +258,9 @@ export const PostDetailPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     const handleRefresh = () => {
-      fetchPostDetail();
+      if (isMountedRef.current) {
+        fetchPostDetail(activeSlugRef.current);
+      }
     };
 
     window.addEventListener('profile_updated', handleRefresh);
@@ -248,7 +270,7 @@ export const PostDetailPage = () => {
       window.removeEventListener('profile_updated', handleRefresh);
       window.removeEventListener('post_updated', handleRefresh);
     };
-  }, [slug]);
+  }, [slug, fetchPostDetail]);
 
   const handleCheer = async () => {
     if (hasCheered || !post) return;

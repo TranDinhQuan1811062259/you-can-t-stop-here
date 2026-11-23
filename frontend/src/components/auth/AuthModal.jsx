@@ -183,6 +183,19 @@ export const AuthModal = () => {
   // 📳 Hiệu ứng rung nhẹ (Shake) phản hồi vi tương tác khi nhập OTP sai hoặc chưa đủ ký tự
   const [isOtpShaking, setIsOtpShaking] = useState(false);
   const otpShakeTimerRef = useRef(null);
+  const successTimerRef = useRef(null);
+
+  const safeScheduleClose = (callback, delay = 500) => {
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    successTimerRef.current = setTimeout(() => {
+      if (typeof callback === 'function') {
+        callback();
+      } else {
+        closeAuthModal();
+        window.dispatchEvent(new Event('profile_updated'));
+      }
+    }, delay);
+  };
 
   const triggerOtpShake = () => {
     if (otpShakeTimerRef.current) clearTimeout(otpShakeTimerRef.current);
@@ -195,6 +208,7 @@ export const AuthModal = () => {
   useEffect(() => {
     return () => {
       if (otpShakeTimerRef.current) clearTimeout(otpShakeTimerRef.current);
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
     };
   }, []);
 
@@ -295,10 +309,7 @@ export const AuthModal = () => {
       };
       await socialLogin(payload);
       setSuccessMsg(`✓ Đăng ký tài khoản thành công qua ${socialRegData.providerName}! Đang tự động đăng nhập...`);
-      setTimeout(() => {
-        closeAuthModal();
-        window.dispatchEvent(new Event('profile_updated'));
-      }, 350);
+      safeScheduleClose(null, 350);
     } catch (err) {
       setErrorMsg(err.message || 'Lỗi đăng ký tài khoản mạng xã hội!');
     } finally {
@@ -394,7 +405,7 @@ export const AuthModal = () => {
           window.dispatchEvent(new Event('profile_updated'));
           window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
 
-          setTimeout(() => {
+          safeScheduleClose(() => {
             closeAuthModal();
             window.location.reload();
           }, 600);
@@ -572,20 +583,13 @@ export const AuthModal = () => {
 
       await socialLogin(oauthPayload);
       setSuccessMsg(`✓ Đăng nhập thành công bằng tài khoản ${targetProvider.name}!`);
-
-      setTimeout(() => {
-        closeAuthModal();
-        window.dispatchEvent(new Event('profile_updated'));
-      }, 350);
+      safeScheduleClose(null, 350);
     } catch (err) {
       console.warn('Social OAuth warning:', err);
       try {
         await socialLogin(oauthPayload);
         setSuccessMsg(`✓ Đăng nhập thành công bằng tài khoản ${targetProvider.name}!`);
-        setTimeout(() => {
-          closeAuthModal();
-          window.dispatchEvent(new Event('profile_updated'));
-        }, 350);
+        safeScheduleClose(null, 350);
       } catch (finalErr) {
         setErrorMsg(err.message || `Lỗi khi kết nối OAuth với ${targetProvider.name}. Vui lòng thử lại!`);
       }
@@ -695,10 +699,7 @@ export const AuthModal = () => {
         });
 
         setSuccessMsg('✓ Đăng nhập thành công!');
-        setTimeout(() => {
-          closeAuthModal();
-          window.dispatchEvent(new Event('profile_updated'));
-        }, 350);
+        safeScheduleClose(null, 350);
       } else {
         // ĐĂNG KÝ TÀI KHOẢN NỘI BỘ: GỬI MÃ OTP QUA NODEMAILER ĐỂ XÁC THỰC EMAIL
         if (!registerForm.name || !registerForm.identifier || !registerForm.password) {
@@ -824,7 +825,7 @@ export const AuthModal = () => {
         setEmailOtpStep(false);
         setSmsNotification(null);
         setPendingRegisterData(null);
-        setTimeout(() => {
+        safeScheduleClose(() => {
           closeAuthModal();
           window.dispatchEvent(new Event('profile_updated'));
           if (finalRegisteredUser) {
@@ -856,10 +857,7 @@ export const AuthModal = () => {
         setSuccessMsg('✓ Đăng nhập thành công!');
         setEmailOtpStep(false);
         setSmsNotification(null);
-        setTimeout(() => {
-          closeAuthModal();
-          window.dispatchEvent(new Event('profile_updated'));
-        }, 500);
+        safeScheduleClose(null, 500);
       }
     } catch (err) {
       triggerOtpShake();
