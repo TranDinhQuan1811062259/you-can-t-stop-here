@@ -22242,6 +22242,15 @@ body.theme-dark .notif-dropdown-footer,
   position: relative;
   border-left: 3px solid #f59e0b;
   padding-left: 12px;
+  min-height: 56px; /* 0% CLS: Chống giật khựng chiều cao khi chuyển câu trích dẫn */
+  display: flex;
+  align-items: center;
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.quote-content-text.is-fading {
+  opacity: 0;
+  transform: translateY(3px);
 }
 
 .quote-author-name {
@@ -22249,6 +22258,7 @@ body.theme-dark .notif-dropdown-footer,
   font-weight: 700;
   color: #94a3b8;
   text-align: right;
+  transition: opacity 0.18s ease;
 }
 
 /* Bảng Tương Tác Ghi Nhận Nỗ Lực */
@@ -22322,6 +22332,14 @@ body.theme-dark .notif-dropdown-footer,
 
 .give-effort-btn:active {
   transform: translateY(1px);
+}
+
+.give-effort-btn:focus-visible,
+.beat-select-btn:focus-visible,
+.quote-nav-btn:focus-visible,
+.efforts-toggle-btn:focus-visible {
+  outline: 2px solid #f59e0b !important;
+  outline-offset: 3px !important;
 }
 
 .floating-effort-sparkle {

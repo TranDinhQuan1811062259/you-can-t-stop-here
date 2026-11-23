@@ -1098,10 +1098,10 @@ export const MusicProvider = ({ children }) => {
   return (
     <MusicContext.Provider value={value}>
       {children}
-      {/* Audio element duy nhất trên toàn ứng dụng */}
+      {/* Audio element duy nhất trên toàn ứng dụng: preload="metadata" để tối ưu hóa băng thông, không tải trước cả file WAV 34.6MB khi chưa phát */}
       <audio
         ref={audioRef}
-        preload="auto"
+        preload="metadata"
         style={{ display: 'none' }}
       />
       {/* Toast phản hồi nhanh khi Thao Tác Phím Tắt (Mute / Unmute / Play / Pause) */}

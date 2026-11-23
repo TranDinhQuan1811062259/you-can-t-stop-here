@@ -75,9 +75,11 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
 
   const [isExpanded, setIsExpanded] = useState(true);
   const [quoteIndex, setQuoteIndex] = useState(0);
+  const [isQuoteFading, setIsQuoteFading] = useState(false);
   const [sparkles, setSparkles] = useState([]);
   const [cheerNotice, setCheerNotice] = useState(null);
   const cheerTimerRef = useRef(null);
+  const quoteFadeTimerRef = useRef(null);
   const progressBarRef = useRef(null);
 
   // Số lượt nỗ lực ghi nhận (cá nhân & cộng đồng)
@@ -105,25 +107,38 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
   const isSong1Playing = isEffortTheme && currentTrackIndex === 0 && isPlaying;
   const isSong2Playing = isEffortTheme && currentTrackIndex === 1 && isPlaying;
 
-  // Dọn dẹp timer cheer notice khi unmount
+  // Dọn dẹp timer cheer notice & fade quote khi unmount
   useEffect(() => {
     return () => {
       if (cheerTimerRef.current) {
         clearTimeout(cheerTimerRef.current);
       }
+      if (quoteFadeTimerRef.current) {
+        clearTimeout(quoteFadeTimerRef.current);
+      }
     };
+  }, []);
+
+  // Chuyển câu truyền động lực mượt mà không gây giật khựng giao diện (CLS = 0)
+  const changeQuote = useCallback((nextIdx) => {
+    setIsQuoteFading(true);
+    if (quoteFadeTimerRef.current) clearTimeout(quoteFadeTimerRef.current);
+    quoteFadeTimerRef.current = setTimeout(() => {
+      setQuoteIndex(nextIdx);
+      setIsQuoteFading(false);
+    }, 180);
   }, []);
 
   // Đổi câu truyền động lực tiếp theo
   const handleNextQuote = useCallback(() => {
     playClickSound();
-    setQuoteIndex((prev) => (prev + 1) % MOTIVATION_QUOTES.length);
-  }, []);
+    changeQuote((quoteIndex + 1) % MOTIVATION_QUOTES.length);
+  }, [changeQuote, quoteIndex]);
 
   const handlePrevQuote = useCallback(() => {
     playClickSound();
-    setQuoteIndex((prev) => (prev - 1 + MOTIVATION_QUOTES.length) % MOTIVATION_QUOTES.length);
-  }, []);
+    changeQuote((quoteIndex - 1 + MOTIVATION_QUOTES.length) % MOTIVATION_QUOTES.length);
+  }, [changeQuote, quoteIndex]);
 
   // Xử lý nút Phát / Dừng hoặc Chọn Nhịp Nhạc
   const handleSelectTrack = useCallback((trackIdx) => {
@@ -157,6 +172,13 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
     try {
       playStarChimeSound();
     } catch (_) {}
+
+    // Rung xúc giác haptic nhẹ nhàng trên thiết bị di động hỗ trợ
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate(25);
+      } catch (_) {}
+    }
 
     const rect = e.currentTarget.getBoundingClientRect();
     const newSparkleId = Date.now() + Math.random();
@@ -396,7 +418,10 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
                   </div>
                 </div>
 
-                <blockquote className="quote-content-text">
+                <blockquote
+                  className={`quote-content-text ${isQuoteFading ? 'is-fading' : ''}`}
+                  aria-live="polite"
+                >
                   "{currentQuote.quote}"
                 </blockquote>
                 <div className="quote-author-name">
