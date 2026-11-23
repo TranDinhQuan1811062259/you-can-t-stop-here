@@ -577,17 +577,24 @@ export const MusicProvider = ({ children }) => {
     const newTheme = getPlaylistBySlug(newSlug);
     if (newTheme?.tracks && newTheme.tracks.length > 0) {
       setCurrentTrackIndex(0);
+      setSelectedTrackSeason('winter');
+      stopEventAmbient();
+      setAudioError(null);
       const nextTrack = newTheme.tracks[0];
       const targetSrc = getTargetTrackSrc(nextTrack);
       const audio = audioRef.current;
       if (audio && targetSrc) {
         const wasPlaying = !audio.paused;
+        if (wasPlaying) {
+          setIsLoading(true);
+        }
         audio.src = targetSrc;
         audio.load();
         if (wasPlaying) {
           audio.play().catch((err) => {
             if (err?.name === 'AbortError') return;
             console.warn('[MusicContext] Theme switch play error:', err);
+            setIsPlaying(false);
           });
         }
       }
