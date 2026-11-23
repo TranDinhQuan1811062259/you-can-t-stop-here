@@ -615,15 +615,18 @@ export const PostDetailPage = () => {
                 </div>
               )}
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+              <div className="post-header-badges-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
                 <Link
                   to={categoryData.slug ? `/?category=${categoryData.slug}` : '/'}
-                  className="post-header-badge"
+                  className="post-header-badge post-header-badge-category"
                   style={{
                     textDecoration: 'none',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    maxWidth: '100%',
                     background: isCustomBg ? 'rgba(255, 255, 255, 0.22)' : 'rgba(13, 148, 136, 0.12)',
                     color: isCustomBg ? '#ffffff' : 'var(--primary-hover)',
                     border: isCustomBg ? '1.5px solid rgba(255, 255, 255, 0.4)' : '1px solid rgba(13, 148, 136, 0.25)',
@@ -637,15 +640,17 @@ export const PostDetailPage = () => {
                   }}
                   title={`Thể loại: ${categoryData.name} (Xem các bài viết liên quan)`}
                 >
-                  <span style={{ fontSize: '1rem' }}>{categoryData.icon}</span>
-                  <span>{categoryData.name}</span>
+                  <span style={{ fontSize: '1rem', flexShrink: 0 }}>{categoryData.icon}</span>
+                  <span className="badge-text-ellipsis">{categoryData.name}</span>
                 </Link>
                 <span
-                  className={`card-visibility-pill ${post.visibility === 'friends' ? 'is-friends' : 'is-public'} ${isCustomBg ? 'custom-atm-visibility-pill' : ''}`}
+                  className={`post-header-badge post-header-badge-visibility ${post.visibility === 'friends' ? 'is-friends' : 'is-public'} ${isCustomBg ? 'custom-atm-visibility-pill' : ''}`}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
                     background: isCustomBg
                       ? (post.visibility === 'friends' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.22)')
                       : undefined,
@@ -666,21 +671,24 @@ export const PostDetailPage = () => {
                 >
                   {post.visibility === 'friends' ? (
                     <>
-                      <i className="fa-solid fa-user-group"></i> Chỉ bạn bè
+                      <i className="fa-solid fa-user-group" style={{ flexShrink: 0 }}></i> <span>Chỉ bạn bè</span>
                     </>
                   ) : (
                     <>
-                      <i className="fa-solid fa-globe"></i> Công khai
+                      <i className="fa-solid fa-globe" style={{ flexShrink: 0 }}></i> <span>Công khai</span>
                     </>
                   )}
                 </span>
                 {postAtmosphere.theme !== 'default' && (
                   <span
-                    className="post-atmosphere-badge"
+                    className="post-header-badge post-header-badge-atmosphere"
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '6px',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      maxWidth: '100%',
                       padding: '4px 14px',
                       borderRadius: '999px',
                       fontSize: '0.8rem',
@@ -692,8 +700,8 @@ export const PostDetailPage = () => {
                       backdropFilter: isCustomBg ? 'blur(8px)' : 'none',
                     }}
                   >
-                    <span>{themeMeta.icon}</span>
-                    <span>Không gian: {themeMeta.badgeText}</span>
+                    <span style={{ flexShrink: 0 }}>{themeMeta.icon}</span>
+                    <span className="badge-text-ellipsis">Không gian: {themeMeta.badgeText}</span>
                   </span>
                 )}
               </div>

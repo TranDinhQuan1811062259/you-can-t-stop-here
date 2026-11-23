@@ -6,6 +6,7 @@ import { Pagination } from '../components/common/Pagination';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { IdleWeatherText } from '../components/common/IdleWeatherText';
+import { GivingSomeEffortsSection } from '../components/wellness/GivingSomeEffortsSection';
 
 export const CategoryPage = () => {
   const { categorySlug } = useParams();
@@ -61,6 +62,16 @@ export const CategoryPage = () => {
 
       {/* Main Content */}
       <section className="container" style={{ padding: '30px 20px' }}>
+        {/* Module Truyền Động Lực Tiếp Sức Giving Some Efforts (Hiển thị nổi bật khi duyệt chuyên mục Động Lực / Small Wins) */}
+        {(categorySlug.includes('dong-luc') ||
+          categorySlug.includes('small-wins') ||
+          categorySlug.includes('tia-sang') ||
+          categorySlug.includes('effort')) && (
+          <div style={{ marginBottom: '24px' }}>
+            <GivingSomeEffortsSection />
+          </div>
+        )}
+
         {/* Thanh Công Cụ Bộ Lọc Sắp Xếp & Chế Độ Bài Viết */}
         <div className="posts-filter-toolbar">
           <div className="filter-toolbar-left">

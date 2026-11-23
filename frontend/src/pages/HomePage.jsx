@@ -15,6 +15,7 @@ import { CreateStoryModal } from '../components/story/CreateStoryModal';
 import { StoryViewerModal } from '../components/story/StoryViewerModal';
 import { IdleWeatherText } from '../components/common/IdleWeatherText';
 import { CommunityResilienceTree } from '../components/wellness/CommunityResilienceTree';
+import { GivingSomeEffortsSection } from '../components/wellness/GivingSomeEffortsSection';
 
 export const HomePage = () => {
   const { isAuthenticated, openLoginModal } = useAuth();
@@ -379,6 +380,9 @@ export const HomePage = () => {
 
         {/* 🌳 Cây Hồi Sinh & Tái Tạo Năng Lượng Cộng Đồng (Live Tree of Resilience) */}
         <CommunityResilienceTree />
+
+        {/* ⚡ Module Truyền Động Lực Tương Tác Thực Thụ: Giving Some Efforts (Tiếp Sức & 2 Nhịp Nhạc Studio WAV) */}
+        <GivingSomeEffortsSection />
 
         {/* Bộ lọc danh mục */}
         <CategoryFilter

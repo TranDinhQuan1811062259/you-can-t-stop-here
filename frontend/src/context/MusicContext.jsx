@@ -570,31 +570,61 @@ export const MusicProvider = ({ children }) => {
     });
   }, [currentTrack, getTargetTrackSrc]);
 
-  // Đổi chủ đề Playlist (Góc Nhạc)
-  const switchTheme = useCallback((newSlug) => {
-    if (!newSlug || newSlug === themeSlug) return;
+  // Đổi chủ đề Playlist (Góc Nhạc) & hỗ trợ chọn track index trực tiếp
+  const switchTheme = useCallback((newSlug, targetTrackIndex = 0, forcePlay = false) => {
+    if (!newSlug) return;
+    const isSameTheme = newSlug === themeSlug;
+    if (isSameTheme) {
+      if (typeof targetTrackIndex === 'number' && targetTrackIndex !== currentTrackIndex) {
+        playTrack(targetTrackIndex);
+      } else if (forcePlay) {
+        const audio = audioRef.current;
+        if (audio && audio.paused) {
+          togglePlay();
+        }
+      }
+      return;
+    }
     setThemeSlug(newSlug);
     const newTheme = getPlaylistBySlug(newSlug);
     if (newTheme?.tracks && newTheme.tracks.length > 0) {
-      setCurrentTrackIndex(0);
+      const safeIndex = Math.max(0, Math.min(targetTrackIndex || 0, newTheme.tracks.length - 1));
+      setCurrentTrackIndex(safeIndex);
       setSelectedTrackSeason('winter');
       stopEventAmbient();
       setAudioError(null);
-      const nextTrack = newTheme.tracks[0];
+      const nextTrack = newTheme.tracks[safeIndex];
       const targetSrc = getTargetTrackSrc(nextTrack);
       const audio = audioRef.current;
       if (audio && targetSrc) {
-        const wasPlaying = !audio.paused;
+        const currentSrc = audio.src || '';
+        const isSameSrc = currentSrc.endsWith(targetSrc) || currentSrc.includes(encodeURI(targetSrc));
+        const wasPlaying = (!audio.paused && !audio.ended) || forcePlay;
         if (wasPlaying) {
           setIsLoading(true);
         }
-        audio.src = targetSrc;
-        audio.load();
+        if (!isSameSrc) {
+          isSwitchingTrackRef.current = true;
+          audio.src = targetSrc;
+        }
         if (wasPlaying) {
-          audio.play().catch((err) => {
+          userExplicitPausedRef.current = false;
+          try {
+            sessionStorage.removeItem('freedom_user_explicit_paused');
+          } catch (_) {}
+          audio.play().then(() => {
+            isSwitchingTrackRef.current = false;
+            setIsPlaying(true);
+            setIsAutoplayBlocked(false);
+            duckAmbientForMusic();
+          }).catch((err) => {
+            isSwitchingTrackRef.current = false;
             if (err?.name === 'AbortError') return;
             console.warn('[MusicContext] Theme switch play error:', err);
             setIsPlaying(false);
+            if (err?.name === 'NotAllowedError') {
+              setIsAutoplayBlocked(true);
+            }
           });
         }
       }
@@ -609,7 +639,12 @@ export const MusicProvider = ({ children }) => {
       setIsPlaying(false);
       restoreAmbientFromMusic();
     }
-  }, [themeSlug, getTargetTrackSrc]);
+  }, [themeSlug, currentTrackIndex, playTrack, togglePlay, getTargetTrackSrc]);
+
+  // Hành động kích hoạt phát nhanh một bài trong theme bất kỳ (Tự động chuyển theme và play)
+  const playThemeTrack = useCallback((slug, trackIndex = 0) => {
+    switchTheme(slug, trackIndex, true);
+  }, [switchTheme]);
 
   // Điều khiển mùa cho bản thu âm Header (Xuân, Hạ, Thu, Đông)
   const selectRecordingSeason = useCallback((seasonId) => {
@@ -711,11 +746,17 @@ export const MusicProvider = ({ children }) => {
     if (!audio) return;
 
     const handleLoadedMetadata = () => {
-      if (audio.duration && !isNaN(audio.duration)) {
+      if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration) && audio.duration > 0) {
         setDuration(audio.duration);
       }
       setIsLoading(false);
       setAudioError(null);
+    };
+
+    const handleDurationChange = () => {
+      if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration) && audio.duration > 0) {
+        setDuration(audio.duration);
+      }
     };
 
     const handleTimeUpdate = () => {
@@ -733,6 +774,9 @@ export const MusicProvider = ({ children }) => {
     };
 
     const handleCanPlay = () => {
+      if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration) && audio.duration > 0) {
+        setDuration(audio.duration);
+      }
       setIsLoading(false);
       setAudioError(null);
     };
@@ -799,15 +843,24 @@ export const MusicProvider = ({ children }) => {
         return;
       }
 
-      console.warn('[MusicContext] Audio playback error on:', cTrack?.src, e);
+      const mediaErr = audio?.error;
+      console.warn('[MusicContext] Audio playback error on:', cTrack?.src, mediaErr || e);
       isSwitchingTrackRef.current = false;
       setIsLoading(false);
       setIsPlaying(false);
-      setAudioError('Không thể phát tệp âm thanh này hoặc định dạng chưa được hỗ trợ.');
+
+      let errMsg = 'Không thể phát tệp âm thanh này. Bấm để thử lại.';
+      if (mediaErr?.code === 4) {
+        errMsg = 'Trình duyệt/Webview chưa hỗ trợ giải mã định dạng WAV 24-bit này.';
+      } else if (mediaErr?.code === 2) {
+        errMsg = 'Lỗi kết nối mạng khi tải bản thu âm.';
+      }
+      setAudioError(errMsg);
       restoreAmbientFromMusic();
     };
 
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('durationchange', handleDurationChange);
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('waiting', handleWaiting);
     audio.addEventListener('canplay', handleCanPlay);
@@ -820,6 +873,7 @@ export const MusicProvider = ({ children }) => {
 
     return () => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('durationchange', handleDurationChange);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('waiting', handleWaiting);
       audio.removeEventListener('canplay', handleCanPlay);
@@ -1031,6 +1085,7 @@ export const MusicProvider = ({ children }) => {
     toggleShuffle,
     toggleAudioQuality,
     switchTheme,
+    playThemeTrack,
     selectRecordingSeason,
     uploadCustomRecording,
     dismissAutoplayBlocked,

@@ -375,102 +375,6 @@ const initialData = {
       views: 1,
       createdAt: new Date().toISOString(),
     },
-    {
-      _id: 'post_effort_1',
-      title: 'Giving Some Efforts: Khi bạn cảm thấy muốn bỏ cuộc, hãy thử cố thêm 5 phút nữa',
-      slug: 'giving-some-efforts-khi-ban-cam-thay-muon-bo-cuoc-hay-thu-co-them-5-phut-nua',
-      summary: 'Sự kiên trì không phải là những bước nhảy vọt phi thường, mà đôi khi chỉ là quyết định không buông tay trong 5 phút khó khăn nhất.',
-      content: `
-        <p>Có những ngày ngồi trước màn hình máy tính hay đối diện với một bài toán hóc búa, năng lượng của bạn cạn kiệt đến mức chỉ muốn tắt ngúm mọi thứ và từ bỏ. Cảm giác đó rất thật, và nó xảy ra với tất cả chúng ta.</p>
-        <h2>Quy tắc "5 phút nữa thôi"</h2>
-        <p>Mỗi khi thấy mình chạm đến giới hạn chịu đựng, thay vì dẹp bỏ tất cả, tôi thường tự đặt một chiếc đồng hồ bấm giờ 5 phút. Tự nhủ rằng: <em>"Mình chỉ cần cố gắng thêm đúng 5 phút nữa thôi. Sau 5 phút, nếu vẫn thấy không thể tiếp tục, mình sẽ nghỉ."</em></p>
-        <p>Điều kỳ diệu là trong 90% trường hợp, qua được 5 phút ngột ngạt ấy, nhịp thở của bạn sẽ dần ổn định trở lại, sự tập trung quay về và bạn nhận ra chướng ngại vật kia thực ra không đáng sợ như mình tưởng.</p>
-        <blockquote>"Chiến thắng lớn nhất không phải là không bao giờ gục ngã, mà là biết đứng lên thêm một lần nữa sau mỗi lần gục ngã."</blockquote>
-        <div class="effort-song-recommendation" style="margin: 20px 0; padding: 16px; border-radius: 12px; background: rgba(245, 158, 11, 0.08); border-left: 4px solid #f59e0b;">
-          <p style="margin: 0 0 8px 0; font-weight: 600; color: #f59e0b;">🎵 Giai Điệu Đồng Hành: Song 1E (Bền Bỉ &amp; Vươn Lên)</p>
-          <p style="margin: 0; font-size: 0.95rem; opacity: 0.9;">Bản thu âm Studio WAV mộc mạc mang nhịp điệu kiên trì, tiếp thêm nguồn năng lượng để bạn vững bước qua những giờ làm việc căng thẳng.</p>
-          <div style="margin-top: 10px;">
-            <audio controls preload="metadata" style="width: 100%; max-width: 480px; height: 36px;" src="/audio/giving-some-efforts/Song1E.wav"></audio>
-          </div>
-        </div>
-        <p>Nếu bạn đang đọc những dòng này vào một ngày mệt mỏi: Hãy hít một hơi thật sâu, thả lỏng vai, nghe một bản nhạc nhẹ nhàng và cho bản thân thêm 5 phút nữa nhé. You Can't Stop Here!</p>
-      `,
-      coverImage: '/images/restart-coding.jpg',
-      category: { _id: 'cat_4', name: 'Những tia sáng & Động lực (Small Wins)', slug: 'nhung-tia-sang-dong-luc-small-wins' },
-      author: 'Trần Đình Quân',
-      authorJob: 'System Admin & Lead Dev',
-      authorSocialLinks: {
-        facebook: 'https://www.facebook.com/anthony.qill/',
-        website: 'https://cantstophere.com',
-      },
-      audioUrl: '/audio/giving-some-efforts/Song1E.wav',
-      audioTitle: 'Song 1E (Bền Bỉ & Vươn Lên)',
-      audioMood: 'uplifting',
-      atmosphere: {
-        theme: 'healing',
-        soundEnabled: true,
-        soundEffect: 'auto',
-        particleEffect: 'sparkles',
-      },
-      tags: ['Giving Some Efforts', 'Động lực', 'Kiên trì', 'Small Wins'],
-      cheersCount: 89,
-      reactionCounts: { sympathy: 14, stop: 0, love: 45, encourage: 30, total: 89 },
-      reactions: [
-        { userName: 'Hương Ly', userAvatar: '/images/img2.jpg', types: ['love', 'encourage'] },
-        { userName: 'Thành Nam', userAvatar: '/images/2.jpg', types: ['sympathy', 'love'] },
-      ],
-      showReactionCount: true,
-      sharesCount: 16,
-      views: 48,
-      createdAt: '2026-11-20T08:00:00.000Z',
-    },
-    {
-      _id: 'post_effort_2',
-      title: 'Mỗi nỗ lực nhỏ bé đều để lại dấu ấn: Đừng đánh giá thấp bước chân hôm nay của bạn',
-      slug: 'moi-no-luc-nho-be-deu-de-lai-dau-an-dung-danh-gia-thap-buoc-chan-hom-nay-cua-ban',
-      summary: 'Chúng ta thường chỉ tôn vinh những đích đến hoành tráng mà quên mất rằng chính những nỗ lực thầm lặng mỗi ngày mới là thứ tạc nên bản lĩnh.',
-      content: `
-        <p>Trong một thế giới luôn hối hả và tôn vinh những thành công chớp nhoáng, rất dễ để chúng ta cảm thấy bản thân mình chậm chạp và tầm thường. Bạn nhìn thấy người khác khoe giải thưởng, khoe thăng tiến, trong khi bản thân vẫn đang loay hoay với những dòng code dở dang hay những trang sách chưa đọc hết.</p>
-        <h2>Sức mạnh của những bước tiến nhỏ bé (Small Wins)</h2>
-        <p>Nhưng sự thật là: Không có cái cây đại thụ nào lớn lên sau một đêm. Mỗi dòng code bạn viết hôm nay, mỗi email bạn trả lời tử tế, mỗi buổi tối bạn chọn ngồi vào bàn làm việc thay vì lướt mạng vô định — tất cả đều đang tích lũy từng chút một.</p>
-        <p>Đó là tinh thần cốt lõi của <strong>Giving Some Efforts</strong>. Đôi khi nỗ lực hôm nay chỉ là thức dậy đúng giờ, ăn một bữa ấm nóng và mỉm cười với đồng nghiệp. Bạn không cần phải hoàn hảo, bạn chỉ cần không dừng lại.</p>
-        <div class="effort-song-recommendation" style="margin: 20px 0; padding: 16px; border-radius: 12px; background: rgba(245, 158, 11, 0.08); border-left: 4px solid #f59e0b;">
-          <p style="margin: 0 0 8px 0; font-weight: 600; color: #f59e0b;">🎵 Giai Điệu Đồng Hành: Song 2E (Ánh Sáng Cuối Con Đường)</p>
-          <p style="margin: 0; font-size: 0.95rem; opacity: 0.9;">Giai điệu tươi sáng và lạc quan, là liều thuốc tinh thần sưởi ấm tâm hồn bạn sau những giờ nỗ lực miệt mài.</p>
-          <div style="margin-top: 10px;">
-            <audio controls preload="metadata" style="width: 100%; max-width: 480px; height: 36px;" src="/audio/giving-some-efforts/Song2E.wav"></audio>
-          </div>
-        </div>
-        <p>Hãy tự vỗ vai khen ngợi chính mình vì những cố gắng của ngày hôm nay. Dù kết quả ra sao, bạn đã dũng cảm đối diện và không bỏ cuộc. Đó đã là một chiến thắng rực rỡ rồi!</p>
-      `,
-      coverImage: '/images/sun.jpg',
-      category: { _id: 'cat_4', name: 'Những tia sáng & Động lực (Small Wins)', slug: 'nhung-tia-sang-dong-luc-small-wins' },
-      author: 'Minh Anh',
-      authorJob: 'Frontend Dev 3 năm kinh nghiệm',
-      authorSocialLinks: {
-        linkedin: 'https://linkedin.com/in/minhanh-dev',
-      },
-      audioUrl: '/audio/giving-some-efforts/Song2E.wav',
-      audioTitle: 'Song 2E (Ánh Sáng Cuối Con Đường)',
-      audioMood: 'uplifting',
-      atmosphere: {
-        theme: 'healing',
-        soundEnabled: true,
-        soundEffect: 'auto',
-        particleEffect: 'sparkles',
-      },
-      tags: ['Giving Some Efforts', 'Nỗ lực', 'Tập trung', 'Vươn lên', 'Small Wins'],
-      cheersCount: 112,
-      reactionCounts: { sympathy: 20, stop: 0, love: 52, encourage: 40, total: 112 },
-      reactions: [
-        { userName: 'Trần Đình Quân', userAvatar: '', types: ['love', 'encourage'] },
-        { userName: 'Đức Huy', userAvatar: '/images/3.jpg', types: ['sympathy', 'encourage'] },
-      ],
-      showReactionCount: true,
-      sharesCount: 24,
-      views: 62,
-      createdAt: '2026-11-21T09:30:00.000Z',
-    },
   ],
   comments: [
     {
@@ -554,13 +458,11 @@ export const loadStore = () => {
           parsed.posts = [...initialData.posts];
           needsSave = true;
         } else {
-          // Bổ sung các bài viết hệ thống mới nếu chưa có trong db_store.json
-          const existingPostIds = new Set(parsed.posts.map((p) => String(p._id)));
-          for (const defaultPost of initialData.posts) {
-            if (!existingPostIds.has(String(defaultPost._id))) {
-              parsed.posts.push(defaultPost);
-              needsSave = true;
-            }
+          // Lọc bỏ triệt để các bài post_effort blog bị tạo nhầm trước đó khỏi db_store.json
+          const prevLen = parsed.posts.length;
+          parsed.posts = parsed.posts.filter((p) => p && !String(p._id).startsWith('post_effort'));
+          if (parsed.posts.length !== prevLen) {
+            needsSave = true;
           }
         }
 

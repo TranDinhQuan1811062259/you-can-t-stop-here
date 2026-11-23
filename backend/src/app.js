@@ -12,6 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const uploadsDir = path.join(__dirname, '../uploads');
 const imagesDir = path.join(__dirname, '../../frontend/public/images');
+const audioDir = path.join(__dirname, '../../frontend/public/audio');
 const clientDistDir = path.join(__dirname, '../../frontend/dist');
 const clientAssetsDir = path.join(clientDistDir, 'assets');
 
@@ -106,6 +107,19 @@ if (fs.existsSync(imagesDir)) {
     express.static(imagesDir, {
       maxAge: '1d',
       setHeaders: (res) => {
+        res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+      },
+    })
+  );
+}
+
+if (fs.existsSync(audioDir)) {
+  app.use(
+    '/audio',
+    express.static(audioDir, {
+      maxAge: '1d',
+      setHeaders: (res) => {
+        res.setHeader('Accept-Ranges', 'bytes');
         res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
       },
     })

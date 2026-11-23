@@ -584,7 +584,7 @@ img {
 .header-search-input {
   width: 100%;
   height: 38px;
-  padding: 6px 82px 6px 38px;
+  padding: 6px 92px 6px 38px;
   border-radius: 999px;
   border: 1.5px solid rgba(255, 255, 255, 0.14);
   background: rgba(15, 23, 42, 0.65);
@@ -610,41 +610,53 @@ img {
 
 .header-search-clear {
   position: absolute;
-  right: 54px;
-  background: transparent;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 58px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
   border: none;
   color: #94a3b8;
   cursor: pointer;
-  font-size: 0.85rem;
-  padding: 2px 6px;
+  font-size: 0.8rem;
+  line-height: 1;
   border-radius: 50%;
-  transition: all 0.15s;
-  z-index: 3;
+  transition: all 0.15s ease;
+  z-index: 4;
 }
 
 .header-search-clear:hover {
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.22);
 }
 
-/* Nút Submit Tìm Kiếm (Nút Tìm Action Button) */
+/* Nút Submit Tìm Kiếm (Nút Tìm Action Button - Nằm gọn 100% bên trong khung bo tròn của thanh tìm kiếm) */
 .header-search-submit-btn {
   position: absolute;
-  right: 4px;
-  height: 30px;
-  padding: 0 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 5px;
+  height: 28px;
+  padding: 0 10px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.08);
   color: #cbd5e1;
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   font-weight: 700;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
+  box-sizing: border-box;
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 3;
+  z-index: 4;
 }
 
 .header-search-submit-btn:hover,
@@ -653,7 +665,7 @@ img {
   border-color: #2dd4bf;
   color: #ffffff;
   box-shadow: 0 0 12px rgba(45, 212, 191, 0.45);
-  transform: scale(1.02);
+  transform: translateY(-50%) scale(1.02);
 }
 
 /* Hộp Gợi Ý Tìm Kiếm Trực Tiếp (Live Search Dropdown) */
@@ -11599,7 +11611,7 @@ body.theme-light .floating-region-select {
   gap: 6px;
   min-width: 0;
   flex: 1 1 auto;
-  max-width: calc(100% - 85px);
+  max-width: 100%;
 }
 
 /* Cụm huy hiệu bên phải (Không gian + Cảnh báo) */
@@ -11609,7 +11621,10 @@ body.theme-light .floating-region-select {
   gap: 6px;
   flex-shrink: 0 !important;
   margin-left: auto;
-  min-width: max-content;
+}
+
+.card-badges-right:empty {
+  display: none !important;
 }
 
 /* Category Badge bên trái - Hiển thị tên danh mục đầy đủ, sang trọng, không bị cắt ngắn vô lý */
@@ -15163,6 +15178,7 @@ body.theme-dark .header-logout-btn,
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
+.filter-pill-group,
 .filter-pills-group {
   display: flex;
   align-items: center;
@@ -15176,6 +15192,8 @@ body.theme-dark .header-logout-btn,
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(15, 23, 42, 0.5);
@@ -21791,4 +21809,734 @@ body.theme-dark .notif-dropdown-footer,
   z-index: 1;
   opacity: 0.75;
 }
+
+/* =========================================================================
+   GIVING SOME EFFORTS: MODULE TRUYỀN ĐỘNG LỰC TƯƠNG TÁC THỰC THỤ
+   (Dual-Beat Studio WAV Master, Quote Carousel & Nhịp Cố Gắng +1)
+   ========================================================================= */
+.giving-efforts-section {
+  width: 100%;
+  margin: 24px 0;
+  position: relative;
+  z-index: 3;
+}
+
+.efforts-card-container {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.35);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), 0 0 24px rgba(245, 158, 11, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.efforts-card-container:hover {
+  border-color: rgba(245, 158, 11, 0.55);
+  box-shadow: 0 14px 36px -8px rgba(0, 0, 0, 0.6), 0 0 32px rgba(245, 158, 11, 0.18);
+}
+
+/* Header Row: Badge & Nút Thu Gọn */
+.efforts-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.efforts-badge-wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.efforts-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+  white-space: nowrap;
+}
+
+.efforts-icon-sparkle {
+  font-size: 1rem;
+}
+
+.efforts-subtitle-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.efforts-toggle-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.efforts-toggle-btn:hover {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+/* Grid Bố Cục: 2 Cột (Trình Phát Nhạc & Thông Điệp Tương Tác) */
+.efforts-body-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* Cột Trái: Trình Phát Âm Thanh */
+.efforts-audio-player-card {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.audio-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.audio-player-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.player-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #f59e0b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.audio-now-playing-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.audio-wav-badge {
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fcd34d;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* Nút Chọn 2 Nhịp Nhạc */
+.efforts-beats-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.beat-select-btn {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.beat-select-btn:hover {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.4);
+  transform: translateY(-2px);
+}
+
+.beat-select-btn.is-active {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: #f59e0b;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.2);
+}
+
+.beat-btn-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.beat-select-btn.is-active .beat-btn-icon-wrap {
+  background: #f59e0b;
+  color: #0f172a;
+}
+
+.beat-btn-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.beat-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.beat-desc {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Equalizer mini 3 thanh nhảy sóng */
+.beat-equalizer-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+
+.beat-equalizer-bars span {
+  width: 3px;
+  background: #0f172a;
+  border-radius: 2px;
+  animation: beatEqWave 0.8s ease-in-out infinite alternate;
+}
+
+.beat-equalizer-bars span:nth-child(1) {
+  height: 6px;
+  animation-delay: 0s;
+}
+
+.beat-equalizer-bars span:nth-child(2) {
+  height: 12px;
+  animation-delay: 0.2s;
+}
+
+.beat-equalizer-bars span:nth-child(3) {
+  height: 8px;
+  animation-delay: 0.4s;
+}
+
+@keyframes beatEqWave {
+  0% { height: 4px; }
+  100% { height: 14px; }
+}
+
+/* Thanh Tiến Trình & Thời Gian */
+.efforts-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.efforts-progress-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+}
+
+.efforts-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+  border-radius: 999px;
+  transition: width 0.15s linear;
+}
+
+.efforts-time-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.time-divider {
+  opacity: 0.5;
+}
+
+.now-playing-tag {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #38bdf8;
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  background: #38bdf8;
+  border-radius: 50%;
+  animation: pulseDotAnim 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes pulseDotAnim {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(1.3); opacity: 1; }
+}
+
+/* Cột Phải: Thông Điệp Động Lực & Tương Tác */
+.efforts-interactive-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.quote-display-card {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.quote-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.quote-category-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.quote-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quote-nav-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  transition: all 0.2s ease;
+}
+
+.quote-nav-btn:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.quote-pagination-index {
+  font-size: 0.74rem;
+  color: #94a3b8;
+  font-weight: 700;
+  padding: 0 4px;
+}
+
+.quote-content-text {
+  font-size: 0.92rem;
+  font-style: italic;
+  color: #f1f5f9;
+  line-height: 1.55;
+  margin: 0;
+  position: relative;
+  border-left: 3px solid #f59e0b;
+  padding-left: 12px;
+}
+
+.quote-author-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-align: right;
+}
+
+/* Bảng Tương Tác Ghi Nhận Nỗ Lực */
+.effort-action-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+
+.effort-counters {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(15, 23, 42, 0.4);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+
+.counter-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.counter-label {
+  color: #94a3b8;
+}
+
+.counter-num {
+  color: #fbbf24;
+  font-weight: 800;
+}
+
+.counter-divider {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.effort-button-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.give-effort-btn {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #0f172a;
+  font-weight: 800;
+  font-size: 0.88rem;
+  padding: 10px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+.give-effort-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(245, 158, 11, 0.5);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+}
+
+.give-effort-btn:active {
+  transform: translateY(1px);
+}
+
+.floating-effort-sparkle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #fbbf24;
+  pointer-events: none;
+  animation: floatSparkleUp 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  text-shadow: 0 2px 8px rgba(245, 158, 11, 0.6);
+  z-index: 10;
+}
+
+@keyframes floatSparkleUp {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--tw-translate-x, 0), -45px) scale(1.3);
+  }
+}
+
+.effort-cheer-toast {
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 4px 12px;
+  border-radius: 999px;
+  animation: fadeInCheer 0.3s ease;
+}
+
+@keyframes fadeInCheer {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========================================================
+   LIGHT MODE OVERRIDES CHO GIVING SOME EFFORTS
+   ======================================================== */
+body.theme-light .efforts-card-container,
+[data-theme="light"] .efforts-card-container,
+.mode-light .efforts-card-container {
+  background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%) !important;
+  border-color: rgba(217, 119, 6, 0.35) !important;
+  box-shadow: 0 10px 30px -10px rgba(217, 119, 6, 0.12), 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.theme-light .efforts-pill-badge,
+[data-theme="light"] .efforts-pill-badge,
+.mode-light .efforts-pill-badge {
+  background: rgba(245, 158, 11, 0.12) !important;
+  border-color: rgba(217, 119, 6, 0.4) !important;
+  color: #b45309 !important;
+}
+
+body.theme-light .efforts-subtitle-chip,
+[data-theme="light"] .efforts-subtitle-chip,
+.mode-light .efforts-subtitle-chip {
+  color: #64748b !important;
+}
+
+body.theme-light .efforts-toggle-btn,
+[data-theme="light"] .efforts-toggle-btn,
+.mode-light .efforts-toggle-btn {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #475569 !important;
+}
+
+body.theme-light .efforts-audio-player-card,
+body.theme-light .quote-display-card,
+[data-theme="light"] .efforts-audio-player-card,
+[data-theme="light"] .quote-display-card,
+.mode-light .efforts-audio-player-card,
+.mode-light .quote-display-card {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+body.theme-light .audio-now-playing-title,
+[data-theme="light"] .audio-now-playing-title,
+.mode-light .audio-now-playing-title {
+  color: #1e293b !important;
+}
+
+body.theme-light .beat-select-btn,
+[data-theme="light"] .beat-select-btn,
+.mode-light .beat-select-btn {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+body.theme-light .beat-name,
+[data-theme="light"] .beat-name,
+.mode-light .beat-name {
+  color: #0f172a !important;
+}
+
+body.theme-light .quote-content-text,
+[data-theme="light"] .quote-content-text,
+.mode-light .quote-content-text {
+  color: #334155 !important;
+}
+
+body.theme-light .effort-counters,
+[data-theme="light"] .effort-counters,
+.mode-light .effort-counters {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+body.theme-light .counter-num,
+[data-theme="light"] .counter-num,
+.mode-light .counter-num {
+  color: #d97706 !important;
+}
+
+/* ========================================================
+   CHUẨN HÓA BADGES (CHỐNG KẸP CHỮ / NGẮT DÒNG XẤU TRÊN MOBILE)
+   ======================================================== */
+.post-header-badges-row {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  margin-bottom: 14px !important;
+}
+
+.post-header-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  max-width: 100% !important;
+  line-height: 1.3 !important;
+}
+
+.badge-text-ellipsis {
+  display: inline-block !important;
+  max-width: 220px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  vertical-align: middle !important;
+}
+
+/* ========================================================
+   RESPONSIVE GIVING SOME EFFORTS & BADGES (320px - 768px)
+   ======================================================== */
+@media (max-width: 768px) {
+  .efforts-body-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .efforts-card-container {
+    padding: 18px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Header Search Bar Tối Ưu Mobile 320px - 480px */
+  .site-header .header-top-center {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+  .header-search-wrapper {
+    min-width: 0 !important;
+  }
+  .header-search-input {
+    height: 34px !important;
+    font-size: 0.78rem !important;
+    padding: 4px 86px 4px 32px !important;
+  }
+  .header-search-icon-btn {
+    left: 4px !important;
+    width: 24px !important;
+    height: 24px !important;
+    font-size: 0.8rem !important;
+  }
+  .header-search-submit-btn {
+    right: 4px !important;
+    height: 26px !important;
+    padding: 0 8px !important;
+    font-size: 0.7rem !important;
+  }
+  .header-search-clear {
+    right: 56px !important;
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 0.75rem !important;
+  }
+
+  .efforts-beats-selector {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .beat-select-btn {
+    padding: 10px 12px;
+  }
+  .quote-content-text {
+    font-size: 0.86rem;
+  }
+  .give-effort-btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.82rem;
+    padding: 9px 16px;
+  }
+  .badge-text-ellipsis {
+    max-width: 140px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .header-search-input {
+    padding: 4px 78px 4px 28px !important;
+    font-size: 0.74rem !important;
+  }
+  .header-search-submit-btn {
+    padding: 0 6px !important;
+  }
+  .header-search-clear {
+    right: 50px !important;
+  }
+
+  .efforts-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .badge-text-ellipsis {
+    max-width: 110px !important;
+  }
+  .efforts-toggle-btn .toggle-text {
+    display: none;
+  }
+  .efforts-toggle-btn {
+    padding: 6px 10px;
+  }
+}
+
 
