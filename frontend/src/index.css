@@ -8924,23 +8924,52 @@ body.theme-dark .ambient-orb.orb-4,
   border: 1px solid rgba(234, 88, 12, 0.28) !important;
 }
 
-/* --- MÙA ĐÔNG (WINTER): Tĩnh lặng, Chữa lành --- */
+/* --- MÙA ĐÔNG (WINTER): Ánh băng đỉnh chữ tự nhiên & Tĩnh lặng chữa lành --- */
 .season-winter .hero-banner {
-  border-bottom: 1px solid rgba(13, 148, 136, 0.2) !important;
+  border-bottom: 1px solid rgba(14, 165, 233, 0.25) !important;
 }
 
 .season-winter .hero-title {
-  color: var(--text-heading);
+  background: linear-gradient(180deg, #ffffff 0%, #e0f2fe 35%, #7dd3fc 70%, #0284c7 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  filter: drop-shadow(0 2px 10px rgba(56, 189, 248, 0.45));
+  text-shadow: none !important;
+  font-weight: 850 !important;
 }
 
 .season-winter .hero-title span {
-  color: #0d9488;
+  background: linear-gradient(180deg, #ffffff 0%, #bae6fd 30%, #38bdf8 70%, #0369a1 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
 }
 
 .season-winter .hero-tag-pill {
-  background: rgba(13, 148, 136, 0.12) !important;
-  color: #0d9488 !important;
-  border: 1px solid rgba(13, 148, 136, 0.28) !important;
+  background: rgba(14, 165, 233, 0.12) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+}
+
+/* Nút bấm điểm nhấn chính mùa đông: Lớp sương giá hữu cơ nhẹ nhàng trên đỉnh */
+.season-winter .hero-btn-primary {
+  position: relative;
+  background: linear-gradient(135deg, #0284c7, #0d9488) !important;
+  box-shadow: 0 4px 18px rgba(2, 132, 199, 0.35) !important;
+  border: 1px solid rgba(224, 242, 254, 0.3) !important;
+}
+.season-winter .hero-btn-primary::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 18%;
+  right: 18%;
+  height: 3px;
+  background: radial-gradient(ellipse at 50% 100%, rgba(255, 255, 255, 0.95) 0%, rgba(224, 242, 254, 0.6) 55%, transparent 100%);
+  border-radius: 999px;
+  filter: drop-shadow(0 1px 4px rgba(255, 255, 255, 0.75));
+  pointer-events: none;
 }
 
 .seasonal-particles-wrap {
@@ -9678,21 +9707,27 @@ body.theme-dark .site-header .logo-text:not(.seasonal-logo-text),
   white-space: nowrap !important;
 }
 
-/* 1. Mùa Đông (Winter) - Xanh băng tuyết dịu êm và rõ nét */
+/* 1. Mùa Đông (Winter) - Ánh băng đỉnh chữ tự nhiên cho Logo Brand */
 .site-header .seasonal-logo-text.season-winter,
-body.theme-light .site-header .seasonal-logo-text.season-winter,
-[data-theme="light"] .site-header .seasonal-logo-text.season-winter,
-.mode-light .site-header .seasonal-logo-text.season-winter {
-  color: #0284c7 !important;
-  -webkit-text-fill-color: #0284c7 !important;
-  text-shadow: 0 1px 2px rgba(2, 132, 199, 0.18);
-}
 body.theme-dark .site-header .seasonal-logo-text.season-winter,
 [data-theme="dark"] .site-header .seasonal-logo-text.season-winter,
 .mode-dark .site-header .seasonal-logo-text.season-winter {
-  color: #38bdf8 !important;
-  -webkit-text-fill-color: #38bdf8 !important;
-  text-shadow: 0 2px 8px rgba(56, 189, 248, 0.4);
+  background: linear-gradient(180deg, #ffffff 0%, #e0f2fe 30%, #38bdf8 70%, #0284c7 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  filter: drop-shadow(0 2px 6px rgba(56, 189, 248, 0.35));
+  text-shadow: none !important;
+}
+body.theme-light .site-header .seasonal-logo-text.season-winter,
+[data-theme="light"] .site-header .seasonal-logo-text.season-winter,
+.mode-light .site-header .seasonal-logo-text.season-winter {
+  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 35%, #0369a1 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.8));
+  text-shadow: none !important;
 }
 
 /* 2. Mùa Xuân (Spring) - Hồng hoa đào tươi mới */
@@ -16222,31 +16257,26 @@ body.theme-light .inline-friend-chip:hover,
   transform: translateY(1px) scale(0.99) !important;
 }
 
-/* Mùa Đông (Winter) + Chế độ Ngày: chữ xanh sapphire / navy đậm sâu cực nổi bật trên nền vàng nhạt */
-.season-winter .hero-title,
+/* Mùa Đông (Winter) + Chế độ Ngày: Ánh băng chuyển sắc tương phản cao, đỉnh ánh tuyết sáng nhẹ, thân chữ navy/sapphire đậm sâu */
 .mode-light .season-winter .hero-title,
 body.theme-light .season-winter .hero-title,
 [data-theme="light"] .season-winter .hero-title {
-  color: #0369a1 !important;
-  -webkit-text-fill-color: #0369a1 !important;
-  background: none !important;
-  -webkit-background-clip: unset !important;
-  background-clip: unset !important;
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.95),
-    0 2px 8px rgba(3, 105, 161, 0.3),
-    0 4px 14px rgba(2, 132, 199, 0.2) !important;
-  font-weight: 900 !important;
+  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 32%, #0369a1 70%, #0c4a6e 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.95)) drop-shadow(0 2px 6px rgba(3, 105, 161, 0.25));
+  text-shadow: none !important;
+  font-weight: 850 !important;
 }
 
-.season-winter .hero-title span,
 .mode-light .season-winter .hero-title span,
 body.theme-light .season-winter .hero-title span,
 [data-theme="light"] .season-winter .hero-title span {
-  color: #0284c7 !important;
-  -webkit-text-fill-color: #0284c7 !important;
-  background: none !important;
-  -webkit-background-clip: unset !important;
+  background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 35%, #0369a1 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
 }
 
 /* Mùa Xuân (Spring) + Chế độ Ngày: chữ đậm đỏ hồng sâu trên nền trắng pastel */

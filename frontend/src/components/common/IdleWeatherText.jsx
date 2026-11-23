@@ -108,15 +108,9 @@ export const IdleWeatherText = ({
       }}
       {...props}
     >
-      {/* Lớp viền sương tuyết mỏng manh tinh khôi trên đỉnh chữ (Mùa đông) */}
-      {isWinter && (effectiveLevel > 0 || isRecovering) && (
-        <span
-          className={`snow-cap-accumulation snow-cap-level-${effectiveLevel}`}
-          aria-hidden="true"
-        />
-      )}
+      {/* Mùa đông: Sử dụng hiệu ứng ánh băng đỉnh chữ tự nhiên (gradient chuyển sắc), không dùng thanh tuyết ngang đè lên chữ */}
 
-      {/* Nội dung chữ nguyên bản kèm hiệu ứng tan chảy lượn sóng nếu là Mùa Hạ */}
+      {/* Nội dung chữ nguyên bản kèm hiệu ứng tan chảy lượn sóng nếu là Mùa Hạ hoặc ánh băng Mùa Đông */}
       <span className="idle-weather-inner-text">
         {children}
       </span>

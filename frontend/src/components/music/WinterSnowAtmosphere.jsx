@@ -96,12 +96,23 @@ export const WinterSnowAtmosphere = ({ density = 35, speed = 0.6, enabled = true
           flake.x = width + 5;
         }
 
-        // Vẽ bông tuyết với ánh sáng mờ sương
+        // Vẽ bông tuyết hạt mềm mượt mà tự nhiên (Soft Radial Gradient Particle)
+        // Tâm sáng tinh khiết, viền ngoài lan tỏa mờ dịu vào không gian, không tốn GPU shadowBlur
+        const grad = ctx.createRadialGradient(
+          flake.x,
+          flake.y,
+          0,
+          flake.x,
+          flake.y,
+          flake.radius
+        );
+        grad.addColorStop(0, `rgba(255, 255, 255, ${flake.opacity})`);
+        grad.addColorStop(0.4, `rgba(224, 242, 254, ${flake.opacity * 0.8})`);
+        grad.addColorStop(1, 'rgba(224, 242, 254, 0)');
+
         ctx.beginPath();
         ctx.arc(flake.x, flake.y, flake.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(224, 242, 254, ${flake.opacity})`;
-        ctx.shadowColor = 'rgba(186, 230, 253, 0.4)';
-        ctx.shadowBlur = 4;
+        ctx.fillStyle = grad;
         ctx.fill();
         ctx.closePath();
       }
