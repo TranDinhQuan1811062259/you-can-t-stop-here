@@ -12,6 +12,7 @@ import { AnonymousWarmthBox } from '../components/blog/AnonymousWarmthBox';
 import { PeaceCandleBox } from '../components/blog/PeaceCandleBox';
 import { CinemaReadingOverlay } from '../components/blog/CinemaReadingOverlay';
 import { PostAudioPlayer } from '../components/blog/PostAudioPlayer';
+import { UserPersonalMusicCard } from '../components/common/UserPersonalMusicCard';
 import { PostAtmosphereSoundBar } from '../components/blog/PostAtmosphereSoundBar';
 import { ATMOSPHERE_THEMES, BACKGROUND_PRESETS } from '../utils/postAtmosphereEngine';
 import { SharePostModal } from '../components/blog/SharePostModal';
@@ -1007,6 +1008,16 @@ export const PostDetailPage = () => {
 
               {/* Trình Đọc Bài Viết A.I Thông Minh Bằng Giọng Cảm Xúc & Giọng Nhân Bản */}
               <PostAudioPlayer post={post} />
+
+              {/* 🎵 Thẻ Nhạc Cá Nhân Người Viết Đính Kèm (Spotify / SoundCloud / YouTube Music / Zing MP3) */}
+              {post.personalMusic && post.personalMusic.url && post.personalMusic.enabled !== false && (
+                <div style={{ marginBottom: '1.75rem' }}>
+                  <UserPersonalMusicCard
+                    musicData={post.personalMusic}
+                    authorName={authorName}
+                  />
+                </div>
+              )}
 
               {/* Body: Nếu là chế độ bạn bè và chưa kết bạn, khóa nội dung an toàn */}
               {canViewFull ? (

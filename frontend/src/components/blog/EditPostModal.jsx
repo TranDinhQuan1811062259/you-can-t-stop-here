@@ -8,6 +8,7 @@ import { MediaCameraCaptureModal } from './MediaCameraCaptureModal';
 import { formatPostContent } from '../../utils/contentFormatter';
 import { maskSensitiveText, analyzeContentSafety } from '../../utils/sensitiveFilter';
 import { PostAtmosphereSelector } from './PostAtmosphereSelector';
+import { PersonalMusicFormInput } from './PersonalMusicFormInput';
 import { AsmrKeyboardToggle } from '../common/AsmrKeyboardToggle';
 
 export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
@@ -28,6 +29,13 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
     audioMood: 'auto',
     voiceGender: 'female',
     voiceRegion: 'north',
+    personalMusic: {
+      enabled: false,
+      url: '',
+      provider: '',
+      title: '',
+      artist: '',
+    },
     atmosphere: {
       theme: 'default',
       soundEnabled: true,
@@ -75,6 +83,13 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
           audioMood: post.audioMood || 'auto',
           voiceGender: post.voiceGender || 'female',
           voiceRegion: post.voiceRegion || 'north',
+          personalMusic: post.personalMusic || {
+            enabled: false,
+            url: '',
+            provider: '',
+            title: '',
+            artist: '',
+          },
           atmosphere: post.atmosphere || {
             theme: 'default',
             soundEnabled: true,
@@ -227,6 +242,7 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
         audioMood: formData.audioMood || 'auto',
         voiceGender: formData.voiceGender || 'female',
         voiceRegion: formData.voiceRegion || 'north',
+        personalMusic: formData.personalMusic,
         atmosphere: formData.atmosphere,
       };
 
@@ -756,6 +772,12 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
               </select>
             </div>
           </div>
+
+          {/* 🎵 Đính Kèm Nhạc Cá Nhân (Spotify / SoundCloud / YouTube / Zing MP3) */}
+          <PersonalMusicFormInput
+            value={formData.personalMusic}
+            onChange={(val) => setFormData((prev) => ({ ...prev, personalMusic: val }))}
+          />
 
           {/* Chế độ hiển thị bài viết (Công khai hoặc Chỉ bạn bè) */}
           <div className="form-group" style={{ marginTop: '14px', background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>

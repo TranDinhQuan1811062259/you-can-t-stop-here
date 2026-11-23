@@ -13,6 +13,15 @@ import {
 
 const MusicContext = createContext(null);
 
+/**
+ * Tiện ích toàn cục phát lệnh tạm dừng nhạc nền hệ thống khi có nguồn phát nhạc cá nhân bên ngoài
+ */
+export const pauseSystemMusic = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('freedom_pause_system_music'));
+  }
+};
+
 export const useMusic = () => {
   const context = useContext(MusicContext);
   if (!context) {
@@ -1139,6 +1148,27 @@ export const MusicProvider = ({ children }) => {
     };
   }, []);
 
+  // =========================================================================
+  // ĐỒNG BỘ NGUỒN PHÁT: TẠM DỪNG NHẠC HỆ THỐNG KHI USER PHÁT NHẠC CÁ NHÂN
+  // =========================================================================
+  useEffect(() => {
+    const handleExternalPause = () => {
+      const audio = audioRef.current;
+      if (audio && !audio.paused) {
+        try {
+          audio.pause();
+        } catch (_) {}
+        setIsPlaying(false);
+        restoreAmbientFromMusic();
+      }
+    };
+
+    window.addEventListener('freedom_pause_system_music', handleExternalPause);
+    return () => {
+      window.removeEventListener('freedom_pause_system_music', handleExternalPause);
+    };
+  }, []);
+
   const value = {
     // State
     themeSlug,
@@ -1178,6 +1208,7 @@ export const MusicProvider = ({ children }) => {
     selectRecordingSeason,
     uploadCustomRecording,
     dismissAutoplayBlocked,
+    pauseSystemMusic,
   };
 
   return (

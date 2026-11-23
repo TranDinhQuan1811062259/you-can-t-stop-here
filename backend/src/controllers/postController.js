@@ -947,6 +947,13 @@ export const createPost = async (req, res) => {
       voiceGender: voiceGender || 'female',
       voiceRegion: voiceRegion || 'north',
       customVoiceProfile: customVoiceProfile || req.user?.customVoiceProfile || {},
+      personalMusic: req.body.personalMusic && typeof req.body.personalMusic === 'object' ? {
+        enabled: Boolean(req.body.personalMusic.enabled),
+        url: typeof req.body.personalMusic.url === 'string' ? req.body.personalMusic.url.trim() : '',
+        provider: typeof req.body.personalMusic.provider === 'string' ? req.body.personalMusic.provider.trim() : '',
+        title: typeof req.body.personalMusic.title === 'string' ? req.body.personalMusic.title.trim() : '',
+        artist: typeof req.body.personalMusic.artist === 'string' ? req.body.personalMusic.artist.trim() : '',
+      } : { enabled: false, url: '', provider: '', title: '', artist: '' },
       atmosphere: atmosphere || {
         theme: 'default',
         soundEnabled: true,
@@ -1148,6 +1155,7 @@ export const updatePost = async (req, res) => {
         voiceGender: voiceGender !== undefined ? voiceGender : existing.voiceGender || 'female',
         voiceRegion: voiceRegion !== undefined ? voiceRegion : existing.voiceRegion || 'north',
         customVoiceProfile: customVoiceProfile !== undefined ? customVoiceProfile : existing.customVoiceProfile || {},
+        personalMusic: req.body.personalMusic !== undefined ? req.body.personalMusic : existing.personalMusic || { enabled: false, url: '' },
         atmosphere: atmosphere !== undefined ? atmosphere : existing.atmosphere || {
           theme: 'default',
           soundEnabled: true,
@@ -1197,6 +1205,7 @@ export const updatePost = async (req, res) => {
           if (voiceGender !== undefined) post.voiceGender = voiceGender;
           if (voiceRegion !== undefined) post.voiceRegion = voiceRegion;
           if (atmosphere !== undefined) post.atmosphere = atmosphere;
+          if (req.body.personalMusic !== undefined) post.personalMusic = req.body.personalMusic;
           await post.save();
         }
       } catch (dbErr) {

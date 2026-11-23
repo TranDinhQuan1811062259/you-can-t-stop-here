@@ -169,6 +169,13 @@ const postSchema = new mongoose.Schema(
       rate: { type: Number, default: 1.0 },
       timbre: { type: String, default: 'authentic' },
     },
+    personalMusic: {
+      enabled: { type: Boolean, default: false },
+      url: { type: String, default: '' },
+      provider: { type: String, default: '' },
+      title: { type: String, default: '' },
+      artist: { type: String, default: '' },
+    },
     isFlagged: {
       type: Boolean,
       default: false,

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { extractYouTubeId, extractSpotifyId, extractTikTokId, MUSIC_PRESETS } from '../../utils/musicPresets';
+import { validatePersonalMusicUrl } from '../../utils/personalMusicUtils';
+import { pauseSystemMusic } from '../../context/MusicContext';
 import { duckAmbientForMusic, restoreAmbientFromMusic } from '../../utils/ambientSoundEngine';
 
 const QUALITY_MAP = {
@@ -38,10 +40,13 @@ export const ProfileMusicPlayer = ({ musicConfig, authorName, isSelf, onOpenSett
   const youtubeId = extractYouTubeId(config.url);
   const spotifyId = extractSpotifyId(config.url);
   const tiktokId = extractTikTokId(config.url);
+  const musicValidation = validatePersonalMusicUrl(config.url || '');
 
   const isYouTube = config.sourceType === 'youtube' || Boolean(youtubeId);
   const isSpotify = config.sourceType === 'spotify' || Boolean(spotifyId);
   const isTikTok = config.sourceType === 'tiktok' || Boolean(tiktokId);
+  const isSoundCloud = config.sourceType === 'soundcloud' || musicValidation.provider === 'soundcloud';
+  const isZingMp3 = config.sourceType === 'zingmp3' || musicValidation.provider === 'zingmp3';
 
   const audioQuality = config.audioQuality || 'high';
   const audioProfile = config.audioProfile || 'balanced';
@@ -112,9 +117,10 @@ export const ProfileMusicPlayer = ({ musicConfig, authorName, isSelf, onOpenSett
     localStorage.setItem('freedom_music_volume', String(volume));
   }, [volume, isMuted]);
 
-  // Audio Ducking: Tự động làm chìm âm thanh môi trường khi nhạc cá nhân phát
+  // Audio Ducking: Tự động làm chìm âm thanh môi trường & tạm dừng nhạc hệ thống khi nhạc cá nhân phát
   useEffect(() => {
     if (isPlaying) {
+      pauseSystemMusic();
       duckAmbientForMusic();
     } else {
       restoreAmbientFromMusic();
@@ -137,8 +143,11 @@ export const ProfileMusicPlayer = ({ musicConfig, authorName, isSelf, onOpenSett
   const togglePlay = () => {
     setAudioError(null);
 
-    // Đối với Spotify hoặc YouTube: bật/tắt phát
-    if (isYouTube || isSpotify || isTikTok) {
+    // Đối với Spotify, YouTube, TikTok, SoundCloud, Zing MP3: bật/tắt phát
+    if (isYouTube || isSpotify || isTikTok || isSoundCloud || isZingMp3) {
+      if (!isPlaying) {
+        pauseSystemMusic();
+      }
       setIsPlaying((prev) => !prev);
       return;
     }
@@ -149,6 +158,7 @@ export const ProfileMusicPlayer = ({ musicConfig, authorName, isSelf, onOpenSett
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
+      pauseSystemMusic();
       audioRef.current
         .play()
         .then(() => {
