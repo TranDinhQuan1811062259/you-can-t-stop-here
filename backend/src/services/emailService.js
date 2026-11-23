@@ -10,6 +10,7 @@ export const DIRECT_GMAIL_USER = (process.env.EMAIL_USER || process.env.MAIL_USE
 export const DIRECT_GMAIL_APP_PASS = (process.env.EMAIL_PASS || process.env.MAIL_APP_PASS || '').replace(/\s+/g, '');
 
 import nodemailer from 'nodemailer';
+import { sendEmailViaBrevo } from './mailer.js';
 
 /**
  * Khởi tạo bộ gửi mail linh hoạt (Hỗ trợ Gmail SMTP hoặc Test Transporter)
@@ -183,6 +184,65 @@ export const sendWelcomeNewsletter = async (toEmail) => {
  * Gửi Mã Xác Thực OTP (6 số) đến Email chính chủ
  */
 export const sendOtpEmail = async (toEmail, otpCode, type = 'login') => {
+  const isRegister = type === 'register';
+  const actionText = isRegister ? 'tạo tài khoản mới' : 'đăng nhập tài khoản';
+  const subject = `[${otpCode}] là mã xác thực ${actionText} của bạn - You Can't Stop Here`;
+  const textContent = `Mã xác thực của bạn là: ${otpCode}. Mã có hiệu lực trong 5 phút. Vui lòng không chia sẻ mã này với bất kỳ ai.`;
+
+  // 1. Ưu tiên gửi qua Brevo HTTP API nếu có BREVO_API_KEY
+  if (process.env.BREVO_API_KEY) {
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="vi">
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; }
+          .wrapper { width: 100%; max-width: 580px; margin: 30px auto; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 6px 24px rgba(0,0,0,0.07); border: 1px solid #e2e8f0; }
+          .header { background: linear-gradient(135deg, #0f172a 0%, #0d9488 100%); padding: 32px 24px; text-align: center; color: #ffffff; }
+          .badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 999px; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
+          .content { padding: 32px 26px; line-height: 1.6; }
+          .otp-card { text-align: center; margin: 26px 0; padding: 22px; background: #f0fdfa; border: 2px dashed #0d9488; border-radius: 12px; }
+          .otp-code { font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0f766e; font-family: monospace, sans-serif; display: inline-block; }
+          .footer { background: #f8fafc; padding: 18px 24px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; }
+        </style>
+      </head>
+      <body>
+        <div class="wrapper">
+          <div class="header">
+            <span class="badge">Xác Thực Bảo Mật</span>
+            <h2 style="margin: 0; font-size: 22px;">YOU CAN'T STOP HERE</h2>
+            <p style="margin: 6px 0 0; opacity: 0.85; font-size: 13px;">Mã xác thực gửi tới: ${toEmail}</p>
+          </div>
+          <div class="content">
+            <p>Xin chào bạn,</p>
+            <p>Chúng tôi nhận được yêu cầu <strong>${actionText}</strong> trên hệ thống You Can't Stop Here. Đây là mã xác thực OTP của bạn:</p>
+            <div class="otp-card">
+              <span class="otp-code">${otpCode}</span>
+              <p style="margin: 10px 0 0; font-size: 13px; color: #0d9488; font-weight: 600;">Mã có hiệu lực trong 5 phút</p>
+            </div>
+            <p style="font-size: 13px; color: #64748b;">Nếu không phải bạn yêu cầu, vui lòng bỏ qua thư này. Không cung cấp mã xác nhận này cho bất kỳ ai để đảm bảo an toàn cho tài khoản.</p>
+          </div>
+          <div class="footer">
+            © 2026 YOU CAN'T STOP HERE • Không gian an toàn và sẻ chia của người đi làm
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const brevoRes = await sendEmailViaBrevo({
+      toEmail,
+      subject,
+      htmlContent,
+      textContent,
+    });
+    if (brevoRes.success) {
+      return { ...brevoRes, otpCode };
+    }
+    console.warn(`[EMAIL SERVICE] ⚠️ Brevo API thất bại (${brevoRes.error}), chuyển sang Nodemailer fallback...`);
+  }
+
   try {
     const transporter = await getTransporter();
     const senderEmail = process.env.EMAIL_USER || 'security@cantstophere.com';

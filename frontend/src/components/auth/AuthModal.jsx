@@ -1771,43 +1771,9 @@ export const AuthModal = () => {
              KÈM LỰA CHỌN MẠNG XÃ HỘI TRỰC TIẾP
              ======================================================== */
           <>
-            {authModalMode === 'register' && (
-              /* ĐĂNG KÝ NHANH QUA MẠNG XÃ HỘI (GOOGLE, FACEBOOK, TWITTER...) */
-              <div className="social-register-prompt-box" style={{ marginBottom: '20px' }}>
-                <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
-                    ⚡ Đăng Ký Nhanh Bằng Tài Khoản Mạng Xã Hội
-                  </span>
-                  <p style={{ margin: '3px 0 0', fontSize: '0.76rem', color: '#64748b' }}>
-                    Tự động đồng bộ tên thật, avatar sắc nét và chức danh từ nền tảng:
-                  </p>
-                </div>
-
-                <div className="social-buttons-grid">
-                  {SOCIAL_PROVIDERS.map((provider) => (
-                    <button
-                      key={provider.id}
-                      type="button"
-                      className={`social-auth-btn ${provider.id}`}
-                      onClick={() => handleOpenSocialRegister(provider.id)}
-                      title={`Đăng ký tài khoản bằng dữ liệu thực tế từ ${provider.name}`}
-                      disabled={loading}
-                    >
-                      {provider.icon}
-                      <span>{provider.buttonLabel}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="social-login-divider" style={{ margin: '16px 0 12px' }}>
-                  <span>Hoặc đăng ký tài khoản nội bộ bằng Email</span>
-                </div>
-              </div>
-            )}
-
             <form onSubmit={handleSubmitInternalForm} className="modal-form">
               {authModalMode === 'register' ? (
-                /* TAB ĐĂNG KÝ NỘI BỘ */
+                /* TAB ĐĂNG KÝ BẰNG EMAIL & MẬT KHẨU */
                 <>
                   <div className="form-group">
                     <label>Họ và tên *</label>
@@ -1837,7 +1803,7 @@ export const AuthModal = () => {
                   </div>
 
                   <div className="form-group">
-                    <label>Địa chỉ Email nội bộ *</label>
+                    <label>Địa chỉ Email *</label>
                     <input
                       type="email"
                       placeholder="Nhập email của bạn (Ví dụ: anthonyq012025@gmail.com)"
@@ -1869,9 +1835,9 @@ export const AuthModal = () => {
                   </button>
                 </>
               ) : (
-                /* TAB ĐĂNG NHẬP NỘI BỘ */
+                /* TAB ĐĂNG NHẬP (EMAIL & MẬT KHẨU HOẶC EMAIL OTP) */
                 <>
-                  {/* THANH CHỌN PHƯƠNG THỨC ĐĂNG NHẬP (MẬT KHẨU / SMS SĐT / EMAIL OTP) */}
+                  {/* THANH CHỌN PHƯƠNG THỨC ĐĂNG NHẬP: CHỈ GIỮ 2 PHƯƠNG THỨC HOẠT ĐỘNG HOÀN CHỈNH */}
                   <div
                     className="login-method-nav"
                     style={{
@@ -1893,8 +1859,8 @@ export const AuthModal = () => {
                       }}
                       style={{
                         flex: 1,
-                        padding: '8px 4px',
-                        fontSize: '0.78rem',
+                        padding: '9px 6px',
+                        fontSize: '0.82rem',
                         fontWeight: 700,
                         border: 'none',
                         borderRadius: '7px',
@@ -1905,31 +1871,7 @@ export const AuthModal = () => {
                         transition: 'all 0.2s ease',
                       }}
                     >
-                      🔑 Mật Khẩu
-                    </button>
-                    <button
-                      type="button"
-                      className={`login-method-btn ${loginMethod === 'phone' ? 'active' : ''}`}
-                      onClick={() => {
-                        setLoginMethod('phone');
-                        setErrorMsg('');
-                        setSuccessMsg('');
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: '8px 4px',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        border: 'none',
-                        borderRadius: '7px',
-                        cursor: 'pointer',
-                        background: loginMethod === 'phone' ? '#ffffff' : 'transparent',
-                        color: loginMethod === 'phone' ? '#0f766e' : '#64748b',
-                        boxShadow: loginMethod === 'phone' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      📱 SMS Điện Thoại
+                      🔑 Email & Mật Khẩu
                     </button>
                     <button
                       type="button"
@@ -1941,8 +1883,8 @@ export const AuthModal = () => {
                       }}
                       style={{
                         flex: 1,
-                        padding: '8px 4px',
-                        fontSize: '0.78rem',
+                        padding: '9px 6px',
+                        fontSize: '0.82rem',
                         fontWeight: 700,
                         border: 'none',
                         borderRadius: '7px',
@@ -1957,85 +1899,13 @@ export const AuthModal = () => {
                     </button>
                   </div>
 
-                  {loginMethod === 'phone' ? (
-                    /* LUỒNG 1: ĐĂNG NHẬP BẰNG SMS OTP SỐ ĐIỆN THOẠI */
-                    <>
-                      <div className="form-group">
-                        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span>Số điện thoại nhận mã SMS *</span>
-                          <span style={{ fontSize: '0.74rem', color: '#0d9488', fontWeight: 700 }}>⚡ Nhận OTP tức thì</span>
-                        </label>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              padding: '0 12px',
-                              background: '#f8fafc',
-                              border: '1px solid #cbd5e1',
-                              borderRadius: '8px',
-                              fontSize: '0.88rem',
-                              fontWeight: 700,
-                              color: '#334155',
-                              userSelect: 'none',
-                              flexShrink: 0,
-                            }}
-                          >
-                            <span>🇻🇳</span>
-                            <span>+84</span>
-                          </div>
-                          <input
-                            type="tel"
-                            placeholder="Ví dụ: 0901234567 hoặc 901234567"
-                            value={phoneInput}
-                            onChange={(e) => {
-                              setPhoneInput(e.target.value);
-                              setErrorMsg('');
-                            }}
-                            style={{ flex: 1 }}
-                            autoFocus
-                            required
-                          />
-                        </div>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
-                          Mã OTP 6 số sẽ gửi qua tin nhắn SMS Brandname [CANTSTOPHERE].
-                        </span>
-                      </div>
-
-                      {/* DUY TRÌ ĐĂNG NHẬP */}
-                      <div style={{ margin: '8px 0 16px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: '#475569' }}>
-                          <input
-                            type="checkbox"
-                            checked={loginForm.remember}
-                            onChange={(e) => setLoginForm((prev) => ({ ...prev, remember: e.target.checked }))}
-                            style={{ width: '16px', height: '16px', accentColor: '#0d9488' }}
-                          />
-                          <span style={{ fontWeight: 500 }}>Duy trì đăng nhập trên thiết bị này</span>
-                        </label>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="modal-submit-btn"
-                        onClick={handleSendPhoneOtp}
-                        disabled={loading || !phoneInput.trim()}
-                        style={{
-                          background: 'linear-gradient(135deg, #0d9488, #059669)',
-                          boxShadow: '0 4px 14px rgba(13, 148, 136, 0.3)',
-                        }}
-                      >
-                        {loading ? 'Đang gửi mã SMS...' : '📱 Nhận Mã Xác Thực SMS OTP ➔'}
-                      </button>
-                    </>
-                  ) : loginMethod === 'email-otp' ? (
-                    /* LUỒNG 2: ĐĂNG NHẬP BẰNG MÃ OTP EMAIL */
+                  {loginMethod === 'email-otp' ? (
+                    /* LUỒNG 1: ĐĂNG NHẬP BẰNG MÃ OTP EMAIL */
                     <>
                       <div className="form-group">
                         <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <span>Địa chỉ Email của bạn *</span>
-                          <span style={{ fontSize: '0.74rem', color: '#0d9488', fontWeight: 700 }}>✉️ Nodemailer OTP</span>
+                          <span style={{ fontSize: '0.74rem', color: '#0d9488', fontWeight: 700 }}>✉️ Xác thực OTP</span>
                         </label>
                         <input
                           type="email"
@@ -2049,7 +1919,7 @@ export const AuthModal = () => {
                           required
                         />
                         <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
-                          Hệ thống sẽ gửi mã OTP 6 số vào hộp thư Gmail mà không cần nhớ mật khẩu.
+                          Hệ thống sẽ gửi mã OTP 6 số vào hộp thư Email mà không cần nhớ mật khẩu.
                         </span>
                       </div>
 
@@ -2080,7 +1950,7 @@ export const AuthModal = () => {
                       </button>
                     </>
                   ) : (
-                    /* LUỒNG 3: ĐĂNG NHẬP BẰNG MẬT KHẨU TRUYỀN THỐNG */
+                    /* LUỒNG 2: ĐĂNG NHẬP BẰNG EMAIL & MẬT KHẨU */
                     <>
                       <div className="form-group">
                         <label>Địa chỉ Email *</label>
@@ -2149,34 +2019,6 @@ export const AuthModal = () => {
                 </>
               )}
             </form>
-
-            {/* ========================================================
-                KHU VỰC ĐĂNG NHẬP BẰNG MẠNG XÃ HỘI (OAUTH TRỰC TIẾP)
-                Chỉ hiển thị ở tab Đăng Nhập
-               ======================================================== */}
-            {authModalMode === 'login' && (
-              <div className="social-login-section" style={{ marginTop: '24px' }}>
-                <div className="social-login-divider">
-                  <span>Hoặc đăng nhập nhanh qua OAuth nền tảng</span>
-                </div>
-
-                <div className="social-buttons-grid">
-                  {SOCIAL_PROVIDERS.map((provider) => (
-                    <button
-                      key={provider.id}
-                      type="button"
-                      className={`social-auth-btn ${provider.id}`}
-                      onClick={() => handleSocialOAuth(provider.id)}
-                      title={`Đăng nhập trực tiếp qua OAuth ${provider.name}`}
-                      disabled={loading}
-                    >
-                      {provider.icon}
-                      <span>{provider.buttonLabel}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </>
         )}
       </div>

@@ -9,6 +9,76 @@
 import nodemailer from 'nodemailer';
 
 /**
+ * Gửi email qua Brevo Transactional Email HTTP API (vượt chặn cổng SMTP trên Render/Vercel)
+ * https://api.brevo.com/v3/smtp/email
+ */
+export const sendEmailViaBrevo = async ({ toEmail, subject, htmlContent, textContent }) => {
+  const apiKey = (process.env.BREVO_API_KEY || '').trim();
+  if (!apiKey) {
+    return { success: false, skipped: true, message: 'Chưa cấu hình BREVO_API_KEY' };
+  }
+
+  const senderEmail = (process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'anthonyq012025@gmail.com').trim();
+  const senderName = "You Can't Stop Here";
+
+  const payload = {
+    sender: { name: senderName, email: senderEmail },
+    to: [{ email: toEmail }],
+    subject: subject,
+    htmlContent: htmlContent,
+  };
+  if (textContent) {
+    payload.textContent = textContent;
+  }
+
+  console.log(`[BREVO API] 🚀 Đang gửi email OTP tới <${toEmail}> qua Brevo HTTP API (Sender: <${senderEmail}>)...`);
+
+  try {
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': apiKey,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const responseText = await response.text();
+    let responseData = {};
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (_) {
+      responseData = { raw: responseText };
+    }
+
+    if (!response.ok) {
+      console.error(`[BREVO API] ❌ Brevo HTTP API trả về mã lỗi ${response.status}:`, JSON.stringify(responseData));
+      return {
+        success: false,
+        status: response.status,
+        error: `Brevo HTTP ${response.status}: ${responseData.message || responseText || 'Lỗi gửi email Brevo'}`,
+        data: responseData,
+      };
+    }
+
+    console.log(`[BREVO API] ✅ ĐÃ GỬI THÀNH CÔNG QUA BREVO HTTP API tới: ${toEmail} (MessageId: ${responseData.messageId || 'OK'})`);
+    return {
+      success: true,
+      messageId: responseData.messageId || `brevo_${Date.now()}`,
+      to: toEmail,
+      provider: 'brevo_http',
+    };
+  } catch (err) {
+    console.error(`[BREVO API] ❌ Lỗi kết nối Brevo HTTP API:`, err.message);
+    return {
+      success: false,
+      error: err.message,
+    };
+  }
+};
+
+/**
  * Sinh mã OTP ngẫu nhiên gồm 6 chữ số (100000 - 999999)
  */
 export const generateOtp = () => {
@@ -149,19 +219,38 @@ const generateOtpEmailTemplate = (toEmail, otpCode, actionName = 'kích hoạt t
  * @param {string} otpCode - Mã 6 số OTP
  */
 export const sendRegistrationOtp = async (toEmail, otpCode) => {
+  const subject = `[${otpCode}] là mã xác thực đăng ký tài khoản của bạn - You Can't Stop Here`;
+  const textContent = `Mã xác thực đăng ký tài khoản của bạn là: ${otpCode}. Mã có hiệu lực trong vòng 5 phút. Vui lòng không chia sẻ mã này với bất kỳ ai.`;
+  const htmlContent = generateOtpEmailTemplate(toEmail, otpCode, 'kích hoạt tài khoản mới');
+
+  // 1. ƯU TIÊN GỬI QUA BREVO HTTP API NẾU CÓ BREVO_API_KEY (VƯỢT CHẶN CỔNG SMTP TRÊN RENDER/VERCEL)
+  if (process.env.BREVO_API_KEY) {
+    const brevoRes = await sendEmailViaBrevo({
+      toEmail,
+      subject,
+      htmlContent,
+      textContent,
+    });
+    if (brevoRes.success) {
+      return brevoRes;
+    }
+    console.warn(`[MAILER] ⚠️ Gửi qua Brevo API không thành công: ${brevoRes.error}. Tiến hành thử phương án dự phòng Gmail SMTP...`);
+  }
+
+  // 2. FALLBACK SANG NODEMAILER GMAIL SMTP KHI KHÔNG CÓ BREVO_API_KEY HOẶC BREVO GẶP SỰ CỐ
   const { user: senderEmail, pass: senderPass } = getGmailCredentials();
   const senderName = "You Can't Stop Here";
 
   if (!senderEmail || !senderPass || senderPass.includes('xxxx')) {
-    throw new Error('Dịch vụ gửi email chưa được cấu hình tài khoản EMAIL_USER / EMAIL_PASS trên môi trường máy chủ (Vercel).');
+    throw new Error('Dịch vụ gửi email chưa được cấu hình BREVO_API_KEY hoặc EMAIL_USER / EMAIL_PASS.');
   }
 
   const mailOptions = {
     from: `"${senderName}" <${senderEmail}>`,
     to: toEmail,
-    subject: `[${otpCode}] là mã xác thực đăng ký tài khoản của bạn - You Can't Stop Here`,
-    text: `Mã xác thực đăng ký tài khoản của bạn là: ${otpCode}. Mã có hiệu lực trong vòng 5 phút. Vui lòng không chia sẻ mã này với bất kỳ ai.`,
-    html: generateOtpEmailTemplate(toEmail, otpCode, 'kích hoạt tài khoản mới'),
+    subject,
+    text: textContent,
+    html: htmlContent,
   };
 
   try {
@@ -169,7 +258,7 @@ export const sendRegistrationOtp = async (toEmail, otpCode) => {
     const transporter465 = getMailerTransporter(465);
     const info = await transporter465.sendMail(mailOptions);
     console.log(`[MAILER] ✅ ĐÃ GỬI THÀNH CÔNG VÀO GMAIL CỦA USER: ${toEmail} (MessageId: ${info.messageId})`);
-    return { success: true, messageId: info.messageId, to: toEmail };
+    return { success: true, messageId: info.messageId, to: toEmail, provider: 'gmail_smtp' };
   } catch (error) {
     // Nếu cổng 465 bị firewall serverless/cloud chặn, fallback sang cổng 587 (TLS)
     if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
@@ -178,7 +267,7 @@ export const sendRegistrationOtp = async (toEmail, otpCode) => {
         const transporter587 = getMailerTransporter(587);
         const info587 = await transporter587.sendMail(mailOptions);
         console.log(`[MAILER] ✅ ĐÃ GỬI THÀNH CÔNG QUA CỔNG 587: ${toEmail} (MessageId: ${info587.messageId})`);
-        return { success: true, messageId: info587.messageId, to: toEmail };
+        return { success: true, messageId: info587.messageId, to: toEmail, provider: 'gmail_smtp_587' };
       } catch (err587) {
         console.error('[MAILER] Thử cổng 587 cũng thất bại:', err587.message);
       }
@@ -186,9 +275,9 @@ export const sendRegistrationOtp = async (toEmail, otpCode) => {
 
     let friendlyMessage = error.message;
     if (error.responseCode === 535 || error.message.includes('535') || error.message.includes('Username and Password not accepted') || error.message.includes('BadCredentials')) {
-      friendlyMessage = 'Google từ chối Mật khẩu ứng dụng (535 Bad Credentials). Vui lòng tạo lại mật khẩu 16 chữ cái mới cho anthonyq012025@gmail.com tại myaccount.google.com/apppasswords!';
+      friendlyMessage = 'Google từ chối Mật khẩu ứng dụng (535 Bad Credentials). Vui lòng cấu hình BREVO_API_KEY trên Render hoặc cập nhật App Password!';
     } else if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
-      friendlyMessage = 'Máy chủ gửi thư SMTP phản hồi quá chậm (Connection Timeout). Vui lòng thử lại sau hoặc sử dụng Đăng nhập Mật khẩu / Mạng xã hội!';
+      friendlyMessage = 'Máy chủ gửi thư SMTP phản hồi quá chậm do tường lửa chặn cổng SMTP. Vui lòng cấu hình biến môi trường BREVO_API_KEY!';
     }
     throw new Error(friendlyMessage);
   }
@@ -200,20 +289,38 @@ export const sendRegistrationOtp = async (toEmail, otpCode) => {
 export const sendOtpEmail = async (toEmail, otpCode, purpose = 'register') => {
   const isRegister = purpose === 'register';
   const actionText = isRegister ? 'kích hoạt tài khoản mới' : (purpose === 'forgot_password' ? 'đặt lại mật khẩu' : 'đăng nhập');
+  const subject = `[${otpCode}] là mã xác nhận ${actionText} của bạn - You Can't Stop Here`;
+  const textContent = `Mã xác thực của bạn là: ${otpCode}. Mã có hiệu lực trong vòng 5 phút. Vui lòng không chia sẻ mã này với bất kỳ ai.`;
+  const htmlContent = generateOtpEmailTemplate(toEmail, otpCode, actionText);
 
+  // 1. ƯU TIÊN GỬI QUA BREVO HTTP API NẾU CÓ BREVO_API_KEY (VƯỢT CHẶN CỔNG SMTP TRÊN RENDER/VERCEL)
+  if (process.env.BREVO_API_KEY) {
+    const brevoRes = await sendEmailViaBrevo({
+      toEmail,
+      subject,
+      htmlContent,
+      textContent,
+    });
+    if (brevoRes.success) {
+      return brevoRes;
+    }
+    console.warn(`[MAILER] ⚠️ Gửi qua Brevo API không thành công: ${brevoRes.error}. Tiến hành thử phương án dự phòng Gmail SMTP...`);
+  }
+
+  // 2. FALLBACK SANG NODEMAILER GMAIL SMTP
   const { user: senderEmail, pass: senderPass } = getGmailCredentials();
   const senderName = "You Can't Stop Here";
 
   if (!senderEmail || !senderPass || senderPass.includes('xxxx')) {
-    throw new Error('Dịch vụ gửi email chưa được cấu hình tài khoản EMAIL_USER / EMAIL_PASS trên môi trường máy chủ (Vercel).');
+    throw new Error('Dịch vụ gửi email chưa được cấu hình BREVO_API_KEY hoặc EMAIL_USER / EMAIL_PASS.');
   }
 
   const mailOptions = {
     from: `"${senderName}" <${senderEmail}>`,
     to: toEmail,
-    subject: `[${otpCode}] là mã xác nhận ${actionText} của bạn - You Can't Stop Here`,
-    text: `Mã xác thực của bạn là: ${otpCode}. Mã có hiệu lực trong vòng 5 phút. Vui lòng không chia sẻ mã này với bất kỳ ai.`,
-    html: generateOtpEmailTemplate(toEmail, otpCode, actionText),
+    subject,
+    text: textContent,
+    html: htmlContent,
   };
 
   try {
@@ -221,7 +328,7 @@ export const sendOtpEmail = async (toEmail, otpCode, purpose = 'register') => {
     const transporter465 = getMailerTransporter(465);
     const info = await transporter465.sendMail(mailOptions);
     console.log(`[MAILER] ✅ ĐÃ GỬI THÀNH CÔNG VÀO GMAIL: ${toEmail} (MessageId: ${info.messageId})`);
-    return { success: true, messageId: info.messageId, to: toEmail };
+    return { success: true, messageId: info.messageId, to: toEmail, provider: 'gmail_smtp' };
   } catch (error) {
     if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
       console.warn(`[MAILER] Cổng 465 bị timeout, thử lại qua cổng 587 (TLS)...`);
@@ -229,7 +336,7 @@ export const sendOtpEmail = async (toEmail, otpCode, purpose = 'register') => {
         const transporter587 = getMailerTransporter(587);
         const info587 = await transporter587.sendMail(mailOptions);
         console.log(`[MAILER] ✅ ĐÃ GỬI THÀNH CÔNG QUA CỔNG 587: ${toEmail} (MessageId: ${info587.messageId})`);
-        return { success: true, messageId: info587.messageId, to: toEmail };
+        return { success: true, messageId: info587.messageId, to: toEmail, provider: 'gmail_smtp_587' };
       } catch (err587) {
         console.error('[MAILER] Thử cổng 587 cũng thất bại:', err587.message);
       }
@@ -237,9 +344,9 @@ export const sendOtpEmail = async (toEmail, otpCode, purpose = 'register') => {
 
     let friendlyMessage = error.message;
     if (error.responseCode === 535 || error.message.includes('535') || error.message.includes('Username and Password not accepted') || error.message.includes('BadCredentials')) {
-      friendlyMessage = 'Google từ chối Mật khẩu ứng dụng (535 Bad Credentials). Vui lòng tạo lại mật khẩu 16 chữ cái mới cho anthonyq012025@gmail.com tại myaccount.google.com/apppasswords!';
+      friendlyMessage = 'Google từ chối Mật khẩu ứng dụng (535 Bad Credentials). Vui lòng cấu hình BREVO_API_KEY trên Render hoặc cập nhật App Password!';
     } else if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
-      friendlyMessage = 'Máy chủ gửi thư SMTP phản hồi quá chậm (Connection Timeout). Vui lòng thử lại sau hoặc sử dụng Đăng nhập Mật khẩu / Mạng xã hội!';
+      friendlyMessage = 'Máy chủ gửi thư SMTP phản hồi quá chậm do tường lửa chặn cổng SMTP. Vui lòng cấu hình biến môi trường BREVO_API_KEY!';
     }
     throw new Error(friendlyMessage);
   }
@@ -247,6 +354,7 @@ export const sendOtpEmail = async (toEmail, otpCode, purpose = 'register') => {
 
 export default {
   generateOtp,
+  sendEmailViaBrevo,
   getMailerTransporter,
   verifyMailerConnection,
   sendRegistrationOtp,
