@@ -174,6 +174,25 @@ export const MusicProvider = ({ children }) => {
   const audioRef = useRef(null);
   const userExplicitPausedRef = useRef(false);
   const isSwitchingTrackRef = useRef(false);
+  const waitingTimeoutRef = useRef(null);
+
+  // Dọn dẹp tài nguyên âm thanh khi unmount Provider (Quy tắc 3 GEMINI.md)
+  useEffect(() => {
+    return () => {
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current);
+        waitingTimeoutRef.current = null;
+      }
+      const audio = audioRef.current;
+      if (audio) {
+        try {
+          audio.pause();
+          audio.src = '';
+          audio.load();
+        } catch (_) {}
+      }
+    };
+  }, []);
 
   const currentTrack = tracks && tracks.length > 0 ? tracks[currentTrackIndex] || tracks[0] : null;
 
@@ -422,12 +441,13 @@ export const MusicProvider = ({ children }) => {
     playTrack(prevIdx);
   }, [tracks, currentTrackIndex, playTrack]);
 
-  // Tua thời lượng (phòng thủ NaN / Invalid number / audio crash)
+  // Tua thời lượng (phòng thủ NaN / Invalid number / audio crash / unready state)
   const seekTo = useCallback((seconds) => {
     const audio = audioRef.current;
     const num = Number(seconds);
     if (!audio || !Number.isFinite(num)) return;
     const maxDur = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
+    if (maxDur <= 0) return; // Chưa nạp xong metadata bài hát thì không tua
     const clamped = Math.max(0, Math.min(num, maxDur));
     try {
       audio.currentTime = clamped;
@@ -786,9 +806,22 @@ export const MusicProvider = ({ children }) => {
 
     const handleWaiting = () => {
       setIsLoading(true);
+      if (waitingTimeoutRef.current) clearTimeout(waitingTimeoutRef.current);
+      // Timeout 12s phòng ngừa mạng rớt hoàn toàn khiến spinner quay vô tận
+      waitingTimeoutRef.current = setTimeout(() => {
+        const audioEl = audioRef.current;
+        if (audioEl && (audioEl.readyState < 2 || audioEl.paused)) {
+          setIsLoading(false);
+          setAudioError('Kết nối mạng gián đoạn khi nạp âm thanh. Bấm để thử lại.');
+        }
+      }, 12000);
     };
 
     const handleCanPlay = () => {
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current);
+        waitingTimeoutRef.current = null;
+      }
       if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration) && audio.duration > 0) {
         setDuration(audio.duration);
       }
@@ -803,6 +836,10 @@ export const MusicProvider = ({ children }) => {
     };
 
     const handlePlaying = () => {
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current);
+        waitingTimeoutRef.current = null;
+      }
       isSwitchingTrackRef.current = false;
       setIsPlaying(true);
       setIsLoading(false);
@@ -815,10 +852,31 @@ export const MusicProvider = ({ children }) => {
       // Khi stream dữ liệu bị gián đoạn hoặc đứng hình quá lâu
       if (audio && audio.readyState >= 2) {
         setIsLoading(false);
+      } else if (audio && (audio.networkState === 3 || audio.networkState === 0)) {
+        setIsLoading(false);
+        setAudioError('Mạng chập chờn khi nạp âm thanh. Bấm để thử lại.');
       }
     };
 
+    const handleAbort = () => {
+      if (!isSwitchingTrackRef.current) {
+        setIsLoading(false);
+      }
+    };
+
+    const handleEmptied = () => {
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current);
+        waitingTimeoutRef.current = null;
+      }
+      setCurrentTime(0);
+    };
+
     const handlePause = () => {
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current);
+        waitingTimeoutRef.current = null;
+      }
       if (isSwitchingTrackRef.current) return;
       if (audio && !audio.paused) return;
       setIsPlaying(false);
@@ -826,6 +884,10 @@ export const MusicProvider = ({ children }) => {
     };
 
     const handleEnded = () => {
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current);
+        waitingTimeoutRef.current = null;
+      }
       const mode = loopModeRef.current;
       const curIdx = currentTrackIndexRef.current;
       const curTracks = tracksRef.current;
@@ -845,6 +907,10 @@ export const MusicProvider = ({ children }) => {
     };
 
     const handleError = (e) => {
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current);
+        waitingTimeoutRef.current = null;
+      }
       const currentSrc = audio?.src || '';
       const cTrack = currentTrackRef.current;
       const fallbackSrc = cTrack?.wavSrc || cTrack?.src;
@@ -885,8 +951,14 @@ export const MusicProvider = ({ children }) => {
     audio.addEventListener('pause', handlePause);
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('error', handleError);
+    audio.addEventListener('abort', handleAbort);
+    audio.addEventListener('emptied', handleEmptied);
 
     return () => {
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current);
+        waitingTimeoutRef.current = null;
+      }
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('durationchange', handleDurationChange);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
@@ -898,6 +970,8 @@ export const MusicProvider = ({ children }) => {
       audio.removeEventListener('pause', handlePause);
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
+      audio.removeEventListener('abort', handleAbort);
+      audio.removeEventListener('emptied', handleEmptied);
     };
   }, []);
 
