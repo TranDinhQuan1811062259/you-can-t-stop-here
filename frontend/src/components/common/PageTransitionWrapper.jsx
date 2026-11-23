@@ -109,6 +109,7 @@ export const PageTransitionWrapper = ({ children }) => {
   const dragStartRef = useRef({ x: 0, y: 0, time: 0, pointerId: null, isHorizontalSwipe: false });
   const rafRef = useRef(null);
   const pendingOffsetRef = useRef(0);
+  const springBackTimerRef = useRef(null);
 
   useEffect(() => {
     return () => {
@@ -116,8 +117,38 @@ export const PageTransitionWrapper = ({ children }) => {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
+      if (springBackTimerRef.current) {
+        clearTimeout(springBackTimerRef.current);
+        springBackTimerRef.current = null;
+      }
     };
   }, []);
+
+  // Lắng nghe resize / orientation / blur để lập tức giải phóng kéo nếu đổi kích cỡ cửa sổ hoặc đổi tab
+  useEffect(() => {
+    const handleWindowReset = () => {
+      if (isDragging) {
+        if (rafRef.current) {
+          cancelAnimationFrame(rafRef.current);
+          rafRef.current = null;
+        }
+        setIsDragging(false);
+        setIsSpringingBack(false);
+        setDragOffset(0);
+        pendingOffsetRef.current = 0;
+        dragStartRef.current.pointerId = null;
+        dragStartRef.current.isHorizontalSwipe = false;
+      }
+    };
+    window.addEventListener('resize', handleWindowReset);
+    window.addEventListener('orientationchange', handleWindowReset);
+    window.addEventListener('blur', handleWindowReset);
+    return () => {
+      window.removeEventListener('resize', handleWindowReset);
+      window.removeEventListener('orientationchange', handleWindowReset);
+      window.removeEventListener('blur', handleWindowReset);
+    };
+  }, [isDragging]);
 
   const shouldIgnoreGesture = (target) => {
     if (!target || !(target instanceof Element)) return false;
@@ -130,16 +161,24 @@ export const PageTransitionWrapper = ({ children }) => {
       target.closest('select') ||
       target.closest('[role="slider"]') ||
       target.closest('[role="button"]') ||
+      target.closest('input[type="range"]') ||
       target.closest('.efforts-card-container') ||
       target.closest('.efforts-progress-wrap') ||
       target.closest('.efforts-seekbar-container') ||
       target.closest('.efforts-volume-suite') ||
       target.closest('.efforts-volume-slider-wrapper') ||
       target.closest('.audio-player-wrap') ||
+      target.closest('.custom-audio-player') ||
+      target.closest('.header-audio-visualizer') ||
+      target.closest('.ambient-sound-drawer') ||
+      target.closest('.floating-btn') ||
+      target.closest('.dr-write-post-btn') ||
+      target.closest('.back-to-top-btn') ||
       target.closest('.modal-backdrop') ||
       target.closest('.modal-box') ||
       target.closest('.interactive-canvas') ||
-      target.closest('.rich-visual-editor')
+      target.closest('.rich-visual-editor') ||
+      target.closest('[data-no-swipe="true"]')
     );
   };
 
@@ -150,6 +189,11 @@ export const PageTransitionWrapper = ({ children }) => {
     if (currentDashIndex === -1) return;
 
     setIsSpringingBack(false);
+    if (springBackTimerRef.current) {
+      clearTimeout(springBackTimerRef.current);
+      springBackTimerRef.current = null;
+    }
+
     dragStartRef.current = {
       x: e.clientX,
       y: e.clientY,
@@ -205,7 +249,9 @@ export const PageTransitionWrapper = ({ children }) => {
   };
 
   const handlePointerUpOrCancel = (e) => {
-    if (dragStartRef.current.pointerId !== e.pointerId) return;
+    if (dragStartRef.current.pointerId !== null && e.pointerId !== undefined && dragStartRef.current.pointerId !== e.pointerId) {
+      return;
+    }
 
     try {
       if (e.currentTarget?.hasPointerCapture?.(e.pointerId)) {
@@ -233,6 +279,7 @@ export const PageTransitionWrapper = ({ children }) => {
       navigate(nextRoute.path);
       setIsDragging(false);
       setDragOffset(0);
+      pendingOffsetRef.current = 0;
     } else if (currentOffset > threshold && currentDashIndex > 0) {
       // Vuốt sang PHẢI -> Chuyển sang Dashboard trước đó
       playClickSound();
@@ -240,20 +287,38 @@ export const PageTransitionWrapper = ({ children }) => {
       navigate(prevRoute.path);
       setIsDragging(false);
       setDragOffset(0);
+      pendingOffsetRef.current = 0;
     } else {
       // Chưa đạt ngưỡng hoặc ở kịch biên -> Nảy mềm (spring back) về 0px
       if (Math.abs(currentOffset) > 0) {
         setIsSpringingBack(true);
         setDragOffset(0);
-        setTimeout(() => {
+        pendingOffsetRef.current = 0;
+        if (springBackTimerRef.current) clearTimeout(springBackTimerRef.current);
+        springBackTimerRef.current = setTimeout(() => {
           setIsDragging(false);
           setIsSpringingBack(false);
+          springBackTimerRef.current = null;
         }, 320);
       } else {
         setIsDragging(false);
       }
     }
   };
+
+  // Global pointerup/cancel listener phòng ngừa trường hợp con trỏ nhả bên ngoài container
+  useEffect(() => {
+    if (!isDragging) return;
+    const handleGlobalPointerUp = (e) => {
+      handlePointerUpOrCancel(e);
+    };
+    window.addEventListener('pointerup', handleGlobalPointerUp);
+    window.addEventListener('pointercancel', handleGlobalPointerUp);
+    return () => {
+      window.removeEventListener('pointerup', handleGlobalPointerUp);
+      window.removeEventListener('pointercancel', handleGlobalPointerUp);
+    };
+  }, [isDragging]);
 
   const targetNext = currentDashIndex < DASHBOARD_ROUTES.length - 1 ? DASHBOARD_ROUTES[currentDashIndex + 1] : null;
   const targetPrev = currentDashIndex > 0 ? DASHBOARD_ROUTES[currentDashIndex - 1] : null;

@@ -116,11 +116,12 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
   const milestoneTimerRef = useRef(null);
   const progressBarRef = useRef(null);
 
-  // Số lượt nỗ lực ghi nhận (cá nhân & cộng đồng)
+  // Số lượt nỗ lực ghi nhận (cá nhân & cộng đồng, phòng thủ dữ liệu hỏng / NaN)
   const [userEfforts, setUserEfforts] = useState(() => {
     try {
       const saved = localStorage.getItem('freedom_user_effort_count');
-      return saved ? parseInt(saved, 10) : 12;
+      const parsed = parseInt(saved, 10);
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : 12;
     } catch (_) {
       return 12;
     }
@@ -129,7 +130,8 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
   const [communityEfforts, setCommunityEfforts] = useState(() => {
     try {
       const saved = localStorage.getItem('freedom_community_effort_count');
-      return saved ? parseInt(saved, 10) : 1386;
+      const parsed = parseInt(saved, 10);
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : 1386;
     } catch (_) {
       return 1386;
     }
@@ -226,12 +228,13 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
     };
   }, [handleSelectTrack]);
 
-  // Tua thời lượng bài hát
+  // Tua thời lượng bài hát (kiểm tra an toàn width và finite duration)
   const handleSeek = (e) => {
-    if (!isEffortTheme || !duration || duration <= 0) return;
+    if (!isEffortTheme || !Number.isFinite(duration) || duration <= 0) return;
     const bar = progressBarRef.current;
     if (!bar) return;
     const rect = bar.getBoundingClientRect();
+    if (!rect.width || rect.width <= 0) return;
     const clickX = e.clientX - rect.left;
     const ratio = Math.max(0, Math.min(1, clickX / rect.width));
     seekTo(ratio * duration);
@@ -294,6 +297,8 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
     }, 2800);
   };
 
+  const currentQuote = MOTIVATION_QUOTES[quoteIndex] || MOTIVATION_QUOTES[0];
+
   // Sao chép câu truyền cảm hứng kèm trích dẫn nguồn
   const handleCopyQuote = useCallback(() => {
     playClickSound();
@@ -330,8 +335,10 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
     }, 2000);
   }, [currentQuote]);
 
-  const currentQuote = MOTIVATION_QUOTES[quoteIndex];
-  const progressPercent = isEffortTheme && duration > 0 ? (currentTime / duration) * 100 : 0;
+  const progressPercent =
+    isEffortTheme && Number.isFinite(duration) && duration > 0 && Number.isFinite(currentTime) && currentTime >= 0
+      ? Math.max(0, Math.min(100, (currentTime / duration) * 100))
+      : 0;
   const userMilestone = getUserMilestoneBadge(userEfforts);
 
   return (

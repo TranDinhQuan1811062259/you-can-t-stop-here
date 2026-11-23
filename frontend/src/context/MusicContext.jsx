@@ -47,11 +47,17 @@ export const MusicProvider = ({ children }) => {
     }
   });
 
-  // Âm lượng lưu trong localStorage (mặc định 45%)
+  // Âm lượng lưu trong localStorage (mặc định 45%, phòng thủ dữ liệu hỏng / NaN)
   const [volume, setVolumeState] = useState(() => {
     try {
       const saved = localStorage.getItem('freedom_music_player_volume');
-      return saved !== null ? Math.max(0, Math.min(1, parseFloat(saved))) : 0.45;
+      if (saved !== null) {
+        const val = parseFloat(saved);
+        if (Number.isFinite(val)) {
+          return Math.max(0, Math.min(1, val));
+        }
+      }
+      return 0.45;
     } catch (_) {
       return 0.45;
     }
@@ -416,18 +422,23 @@ export const MusicProvider = ({ children }) => {
     playTrack(prevIdx);
   }, [tracks, currentTrackIndex, playTrack]);
 
-  // Tua thời lượng
+  // Tua thời lượng (phòng thủ NaN / Invalid number / audio crash)
   const seekTo = useCallback((seconds) => {
     const audio = audioRef.current;
-    if (!audio || !isFinite(seconds)) return;
-    const clamped = Math.max(0, Math.min(seconds, audio.duration || 0));
-    audio.currentTime = clamped;
+    const num = Number(seconds);
+    if (!audio || !Number.isFinite(num)) return;
+    const maxDur = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
+    const clamped = Math.max(0, Math.min(num, maxDur));
+    try {
+      audio.currentTime = clamped;
+    } catch (_) {}
     setCurrentTime(clamped);
   }, []);
 
-  // Thay đổi âm lượng
+  // Thay đổi âm lượng (phòng thủ NaN / Invalid input)
   const changeVolume = useCallback((newVolume) => {
-    const clamped = Math.max(0, Math.min(1, newVolume));
+    const num = Number(newVolume);
+    const clamped = Number.isFinite(num) ? Math.max(0, Math.min(1, num)) : 0.45;
     setVolumeState(clamped);
     const nextMuted = clamped === 0;
     setIsMuted(nextMuted);
