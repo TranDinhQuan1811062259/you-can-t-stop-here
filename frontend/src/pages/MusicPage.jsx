@@ -19,11 +19,15 @@ export const MusicPage = () => {
   const player = useMusicPlayer();
   const currentTheme = player.currentTheme || getPlaylistBySlug(themeId || 'winter');
 
-  // Đồng bộ theme theo tham số URL nếu có thay đổi
+  // Đồng bộ theme theo tham số URL nếu có thay đổi rõ ràng
   useEffect(() => {
-    const targetSlug = themeId || 'winter';
-    if (targetSlug !== player.currentTheme?.slug) {
-      player.switchTheme(targetSlug);
+    // 🛡️ CHỈ switchTheme khi người dùng chủ động chỉ định themeId trên URL VÀ khác theme đang phát
+    // Tránh việc người dùng vào /music (themeId undefined) làm ngắt ngang bài hát đang phát dở (Song1E/Song2E, v.v.)
+    if (themeId && themeId !== player.currentTheme?.slug) {
+      player.switchTheme(themeId);
+    } else if (!player.currentTheme) {
+      // Nếu hoàn toàn chưa nạp bất kỳ theme nào trước đó thì mới khởi tạo winter mặc định
+      player.switchTheme('winter');
     }
   }, [themeId]);
   const [isZenMode, setIsZenMode] = useState(false);

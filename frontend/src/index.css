@@ -584,7 +584,7 @@ img {
 .header-search-input {
   width: 100%;
   height: 38px;
-  padding: 6px 92px 6px 38px;
+  padding: 6px 100px 6px 38px;
   border-radius: 999px;
   border: 1.5px solid rgba(255, 255, 255, 0.14);
   background: rgba(15, 23, 42, 0.65);
@@ -612,7 +612,7 @@ img {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  right: 58px;
+  right: 66px;
   width: 24px;
   height: 24px;
   padding: 0;
@@ -1685,10 +1685,15 @@ body.theme-light .dashboard-3d-item:hover,
   color: #ffffff;
   font-size: 0.65rem;
   font-weight: 800;
-  padding: 1px 5px;
+  padding: 1px 6px;
   border-radius: 10px;
   letter-spacing: 0.4px;
   flex-shrink: 0;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
 }
 
 .header-account-btn {
@@ -9132,7 +9137,7 @@ body.theme-dark .ambient-orb.orb-4,
 .card-stats-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   background: rgba(148, 163, 184, 0.12);
   border: 1px solid rgba(148, 163, 184, 0.25);
   padding: 4px 10px;
@@ -9158,12 +9163,14 @@ body.theme-dark .ambient-orb.orb-4,
 .card-stats-pill .pill-stat {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 
 .card-stats-pill .pill-divider {
   color: #94a3b8;
-  opacity: 0.7;
+  opacity: 0.65;
+  margin: 0 2px;
+  font-size: 0.7rem;
 }
 
 .card-read-action-btn {
@@ -20868,7 +20875,8 @@ body.theme-light .sort-select-box,
   padding: 8px 12px;
   background: #f8fafc;
   border-bottom: 1px solid #f1f5f9;
-  overflow-x: auto;
+  overflow-x: hidden;
+  flex-wrap: wrap;
 }
 
 .notif-tab-item {
@@ -21017,6 +21025,8 @@ body.theme-light .sort-select-box,
   line-height: 1.45;
   color: #334155;
   margin-bottom: 4px;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .notif-sender-name {
@@ -21287,7 +21297,8 @@ body.theme-dark .notif-dropdown-footer,
   font-weight: 700;
   color: #2dd4bf;
   letter-spacing: 0.3px;
-  max-width: 90px;
+  max-width: 135px;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

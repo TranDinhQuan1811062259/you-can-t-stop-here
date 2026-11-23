@@ -1268,7 +1268,15 @@ export const sendLoginOtp = async (req, res) => {
         mailResult = await sendRegistrationOtp(cleanTarget, otpCode);
       } catch (err) {
         console.warn('[AUTH] Thử lại với hàm gửi mail dự phòng:', err.message);
-        mailResult = await sendOtpEmail(cleanTarget, otpCode, purpose);
+        try {
+          mailResult = await sendOtpEmail(cleanTarget, otpCode, purpose);
+        } catch (backupErr) {
+          console.error('[AUTH] Cả 2 cổng gửi email đều không khả dụng:', backupErr.message);
+          return sendError(res, {
+            message: 'Máy chủ gửi email tạm thời không phản hồi. Quý khách vui lòng thử lại sau ít phút hoặc đăng nhập bằng Mật khẩu.',
+            status: 500,
+          });
+        }
       }
 
       console.log(`\n========================================`);
@@ -1291,6 +1299,22 @@ export const sendLoginOtp = async (req, res) => {
     } else {
       // GỬI TIN NHẮN SMS XÁC NHẬN TỚI SỐ ĐIỆN THOẠI CHÍNH CHỦ
       const smsResult = await sendOtpSms(cleanTarget, otpCode, deviceName);
+
+      // Nếu cổng SMS chưa được cấu hình hoặc gửi thất bại (nhất là trên Production Vercel)
+      if (!smsResult || !smsResult.success) {
+        console.warn(`[AUTH SECURITY] Cổng SMS không khả dụng cho ${cleanTarget}:`, smsResult?.error || 'Chưa cấu hình API Key SMS');
+        return sendError(res, {
+          message: smsResult?.error || 'Dịch vụ gửi SMS tạm thời chưa khả dụng. Quý khách vui lòng chọn Đăng nhập / Đăng ký bằng Email hoặc Mật khẩu.',
+          status: 503,
+          data: {
+            reason: smsResult?.reason || 'SMS_GATEWAY_NOT_CONFIGURED',
+            identifier: cleanTarget,
+            type: 'phone',
+            supportedAlternatives: ['email', 'password'],
+          },
+        });
+      }
+
       console.log(`\n========================================`);
       console.log(`[AUTH SECURITY] ĐÃ GỬI TIN NHẮN SMS XÁC THỰC`);
       console.log(`- Số điện thoại nhận: ${cleanTarget}`);

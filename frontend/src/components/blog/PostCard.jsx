@@ -74,7 +74,14 @@ export const PostCard = ({ post }) => {
 
   // Giữ đúng tác giả của từng bài viết; nếu là chính chủ đang đăng nhập thì đồng bộ 100% tên & avatar hiện tại
   const cleanAdminAvatar = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
-  const authorName = post.author || post.user?.name || (isCurrentUserAuthor ? user.name : 'Thành viên');
+  const rawAuthor = post.author || post.user?.name || (isCurrentUserAuthor ? user.name : '');
+  const isInvalidAuthor =
+    !rawAuthor ||
+    typeof rawAuthor !== 'string' ||
+    ['hình ảnh', 'hình anh', 'image', 'picture', 'photo', 'ảnh'].includes(rawAuthor.trim().toLowerCase());
+  const authorName = isInvalidAuthor
+    ? (isCurrentUserAuthor ? user?.name || 'Tác giả' : 'Thành viên')
+    : rawAuthor.trim();
   const authorJob = post.authorJob || post.user?.jobTitle || (isCurrentUserAuthor ? user.jobTitle : 'Thành viên cộng đồng');
 
   // Đồng bộ Avatar chuẩn xác 100%:

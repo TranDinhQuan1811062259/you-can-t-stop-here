@@ -70,6 +70,8 @@ apiClient.interceptors.response.use(
       originalRequest?.url?.includes('/auth/login') ||
       originalRequest?.url?.includes('/auth/register') ||
       originalRequest?.url?.includes('/auth/refresh-token') ||
+      originalRequest?.url?.includes('/auth/social-login') ||
+      originalRequest?.url?.includes('/auth/send-otp') ||
       originalRequest?.url?.includes('/auth/verify-otp');
 
     if (status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {

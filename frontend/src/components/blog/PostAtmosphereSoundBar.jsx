@@ -131,17 +131,20 @@ export const PostAtmosphereSoundBar = ({ atmosphere, postTitle }) => {
             </strong>
             {isPlaying && (
               <span
+                className="live-atmosphere-pill"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  background: '#dcfce7',
-                  color: '#15803d',
-                  border: '1px solid #86efac',
-                  padding: '2px 8px',
+                  gap: '5px',
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  color: '#047857',
+                  border: '1.5px solid rgba(16, 185, 129, 0.45)',
+                  padding: '2px 9px',
                   borderRadius: '12px',
                   fontSize: '0.72rem',
-                  fontWeight: 700,
+                  fontWeight: 800,
+                  letterSpacing: '0.2px',
+                  boxShadow: '0 0 10px rgba(16, 185, 129, 0.2)',
                 }}
               >
                 <span className="live-sound-dot" />

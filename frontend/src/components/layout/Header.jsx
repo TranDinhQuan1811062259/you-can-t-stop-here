@@ -2228,81 +2228,84 @@ export const Header = () => {
             className="logout-confirm-box"
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: 'linear-gradient(145deg, #1e293b 0%, #0f172a 100%)',
-              border: '1.5px solid rgba(248, 113, 113, 0.45)',
-              borderRadius: '20px',
-              padding: '28px 24px',
-              maxWidth: '420px',
+              background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.96) 0%, rgba(15, 23, 42, 0.98) 100%)',
+              border: '1px solid rgba(248, 113, 113, 0.35)',
+              borderRadius: '18px',
+              padding: '24px 20px',
+              maxWidth: '380px',
               width: '100%',
-              boxShadow: '0 20px 45px rgba(0, 0, 0, 0.6), 0 0 25px rgba(239, 68, 68, 0.25)',
+              boxShadow: '0 20px 45px rgba(0, 0, 0, 0.65), 0 0 20px rgba(239, 68, 68, 0.15)',
               textAlign: 'center',
-              animation: 'popupSlideUp 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.2)',
+              animation: 'popupSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           >
             <div
               style={{
-                width: '56px',
-                height: '56px',
+                width: '46px',
+                height: '46px',
                 borderRadius: '50%',
-                background: 'rgba(239, 68, 68, 0.15)',
-                border: '1.5px solid rgba(239, 68, 68, 0.4)',
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                margin: '0 auto 16px',
-                fontSize: '1.6rem',
+                margin: '0 auto 12px',
+                fontSize: '1.25rem',
+                color: '#f87171',
               }}
             >
-              👋
+              <i className="fa-solid fa-arrow-right-from-bracket"></i>
             </div>
 
             <h3
               style={{
                 color: '#f8fafc',
-                fontSize: '1.25rem',
+                fontSize: '1.15rem',
                 fontWeight: 800,
-                marginBottom: '8px',
-                fontFamily: 'var(--font-serif)',
+                marginBottom: '6px',
+                letterSpacing: '0.2px',
               }}
             >
-              Bạn muốn đăng xuất khỏi tài khoản?
+              Đăng xuất khỏi tài khoản?
             </h3>
 
             <p
               style={{
-                color: '#cbd5e1',
-                fontSize: '0.88rem',
-                lineHeight: 1.6,
-                marginBottom: '22px',
+                color: '#94a3b8',
+                fontSize: '0.84rem',
+                lineHeight: 1.5,
+                margin: '0 0 20px',
               }}
             >
-              You Can't Stop Here sẽ luôn ở đây chờ bạn quay lại bất cứ khi nào bạn cần một nơi yên bình để nghỉ chân và trút bỏ những áp lực cuộc sống.
+              Phiên làm việc trên các tab sẽ được thu hồi an toàn. Bạn có thể đăng nhập lại bất cứ lúc nào!
             </p>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
               <button
                 type="button"
                 onClick={() => setIsLogoutConfirmOpen(false)}
                 style={{
                   flex: 1,
-                  padding: '10px 16px',
-                  borderRadius: '12px',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#e2e8f0',
-                  fontWeight: 700,
-                  fontSize: '0.86rem',
+                  padding: '9px 14px',
+                  borderRadius: '10px',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid rgba(255, 255, 255, 0.14)',
+                  color: '#cbd5e1',
+                  fontWeight: 600,
+                  fontSize: '0.84rem',
                   cursor: 'pointer',
-                  transition: 'all 0.2s',
+                  transition: 'all 0.18s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.16)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+                  e.currentTarget.style.color = '#ffffff';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
+                  e.currentTarget.style.color = '#cbd5e1';
                 }}
               >
-                Ở lại cùng mọi người
+                Ở lại
               </button>
 
               <button
@@ -2313,27 +2316,27 @@ export const Header = () => {
                 }}
                 style={{
                   flex: 1,
-                  padding: '10px 16px',
-                  borderRadius: '12px',
+                  padding: '9px 14px',
+                  borderRadius: '10px',
                   background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                   border: 'none',
                   color: '#ffffff',
-                  fontWeight: 800,
-                  fontSize: '0.86rem',
+                  fontWeight: 700,
+                  fontSize: '0.84rem',
                   cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
-                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 14px rgba(239, 68, 68, 0.35)',
+                  transition: 'all 0.18s ease',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 6px 18px rgba(239, 68, 68, 0.55)';
+                  e.currentTarget.style.boxShadow = '0 6px 18px rgba(239, 68, 68, 0.5)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 14px rgba(239, 68, 68, 0.4)';
+                  e.currentTarget.style.boxShadow = '0 4px 14px rgba(239, 68, 68, 0.35)';
                 }}
               >
-                Đăng xuất an toàn
+                Xác nhận
               </button>
             </div>
           </div>

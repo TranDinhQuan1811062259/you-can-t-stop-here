@@ -6,6 +6,12 @@ const AuthContext = createContext(null);
 
 const ADMIN_AVATAR = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
 
+// Kênh BroadcastChannel đồng bộ phiên đăng nhập / đăng xuất giữa các tab
+const authBroadcastChannel =
+  typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined'
+    ? new BroadcastChannel('freedom_auth_sync_channel')
+    : null;
+
 /**
  * Đảm bảo tài khoản Quản trị viên luôn có đầy đủ đặc quyền Admin và hình đại diện chuẩn
  */
@@ -165,17 +171,83 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {}
   }, []);
 
-  // Lắng nghe sự kiện đồng bộ trạng thái đăng nhập từ apiClient khi token hết hạn
+  // 🛡️ Đồng bộ đăng nhập & đăng xuất đa tab / đa phiên (Cross-Tab Synchronization)
   useEffect(() => {
+    const applyLogoutState = () => {
+      setUser(null);
+      setToken(null);
+      syncAuthStorage(null, null, null);
+      try {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('freedom_token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('freedom_refresh_token');
+        localStorage.removeItem('freedom_persisted_profile');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
+        sessionStorage.removeItem('freedom_otp_resend_until');
+      } catch (_) {}
+      window.dispatchEvent(new Event('profile_updated'));
+      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
+    };
+
+    const applyLoginState = (userData, userToken, userRefreshToken) => {
+      if (userData && userToken) {
+        const safe = ensureAdminPrivileges(userData);
+        setUser(safe);
+        setToken(userToken);
+        syncAuthStorage(safe, userToken, userRefreshToken);
+        window.dispatchEvent(new Event('profile_updated'));
+        window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safe }));
+      }
+    };
+
     const handleAuthChanged = (e) => {
       const newUser = e?.detail;
       if (!newUser) {
-        setUser(null);
-        setToken(null);
+        applyLogoutState();
       }
     };
+
+    const handleStorageEvent = (e) => {
+      if (e.key === 'freedom_logout_signal') {
+        applyLogoutState();
+      } else if (e.key === 'freedom_login_signal') {
+        try {
+          const rawUser = localStorage.getItem('user');
+          const storedToken = localStorage.getItem('token') || localStorage.getItem('freedom_token');
+          const storedRt = localStorage.getItem('refreshToken');
+          if (rawUser && storedToken) {
+            applyLoginState(JSON.parse(rawUser), storedToken, storedRt);
+          }
+        } catch (_) {}
+      }
+    };
+
+    const handleBroadcastMessage = (event) => {
+      const msg = event?.data;
+      if (msg?.type === 'LOGOUT') {
+        applyLogoutState();
+      } else if (msg?.type === 'LOGIN') {
+        applyLoginState(msg.user, msg.token, msg.refreshToken);
+      }
+    };
+
     window.addEventListener('freedom_auth_changed', handleAuthChanged);
-    return () => window.removeEventListener('freedom_auth_changed', handleAuthChanged);
+    window.addEventListener('storage', handleStorageEvent);
+
+    if (authBroadcastChannel) {
+      authBroadcastChannel.addEventListener('message', handleBroadcastMessage);
+    }
+
+    return () => {
+      window.removeEventListener('freedom_auth_changed', handleAuthChanged);
+      window.removeEventListener('storage', handleStorageEvent);
+      if (authBroadcastChannel) {
+        authBroadcastChannel.removeEventListener('message', handleBroadcastMessage);
+      }
+    };
   }, []);
 
   // Chỉ xác thực token 1 LẦN DUY NHẤT lúc ứng dụng khởi động (Initial Mount)
@@ -240,6 +312,17 @@ export const AuthProvider = ({ children }) => {
       syncAuthStorage(safeUser, receivedToken, receivedRefreshToken);
       setIsAuthModalOpen(false);
 
+      // Đồng bộ đăng nhập sang các tab khác qua BroadcastChannel & Storage
+      authBroadcastChannel?.postMessage({
+        type: 'LOGIN',
+        user: safeUser,
+        token: receivedToken,
+        refreshToken: receivedRefreshToken,
+      });
+      try {
+        localStorage.setItem('freedom_login_signal', String(Date.now()));
+      } catch (_) {}
+
       window.dispatchEvent(new Event('profile_updated'));
       window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
       return { data: { token: receivedToken, refreshToken: receivedRefreshToken, ...safeUser } };
@@ -274,6 +357,17 @@ export const AuthProvider = ({ children }) => {
       syncAuthStorage(safeUser, receivedToken, receivedRefreshToken);
       setIsAuthModalOpen(false);
 
+      // Đồng bộ đăng nhập sang các tab khác qua BroadcastChannel & Storage
+      authBroadcastChannel?.postMessage({
+        type: 'LOGIN',
+        user: safeUser,
+        token: receivedToken,
+        refreshToken: receivedRefreshToken,
+      });
+      try {
+        localStorage.setItem('freedom_login_signal', String(Date.now()));
+      } catch (_) {}
+
       window.dispatchEvent(new Event('profile_updated'));
       window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
       return { data: { token: receivedToken, refreshToken: receivedRefreshToken, ...safeUser } };
@@ -297,17 +391,29 @@ export const AuthProvider = ({ children }) => {
         throw new Error(res?.data?.message || 'Đăng ký tài khoản không thành công!');
       }
 
+      const receivedRefreshToken = rawData.refreshToken || res?.refreshToken || null;
       const { token: _t, ...extractedUser } = rawData;
       const safeUser = ensureAdminPrivileges(extractedUser);
 
       setToken(receivedToken);
       setUser(safeUser);
-      syncAuthStorage(safeUser, receivedToken);
+      syncAuthStorage(safeUser, receivedToken, receivedRefreshToken);
       setIsAuthModalOpen(false);
+
+      // Đồng bộ đăng ký/đăng nhập sang các tab khác qua BroadcastChannel & Storage
+      authBroadcastChannel?.postMessage({
+        type: 'LOGIN',
+        user: safeUser,
+        token: receivedToken,
+        refreshToken: receivedRefreshToken,
+      });
+      try {
+        localStorage.setItem('freedom_login_signal', String(Date.now()));
+      } catch (_) {}
 
       window.dispatchEvent(new Event('profile_updated'));
       window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
-      return { data: { token: receivedToken, ...safeUser } };
+      return { data: { token: receivedToken, refreshToken: receivedRefreshToken, ...safeUser } };
     } catch (err) {
       console.error('[Auth] Đăng ký backend thất bại:', err);
       throw err;
@@ -340,6 +446,17 @@ export const AuthProvider = ({ children }) => {
       setUser(safeUser);
       syncAuthStorage(safeUser, receivedToken, receivedRefreshToken);
       setIsAuthModalOpen(false);
+
+      // Đồng bộ đăng nhập sang các tab khác qua BroadcastChannel & Storage
+      authBroadcastChannel?.postMessage({
+        type: 'LOGIN',
+        user: safeUser,
+        token: receivedToken,
+        refreshToken: receivedRefreshToken,
+      });
+      try {
+        localStorage.setItem('freedom_login_signal', String(Date.now()));
+      } catch (_) {}
 
       window.dispatchEvent(new Event('profile_updated'));
       window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
@@ -408,6 +525,12 @@ export const AuthProvider = ({ children }) => {
       // Chống gợi ý Google One Tap bật lên ngay khi vừa chủ động đăng xuất
       sessionStorage.setItem('google_onetap_dismissed', 'true');
     } catch (_) {}
+    // 🛡️ PHÁT TÍN HIỆU ĐỒNG BỘ ĐĂNG XUẤT TỚI TẤT CẢ CÁC TAB / CỬA SỔ
+    authBroadcastChannel?.postMessage({ type: 'LOGOUT', timestamp: Date.now() });
+    try {
+      localStorage.setItem('freedom_logout_signal', String(Date.now()));
+    } catch (_) {}
+
     window.dispatchEvent(new Event('profile_updated'));
     window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
   };

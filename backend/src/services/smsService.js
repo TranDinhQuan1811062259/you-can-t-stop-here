@@ -34,10 +34,41 @@ export const maskPhoneNumber = (phone) => {
  * @param {string} otpCode - Mã 6 số xác thực
  * @param {string} deviceName - Tên thiết bị yêu cầu
  */
+export const isSmsGatewayConfigured = () => {
+  return Boolean(
+    (process.env.SMS_API_KEY && process.env.SMS_API_KEY !== 'xxxx') ||
+    (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) ||
+    process.env.SPEEDSMS_ACCESS_TOKEN ||
+    process.env.ESMS_API_KEY
+  );
+};
+
+/**
+ * Gửi tin nhắn SMS chứa mã OTP 6 số tới Số điện thoại
+ * @param {string} phoneNumber - Số điện thoại người nhận
+ * @param {string} otpCode - Mã 6 số xác thực
+ * @param {string} deviceName - Tên thiết bị yêu cầu
+ */
 export const sendOtpSms = async (phoneNumber, otpCode, deviceName = 'Windows PC (Chrome)', userName = '') => {
   const cleanPhone = String(phoneNumber).replace(/\D/g, '');
   const formattedPhone = formatPhoneNumber(cleanPhone);
   const maskedPhone = maskPhoneNumber(cleanPhone);
+  const isConfigured = isSmsGatewayConfigured();
+  const isProd = process.env.NODE_ENV === 'production';
+
+  // 🛡️ NẾU TRÊN MÔI TRƯỜNG PRODUCTION VÀ CHƯA CÓ CỔNG SMS THẬT:
+  // Thông báo minh bạch, tuyệt đối KHÔNG giả lập lừa người dùng
+  if (isProd && !isConfigured) {
+    return {
+      success: false,
+      isConfigured: false,
+      message: 'Cổng SMS Brandname hiện chưa được tích hợp nhà mạng viễn thông trên máy chủ. Vui lòng nhận mã xác thực qua Email hoặc đăng nhập bằng Mật khẩu / Mạng xã hội!',
+      phoneNumber: cleanPhone,
+      formattedPhone,
+      maskedPhone,
+    };
+  }
+
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
@@ -52,10 +83,12 @@ export const sendOtpSms = async (phoneNumber, otpCode, deviceName = 'Windows PC 
   console.log(`Brandname:   ${brandname}`);
   console.log(`Nội dung SMS:\n"${messageContent}"`);
   console.log(`MÃ SMS OTP:  [ ${otpCode} ]`);
+  console.log(`Trạng thái:  ${isConfigured ? 'Cổng SMS viễn thông thật' : 'Chế độ mô phỏng thử nghiệm (Sandbox / Dev)'}`);
   console.log(`======================================================\n`);
 
   return {
     success: true,
+    isConfigured,
     messageId: `sms_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     phoneNumber: cleanPhone,
     formattedPhone,

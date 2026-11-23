@@ -27,30 +27,29 @@ const getGmailCredentials = () => {
 /**
  * Khởi tạo Transporter cho Nodemailer với cấu hình tối ưu nhất cho Gmail
  */
-export const getMailerTransporter = () => {
+export const getMailerTransporter = (preferPort = 465) => {
   const { user, pass } = getGmailCredentials();
 
-  if (!user || !pass) {
-    console.warn('[MAILER] ⚠️ CẢNH BÁO: Chưa tìm thấy EMAIL_USER hoặc EMAIL_PASS trong file .env!');
+  if (!user || !pass || pass.includes('xxxx')) {
+    console.warn('[MAILER] ⚠️ CẢNH BÁO: Chưa tìm thấy EMAIL_USER hoặc EMAIL_PASS hợp lệ trong biến môi trường!');
   }
 
-  // Cấu hình chuẩn kết nối Gmail SMTP trực tiếp qua host: smtp.gmail.com
-  // Cổng 465 với secure: true là cổng ổn định nhất, tránh bị nhà mạng chặn cổng 587/25
+  const isTls = preferPort === 587;
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // Sử dụng SSL trực tiếp
+    port: preferPort,
+    secure: !isTls, // true cho 465 (SSL), false cho 587 (TLS/STARTTLS)
     auth: {
       user: user,
       pass: pass,
     },
     tls: {
-      rejectUnauthorized: false, // Tránh lỗi chứng chỉ mạng trên Windows/môi trường phát triển
+      rejectUnauthorized: false,
     },
-    // Timeout 15 giây
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 15000,
+    // Giới hạn timeout 5 giây chống treo serverless trên Vercel
+    connectionTimeout: 5000,
+    greetingTimeout: 5000,
+    socketTimeout: 5000,
   });
 };
 
@@ -150,14 +149,12 @@ const generateOtpEmailTemplate = (toEmail, otpCode, actionName = 'kích hoạt t
  * @param {string} otpCode - Mã 6 số OTP
  */
 export const sendRegistrationOtp = async (toEmail, otpCode) => {
-  const { user: senderEmail } = getGmailCredentials();
+  const { user: senderEmail, pass: senderPass } = getGmailCredentials();
   const senderName = "You Can't Stop Here";
 
-  if (!senderEmail) {
-    throw new Error('Chưa cấu hình EMAIL_USER trong file .env');
+  if (!senderEmail || !senderPass || senderPass.includes('xxxx')) {
+    throw new Error('Dịch vụ gửi email chưa được cấu hình tài khoản EMAIL_USER / EMAIL_PASS trên môi trường máy chủ (Vercel).');
   }
-
-  const transporter = getMailerTransporter();
 
   const mailOptions = {
     from: `"${senderName}" <${senderEmail}>`,
@@ -168,26 +165,31 @@ export const sendRegistrationOtp = async (toEmail, otpCode) => {
   };
 
   try {
-    console.log(`[MAILER] 🚀 Đang gửi mã OTP [${otpCode}] từ <${senderEmail}> đến email: <${toEmail}>...`);
-    const info = await transporter.sendMail(mailOptions);
+    console.log(`[MAILER] 🚀 Đang gửi mã OTP [${otpCode}] từ <${senderEmail}> đến: <${toEmail}> (cổng 465)...`);
+    const transporter465 = getMailerTransporter(465);
+    const info = await transporter465.sendMail(mailOptions);
     console.log(`[MAILER] ✅ ĐÃ GỬI THÀNH CÔNG VÀO GMAIL CỦA USER: ${toEmail} (MessageId: ${info.messageId})`);
-
-    return {
-      success: true,
-      messageId: info.messageId,
-      to: toEmail,
-    };
+    return { success: true, messageId: info.messageId, to: toEmail };
   } catch (error) {
-    console.error('\n========================================');
-    console.error('❌ [MAILER] LỖI GỬI EMAIL NODEMAILER:');
-    console.error('- Message:', error.message);
-    if (error.response) console.error('- SMTP Response:', error.response);
+    // Nếu cổng 465 bị firewall serverless/cloud chặn, fallback sang cổng 587 (TLS)
+    if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
+      console.warn(`[MAILER] Cổng 465 bị timeout, thử lại qua cổng 587 (TLS)...`);
+      try {
+        const transporter587 = getMailerTransporter(587);
+        const info587 = await transporter587.sendMail(mailOptions);
+        console.log(`[MAILER] ✅ ĐÃ GỬI THÀNH CÔNG QUA CỔNG 587: ${toEmail} (MessageId: ${info587.messageId})`);
+        return { success: true, messageId: info587.messageId, to: toEmail };
+      } catch (err587) {
+        console.error('[MAILER] Thử cổng 587 cũng thất bại:', err587.message);
+      }
+    }
 
     let friendlyMessage = error.message;
     if (error.responseCode === 535 || error.message.includes('535') || error.message.includes('Username and Password not accepted') || error.message.includes('BadCredentials')) {
       friendlyMessage = 'Google từ chối Mật khẩu ứng dụng (535 Bad Credentials). Vui lòng tạo lại mật khẩu 16 chữ cái mới cho anthonyq012025@gmail.com tại myaccount.google.com/apppasswords!';
+    } else if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
+      friendlyMessage = 'Máy chủ gửi thư SMTP phản hồi quá chậm (Connection Timeout). Vui lòng thử lại sau hoặc sử dụng Đăng nhập Mật khẩu / Mạng xã hội!';
     }
-    console.error('========================================\n');
     throw new Error(friendlyMessage);
   }
 };
@@ -199,14 +201,12 @@ export const sendOtpEmail = async (toEmail, otpCode, purpose = 'register') => {
   const isRegister = purpose === 'register';
   const actionText = isRegister ? 'kích hoạt tài khoản mới' : (purpose === 'forgot_password' ? 'đặt lại mật khẩu' : 'đăng nhập');
 
-  const { user: senderEmail } = getGmailCredentials();
+  const { user: senderEmail, pass: senderPass } = getGmailCredentials();
   const senderName = "You Can't Stop Here";
 
-  if (!senderEmail) {
-    throw new Error('Chưa cấu hình EMAIL_USER trong file .env');
+  if (!senderEmail || !senderPass || senderPass.includes('xxxx')) {
+    throw new Error('Dịch vụ gửi email chưa được cấu hình tài khoản EMAIL_USER / EMAIL_PASS trên môi trường máy chủ (Vercel).');
   }
-
-  const transporter = getMailerTransporter();
 
   const mailOptions = {
     from: `"${senderName}" <${senderEmail}>`,
@@ -217,26 +217,30 @@ export const sendOtpEmail = async (toEmail, otpCode, purpose = 'register') => {
   };
 
   try {
-    console.log(`[MAILER] 🚀 Đang gửi mã OTP [${otpCode}] (Mục đích: ${purpose}) từ <${senderEmail}> đến: <${toEmail}>...`);
-    const info = await transporter.sendMail(mailOptions);
+    console.log(`[MAILER] 🚀 Đang gửi mã OTP [${otpCode}] từ <${senderEmail}> đến: <${toEmail}> (cổng 465)...`);
+    const transporter465 = getMailerTransporter(465);
+    const info = await transporter465.sendMail(mailOptions);
     console.log(`[MAILER] ✅ ĐÃ GỬI THÀNH CÔNG VÀO GMAIL: ${toEmail} (MessageId: ${info.messageId})`);
-
-    return {
-      success: true,
-      messageId: info.messageId,
-      to: toEmail,
-    };
+    return { success: true, messageId: info.messageId, to: toEmail };
   } catch (error) {
-    console.error('\n========================================');
-    console.error('❌ [MAILER] LỖI GỬI EMAIL NODEMAILER:');
-    console.error('- Message:', error.message);
-    if (error.response) console.error('- SMTP Response:', error.response);
+    if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
+      console.warn(`[MAILER] Cổng 465 bị timeout, thử lại qua cổng 587 (TLS)...`);
+      try {
+        const transporter587 = getMailerTransporter(587);
+        const info587 = await transporter587.sendMail(mailOptions);
+        console.log(`[MAILER] ✅ ĐÃ GỬI THÀNH CÔNG QUA CỔNG 587: ${toEmail} (MessageId: ${info587.messageId})`);
+        return { success: true, messageId: info587.messageId, to: toEmail };
+      } catch (err587) {
+        console.error('[MAILER] Thử cổng 587 cũng thất bại:', err587.message);
+      }
+    }
 
     let friendlyMessage = error.message;
     if (error.responseCode === 535 || error.message.includes('535') || error.message.includes('Username and Password not accepted') || error.message.includes('BadCredentials')) {
       friendlyMessage = 'Google từ chối Mật khẩu ứng dụng (535 Bad Credentials). Vui lòng tạo lại mật khẩu 16 chữ cái mới cho anthonyq012025@gmail.com tại myaccount.google.com/apppasswords!';
+    } else if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
+      friendlyMessage = 'Máy chủ gửi thư SMTP phản hồi quá chậm (Connection Timeout). Vui lòng thử lại sau hoặc sử dụng Đăng nhập Mật khẩu / Mạng xã hội!';
     }
-    console.error('========================================\n');
     throw new Error(friendlyMessage);
   }
 };

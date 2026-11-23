@@ -6,7 +6,14 @@ import { playClickSound, playSingingBowlSound } from '../../utils/soundEffects';
  * Một không gian tĩnh lặng ở chân bài viết để người đọc có thể thắp một ngọn nến
  * gửi gắm sự đồng cảm, an ủi thầm lặng tới tác giả mà không cần gõ chữ.
  */
-export const PeaceCandleBox = ({ postId, authorName = 'tác giả' }) => {
+export const PeaceCandleBox = ({ postId, authorName: rawAuthor = 'tác giả' }) => {
+  // 🛡️ Làm sạch authorName, tuyệt đối không để rò placeholder "Hình Ảnh" hay rác
+  const isInvalidName =
+    !rawAuthor ||
+    typeof rawAuthor !== 'string' ||
+    ['hình ảnh', 'hình anh', 'image', 'picture', 'photo', 'ảnh'].includes(rawAuthor.trim().toLowerCase());
+  const authorName = isInvalidName ? 'tác giả' : rawAuthor.trim();
+
   const key = `freedom_candle_post_${postId || 'demo'}`;
   const userLitKey = `freedom_user_lit_candle_${postId || 'demo'}`;
 

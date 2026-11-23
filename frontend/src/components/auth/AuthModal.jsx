@@ -944,25 +944,33 @@ export const AuthModal = () => {
       const formatted = data.formattedPhone || cleanPhone;
       const masked = data.maskedPhone || `${cleanPhone.slice(0, 4)} *** ${cleanPhone.slice(-3)}`;
       const brandname = data.brandname || 'CANTSTOPHERE';
-      const code = data.debugOtp || data.otpCode || '';
+      const code = data.debugOtp || '';
 
       setPhoneDataForOtp({ phone: cleanPhone, maskedPhone: masked, formattedPhone: formatted });
       setOtpType('phone');
-      setSmsNotification({
-        brandname,
-        phone: formatted,
-        masked,
-        code,
-        content: data.smsContent || `[${brandname}] SDT (${masked}) vua yeu cau ma xac thuc. Ma OTP cua ban la: ${code}. Co hieu luc trong 5 phut.`,
-        time: 'Vừa xong',
-      });
+
+      // Chỉ hiển thị mô phỏng SMS khi đang ở môi trường phát triển (debug) nội bộ có debugOtp
+      if (code && (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost')) {
+        setSmsNotification({
+          brandname,
+          phone: formatted,
+          masked,
+          code,
+          content: data.smsContent || `[${brandname}] SDT (${masked}) vua yeu cau ma xac thuc. Ma OTP cua ban la: ${code}. Co hieu luc trong 5 phut.`,
+          time: 'Vừa xong',
+        });
+      } else {
+        setSmsNotification(null);
+      }
+
       setSuccessMsg(`✓ Đã gửi tin nhắn SMS chứa mã xác nhận 6 số đến SĐT ${formatted}`);
       setEmailOtpStep(true);
       setOtpCooldownInSession(cleanPhone, 60);
       setOtpCountdown(60);
     } catch (err) {
       console.error('Lỗi gửi SMS OTP:', err);
-      setErrorMsg(err.message || 'Không thể gửi mã SMS OTP. Vui lòng kiểm tra lại kết nối!');
+      const serverMsg = err.response?.data?.message || err.message || 'Không thể gửi mã SMS OTP. Vui lòng kiểm tra lại kết nối!';
+      setErrorMsg(serverMsg);
       setEmailOtpStep(false);
     } finally {
       setLoading(false);
@@ -1543,10 +1551,10 @@ export const AuthModal = () => {
               </p>
             </div>
 
-            {/* Live Profile Card Preview */}
+            {/* Live Profile Card Preview - Giao diện hiện đại, sạch đẹp, tuyệt đối không bị vỡ ảnh */}
             <div
               style={{
-                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                background: 'linear-gradient(135deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.95) 100%)',
                 border: '1.5px solid #cbd5e1',
                 borderRadius: '14px',
                 padding: '12px 14px',
@@ -1557,18 +1565,48 @@ export const AuthModal = () => {
               }}
             >
               <div style={{ position: 'relative', flexShrink: 0 }}>
-                <img
-                  src={socialRegData.avatar}
-                  alt={socialRegData.name}
+                <div
                   style={{
-                    width: '62px',
-                    height: '62px',
+                    width: '60px',
+                    height: '60px',
                     borderRadius: '50%',
-                    objectFit: 'cover',
+                    background: socialRegData.avatar
+                      ? 'transparent'
+                      : (socialRegData.providerId === 'facebook'
+                          ? 'linear-gradient(135deg, #1877f2, #0d9488)'
+                          : 'linear-gradient(135deg, #0d9488, #059669)'),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#ffffff',
+                    fontSize: '1.4rem',
+                    fontWeight: 700,
                     border: '2.5px solid #0d9488',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+                    overflow: 'hidden',
                   }}
-                />
+                >
+                  {socialRegData.avatar ? (
+                    <img
+                      src={socialRegData.avatar}
+                      alt=""
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        if (e.currentTarget.nextSibling) {
+                          e.currentTarget.nextSibling.style.display = 'flex';
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  ) : null}
+                  <span style={{ display: socialRegData.avatar ? 'none' : 'flex' }}>
+                    {socialRegData.name ? socialRegData.name.trim().charAt(0).toUpperCase() : (socialRegData.providerId === 'facebook' ? 'f' : 'U')}
+                  </span>
+                </div>
                 <label
                   htmlFor="social-avatar-file-input"
                   title="Tải ảnh mới từ máy tính của bạn"
@@ -1607,8 +1645,8 @@ export const AuthModal = () => {
                   </strong>
                   <span
                     style={{
-                      background: '#e0f2fe',
-                      color: '#0369a1',
+                      background: socialRegData.providerId === 'facebook' ? '#e7f3ff' : '#e0f2fe',
+                      color: socialRegData.providerId === 'facebook' ? '#1877f2' : '#0369a1',
                       fontSize: '0.68rem',
                       fontWeight: 700,
                       padding: '2px 6px',
@@ -1619,17 +1657,17 @@ export const AuthModal = () => {
                   </span>
                 </div>
                 <div style={{ fontSize: '0.78rem', color: '#0d9488', fontWeight: 600, marginTop: '2px' }}>
-                  {socialRegData.jobTitle || 'Chức danh'}
+                  {socialRegData.jobTitle || 'Thành viên cộng đồng'}
                 </div>
                 <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '1px' }}>
-                  ✉️ {socialRegData.email}
+                  ✉️ {socialRegData.email || 'Email liên kết'}
                 </div>
               </div>
             </div>
 
-            {/* Form chỉnh sửa thông tin thực tế */}
+            {/* Form đăng ký tinh gọn, nhanh chóng */}
             <form onSubmit={handleConfirmSocialRegister} className="modal-form">
-              <div className="form-group" style={{ marginBottom: '9px' }}>
+              <div className="form-group" style={{ marginBottom: '10px' }}>
                 <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Họ và tên hiển thị *</label>
                 <input
                   type="text"
@@ -1640,46 +1678,52 @@ export const AuthModal = () => {
                 />
               </div>
 
-              <div className="form-group" style={{ marginBottom: '9px' }}>
+              <div className="form-group" style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Email liên kết ({socialRegData.providerName}) *</label>
                 <input
                   type="email"
                   value={socialRegData.email}
                   onChange={(e) => setSocialRegData((prev) => ({ ...prev, email: e.target.value }))}
-                  placeholder="Địa chỉ email"
+                  placeholder="Địa chỉ email nhận thông báo"
                   required
                 />
               </div>
 
-              <div className="form-group" style={{ marginBottom: '9px' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Vị trí / Nghề nghiệp</label>
-                <input
-                  type="text"
-                  value={socialRegData.jobTitle}
-                  onChange={(e) => setSocialRegData((prev) => ({ ...prev, jobTitle: e.target.value }))}
-                  placeholder="Ví dụ: System Admin & Lead Dev"
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: '9px' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Tiểu sử / Bio</label>
-                <input
-                  type="text"
-                  value={socialRegData.bio}
-                  onChange={(e) => setSocialRegData((prev) => ({ ...prev, bio: e.target.value }))}
-                  placeholder="Giới thiệu đôi nét về bản thân"
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: '14px' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Đường dẫn trang cá nhân {socialRegData.providerName}</label>
-                <input
-                  type="url"
-                  value={socialRegData.socialUrl}
-                  onChange={(e) => setSocialRegData((prev) => ({ ...prev, socialUrl: e.target.value }))}
-                  placeholder={`https://${socialRegData.providerId}.com/...`}
-                />
-              </div>
+              {/* Tùy chọn thông tin bổ sung có thể gập mở để form luôn gọn gàng */}
+              <details style={{ marginBottom: '14px', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <summary style={{ fontSize: '0.78rem', color: '#64748b', cursor: 'pointer', fontWeight: 600, userSelect: 'none' }}>
+                  ⚙️ Bổ sung thêm thông tin hồ sơ (Tùy chọn)
+                </summary>
+                <div style={{ marginTop: '10px' }}>
+                  <div className="form-group" style={{ marginBottom: '8px' }}>
+                    <label style={{ fontSize: '0.76rem', fontWeight: 600 }}>Vị trí / Nghề nghiệp</label>
+                    <input
+                      type="text"
+                      value={socialRegData.jobTitle}
+                      onChange={(e) => setSocialRegData((prev) => ({ ...prev, jobTitle: e.target.value }))}
+                      placeholder="Ví dụ: Người sáng tạo nội dung & Kết nối"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '8px' }}>
+                    <label style={{ fontSize: '0.76rem', fontWeight: 600 }}>Tiểu sử / Bio</label>
+                    <input
+                      type="text"
+                      value={socialRegData.bio}
+                      onChange={(e) => setSocialRegData((prev) => ({ ...prev, bio: e.target.value }))}
+                      placeholder="Giới thiệu đôi nét về bản thân"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '4px' }}>
+                    <label style={{ fontSize: '0.76rem', fontWeight: 600 }}>Đường dẫn trang cá nhân {socialRegData.providerName}</label>
+                    <input
+                      type="url"
+                      value={socialRegData.socialUrl}
+                      onChange={(e) => setSocialRegData((prev) => ({ ...prev, socialUrl: e.target.value }))}
+                      placeholder={`https://${socialRegData.providerId}.com/...`}
+                    />
+                  </div>
+                </div>
+              </details>
 
               <button
                 type="submit"
@@ -1688,7 +1732,9 @@ export const AuthModal = () => {
                 style={{
                   width: '100%',
                   padding: '12px',
-                  background: 'linear-gradient(135deg, #0d9488, #059669)',
+                  background: socialRegData.providerId === 'facebook'
+                    ? 'linear-gradient(135deg, #1877f2, #0d9488)'
+                    : 'linear-gradient(135deg, #0d9488, #059669)',
                   color: '#ffffff',
                   fontSize: '0.94rem',
                   fontWeight: 700,
