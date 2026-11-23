@@ -87,9 +87,19 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
     audioError,
     currentTime,
     duration,
+    volume,
+    isMuted,
+    loopMode,
+    isShuffle,
     togglePlay,
+    nextTrack,
+    prevTrack,
     playThemeTrack,
     seekTo,
+    changeVolume,
+    toggleMute,
+    cycleLoopMode,
+    toggleShuffle,
   } = useMusic();
 
   const [isExpanded, setIsExpanded] = useState(true);
@@ -466,36 +476,189 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
                 </div>
               )}
 
-              {/* Thanh Tiến Trình & Thời Gian Bài Hát (Chỉ hiển thị khi đang phát trong theme này) */}
-              <div className="efforts-progress-wrap">
-                <div
-                  className="efforts-progress-bar-bg"
-                  ref={progressBarRef}
-                  onClick={handleSeek}
-                  title={isEffortTheme ? 'Bấm để tua đến đoạn mong muốn' : 'Bật một nhịp nhạc để nghe'}
-                >
-                  <div
-                    className="efforts-progress-bar-fill"
-                    style={{ width: `${progressPercent}%` }}
-                  ></div>
-                </div>
-
-                <div className="efforts-time-row">
-                  <span className="time-text">{isEffortTheme ? formatTime(currentTime) : '0:00'}</span>
-                  <span className="time-divider">/</span>
-                  <span className="time-text">
+              {/* Thanh Tua Thời Lượng Bài Hát Tương Tác Trực Tiếp (Interactive Seekbar) */}
+              <div
+                className="efforts-progress-wrap no-swipe"
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <div className="efforts-progress-times">
+                  <span className="time-text current">{isEffortTheme ? formatTime(currentTime) : '0:00'}</span>
+                  <span className="time-text total">
                     {isLoading && isEffortTheme ? (
                       <span className="loading-dots">Đang tải...</span>
+                    ) : isEffortTheme && duration > 0 ? (
+                      formatTime(duration)
                     ) : (
-                      isEffortTheme && duration > 0 ? formatTime(duration) : '--:--'
+                      '--:--'
                     )}
                   </span>
-                  {isEffortTheme && isPlaying && (
-                    <span className="now-playing-tag">
-                      <span className="pulse-dot"></span> Đang đồng bộ phát
-                    </span>
-                  )}
                 </div>
+
+                <div className="efforts-seekbar-container">
+                  <input
+                    type="range"
+                    min={0}
+                    max={duration || 100}
+                    step={0.5}
+                    value={currentTime}
+                    onChange={(e) => {
+                      if (isEffortTheme && duration > 0) {
+                        seekTo(parseFloat(e.target.value));
+                      }
+                    }}
+                    className="efforts-seekbar-input"
+                    aria-label="Thanh tua bài hát"
+                    disabled={!isEffortTheme || duration <= 0}
+                  />
+                  <div
+                    className="efforts-seekbar-fill"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Cụm Nút Điều Khiển Phát Nhạc Đầy Đủ (Shuffle, Prev, Play/Pause, Next, Loop) */}
+              <div
+                className="efforts-controls-suite no-swipe"
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                {/* Nút ngẫu nhiên (Shuffle) */}
+                <button
+                  type="button"
+                  className={`effort-ctrl-btn secondary ${isShuffle ? 'is-active' : ''}`}
+                  onClick={() => {
+                    playClickSound();
+                    toggleShuffle();
+                  }}
+                  title={isShuffle ? 'Tắt phát ngẫu nhiên' : 'Bật phát ngẫu nhiên'}
+                  aria-label="Phát ngẫu nhiên"
+                >
+                  <i className="fa-solid fa-shuffle"></i>
+                </button>
+
+                {/* Nút nhịp trước (Prev) */}
+                <button
+                  type="button"
+                  className="effort-ctrl-btn nav"
+                  onClick={() => {
+                    playClickSound();
+                    prevTrack();
+                  }}
+                  title="Nhịp trước"
+                  aria-label="Bài trước"
+                >
+                  <i className="fa-solid fa-backward-step"></i>
+                </button>
+
+                {/* Nút Phát / Tạm dừng Trung Tâm Lớn */}
+                <button
+                  type="button"
+                  className={`effort-ctrl-btn master-play ${isPlaying && isEffortTheme ? 'is-playing' : ''}`}
+                  onClick={() => {
+                    playClickSound();
+                    if (!isEffortTheme) {
+                      playThemeTrack('giving-some-efforts', 0);
+                    } else {
+                      togglePlay();
+                    }
+                  }}
+                  title={isPlaying && isEffortTheme ? 'Tạm dừng (Space)' : 'Phát nhạc (Space)'}
+                  aria-label="Phát hoặc tạm dừng"
+                >
+                  {isLoading && isEffortTheme ? (
+                    <i className="fa-solid fa-circle-notch fa-spin"></i>
+                  ) : isPlaying && isEffortTheme ? (
+                    <i className="fa-solid fa-pause"></i>
+                  ) : (
+                    <i className="fa-solid fa-play" style={{ marginLeft: '3px' }}></i>
+                  )}
+                </button>
+
+                {/* Nút nhịp tiếp theo (Next) */}
+                <button
+                  type="button"
+                  className="effort-ctrl-btn nav"
+                  onClick={() => {
+                    playClickSound();
+                    nextTrack();
+                  }}
+                  title="Nhịp tiếp theo"
+                  aria-label="Bài tiếp theo"
+                >
+                  <i className="fa-solid fa-forward-step"></i>
+                </button>
+
+                {/* Nút chế độ lặp lại (Loop) */}
+                <button
+                  type="button"
+                  className={`effort-ctrl-btn secondary ${loopMode !== 'none' ? 'is-active' : ''}`}
+                  onClick={() => {
+                    playClickSound();
+                    cycleLoopMode();
+                  }}
+                  title={
+                    loopMode === 'all'
+                      ? 'Đang lặp lại cả danh sách'
+                      : loopMode === 'one'
+                      ? 'Đang lặp lại bài này'
+                      : 'Không lặp lại'
+                  }
+                  aria-label="Chế độ lặp lại"
+                >
+                  {loopMode === 'one' ? (
+                    <span style={{ fontSize: '0.82rem', fontWeight: 800 }}>1🔂</span>
+                  ) : (
+                    <i className="fa-solid fa-repeat"></i>
+                  )}
+                </button>
+              </div>
+
+              {/* Thanh Điều Chỉnh Âm Lượng & Mute Đồng Bộ MusicContext */}
+              <div
+                className="efforts-volume-suite no-swipe"
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  className="efforts-volume-mute-btn"
+                  onClick={() => {
+                    playClickSound();
+                    toggleMute();
+                  }}
+                  title={isMuted ? 'Bật âm thanh (M)' : 'Tắt tiếng (M)'}
+                  aria-label="Bật hoặc tắt tiếng"
+                >
+                  <i
+                    className={`fa-solid ${
+                      isMuted || volume === 0
+                        ? 'fa-volume-xmark'
+                        : volume < 0.5
+                        ? 'fa-volume-low'
+                        : 'fa-volume-high'
+                    }`}
+                  ></i>
+                </button>
+
+                <div className="efforts-volume-slider-wrapper">
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={isMuted ? 0 : volume}
+                    onChange={(e) => changeVolume(parseFloat(e.target.value))}
+                    className="efforts-volume-input"
+                    aria-label="Thanh chỉnh âm lượng"
+                  />
+                  <div
+                    className="efforts-volume-fill"
+                    style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
+                  />
+                </div>
+
+                <span className="efforts-volume-percent">
+                  {isMuted ? '0%' : `${Math.round(volume * 100)}%`}
+                </span>
               </div>
             </div>
 

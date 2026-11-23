@@ -54,11 +54,6 @@ export const PageTransitionWrapper = ({ children }) => {
     };
   }, []);
 
-  // Kéo vuốt cảm ứng (Touch / Mouse Gestures)
-  const [dragOffset, setDragOffset] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef({ x: 0, y: 0, time: 0 });
-
   // Tìm index của dashboard hiện tại
   const currentDashIndex = DASHBOARD_ROUTES.findIndex((r) => r.path === location.pathname);
 
@@ -104,121 +99,160 @@ export const PageTransitionWrapper = ({ children }) => {
   }, []);
 
   // =========================================================================
-  // GESTURES: BẤM CHUỘT HOẶC CHẠM TAY VUỐT MÀN HÌNH ĐỂ TRƯỢT GIAO DIỆN
+  // GESTURES: BẤM CHUỘT HOẶC CHẠM TAY VUỐT MÀN HÌNH ĐỂ TRƯỢT GIAO DIỆN 1:1
   // =========================================================================
 
+  // Trạng thái kéo và nảy mềm
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isSpringingBack, setIsSpringingBack] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0, time: 0, pointerId: null, isHorizontalSwipe: false });
+  const rafRef = useRef(null);
+  const pendingOffsetRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, []);
+
   const shouldIgnoreGesture = (target) => {
+    if (!target || !(target instanceof Element)) return false;
     return Boolean(
+      target.closest('.no-swipe') ||
       target.closest('button') ||
       target.closest('a') ||
       target.closest('input') ||
       target.closest('textarea') ||
       target.closest('select') ||
+      target.closest('[role="slider"]') ||
+      target.closest('[role="button"]') ||
+      target.closest('.efforts-card-container') ||
+      target.closest('.efforts-progress-wrap') ||
+      target.closest('.efforts-seekbar-container') ||
+      target.closest('.efforts-volume-suite') ||
+      target.closest('.efforts-volume-slider-wrapper') ||
+      target.closest('.audio-player-wrap') ||
       target.closest('.modal-backdrop') ||
       target.closest('.modal-box') ||
       target.closest('.interactive-canvas') ||
-      target.closest('.rich-visual-editor') ||
-      target.closest('.audio-player-wrap')
+      target.closest('.rich-visual-editor')
     );
   };
 
-  // Chuột bắt đầu kéo
-  const handleMouseDown = (e) => {
+  const handlePointerDown = (e) => {
+    // Chỉ xử lý chuột trái hoặc chạm tay
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (shouldIgnoreGesture(e.target)) return;
     if (currentDashIndex === -1) return;
 
+    setIsSpringingBack(false);
     dragStartRef.current = {
       x: e.clientX,
       y: e.clientY,
       time: Date.now(),
+      pointerId: e.pointerId,
+      isHorizontalSwipe: false,
     };
-    setIsDragging(true);
+    pendingOffsetRef.current = 0;
   };
 
-  const handleMouseMove = (e) => {
-    if (!isDragging) return;
+  const handlePointerMove = (e) => {
+    if (dragStartRef.current.pointerId !== e.pointerId) return;
+
     const deltaX = e.clientX - dragStartRef.current.x;
     const deltaY = e.clientY - dragStartRef.current.y;
 
-    if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaX) < 18) {
-      setIsDragging(false);
-      setDragOffset(0);
-      return;
-    }
-
-    // Điện trở đàn hồi khi kéo kịch biên (ở trang đầu hoặc trang cuối)
-    let effective = deltaX;
-    if ((deltaX > 0 && currentDashIndex === 0) || (deltaX < 0 && currentDashIndex === DASHBOARD_ROUTES.length - 1)) {
-      effective = deltaX * 0.28;
-    }
-
-    setDragOffset(effective);
-  };
-
-  const handleMouseUp = () => {
-    if (!isDragging) return;
-    setIsDragging(false);
-
-    const threshold = 55; // Kéo hơn 55px là kích hoạt chuyển giao diện
-    if (dragOffset < -threshold) {
-      // Kéo sang TRÁI -> Chuyển sang giao diện kế tiếp bên phải
-      if (currentDashIndex < DASHBOARD_ROUTES.length - 1) {
-        playClickSound();
-        const nextRoute = DASHBOARD_ROUTES[currentDashIndex + 1];
-        navigate(nextRoute.path);
+    // Nếu người dùng đang cuộn dọc tự nhiên, hủy ngay nhận diện vuốt ngang
+    if (!dragStartRef.current.isHorizontalSwipe) {
+      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 8) {
+        dragStartRef.current.pointerId = null;
+        if (isDragging) {
+          setIsDragging(false);
+          setDragOffset(0);
+        }
+        return;
       }
-    } else if (dragOffset > threshold) {
-      // Kéo sang PHẢI -> Chuyển sang giao diện trước đó bên trái
-      if (currentDashIndex > 0) {
-        playClickSound();
-        const prevRoute = DASHBOARD_ROUTES[currentDashIndex - 1];
-        navigate(prevRoute.path);
+      if (Math.abs(deltaX) > 12) {
+        dragStartRef.current.isHorizontalSwipe = true;
+        setIsDragging(true);
+        try {
+          e.currentTarget.setPointerCapture?.(e.pointerId);
+        } catch {
+          // Bỏ qua nếu browser không hỗ trợ capture
+        }
+      } else {
+        return;
       }
     }
 
-    setDragOffset(0);
-  };
-
-  // Chạm tay trên Màn Hình Cảm Ứng (Touch Screen / Mobile / Tablet)
-  const handleTouchStart = (e) => {
-    if (shouldIgnoreGesture(e.target)) return;
-    if (currentDashIndex === -1) return;
-
-    const touch = e.touches[0];
-    if (!touch) return;
-
-    dragStartRef.current = {
-      x: touch.clientX,
-      y: touch.clientY,
-      time: Date.now(),
-    };
-    setIsDragging(true);
-  };
-
-  const handleTouchMove = (e) => {
-    if (!isDragging) return;
-    const touch = e.touches[0];
-    if (!touch) return;
-
-    const deltaX = touch.clientX - dragStartRef.current.x;
-    const deltaY = touch.clientY - dragStartRef.current.y;
-
-    if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaX) < 18) {
-      setIsDragging(false);
-      setDragOffset(0);
-      return;
-    }
-
+    // Điện trở đàn hồi mượt mà khi kéo kịch biên (ở tab đầu hoặc tab cuối)
     let effective = deltaX;
     if ((deltaX > 0 && currentDashIndex === 0) || (deltaX < 0 && currentDashIndex === DASHBOARD_ROUTES.length - 1)) {
-      effective = deltaX * 0.28;
+      effective = deltaX * 0.22;
     }
 
-    setDragOffset(effective);
+    pendingOffsetRef.current = effective;
+    if (!rafRef.current) {
+      rafRef.current = requestAnimationFrame(() => {
+        setDragOffset(pendingOffsetRef.current);
+        rafRef.current = null;
+      });
+    }
   };
 
-  const handleTouchEnd = () => {
-    handleMouseUp();
+  const handlePointerUpOrCancel = (e) => {
+    if (dragStartRef.current.pointerId !== e.pointerId) return;
+
+    try {
+      if (e.currentTarget?.hasPointerCapture?.(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    } catch {
+      // ignore
+    }
+
+    dragStartRef.current.pointerId = null;
+    dragStartRef.current.isHorizontalSwipe = false;
+
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+
+    const currentOffset = pendingOffsetRef.current;
+    const threshold = 60; // Ngưỡng 60px kích hoạt chuyển trang
+
+    if (currentOffset < -threshold && currentDashIndex < DASHBOARD_ROUTES.length - 1) {
+      // Vuốt sang TRÁI -> Chuyển sang Dashboard kế tiếp
+      playClickSound();
+      const nextRoute = DASHBOARD_ROUTES[currentDashIndex + 1];
+      navigate(nextRoute.path);
+      setIsDragging(false);
+      setDragOffset(0);
+    } else if (currentOffset > threshold && currentDashIndex > 0) {
+      // Vuốt sang PHẢI -> Chuyển sang Dashboard trước đó
+      playClickSound();
+      const prevRoute = DASHBOARD_ROUTES[currentDashIndex - 1];
+      navigate(prevRoute.path);
+      setIsDragging(false);
+      setDragOffset(0);
+    } else {
+      // Chưa đạt ngưỡng hoặc ở kịch biên -> Nảy mềm (spring back) về 0px
+      if (Math.abs(currentOffset) > 0) {
+        setIsSpringingBack(true);
+        setDragOffset(0);
+        setTimeout(() => {
+          setIsDragging(false);
+          setIsSpringingBack(false);
+        }, 320);
+      } else {
+        setIsDragging(false);
+      }
+    }
   };
 
   const targetNext = currentDashIndex < DASHBOARD_ROUTES.length - 1 ? DASHBOARD_ROUTES[currentDashIndex + 1] : null;
@@ -227,13 +261,10 @@ export const PageTransitionWrapper = ({ children }) => {
   return (
     <div
       className="page-gesture-container"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUpOrCancel}
+      onPointerCancel={handlePointerUpOrCancel}
       style={{
         position: 'relative',
         width: '100%',
@@ -250,7 +281,7 @@ export const PageTransitionWrapper = ({ children }) => {
           className="drag-dashboard-indicator"
           style={{
             position: 'fixed',
-            top: '45%',
+            top: '46%',
             left: dragOffset < 0 ? 'auto' : '20px',
             right: dragOffset < 0 ? '20px' : 'auto',
             transform: 'translateY(-50%)',
@@ -293,15 +324,20 @@ export const PageTransitionWrapper = ({ children }) => {
         activeEvent={activeFestiveEvent}
       />
 
-      {/* Vùng chứa nội dung trang với hiệu ứng trượt màn hình cảm ứng toàn diện */}
+      {/* Vùng chứa nội dung trang với hiệu ứng trượt màn hình cảm ứng 1:1 siêu mượt */}
       <div
         key={location.pathname}
         className={`page-transition-content-box ${
           transitionDirection === 'forward' ? 'anim-direction-forward' : 'anim-direction-backward'
         } ${isTransitioning ? 'is-animating' : ''}`}
         style={{
-          transform: isDragging ? `translate3d(${dragOffset}px, 0, 0)` : undefined,
-          transition: isDragging ? 'none' : undefined,
+          transform: isDragging || isSpringingBack ? `translate3d(${dragOffset}px, 0, 0)` : undefined,
+          transition: isSpringingBack
+            ? 'transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)'
+            : isDragging
+            ? 'none'
+            : undefined,
+          willChange: isDragging || isSpringingBack ? 'transform' : 'auto',
         }}
       >
         {children}
