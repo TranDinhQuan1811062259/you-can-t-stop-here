@@ -22060,6 +22060,19 @@ body.theme-dark .notif-dropdown-footer,
   text-overflow: ellipsis;
 }
 
+.beat-kbd-hint {
+  font-family: monospace;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #fbbf24;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 4px;
+  padding: 1px 5px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .beat-desc {
   font-size: 0.72rem;
   color: #94a3b8;
@@ -22187,6 +22200,40 @@ body.theme-dark .notif-dropdown-footer,
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.quote-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quote-copy-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #cbd5e1;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.quote-copy-btn:hover {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.quote-copy-btn.is-copied {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #34d399;
 }
 
 .quote-category-tag {
@@ -22366,6 +22413,36 @@ body.theme-dark .notif-dropdown-footer,
   }
 }
 
+.user-milestone-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+.effort-milestone-toast {
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #fef08a;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.28) 0%, rgba(217, 119, 6, 0.38) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.55);
+  padding: 6px 14px;
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.25);
+  animation: fadeInMilestone 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInMilestone {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .effort-cheer-toast {
   text-align: center;
   font-size: 0.78rem;
@@ -22461,6 +22538,38 @@ body.theme-light .counter-num,
 [data-theme="light"] .counter-num,
 .mode-light .counter-num {
   color: #d97706 !important;
+}
+
+body.theme-light .quote-copy-btn,
+[data-theme="light"] .quote-copy-btn,
+.mode-light .quote-copy-btn {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  color: #475569 !important;
+}
+
+body.theme-light .quote-copy-btn.is-copied,
+[data-theme="light"] .quote-copy-btn.is-copied,
+.mode-light .quote-copy-btn.is-copied {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  color: #059669 !important;
+}
+
+body.theme-light .beat-kbd-hint,
+[data-theme="light"] .beat-kbd-hint,
+.mode-light .beat-kbd-hint {
+  background: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(217, 119, 6, 0.3) !important;
+  color: #b45309 !important;
+}
+
+body.theme-light .user-milestone-pill,
+[data-theme="light"] .user-milestone-pill,
+.mode-light .user-milestone-pill {
+  background: rgba(245, 158, 11, 0.15) !important;
+  border-color: rgba(217, 119, 6, 0.4) !important;
+  color: #b45309 !important;
 }
 
 /* ========================================================

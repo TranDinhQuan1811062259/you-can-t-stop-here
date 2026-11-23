@@ -50,6 +50,25 @@ const CHEER_MESSAGES = [
   '🌱 Mỗi cố gắng hôm nay đều đang đơm hoa kết trái!',
 ];
 
+// Cột mốc vinh danh nỗ lực cá nhân
+const EFFORT_MILESTONES = {
+  10: { badge: '🌱 Hạt Mầm Bền Bỉ', msg: '🌱 Chúc mừng bạn đạt mốc 10 nỗ lực! Hạt mầm kiên trì đã bắt đầu đâm chồi!' },
+  25: { badge: '🏆 Nhịp Bước Vững Vàng', msg: '🏆 Tuyệt vời! Mốc 25 nỗ lực ghi nhận ý chí kiên định phi thường!' },
+  50: { badge: '🌟 Ngọn Lửa Tiếp Sức', msg: '🌟 Mốc 50 nỗ lực! Bạn đang lan tỏa năng lượng tích cực mạnh mẽ!' },
+  100: { badge: '👑 Bậc Thầy Kiên Trì', msg: '👑 Huyền thoại 100 nỗ lực! Bạn đã chứng minh sức mạnh của sự không dừng lại!' },
+  200: { badge: '💎 Bản Lĩnh Thép', msg: '💎 Mốc 200 nỗ lực! Một cột mốc vàng chói lọi của sự nỗ lực không ngừng!' },
+};
+
+// Hàm lấy huy hiệu cột mốc hiện tại của người dùng
+const getUserMilestoneBadge = (count) => {
+  if (count >= 200) return '💎 Bản Lĩnh Thép';
+  if (count >= 100) return '👑 Bậc Thầy Kiên Trì';
+  if (count >= 50) return '🌟 Ngọn Lửa Tiếp Sức';
+  if (count >= 25) return '🏆 Nhịp Bước Vững Vàng';
+  if (count >= 10) return '🌱 Hạt Mầm Bền Bỉ';
+  return null;
+};
+
 // Hàm format giây thành mm:ss an toàn chống NaN
 const formatTime = (secs) => {
   if (!secs || isNaN(secs) || !isFinite(secs) || secs < 0) return '0:00';
@@ -76,10 +95,15 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
   const [isExpanded, setIsExpanded] = useState(true);
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [isQuoteFading, setIsQuoteFading] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
   const [sparkles, setSparkles] = useState([]);
   const [cheerNotice, setCheerNotice] = useState(null);
+  const [milestoneNotice, setMilestoneNotice] = useState(null);
+
   const cheerTimerRef = useRef(null);
   const quoteFadeTimerRef = useRef(null);
+  const copyTimerRef = useRef(null);
+  const milestoneTimerRef = useRef(null);
   const progressBarRef = useRef(null);
 
   // Số lượt nỗ lực ghi nhận (cá nhân & cộng đồng)
@@ -107,7 +131,7 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
   const isSong1Playing = isEffortTheme && currentTrackIndex === 0 && isPlaying;
   const isSong2Playing = isEffortTheme && currentTrackIndex === 1 && isPlaying;
 
-  // Dọn dẹp timer cheer notice & fade quote khi unmount
+  // Dọn dẹp toàn bộ timer khi unmount (Quy tắc 3 GEMINI.md)
   useEffect(() => {
     return () => {
       if (cheerTimerRef.current) {
@@ -115,6 +139,12 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
       }
       if (quoteFadeTimerRef.current) {
         clearTimeout(quoteFadeTimerRef.current);
+      }
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current);
+      }
+      if (milestoneTimerRef.current) {
+        clearTimeout(milestoneTimerRef.current);
       }
     };
   }, []);
@@ -154,6 +184,37 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
       playThemeTrack('giving-some-efforts', trackIdx);
     }
   }, [isEffortTheme, currentTrackIndex, togglePlay, playThemeTrack]);
+
+  // Phím tắt thông minh số 1 và 2: Chuyển nhanh giữa 2 nhịp nhạc khi không gõ text
+  useEffect(() => {
+    const handleBeatShortcuts = (e) => {
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      const target = e.target;
+      if (!target) return;
+      const tag = target.tagName ? target.tagName.toLowerCase() : '';
+      const isInput = tag === 'input' || tag === 'textarea' || tag === 'select';
+      const isEditable = target.isContentEditable || target.getAttribute?.('contenteditable') === 'true';
+      const isInsideEditor = Boolean(
+        target.closest?.(
+          'input, textarea, select, [contenteditable="true"], .rich-editor, .ql-editor, .w-md-editor, [role="textbox"]'
+        )
+      );
+      if (isInput || isEditable || isInsideEditor) return;
+
+      if (e.key === '1' || e.code === 'Digit1' || e.code === 'Numpad1') {
+        e.preventDefault();
+        handleSelectTrack(0);
+      } else if (e.key === '2' || e.code === 'Digit2' || e.code === 'Numpad2') {
+        e.preventDefault();
+        handleSelectTrack(1);
+      }
+    };
+
+    window.addEventListener('keydown', handleBeatShortcuts);
+    return () => {
+      window.removeEventListener('keydown', handleBeatShortcuts);
+    };
+  }, [handleSelectTrack]);
 
   // Tua thời lượng bài hát
   const handleSeek = (e) => {
@@ -204,6 +265,16 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
       localStorage.setItem('freedom_community_effort_count', String(nextCommunityCount));
     } catch (_) {}
 
+    // Kiểm tra và hiển thị mốc kỷ lục tiếp sức cá nhân
+    const reachedMilestone = EFFORT_MILESTONES[nextUserCount];
+    if (reachedMilestone) {
+      setMilestoneNotice(reachedMilestone.msg);
+      if (milestoneTimerRef.current) clearTimeout(milestoneTimerRef.current);
+      milestoneTimerRef.current = setTimeout(() => {
+        setMilestoneNotice(null);
+      }, 4500);
+    }
+
     // Thông điệp khích lệ ngẫu nhiên
     const randomMsg = CHEER_MESSAGES[Math.floor(Math.random() * CHEER_MESSAGES.length)];
     setCheerNotice(randomMsg);
@@ -213,8 +284,45 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
     }, 2800);
   };
 
+  // Sao chép câu truyền cảm hứng kèm trích dẫn nguồn
+  const handleCopyQuote = useCallback(() => {
+    playClickSound();
+    const textToCopy = `"${currentQuote.quote}" — ${currentQuote.author} • You Can't Stop Here`;
+
+    const copyFallback = (text) => {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        setIsCopied(true);
+      } catch (_) {}
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        setIsCopied(true);
+      }).catch(() => {
+        copyFallback(textToCopy);
+      });
+    } else {
+      copyFallback(textToCopy);
+    }
+
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => {
+      setIsCopied(false);
+    }, 2000);
+  }, [currentQuote]);
+
   const currentQuote = MOTIVATION_QUOTES[quoteIndex];
   const progressPercent = isEffortTheme && duration > 0 ? (currentTime / duration) * 100 : 0;
+  const userMilestone = getUserMilestoneBadge(userEfforts);
 
   return (
     <section
@@ -276,7 +384,7 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
                   type="button"
                   className={`beat-select-btn ${isEffortTheme && currentEffortTrackIdx === 0 ? 'is-active' : ''}`}
                   onClick={() => handleSelectTrack(0)}
-                  title="Nhịp 1: Giai điệu mộc mạc, giữ nhịp kiên trì lúc mỏi mệt"
+                  title="Nhịp 1: Giai điệu mộc mạc, giữ nhịp kiên trì lúc mỏi mệt (Phím tắt: 1)"
                 >
                   <div className="beat-btn-icon-wrap">
                     {isSong1Playing ? (
@@ -288,7 +396,10 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
                     )}
                   </div>
                   <div className="beat-btn-text">
-                    <strong className="beat-name">Nhịp 1: Bền Bỉ</strong>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                      <strong className="beat-name">Nhịp 1: Bền Bỉ</strong>
+                      <kbd className="beat-kbd-hint" title="Bấm phím 1 để chọn nhanh">1</kbd>
+                    </div>
                     <span className="beat-desc">Song 1E • Vững bước qua deadline</span>
                   </div>
                 </button>
@@ -297,7 +408,7 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
                   type="button"
                   className={`beat-select-btn ${isEffortTheme && currentEffortTrackIdx === 1 ? 'is-active' : ''}`}
                   onClick={() => handleSelectTrack(1)}
-                  title="Nhịp 2: Giai điệu tươi sáng, tiếp thêm hy vọng và năng lượng"
+                  title="Nhịp 2: Giai điệu tươi sáng, tiếp thêm hy vọng và năng lượng (Phím tắt: 2)"
                 >
                   <div className="beat-btn-icon-wrap">
                     {isSong2Playing ? (
@@ -309,7 +420,10 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
                     )}
                   </div>
                   <div className="beat-btn-text">
-                    <strong className="beat-name">Nhịp 2: Vươn Lên</strong>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                      <strong className="beat-name">Nhịp 2: Vươn Lên</strong>
+                      <kbd className="beat-kbd-hint" title="Bấm phím 2 để chọn nhanh">2</kbd>
+                    </div>
                     <span className="beat-desc">Song 2E • Ánh sáng cuối con đường</span>
                   </div>
                 </button>
@@ -390,9 +504,21 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
               {/* Carousel Thông Điệp Động Lực */}
               <div className="quote-display-card">
                 <div className="quote-card-header">
-                  <span className="quote-category-tag">
-                    {currentQuote.icon} {currentQuote.tag}
-                  </span>
+                  <div className="quote-header-left">
+                    <span className="quote-category-tag">
+                      {currentQuote.icon} {currentQuote.tag}
+                    </span>
+                    <button
+                      type="button"
+                      className={`quote-copy-btn ${isCopied ? 'is-copied' : ''}`}
+                      onClick={handleCopyQuote}
+                      title={isCopied ? 'Đã sao chép câu truyền cảm hứng!' : 'Sao chép câu truyền cảm hứng này'}
+                      aria-label="Sao chép câu truyền cảm hứng"
+                    >
+                      <i className={`fa-solid ${isCopied ? 'fa-check' : 'fa-copy'}`}></i>
+                      <span className="copy-label">{isCopied ? 'Đã chép' : 'Sao chép'}</span>
+                    </button>
+                  </div>
                   <div className="quote-nav-controls">
                     <button
                       type="button"
@@ -435,6 +561,11 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
                   <div className="counter-item user-counter" title="Số nhịp nỗ lực bạn đã ghi nhận">
                     <span className="counter-label">Nỗ lực của bạn:</span>
                     <strong className="counter-num">{userEfforts}</strong>
+                    {userMilestone && (
+                      <span className="user-milestone-pill" title="Cột mốc danh dự bạn đã chinh phục">
+                        {userMilestone}
+                      </span>
+                    )}
                   </div>
                   <div className="counter-divider">|</div>
                   <div className="counter-item community-counter" title="Tổng nỗ lực cộng đồng đã cùng nhau tiếp sức">
@@ -470,8 +601,15 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
                   ))}
                 </div>
 
+                {/* Thông Báo Mốc Kỷ Lục Tiếp Sức */}
+                {milestoneNotice && (
+                  <div className="effort-milestone-toast" role="status" aria-live="polite">
+                    {milestoneNotice}
+                  </div>
+                )}
+
                 {/* Thông Báo Khích Lệ Nhẹ Nhàng */}
-                {cheerNotice && (
+                {cheerNotice && !milestoneNotice && (
                   <div className="effort-cheer-toast" role="status" aria-live="polite">
                     {cheerNotice}
                   </div>
