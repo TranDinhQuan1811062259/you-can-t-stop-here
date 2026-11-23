@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getPlaylistBySlug, getAllPlaylists } from '../data/playlists';
+import { getActiveSeason } from '../utils/seasonUtils';
 import { useMusicPlayer } from '../hooks/useMusicPlayer';
 import { MusicPlayerCard } from '../components/music/MusicPlayerCard';
 import { MusicTrackList } from '../components/music/MusicTrackList';
@@ -47,8 +48,8 @@ export const MusicPage = () => {
 
   return (
     <div className={`music-page-wrapper ${isZenMode ? 'zen-mode-active' : ''}`}>
-      {/* Hiệu ứng thời tiết theo chủ đề (Mùa đông: Tuyết rơi mờ ảo 60fps) */}
-      {currentTheme.atmosphere?.type === 'snow' && (
+      {/* Hiệu ứng thời tiết theo chủ đề (Chỉ render cục bộ nếu layout toàn cục chưa kích hoạt mùa đông) */}
+      {currentTheme.atmosphere?.type === 'snow' && getActiveSeason()?.id !== 'winter' && (
         <WinterSnowAtmosphere
           density={currentTheme.atmosphere.density || 35}
           speed={currentTheme.atmosphere.speed || 0.6}

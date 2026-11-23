@@ -880,6 +880,13 @@ export const MusicProvider = ({ children }) => {
     };
 
     const attemptAutoplay = async () => {
+      // 1. Thử kích hoạt sớm Web Audio Context của hiệu ứng môi trường mùa đông
+      try {
+        await resumeAmbientAudioContext();
+        startWeatherAmbient('winter');
+      } catch (_) {}
+
+      // 2. Thử tự động phát nhạc nền ngay từ đầu (có bọc try/catch chống lỗi trình duyệt)
       try {
         const playPromise = audio.play();
         if (playPromise !== undefined) {
@@ -890,7 +897,7 @@ export const MusicProvider = ({ children }) => {
         }
       } catch (err) {
         if (err?.name === 'AbortError') return;
-        console.info('[MusicAutoplay] Autoplay restricted on load, awaiting first user interaction.');
+        console.info('[MusicAutoplay] Autoplay policy prevented immediate playback, unlocking on first interaction.');
         setIsPlaying(false);
         setIsAutoplayBlocked(true);
         window.addEventListener('pointerdown', onFirstUserGesture, { once: true });
