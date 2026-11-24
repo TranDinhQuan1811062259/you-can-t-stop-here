@@ -17,6 +17,7 @@ export const MutualMemoriesDrawer = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [bondData, setBondData] = useState(null);
+  const [filterType, setFilterType] = useState('all'); // 'all' | 'reaction' | 'comment'
 
   useEffect(() => {
     if (!isOpen || !targetUserId) return;
@@ -83,6 +84,12 @@ export const MutualMemoriesDrawer = ({
   const partnerRatio = 100 - selfRatio;
 
   const memories = Array.isArray(bondData?.recentMemories) ? bondData.recentMemories : [];
+  const reactionCount = memories.filter((m) => m.type === 'reaction').length;
+  const commentCount = memories.filter((m) => m.type === 'comment').length;
+  const filteredMemories = memories.filter((m) => {
+    if (filterType === 'all') return true;
+    return m.type === filterType;
+  });
 
   return (
     <div
@@ -302,12 +309,90 @@ export const MutualMemoriesDrawer = ({
               </div>
 
               {/* Dòng Thời Gian Kỷ Niệm (Timeline) */}
-              <h4 style={{ margin: '0 0 12px', fontSize: '0.9rem', color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>✨ Các Mốc Tương Tác Gần Nhất</span>
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 400 }}>
-                  ({memories.length} mốc)
-                </span>
-              </h4>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  marginBottom: '10px',
+                }}
+              >
+                <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>✨ Các Mốc Tương Tác Gần Nhất</span>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 400 }}>
+                    ({memories.length} mốc)
+                  </span>
+                </h4>
+              </div>
+
+              {/* Thanh Bộ Lọc Phân Loại (Filter Tabs) */}
+              {memories.length > 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    flexWrap: 'wrap',
+                    marginBottom: '14px',
+                  }}
+                  role="tablist"
+                  aria-label="Lọc mốc kỷ niệm"
+                >
+                  {[
+                    { key: 'all', label: 'Tất cả', count: memories.length, icon: '🌟' },
+                    { key: 'reaction', label: 'Thắp nến / Tim', count: reactionCount, icon: '🕯️' },
+                    { key: 'comment', label: 'Bình luận', count: commentCount, icon: '💬' },
+                  ].map((tab) => {
+                    const isActive = filterType === tab.key;
+                    return (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        onClick={() => {
+                          playClickSound();
+                          setFilterType(tab.key);
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          padding: '5px 11px',
+                          borderRadius: '999px',
+                          fontSize: '0.76rem',
+                          fontWeight: isActive ? 700 : 500,
+                          border: isActive ? '1px solid #f59e0b' : '1px solid #e2e8f0',
+                          background: isActive
+                            ? 'linear-gradient(135deg, #f59e0b, #ef4444)'
+                            : '#ffffff',
+                          color: isActive ? '#ffffff' : '#475569',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          boxShadow: isActive ? '0 2px 6px rgba(245, 158, 11, 0.25)' : 'none',
+                        }}
+                      >
+                        <span style={{ fontSize: '0.85rem' }}>{tab.icon}</span>
+                        <span>{tab.label}</span>
+                        <span
+                          style={{
+                            fontSize: '0.7rem',
+                            padding: '1px 5px',
+                            borderRadius: '999px',
+                            background: isActive ? 'rgba(255, 255, 255, 0.25)' : '#e2e8f0',
+                            color: isActive ? '#ffffff' : '#64748b',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {tab.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               {memories.length === 0 ? (
                 <div
@@ -327,9 +412,45 @@ export const MutualMemoriesDrawer = ({
                     Hãy cùng thắp nến và để lại lời bình luận cho nhau để lưu giữ những kỷ niệm đầu tiên nhé!
                   </p>
                 </div>
+              ) : filteredMemories.length === 0 ? (
+                <div
+                  style={{
+                    padding: '20px 16px',
+                    textAlign: 'center',
+                    background: '#f8fafc',
+                    borderRadius: '12px',
+                    border: '1px dashed #cbd5e1',
+                  }}
+                >
+                  <span style={{ fontSize: '1.4rem', display: 'block', marginBottom: '6px' }}>
+                    {filterType === 'comment' ? '💬' : '🕯️'}
+                  </span>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748b', fontWeight: 500 }}>
+                    Chưa có mốc kỷ niệm nào thuộc danh mục "{filterType === 'comment' ? 'Bình luận' : 'Thắp nến / Thả tim'}".
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playClickSound();
+                      setFilterType('all');
+                    }}
+                    style={{
+                      marginTop: '8px',
+                      background: 'none',
+                      border: 'none',
+                      color: '#0284c7',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    Xem tất cả kỷ niệm ({memories.length})
+                  </button>
+                </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {memories.map((m, idx) => {
+                  {filteredMemories.map((m, idx) => {
                     const isComment = m.type === 'comment';
                     const icon = isComment ? '💬' : '🕯️';
                     const actionText = isComment ? 'đã gửi bình luận vào' : 'đã thắp nến / thả tim vào';

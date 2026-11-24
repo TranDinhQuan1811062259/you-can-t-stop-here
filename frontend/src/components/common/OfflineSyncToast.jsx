@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
-import { playClickSound } from '../../utils/soundEffects';
+import { playClickSound, playReconnectCue } from '../../utils/soundEffects';
 
 const OFFLINE_QUEUE_KEY = 'freedom_offline_post_queue_v1';
 
@@ -8,6 +8,7 @@ export const OfflineSyncToast = () => {
   const { isOnline } = useNetworkStatus();
   const [queuedPost, setQueuedPost] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
+  const wasOfflineRef = useRef(!isOnline);
 
   const checkQueue = useCallback(() => {
     try {
@@ -28,10 +29,16 @@ export const OfflineSyncToast = () => {
     }
   }, []);
 
-  // Kiểm tra hàng đợi khi mount và khi mạng online trở lại
+  // Kiểm tra hàng đợi khi mount và khi mạng online trở lại kèm chuông gió báo hiệu
   useEffect(() => {
     if (isOnline) {
+      if (wasOfflineRef.current) {
+        playReconnectCue();
+        wasOfflineRef.current = false;
+      }
       checkQueue();
+    } else {
+      wasOfflineRef.current = true;
     }
   }, [isOnline, checkQueue]);
 
@@ -61,10 +68,12 @@ export const OfflineSyncToast = () => {
   };
 
   const handleDismiss = () => {
+    playClickSound();
     setIsVisible(false);
   };
 
   const handleDiscardQueue = () => {
+    playClickSound();
     try {
       localStorage.removeItem(OFFLINE_QUEUE_KEY);
       setQueuedPost(null);

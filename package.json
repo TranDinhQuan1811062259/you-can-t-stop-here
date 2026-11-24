@@ -8,6 +8,7 @@
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build",
+    "check:static": "node --check backend/src/server.js && cd frontend && npm run build",
     "start": "start-project.bat"
   }
 }

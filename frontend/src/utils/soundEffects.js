@@ -2170,6 +2170,73 @@ export const createCafeAmbientNode = (volume = 0.5) => {
 };
 
 /**
+ * Chuông gió báo hiệu kết nối mạng phục hồi (Reconnect Audio Cue)
+ * Hòa âm 2 nốt dịu dàng (E5 659Hz -> B5 988Hz), Web Audio API thuần, tự động ngắt kết nối dọn dẹp RAM.
+ */
+export const playReconnectCue = () => {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    const now = ctx.currentTime;
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.08, now);
+    masterGain.connect(ctx.destination);
+
+    // Nốt 1: E5 (659.25Hz) - Âm vang mở đầu dịu dàng
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(659.25, now);
+
+    gain1.gain.setValueAtTime(0.0001, now);
+    gain1.gain.linearRampToValueAtTime(0.7, now + 0.02);
+    gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+
+    osc1.connect(gain1);
+    gain1.connect(masterGain);
+
+    osc1.start(now);
+    osc1.stop(now + 0.46);
+
+    // Nốt 2: B5 (987.77Hz) - Hòa âm tăng dần mang lại cảm giác tích cực, thông suốt
+    const note2Start = now + 0.11;
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(987.77, note2Start);
+
+    gain2.gain.setValueAtTime(0.0001, note2Start);
+    gain2.gain.linearRampToValueAtTime(0.65, note2Start + 0.02);
+    gain2.gain.exponentialRampToValueAtTime(0.0001, note2Start + 0.5);
+
+    osc2.connect(gain2);
+    gain2.connect(masterGain);
+
+    osc2.start(note2Start);
+    osc2.stop(note2Start + 0.51);
+
+    // Dọn dẹp tài nguyên bắt buộc sau khi âm thanh hoàn tất
+    setTimeout(() => {
+      try {
+        osc1.disconnect();
+        gain1.disconnect();
+        osc2.disconnect();
+        gain2.disconnect();
+        masterGain.disconnect();
+      } catch (_) {}
+    }, 700);
+  } catch (err) {
+    // Tránh crash nếu trình duyệt chặn autoplay
+  }
+};
+
+/**
  * Khởi tạo listener toàn cục bắt sự kiện click và rê chuột trên các phần tử tương tác
  */
 let isInitialized = false;
