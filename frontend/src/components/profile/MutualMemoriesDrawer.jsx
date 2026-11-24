@@ -100,12 +100,14 @@ export const MutualMemoriesDrawer = ({
         inset: 0,
         backgroundColor: 'rgba(15, 23, 42, 0.65)',
         backdropFilter: 'blur(5px)',
+        WebkitBackdropFilter: 'blur(5px)',
         zIndex: 10020,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px',
+        padding: 'clamp(8px, 2.5vw, 16px)',
         animation: 'fadeIn 0.2s ease-out',
+        boxSizing: 'border-box',
       }}
     >
       <div
@@ -114,32 +116,35 @@ export const MutualMemoriesDrawer = ({
         style={{
           width: '100%',
           maxWidth: '560px',
-          maxHeight: '90vh',
+          maxHeight: '92vh',
           backgroundColor: '#ffffff',
-          borderRadius: '18px',
+          borderRadius: 'clamp(14px, 4vw, 18px)',
           boxShadow: '0 20px 45px rgba(0, 0, 0, 0.25)',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
+          boxSizing: 'border-box',
         }}
       >
         {/* Header */}
         <div
           style={{
-            padding: '18px 22px',
+            padding: 'clamp(12px, 3.5vw, 18px) clamp(14px, 4vw, 22px)',
             borderBottom: '1px solid #f1f5f9',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            gap: '10px',
             background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
             <span
               style={{
                 width: '36px',
                 height: '36px',
+                minWidth: '36px',
                 borderRadius: '10px',
                 background: 'linear-gradient(135deg, #f59e0b, #ef4444)',
                 color: '#ffffff',
@@ -148,16 +153,36 @@ export const MutualMemoriesDrawer = ({
                 justifyContent: 'center',
                 fontSize: '1.1rem',
                 boxShadow: '0 4px 10px rgba(245, 158, 11, 0.3)',
+                flexShrink: 0,
               }}
             >
               📖
             </span>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: 'clamp(0.92rem, 3.5vw, 1.05rem)',
+                  fontWeight: 800,
+                  color: '#0f172a',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
                 Nhật Ký Tri Kỷ
               </h3>
-              <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
-                Hành trình tương tác và gắn kết giữa bạn & {partner?.name || 'Bạn đồng hành'}
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '0.76rem',
+                  color: '#64748b',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                Hành trình tương tác cùng {partner?.name || 'Bạn đồng hành'}
               </p>
             </div>
           </div>
@@ -168,24 +193,29 @@ export const MutualMemoriesDrawer = ({
               background: '#e2e8f0',
               border: 'none',
               borderRadius: '50%',
-              width: '32px',
-              height: '32px',
+              width: '34px',
+              height: '34px',
+              minWidth: '34px',
+              minHeight: '34px',
               cursor: 'pointer',
               color: '#475569',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 700,
-              fontSize: '0.9rem',
+              fontSize: '0.95rem',
               transition: 'all 0.15s ease',
+              flexShrink: 0,
+              touchAction: 'manipulation',
             }}
+            aria-label="Đóng nhật ký"
           >
             ✕
           </button>
         </div>
 
         {/* Nội dung chính cuộn dọc */}
-        <div style={{ padding: 'clamp(14px, 4vw, 22px)', overflowY: 'auto', flex: 1 }}>
+        <div style={{ padding: 'clamp(12px, 3.5vw, 20px)', overflowY: 'auto', overflowX: 'hidden', flex: 1 }}>
           {loading ? (
             <div style={{ padding: '40px 0', textAlign: 'center' }}>
               <LoadingSpinner />
@@ -360,7 +390,8 @@ export const MutualMemoriesDrawer = ({
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '5px',
-                          padding: '5px 11px',
+                          padding: '6px 12px',
+                          minHeight: '34px',
                           borderRadius: '999px',
                           fontSize: '0.76rem',
                           fontWeight: isActive ? 700 : 500,
@@ -372,6 +403,7 @@ export const MutualMemoriesDrawer = ({
                           cursor: 'pointer',
                           transition: 'all 0.15s ease',
                           boxShadow: isActive ? '0 2px 6px rgba(245, 158, 11, 0.25)' : 'none',
+                          touchAction: 'manipulation',
                         }}
                       >
                         <span style={{ fontSize: '0.85rem' }}>{tab.icon}</span>

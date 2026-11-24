@@ -23501,4 +23501,37 @@ body.theme-light .user-milestone-pill,
   }
 }
 
+/* ========================================================
+   MOBILE UX POLISH: POST DETAIL & MUTUAL MEMORIES (360px - 430px)
+   ======================================================== */
+@media (max-width: 480px) {
+  .post-detail-wrap .breadcrumb-nav {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .post-detail-wrap .breadcrumb-nav > div:last-child {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .post-copy-link-btn {
+    padding: 6px 12px !important;
+    font-size: 0.78rem !important;
+    touch-action: manipulation !important;
+    min-height: 36px !important;
+  }
+
+  .mutual-memories-box {
+    width: 100% !important;
+    max-height: 94vh !important;
+    border-radius: 14px !important;
+  }
+}
+
+
 

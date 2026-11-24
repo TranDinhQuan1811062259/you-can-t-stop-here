@@ -1,3 +1,21 @@
+import {
+  NOTIFICATION_TONES,
+  NOTIFICATION_TONE_STORAGE_KEY,
+  getStoredNotificationTone,
+  setStoredNotificationTone,
+  playNotificationTone,
+  stopNotificationTone,
+} from './campfireAudio';
+
+export {
+  NOTIFICATION_TONES,
+  NOTIFICATION_TONE_STORAGE_KEY,
+  getStoredNotificationTone,
+  setStoredNotificationTone,
+  playNotificationTone,
+  stopNotificationTone,
+};
+
 /**
  * Hệ thống âm thanh tương tác Web Audio API (Click, Hover & Âm Thanh Sự Kiện Lễ Hội)
  * Không phụ thuộc file âm thanh ngoài, hoạt động mượt mà 0ms độ trễ.

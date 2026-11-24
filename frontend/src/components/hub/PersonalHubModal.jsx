@@ -11,6 +11,10 @@ import {
   playCampfireSound,
   isCampfireSoundEnabled,
   setCampfireSoundEnabled,
+  NOTIFICATION_TONES,
+  getStoredNotificationTone,
+  setStoredNotificationTone,
+  playNotificationTone,
 } from '../../utils/campfireAudio';
 import { triggerHaptic } from '../../utils/haptics';
 import { HonorCardModal } from './HonorCardModal';
@@ -61,6 +65,7 @@ export const PersonalHubModal = () => {
   const [sparksOrigin, setSparksOrigin] = useState(null);
   const [milestoneCelebration, setMilestoneCelebration] = useState(null);
   const [campfireSoundOn, setCampfireSoundOn] = useState(() => isCampfireSoundEnabled());
+  const [selectedTone, setSelectedTone] = useState(() => getStoredNotificationTone());
   const [isHonorCardOpen, setIsHonorCardOpen] = useState(false);
   const [isProfileQrOpen, setIsProfileQrOpen] = useState(false);
   const [topBonds, setTopBonds] = useState([]);
@@ -75,6 +80,16 @@ export const PersonalHubModal = () => {
     const next = !campfireSoundOn;
     setCampfireSoundOn(next);
     setCampfireSoundEnabled(next);
+  };
+
+  const handleSelectTone = (toneId) => {
+    playClickSound();
+    setSelectedTone(toneId);
+    setStoredNotificationTone(toneId);
+    triggerHaptic([15]);
+    if (toneId !== 'muted') {
+      playNotificationTone(toneId, { volume: 0.5 });
+    }
   };
 
   // Tính toán 7 ngày trong tuần hiện tại theo giờ Việt Nam
@@ -878,6 +893,132 @@ export const PersonalHubModal = () => {
                     })}
                   </div>
                 )}
+              </div>
+
+              {/* Tùy chọn Âm Báo Kết Nối & Thông Báo Cá Nhân Hóa (Notification Tone Selector) */}
+              <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+                <h4 className="hub-section-title">
+                  <span>
+                    <i className="fa-solid fa-bell" style={{ color: '#f59e0b', marginRight: '6px' }}></i>
+                    Âm Báo Kết Nối &amp; Thông Báo
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Web Audio 0ms trễ</span>
+                </h4>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '10px',
+                  }}
+                >
+                  {NOTIFICATION_TONES.map((tone) => {
+                    const isSelected = selectedTone === tone.id;
+                    return (
+                      <div
+                        key={tone.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleSelectTone(tone.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleSelectTone(tone.id);
+                          }
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '10px',
+                          padding: '10px 12px',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          background: isSelected
+                            ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(239, 68, 68, 0.12) 100%)'
+                            : 'rgba(30, 41, 59, 0.45)',
+                          border: isSelected
+                            ? '1.5px solid #f59e0b'
+                            : '1px solid rgba(255, 255, 255, 0.08)',
+                          boxShadow: isSelected
+                            ? '0 4px 14px rgba(245, 158, 11, 0.22)'
+                            : 'none',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                          <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>{tone.icon}</span>
+                          <div style={{ minWidth: 0 }}>
+                            <div
+                              style={{
+                                fontSize: '0.84rem',
+                                fontWeight: 700,
+                                color: isSelected ? '#f59e0b' : '#f8fafc',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                              }}
+                            >
+                              <span>{tone.name}</span>
+                              {isSelected && (
+                                <span
+                                  style={{
+                                    fontSize: '0.65rem',
+                                    padding: '1px 6px',
+                                    borderRadius: '999px',
+                                    background: '#f59e0b',
+                                    color: '#0f172a',
+                                    fontWeight: 800,
+                                  }}
+                                >
+                                  Đang dùng
+                                </span>
+                              )}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: '0.7rem',
+                                color: '#94a3b8',
+                                marginTop: '2px',
+                                lineHeight: '1.3',
+                              }}
+                            >
+                              {tone.desc}
+                            </div>
+                          </div>
+                        </div>
+
+                        {tone.id !== 'muted' && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectTone(tone.id);
+                            }}
+                            style={{
+                              background: isSelected ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.08)',
+                              border: 'none',
+                              borderRadius: '6px',
+                              color: isSelected ? '#f59e0b' : '#94a3b8',
+                              padding: '5px 8px',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              flexShrink: 0,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                            title={`Nghe thử ${tone.name}`}
+                          >
+                            <i className="fa-solid fa-volume-high"></i>
+                            <span>Thử</span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Danh sách kết nối thân thiết 2 chiều (Mutual Bonds) */}
