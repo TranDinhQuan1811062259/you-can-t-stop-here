@@ -530,6 +530,22 @@ export const sendTimeCapsuleUnlockedEmail = async ({ toEmail, title, content, cr
   }
 };
 
+// Bộ nhớ đệm cooldown cảnh báo an ninh (Chống spam hòm thư & cạn kiệt Quota Brevo khi bị brute-force)
+const securityAlertCooldownCache = new Map();
+
+const alertCacheCleanupTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of securityAlertCooldownCache.entries()) {
+    if (now - timestamp > 10 * 60 * 1000) {
+      securityAlertCooldownCache.delete(key);
+    }
+  }
+}, 10 * 60 * 1000);
+
+if (alertCacheCleanupTimer.unref) {
+  alertCacheCleanupTimer.unref();
+}
+
 /**
  * =========================================================================
  * 🚨 CẢNH BÁO AN NINH ADMIN (BREVO EMAIL ALERT & AUDIT MONITORING)
@@ -541,7 +557,7 @@ export const sendTimeCapsuleUnlockedEmail = async ({ toEmail, title, content, cr
  */
 export const sendAdminSecurityAlertEmail = async ({
   action,
-  targetEmail,
+  targetEmail = '',
   ip = '127.0.0.1',
   location = 'Không xác định / Local',
   userAgent = 'Unknown Device',
@@ -549,18 +565,36 @@ export const sendAdminSecurityAlertEmail = async ({
   details = {},
 }) => {
   try {
+    const cleanTargetEmail = (targetEmail || '').toLowerCase().trim();
+    // 🛡️ BẢO VỆ CHỐNG SPAM MAIL & CẠN KIỆT QUOTA BREVO:
+    // Áp dụng Cooldown 5 phút cho mỗi bộ (hành động + địa chỉ IP + tài khoản đích)
+    const alertKey = `${action}:${ip}:${cleanTargetEmail}`;
+    const lastSentAt = securityAlertCooldownCache.get(alertKey);
+    const nowTimestamp = Date.now();
+    if (lastSentAt && nowTimestamp - lastSentAt < 5 * 60 * 1000) {
+      console.log(`[SECURITY ALERT] ⏳ Bỏ qua cảnh báo lặp (${alertKey}) trong thời gian cooldown 5 phút.`);
+      return true;
+    }
+    securityAlertCooldownCache.set(alertKey, nowTimestamp);
+
     const User = (await import('../models/User.js')).default;
     const adminUsers = await User.find({ role: 'admin' }, 'email name').lean();
 
     const fallbackAdminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
-    let recipientEmails = (adminUsers || []).map((u) => u.email.toLowerCase().trim());
+    let recipientEmails = (adminUsers || []).map((u) => (u.email || '').toLowerCase().trim()).filter(Boolean);
     if (recipientEmails.length === 0) {
       recipientEmails = [fallbackAdminEmail];
     }
 
+    // Loại bỏ email trùng lặp
+    recipientEmails = [...new Set(recipientEmails)];
+
     // Nếu là LOGIN_SUCCESS, ưu tiên gửi cho các Admin còn lại; nếu chỉ có 1 Admin thì gửi cho chính Admin đó
     if (action === 'LOGIN_SUCCESS' && recipientEmails.length > 1) {
-      recipientEmails = recipientEmails.filter((em) => em !== targetEmail.toLowerCase().trim());
+      const remainingAdmins = recipientEmails.filter((em) => em !== cleanTargetEmail);
+      if (remainingAdmins.length > 0) {
+        recipientEmails = remainingAdmins;
+      }
     }
 
     const actionMeta = {
@@ -653,25 +687,29 @@ export const sendAdminSecurityAlertEmail = async ({
 
     // Gửi email cho từng Quản trị viên
     for (const adminEmail of recipientEmails) {
-      // 1. Ưu tiên gửi qua Brevo HTTP API
-      const brevoRes = await sendEmailViaBrevo({
-        toEmail: adminEmail,
-        subject: `[SECURITY ALERT] ${meta.title} (${ip})`,
-        htmlContent,
-      });
-
-      if (!brevoRes.success) {
-        // 2. Fallback sang Nodemailer Transporter
-        const transporter = await getTransporter();
-        const senderEmail = (process.env.EMAIL_USER || process.env.MAIL_USER || DIRECT_GMAIL_USER || 'anthonyq012025@gmail.com').trim();
-        await transporter.sendMail({
-          from: `"Freedom Security" <${senderEmail}>`,
-          to: adminEmail,
+      try {
+        // 1. Ưu tiên gửi qua Brevo HTTP API
+        const brevoRes = await sendEmailViaBrevo({
+          toEmail: adminEmail,
           subject: `[SECURITY ALERT] ${meta.title} (${ip})`,
-          html: htmlContent,
+          htmlContent,
         });
+
+        if (!brevoRes.success) {
+          // 2. Fallback sang Nodemailer Transporter
+          const transporter = await getTransporter();
+          const senderEmail = (process.env.EMAIL_USER || process.env.MAIL_USER || DIRECT_GMAIL_USER || 'anthonyq012025@gmail.com').trim();
+          await transporter.sendMail({
+            from: `"Freedom Security" <${senderEmail}>`,
+            to: adminEmail,
+            subject: `[SECURITY ALERT] ${meta.title} (${ip})`,
+            html: htmlContent,
+          });
+        }
+        console.log(`[SECURITY ALERT] 🛡️ Đã gửi cảnh báo ${action} tới Admin: ${adminEmail}`);
+      } catch (recipientErr) {
+        console.warn(`[SECURITY ALERT] ⚠️ Gặp lỗi khi gửi cảnh báo cho ${adminEmail}:`, recipientErr.message);
       }
-      console.log(`[SECURITY ALERT] 🛡️ Đã gửi cảnh báo ${action} tới Admin: ${adminEmail}`);
     }
 
     return true;

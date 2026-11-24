@@ -1200,6 +1200,24 @@ export const updatePost = async (req, res) => {
       });
     }
 
+    // 🛡️ VALIDATION ĐỊNH DẠNG & GIỚI HẠN KÝ TỰ BÀI ĐĂNG (Tương thích ngược & An toàn dữ liệu)
+    const effectivePostType = req.body.postType || targetPost.postType || 'article';
+    const effectiveContent = content !== undefined ? String(content).trim() : (targetPost.content || '').trim();
+
+    if (effectivePostType === 'photo' && effectiveContent.length > 300) {
+      return sendError(res, {
+        message: `Nội dung khoảnh khắc ảnh tối đa 300 ký tự (Hiện tại: ${effectiveContent.length} ký tự)!`,
+        status: 400,
+      });
+    }
+
+    if (effectivePostType === 'video' && effectiveContent.length > 250) {
+      return sendError(res, {
+        message: `Chú thích video ngắn tối đa 250 ký tự (Hiện tại: ${effectiveContent.length} ký tự)!`,
+        status: 400,
+      });
+    }
+
     let updatedPostObj = null;
 
     if (idx !== -1) {
@@ -1226,8 +1244,14 @@ export const updatePost = async (req, res) => {
 
       const safety = analyzeContentSafety(finalTitle, finalSummary, finalContent, finalTags);
 
+      const finalMediaUrls = req.body.mediaUrls !== undefined
+        ? (Array.isArray(req.body.mediaUrls) ? req.body.mediaUrls.filter(Boolean) : [])
+        : (existing.mediaUrls || []);
+
       updatedPostObj = {
         ...existing,
+        postType: effectivePostType,
+        mediaUrls: finalMediaUrls,
         title: finalTitle,
         slug: newSlug,
         summary: finalSummary,
@@ -1284,6 +1308,10 @@ export const updatePost = async (req, res) => {
             if (catDoc) post.category = catDoc._id;
           }
           if (coverImage) post.coverImage = coverImage;
+          post.postType = effectivePostType;
+          if (req.body.mediaUrls !== undefined && Array.isArray(req.body.mediaUrls)) {
+            post.mediaUrls = req.body.mediaUrls.filter(Boolean);
+          }
           if (parsedTags !== undefined) post.tags = parsedTags;
           if (author) post.author = author.trim();
           if (authorJob !== undefined) post.authorJob = authorJob.trim();

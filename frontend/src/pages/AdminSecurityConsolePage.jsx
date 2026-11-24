@@ -16,14 +16,16 @@ export const AdminSecurityConsolePage = () => {
 
   const [logs, setLogs] = useState([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [logsError, setLogsError] = useState('');
 
   const isAdminAuthenticated = Boolean(user && user.role === 'admin');
 
   // Ghi nhận âm thầm Telemetry lượt truy cập vào /admin-portal
   useEffect(() => {
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
-      fetch(`${baseUrl}/admin/auth/telemetry`, { method: 'POST' }).catch(() => {});
+      const rawBase = import.meta.env.VITE_API_BASE_URL || '/api';
+      const cleanBase = rawBase.replace(/\/+$/, '');
+      fetch(`${cleanBase}/admin/auth/telemetry`, { method: 'POST' }).catch(() => {});
     } catch (_) {}
   }, []);
 
@@ -31,12 +33,14 @@ export const AdminSecurityConsolePage = () => {
   const fetchSecurityLogs = useCallback(async () => {
     if (!isAdminAuthenticated) return;
     setIsLoadingLogs(true);
+    setLogsError('');
     try {
       const res = await apiClient.get('/admin/security-logs');
       const data = res?.data?.data || res?.data || [];
       setLogs(Array.isArray(data) ? data : []);
     } catch (err) {
       console.warn('Lỗi lấy Security Logs:', err);
+      setLogsError(err.response?.data?.message || 'Không thể tải nhật ký an ninh do lỗi kết nối mạng.');
     } finally {
       setIsLoadingLogs(false);
     }
@@ -65,18 +69,21 @@ export const AdminSecurityConsolePage = () => {
       });
 
       const data = res?.data?.data || res?.data;
-      if (data?.token && data?.user) {
+      const adminObj = data?.user || (data?.role === 'admin' ? data : null);
+      if (data?.token && adminObj) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('freedom_token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('user', JSON.stringify(adminObj));
 
         if (typeof setToken === 'function') setToken(data.token);
-        if (typeof setUser === 'function') setUser(data.user);
+        if (typeof setUser === 'function') setUser(adminObj);
 
         setSuccessMessage('✓ Đăng nhập Console thành công! Đang tải nhật ký...');
         setTimeout(() => {
           setSuccessMessage('');
         }, 1500);
+      } else {
+        setErrorMessage('Dữ liệu xác thực không hợp lệ. Vui lòng thử lại!');
       }
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Xác thực thất bại. Vui lòng kiểm tra lại!';
@@ -386,7 +393,33 @@ export const AdminSecurityConsolePage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.length === 0 ? (
+                  {logsError ? (
+                    <tr>
+                      <td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: '#f87171' }}>
+                        <span>⚠️ {logsError}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playClickSound();
+                            fetchSecurityLogs();
+                          }}
+                          style={{
+                            marginLeft: '12px',
+                            background: 'rgba(56, 189, 248, 0.15)',
+                            border: '1px solid #38bdf8',
+                            color: '#38bdf8',
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.76rem',
+                            fontWeight: 700,
+                          }}
+                        >
+                          Thử Lại
+                        </button>
+                      </td>
+                    </tr>
+                  ) : logs.length === 0 ? (
                     <tr>
                       <td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
                         {isLoadingLogs ? 'Đang tải dữ liệu...' : 'Chưa có bản ghi an ninh nào.'}

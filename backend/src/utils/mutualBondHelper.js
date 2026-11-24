@@ -1,16 +1,27 @@
+import mongoose from 'mongoose';
 import MutualBond from '../models/MutualBond.js';
 import { isDbConnected } from '../config/db.js';
 
 /**
  * Công thức tính điểm thân thiết đối xứng 2 chiều:
- * Chỉ khi CẢ HAI BÊN cùng có tương tác qua lại thì điểm mới tăng cao
+ * Chống farm/spam tương tác một chiều. Điểm chỉ tăng mạnh khi CẢ HAI BÊN cùng có tương tác qua lại.
  */
 export const computeMutualScore = (scoreA = 0, scoreB = 0) => {
   const a = Math.max(0, Number(scoreA) || 0);
   const b = Math.max(0, Number(scoreB) || 0);
   const minScore = Math.min(a, b);
   const diff = Math.abs(a - b);
-  return minScore * 2 + Math.floor(diff * 0.2);
+
+  // 🛡️ CHỐNG FARM MỘT CHIỀU:
+  // Nếu một bên hoàn toàn không tương tác lại (minScore === 0), điểm tối đa chỉ là 2 (không thể lên cấp Đồng Hành hay Tri Kỷ)
+  if (minScore === 0) {
+    return Math.min(2, Math.floor(diff * 0.05));
+  }
+
+  // Điểm hai chiều đối xứng là cốt lõi: 2 bên cùng tương tác (minScore * 2)
+  // Phần chênh lệch (diff) chỉ được cộng thêm tối đa 15% diff nhưng bị chặn trần bởi 50% minScore để không bị thổi phồng một chiều
+  const unbalanceBonus = Math.min(Math.floor(diff * 0.15), Math.floor(minScore * 0.5));
+  return minScore * 2 + unbalanceBonus;
 };
 
 /**
@@ -89,6 +100,11 @@ export const recordMutualInteraction = async ({
 
   if (!isDbConnected) return null;
 
+  // Tránh lỗi CastError nếu một trong các ID không phải ObjectId hợp lệ
+  if (!mongoose.Types.ObjectId.isValid(fromUserId) || !mongoose.Types.ObjectId.isValid(toUserId)) {
+    return null;
+  }
+
   try {
     // Chuẩn hóa userA < userB
     const isFromSmaller = fromStr < toStr;
@@ -98,6 +114,7 @@ export const recordMutualInteraction = async ({
     let bond = await MutualBond.findOne({ userA, userB });
 
     const now = new Date();
+    const cooldownPeriodMs = 30000; // 30 giây cooldown theo từng chiều tương tác
 
     if (!bond) {
       bond = new MutualBond({
@@ -106,21 +123,27 @@ export const recordMutualInteraction = async ({
         scoreAtoB: isFromSmaller ? points : 0,
         scoreBtoA: isFromSmaller ? 0 : points,
         lastInteractionAt: now,
-        cooldownUntil: new Date(now.getTime() + 45000), // 45 giây cooldown
+        cooldownUntil: new Date(now.getTime() + cooldownPeriodMs),
+        cooldownUserAUntil: isFromSmaller ? new Date(now.getTime() + cooldownPeriodMs) : null,
+        cooldownUserBUntil: isFromSmaller ? null : new Date(now.getTime() + cooldownPeriodMs),
       });
     } else {
-      // Kiểm tra cooldown chống spam lặp
-      if (bond.cooldownUntil && now < bond.cooldownUntil) {
+      // 🛡️ Cooldown phân luồng theo chiều người tương tác:
+      // Người gửi (fromUser) bị giới hạn cooldown nhưng không chặn người nhận (toUser) phản hồi lại
+      const userCooldown = isFromSmaller ? bond.cooldownUserAUntil : bond.cooldownUserBUntil;
+      if (userCooldown && now < userCooldown) {
         return bond;
       }
 
       if (isFromSmaller) {
         bond.scoreAtoB = (bond.scoreAtoB || 0) + points;
+        bond.cooldownUserAUntil = new Date(now.getTime() + cooldownPeriodMs);
       } else {
         bond.scoreBtoA = (bond.scoreBtoA || 0) + points;
+        bond.cooldownUserBUntil = new Date(now.getTime() + cooldownPeriodMs);
       }
       bond.lastInteractionAt = now;
-      bond.cooldownUntil = new Date(now.getTime() + 45000);
+      bond.cooldownUntil = new Date(now.getTime() + cooldownPeriodMs);
     }
 
     bond.mutualScore = computeMutualScore(bond.scoreAtoB, bond.scoreBtoA);

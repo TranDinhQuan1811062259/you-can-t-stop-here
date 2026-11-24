@@ -45,6 +45,14 @@ const mutualBondSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    cooldownUserAUntil: {
+      type: Date,
+      default: null,
+    },
+    cooldownUserBUntil: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
