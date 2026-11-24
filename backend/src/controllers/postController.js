@@ -103,7 +103,7 @@ export const getPosts = async (req, res) => {
       try {
         const dbPosts = await Post.find({ isPublished: true })
           .populate('category', 'name slug')
-          .populate('user', 'name avatar jobTitle bio')
+          .populate('user', 'name avatar jobTitle bio streakCount')
           .sort({ createdAt: -1 })
           .lean();
 
@@ -122,6 +122,7 @@ export const getPosts = async (req, res) => {
               author: dbP.user?.name || dbP.author,
               authorJob: dbP.user?.jobTitle || dbP.authorJob,
               authorAvatar: dbP.user?.avatar || dbP.authorAvatar || '',
+              authorStreakCount: dbP.user?.streakCount || dbP.authorStreakCount || 0,
             };
             if (!map.has(key)) {
               map.set(key, enrichedDb);
@@ -291,7 +292,7 @@ export const getPostBySlug = async (req, res) => {
     if (checkDbReady()) {
       let post = await Post.findOne({ slug, isPublished: true })
         .populate('category', 'name slug description')
-        .populate('user', 'name avatar jobTitle bio socialLinks');
+        .populate('user', 'name avatar jobTitle bio socialLinks streakCount');
 
       if (post) {
         // CHỈ cập nhật thông tin nếu là bài viết của chính admin/tác giả cụ thể, tuyệt đối không đè lên bài người khác
@@ -307,12 +308,14 @@ export const getPostBySlug = async (req, res) => {
             post.authorJob = adminUser.jobTitle;
             post.authorAvatar = adminUser.avatar;
             post.authorSocialLinks = adminUser.socialLinks;
+            post.authorStreakCount = adminUser.streakCount || 0;
           }
         } else if (post.user && post.user.name) {
           post.author = post.user.name;
           post.authorJob = post.user.jobTitle || post.authorJob;
           post.authorAvatar = post.user.avatar || post.authorAvatar;
           post.authorSocialLinks = post.user.socialLinks || post.authorSocialLinks;
+          post.authorStreakCount = post.user.streakCount || post.authorStreakCount || 0;
         }
 
         // Tăng lượt đọc thực tế

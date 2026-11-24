@@ -21,6 +21,7 @@ import { formatPostContent } from '../utils/contentFormatter';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { playClickSound } from '../utils/soundEffects';
+import { getHighestBadge } from '../utils/badgeHelper';
 
 export const PostDetailPage = () => {
   const { slug } = useParams();
@@ -392,6 +393,8 @@ export const PostDetailPage = () => {
 
   const authorAvatar = getAuthorAvatar();
   const authorFrame = user?.customLayout?.frameStyle && isCurrentUserAuthor ? user.customLayout.frameStyle : (post.user?.customLayout?.frameStyle || 'none');
+  const authorStreak = isCurrentUserAuthor ? (user?.streakCount || 0) : (post.user?.streakCount || post.authorStreakCount || 0);
+  const authorHonorBadge = getHighestBadge(authorStreak);
   const authorBio = post.user?.bio || (isCurrentUserAuthor ? user?.bio : 'Thành viên chia sẻ tâm sự tại You Can\'t Stop Here.');
   const authorSocial = post.user?.socialLinks || post.authorSocialLinks || (isCurrentUserAuthor ? user?.socialLinks : {});
   const authorProfileUrl = `/profile/${post.user?._id || post.user || encodeURIComponent(authorName)}`;
@@ -750,6 +753,29 @@ export const PostDetailPage = () => {
                           {authorName}
                         </h4>
                       </Link>
+                      {authorHonorBadge && (
+                        <span
+                          className="author-detail-honor-badge"
+                          style={{
+                            background: authorHonorBadge.bg,
+                            color: authorHonorBadge.color,
+                            border: `1px solid ${authorHonorBadge.border}`,
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            boxShadow: `0 0 10px ${authorHonorBadge.bg}`,
+                          }}
+                          title={`Chuỗi ${authorStreak} ngày giữ lửa: ${authorHonorBadge.desc}`}
+                        >
+                          <span>{authorHonorBadge.icon}</span>
+                          <span>{authorHonorBadge.name}</span>
+                          <span style={{ opacity: 0.85, fontSize: '0.68rem' }}>({authorStreak}d)</span>
+                        </span>
+                      )}
                       {isCurrentUserAuthor && <span className="author-self-badge">Tác giả</span>}
                     </div>
                     <div className="post-author-sub-row">

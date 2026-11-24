@@ -7,6 +7,11 @@ import { getAllPlaylists } from '../../data/playlists';
 import { playClickSound } from '../../utils/soundEffects';
 import { FlameSparksEffect } from '../common/FlameSparksEffect';
 import { getHighestBadge, checkNewlyUnlockedMilestone } from '../../utils/badgeHelper';
+import {
+  playCampfireSound,
+  isCampfireSoundEnabled,
+  setCampfireSoundEnabled,
+} from '../../utils/campfireAudio';
 import '../../styles/personalHub.css';
 
 const DEFAULT_EMPTY_AVATAR =
@@ -50,9 +55,93 @@ export const PersonalHubModal = () => {
   const [showSparks, setShowSparks] = useState(false);
   const [sparksOrigin, setSparksOrigin] = useState(null);
   const [milestoneCelebration, setMilestoneCelebration] = useState(null);
+  const [campfireSoundOn, setCampfireSoundOn] = useState(() => isCampfireSoundEnabled());
   const checkInButtonRef = useRef(null);
 
   const highestBadge = useMemo(() => getHighestBadge(streakCount), [streakCount]);
+
+  const toggleCampfireSound = () => {
+    playClickSound();
+    const next = !campfireSoundOn;
+    setCampfireSoundOn(next);
+    setCampfireSoundEnabled(next);
+  };
+
+  // Tính toán 7 ngày trong tuần hiện tại theo giờ Việt Nam
+  const weeklyTrackerDays = useMemo(() => {
+    try {
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      const todayStr = formatter.format(now);
+
+      const nowVN = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
+      const currentDayIdx = (nowVN.getDay() + 6) % 7; // 0 = T2, ..., 6 = CN
+
+      const mondayVN = new Date(nowVN);
+      mondayVN.setDate(nowVN.getDate() - currentDayIdx);
+
+      const dayLabels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+      const days = [];
+
+      const streakLength = streakCount || 0;
+      const streakEndDate = new Date(nowVN);
+      if (!hasCheckedInToday) {
+        streakEndDate.setDate(streakEndDate.getDate() - 1);
+      }
+      const streakStartDate = new Date(streakEndDate);
+      if (streakLength > 0) {
+        streakStartDate.setDate(streakStartDate.getDate() - (streakLength - 1));
+      }
+
+      const formatDateOnly = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      const streakStartStr = streakLength > 0 ? formatDateOnly(streakStartDate) : null;
+      const streakEndStr = streakLength > 0 ? formatDateOnly(streakEndDate) : null;
+
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(mondayVN);
+        d.setDate(mondayVN.getDate() + i);
+        const dateStr = formatDateOnly(d);
+        const dateNum = d.getDate();
+
+        const isToday = dateStr === todayStr;
+        const isPast = dateStr < todayStr;
+        const isUpcoming = dateStr > todayStr;
+
+        let isCheckedIn = false;
+        if (isToday) {
+          isCheckedIn = Boolean(hasCheckedInToday);
+        } else if (streakLength > 0 && streakStartStr && streakEndStr) {
+          isCheckedIn = dateStr >= streakStartStr && dateStr <= streakEndStr;
+        }
+
+        days.push({
+          label: dayLabels[i],
+          dateNum,
+          dateStr,
+          isToday,
+          isCheckedIn,
+          isPast,
+          isUpcoming,
+        });
+      }
+
+      return days;
+    } catch (err) {
+      console.warn('[WeeklyStreak] Lỗi tính tuần:', err);
+      return [];
+    }
+  }, [hasCheckedInToday, streakCount]);
 
   // Đồng bộ profile state khi user thay đổi
   useEffect(() => {
@@ -113,6 +202,9 @@ export const PersonalHubModal = () => {
 
     const result = await checkInToday();
     if (result?.success) {
+      if (campfireSoundOn) {
+        playCampfireSound({ volume: 0.5 });
+      }
       setShowSparks(true);
       const newlyUnlocked = checkNewlyUnlockedMilestone(prevStreak, result.streakCount);
       if (newlyUnlocked) {
@@ -364,6 +456,53 @@ export const PersonalHubModal = () => {
                     {checkInFeedback.text}
                   </p>
                 )}
+
+                {/* Nút Bật/Tắt Âm Thanh Bùng Lửa */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '12px' }}>
+                  <button
+                    type="button"
+                    className="streak-sfx-toggle-btn"
+                    onClick={toggleCampfireSound}
+                    title={campfireSoundOn ? 'Tắt hiệu ứng tiếng củi lửa khi điểm danh' : 'Bật hiệu ứng tiếng củi lửa khi điểm danh'}
+                  >
+                    <i className={`fa-solid ${campfireSoundOn ? 'fa-volume-high' : 'fa-volume-xmark'}`}></i>
+                    <span>SFX Lửa: {campfireSoundOn ? 'BẬT' : 'TẮT'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Widget Lịch Điểm Danh 7 Ngày Trong Tuần */}
+              <div className="weekly-streak-card">
+                <div className="weekly-streak-header">
+                  <div className="weekly-streak-title">
+                    <i className="fa-solid fa-calendar-week" style={{ color: '#f59e0b' }}></i>
+                    <span>Tuần Này (Asia/Ho_Chi_Minh)</span>
+                  </div>
+                  <span className="weekly-streak-stats">
+                    {weeklyTrackerDays.filter((d) => d.isCheckedIn).length}/7 ngày giữ lửa
+                  </span>
+                </div>
+
+                <div className="weekly-days-grid">
+                  {weeklyTrackerDays.map((day) => (
+                    <div
+                      key={day.dateStr}
+                      className={`weekly-day-box ${day.isToday ? 'is-today' : ''} ${day.isCheckedIn ? 'is-checked' : ''} ${day.isUpcoming ? 'is-upcoming' : ''} ${day.isPast && !day.isCheckedIn ? 'is-missed' : ''}`}
+                      title={`${day.label} (${day.dateStr}): ${day.isCheckedIn ? 'Đã giữ lửa 🔥' : day.isToday ? 'Hôm nay - Chưa điểm danh' : day.isUpcoming ? 'Sắp tới' : 'Chưa điểm danh'}`}
+                    >
+                      <span className="weekly-day-label">{day.label}</span>
+                      <div className="weekly-day-badge">
+                        {day.isCheckedIn ? (
+                          <span className="weekly-day-flame">🔥</span>
+                        ) : day.isToday ? (
+                          <span className="weekly-day-today-dot">•</span>
+                        ) : (
+                          <span className="weekly-day-num">{day.dateNum}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Thống kê cột mốc lửa */}

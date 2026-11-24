@@ -876,6 +876,152 @@
   box-shadow: 0 0 16px rgba(244, 63, 94, 0.25);
 }
 
+/* =============================================================================
+   WIDGET LỊCH ĐIỂM DANH 7 NGÀY TRONG TUẦN (WEEKLY STREAK TRACKER)
+   ============================================================================= */
+
+.weekly-streak-card {
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1.1rem;
+  margin-top: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.weekly-streak-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+
+.weekly-streak-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.weekly-streak-stats {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.12);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.weekly-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.weekly-day-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background: rgba(30, 41, 59, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 8px 2px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.weekly-day-box.is-today {
+  border-color: #f59e0b;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.weekly-day-box.is-checked {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.18) 0%, rgba(234, 88, 12, 0.08) 100%);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+}
+
+.weekly-day-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.weekly-day-box.is-today .weekly-day-label {
+  color: #fde68a;
+}
+
+.weekly-day-box.is-checked .weekly-day-label {
+  color: #fbbf24;
+}
+
+.weekly-day-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.weekly-day-box.is-checked .weekly-day-badge {
+  color: #fbbf24;
+}
+
+.weekly-day-flame {
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-block;
+  animation: heartPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6));
+}
+
+.weekly-day-today-dot {
+  font-size: 1.4rem;
+  line-height: 1;
+  color: #f59e0b;
+  animation: streakMiniFlame 1.2s infinite alternate;
+}
+
+.weekly-day-box.is-missed {
+  opacity: 0.5;
+}
+
+.weekly-day-box.is-upcoming {
+  opacity: 0.4;
+  border-style: dashed;
+}
+
+/* SFX Sound Toggle Button */
+.streak-sfx-toggle-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.streak-sfx-toggle-btn:hover {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fde68a;
+}
+
 /* Responsive Mobile */
 @media (max-width: 640px) {
   .personal-hub-drawer {

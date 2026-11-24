@@ -8,6 +8,7 @@ import { ATMOSPHERE_THEMES } from '../../utils/postAtmosphereEngine';
 import { SharePostModal } from './SharePostModal';
 import { IdleWeatherText } from '../common/IdleWeatherText';
 import { PostCardIdleOverlay } from './PostCardIdleOverlay';
+import { getHighestBadge } from '../../utils/badgeHelper';
 
 const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
 
@@ -109,6 +110,8 @@ export const PostCard = ({ post }) => {
 
   const authorAvatar = getAuthorAvatar();
   const authorFrame = user?.customLayout?.frameStyle && isCurrentUserAuthor ? user.customLayout.frameStyle : (post.user?.customLayout?.frameStyle || 'none');
+  const authorStreak = isCurrentUserAuthor ? (user?.streakCount || 0) : (post.user?.streakCount || post.authorStreakCount || 0);
+  const authorHonorBadge = getHighestBadge(authorStreak);
 
   const [deleting, setDeleting] = useState(false);
   const [approving, setApproving] = useState(false);
@@ -280,7 +283,31 @@ export const PostCard = ({ post }) => {
         >
           <img src={authorAvatar} alt={authorName} className={`card-author-avatar frame-${authorFrame}`} />
           <div className="card-author-info">
-            <h5 className="card-author-name">{authorName}</h5>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <h5 className="card-author-name">{authorName}</h5>
+              {authorHonorBadge && (
+                <span
+                  className="author-honor-mini-badge"
+                  style={{
+                    background: authorHonorBadge.bg,
+                    color: authorHonorBadge.color,
+                    border: `1px solid ${authorHonorBadge.border}`,
+                    fontSize: '0.66rem',
+                    fontWeight: 700,
+                    padding: '1px 6px',
+                    borderRadius: '999px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    lineHeight: 1.2,
+                  }}
+                  title={`Chuỗi ${authorStreak} ngày giữ lửa: ${authorHonorBadge.desc}`}
+                >
+                  <span>{authorHonorBadge.icon}</span>
+                  <span>{authorHonorBadge.name}</span>
+                </span>
+              )}
+            </div>
             <span className="card-author-sub">{authorJob}</span>
           </div>
         </Link>
