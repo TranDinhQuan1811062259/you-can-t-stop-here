@@ -12,6 +12,7 @@ import {
   isCampfireSoundEnabled,
   setCampfireSoundEnabled,
 } from '../../utils/campfireAudio';
+import { triggerHaptic } from '../../utils/haptics';
 import { HonorCardModal } from './HonorCardModal';
 import { ProfileQrModal } from '../profile/ProfileQrModal';
 import apiClient from '../../services/apiClient';
@@ -305,6 +306,7 @@ export const PersonalHubModal = () => {
 
     const result = await checkInToday();
     if (result?.success) {
+      triggerHaptic([20, 35, 20]);
       if (campfireSoundOn) {
         playCampfireSound({ volume: 0.5 });
       }

@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { playClickSound } from '../../utils/soundEffects';
+import { triggerHaptic } from '../../utils/haptics';
 
 export const ProfileQrModal = ({ isOpen, onClose, user, profileUrl }) => {
   const qrRef = useRef(null);
@@ -42,6 +43,7 @@ export const ProfileQrModal = ({ isOpen, onClose, user, profileUrl }) => {
   // Sao chép link trang cá nhân vào Clipboard
   const handleCopyLink = async () => {
     playClickSound();
+    triggerHaptic([15, 30]);
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(targetUrl);
@@ -66,6 +68,7 @@ export const ProfileQrModal = ({ isOpen, onClose, user, profileUrl }) => {
   // Tải ảnh mã QR dạng PNG về máy
   const handleDownloadQr = () => {
     playClickSound();
+    triggerHaptic([20, 40]);
     try {
       const canvas = qrRef.current?.querySelector('canvas');
       if (!canvas) return;

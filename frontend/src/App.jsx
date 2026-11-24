@@ -7,6 +7,7 @@ import { MusicProvider } from './context/MusicContext';
 import { PersonalHubProvider } from './context/PersonalHubContext';
 import { PersonalHubModal } from './components/hub/PersonalHubModal';
 import { FocusGoalReminderToast } from './components/common/FocusGoalReminderToast';
+import { BondLevelUpToast } from './components/common/BondLevelUpToast';
 import { AppErrorBoundary } from './components/common/AppErrorBoundary';
 import { AppRoutes } from './routes/AppRoutes';
 
@@ -36,6 +37,7 @@ function App() {
                   <AppRoutes />
                   <PersonalHubModal />
                   <FocusGoalReminderToast />
+                  <BondLevelUpToast />
                 </MusicProvider>
               </ChatProvider>
             </PersonalHubProvider>

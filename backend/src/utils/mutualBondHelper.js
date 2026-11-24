@@ -84,8 +84,16 @@ export const getBondTierInfo = (score = 0) => {
   };
 };
 
+export const TIER_ORDER = {
+  none: 0,
+  acquaintance: 1, // Quen Biết 🤝
+  companion: 2,    // Đồng Hành ✨
+  close_friend: 3, // Thân Thiết 💫
+  soulmate: 4,     // Tri Kỷ 🔥
+};
+
 /**
- * Ghi nhận tương tác tự động giữa 2 người dùng (Có chống spam cooldown)
+ * Ghi nhận tương tác tự động giữa 2 người dùng (Có chống spam cooldown & phát hiện thăng hạng)
  */
 export const recordMutualInteraction = async ({
   fromUserId,
@@ -112,6 +120,7 @@ export const recordMutualInteraction = async ({
     const userB = isFromSmaller ? toUserId : fromUserId;
 
     let bond = await MutualBond.findOne({ userA, userB });
+    const oldTier = bond ? (bond.tier || 'none') : 'none';
 
     const now = new Date();
     const cooldownPeriodMs = 30000; // 30 giây cooldown theo từng chiều tương tác
@@ -147,9 +156,30 @@ export const recordMutualInteraction = async ({
     }
 
     bond.mutualScore = computeMutualScore(bond.scoreAtoB, bond.scoreBtoA);
-    bond.tier = getBondTierInfo(bond.mutualScore).key;
+    const newTierInfo = getBondTierInfo(bond.mutualScore);
+    const newTier = newTierInfo.key;
+    const isLevelUp = (TIER_ORDER[newTier] || 0) > (TIER_ORDER[oldTier] || 0);
 
+    bond.tier = newTier;
     await bond.save();
+
+    // 🌟 PHÁT HIỆN THĂNG HẠNG THÂN THIẾT (BOND LEVEL-UP DELIGHT)
+    if (isLevelUp) {
+      try {
+        const User = (await import('../models/User.js')).default;
+        const partnerUser = await User.findById(toUserId).select('name avatar jobTitle').lean();
+        bond.levelUpInfo = {
+          tierKey: newTier,
+          tierName: newTierInfo.name,
+          badge: newTierInfo.name,
+          partnerName: partnerUser?.name || 'Bạn đồng hành',
+          partnerAvatar: partnerUser?.avatar || '',
+          partnerId: String(toUserId),
+          mutualScore: bond.mutualScore,
+        };
+      } catch (_) {}
+    }
+
     return bond;
   } catch (err) {
     console.warn('[MutualBond] Lỗi ghi nhận tương tác:', err.message);

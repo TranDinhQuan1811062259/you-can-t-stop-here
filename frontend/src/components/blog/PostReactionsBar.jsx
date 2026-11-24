@@ -162,6 +162,11 @@ export const PostReactionsBar = ({ post, onPostUpdated }) => {
     try {
       const res = await postService.reactPost(post._id || post.slug, reactionType);
       if (res?.data) {
+        if (res.data.bondLevelUp) {
+          window.dispatchEvent(
+            new CustomEvent('freedom_bond_level_up', { detail: res.data.bondLevelUp })
+          );
+        }
         setReactionCounts(res.data.reactionCounts);
         setMyReactions(res.data.myReactions);
         setReactionsList(res.data.reactions || []);

@@ -165,18 +165,24 @@ export const createComment = async (req, res) => {
       saveStore(store);
 
       // Gửi thông báo bình luận bài viết tới tác giả
+      let bondLevelUp = null;
       try {
         const postDoc = await Post.findById(postId).select('title slug coverImage user').lean();
         if (postDoc) {
           const authorId = postDoc.user?.toString();
           if (authorId && authorId !== req.user._id?.toString()) {
             // Ghi nhận điểm thân thiết 2 chiều (bình luận mang lại 2 điểm)
-            recordMutualInteraction({
-              fromUserId: req.user._id,
-              toUserId: authorId,
-              actionType: 'comment',
-              points: 2,
-            }).catch(() => {});
+            try {
+              const bondRes = await recordMutualInteraction({
+                fromUserId: req.user._id,
+                toUserId: authorId,
+                actionType: 'comment',
+                points: 2,
+              });
+              if (bondRes?.levelUpInfo) {
+                bondLevelUp = bondRes.levelUpInfo;
+              }
+            } catch (_) {}
 
             await createNotification({
               recipientId: authorId,
@@ -193,7 +199,10 @@ export const createComment = async (req, res) => {
 
       return sendSuccess(res, {
         message: 'Đã gửi lời động viên thành công!',
-        data: populated,
+        data: {
+          ...(typeof populated.toObject === 'function' ? populated.toObject() : populated),
+          bondLevelUp: bondLevelUp || undefined,
+        },
         status: 201,
       });
     }

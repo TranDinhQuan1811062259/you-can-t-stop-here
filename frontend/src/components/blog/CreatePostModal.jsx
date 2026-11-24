@@ -12,6 +12,7 @@ import { AsmrKeyboardToggle } from '../common/AsmrKeyboardToggle';
 import { PostSubmitAtmosphereOverlay } from './PostSubmitAtmosphereOverlay';
 import { getActiveSeason } from '../../utils/seasonUtils';
 import { eventService } from '../../services/eventService';
+import { compressImageFile } from '../../utils/imageCompressor';
 
 const DEFAULT_FALLBACK_CATEGORIES = [
   { _id: 'cat_work_life', name: 'Công Sở & Sự Nghiệp', icon: '💼', slug: 'cong-so' },
@@ -56,11 +57,15 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
   const [postFormat, setPostFormat] = useState('article'); // 'article' | 'photo' | 'video'
   const [videoUrlInput, setVideoUrlInput] = useState('');
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [compressingCover, setCompressingCover] = useState(false);
   const [isCoverCameraOpen, setIsCoverCameraOpen] = useState(false);
   const [importingDoc, setImportingDoc] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
+
+  const DRAFT_STORAGE_KEY = 'freedom_post_draft_v1';
 
   // Quản lý tạo thể loại bài viết mới trực tiếp
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
@@ -160,35 +165,156 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
   };
 
   // ==========================================
-  // XỬ LÝ ẢNH BÌA
+  // TỰ ĐỘNG KHÔI PHỤC VÀ LƯU BẢN NHÁP (DRAFT)
   // ==========================================
-  const handleCoverImageChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  useEffect(() => {
+    if (!isOpen) return;
 
-    setErrorMsg('');
-    setInfoMsg('');
-    setUploadingCover(true);
+    try {
+      const rawDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (rawDraft) {
+        const draft = JSON.parse(rawDraft);
+        if (draft && (draft.title || draft.content || draft.summary || draft.videoUrlInput)) {
+          setFormData((prev) => ({
+            ...prev,
+            title: draft.title || prev.title,
+            summary: draft.summary || prev.summary,
+            content: draft.content || prev.content,
+            category: draft.category || prev.category,
+            tags: draft.tags || prev.tags,
+          }));
+          if (draft.postFormat) setPostFormat(draft.postFormat);
+          if (draft.videoUrlInput) setVideoUrlInput(draft.videoUrlInput);
+          setHasRestoredDraft(true);
+        }
+      }
+    } catch (e) {
+      console.warn('Không thể khôi phục bản nháp bài viết:', e);
+    }
+  }, [isOpen]);
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const base64Url = event.target?.result;
-      setFormData((prev) => ({ ...prev, coverImage: base64Url }));
+  // Debounce 600ms tự động lưu bản nháp vào localStorage (không lưu base64 ảnh)
+  useEffect(() => {
+    if (!isOpen) return;
 
+    const timer = setTimeout(() => {
       try {
-        const uploadResult = await uploadService.uploadImage(file);
-        if (uploadResult?.url) {
-          setFormData((prev) => ({ ...prev, coverImage: uploadResult.url }));
-          setInfoMsg('✓ Đã tải và lưu trữ ảnh bìa thành công!');
+        const hasContent =
+          (formData.title && formData.title.trim()) ||
+          (formData.summary && formData.summary.trim()) ||
+          (formData.content && formData.content.trim()) ||
+          (formData.tags && formData.tags.trim()) ||
+          (videoUrlInput && videoUrlInput.trim());
+
+        if (hasContent) {
+          const draftPayload = {
+            title: formData.title || '',
+            summary: formData.summary || '',
+            content: formData.content || '',
+            category: formData.category || '',
+            tags: formData.tags || '',
+            postFormat,
+            videoUrlInput,
+            savedAt: Date.now(),
+          };
+          localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftPayload));
         }
       } catch (err) {
-        setInfoMsg('✓ Đã lưu ảnh bìa cục bộ cho bài viết của bạn.');
-      } finally {
-        setUploadingCover(false);
+        console.warn('Lỗi tự động lưu bản nháp:', err);
       }
-    };
+    }, 600);
 
-    reader.readAsDataURL(file);
+    return () => clearTimeout(timer);
+  }, [isOpen, formData.title, formData.summary, formData.content, formData.category, formData.tags, postFormat, videoUrlInput]);
+
+  const handleClearDraft = () => {
+    try {
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
+    } catch (_) {}
+    setFormData((prev) => ({
+      ...prev,
+      title: '',
+      summary: '',
+      content: '',
+      tags: '',
+      coverImage: '',
+    }));
+    setVideoUrlInput('');
+    setHasRestoredDraft(false);
+    setInfoMsg('✓ Đã xóa bản nháp thành công. Bạn có thể bắt đầu bài viết mới.');
+  };
+
+  // ==========================================
+  // XỬ LÝ ẢNH BÌA (TỰ ĐỘNG NÉN CLIENT-SIDE)
+  // ==========================================
+  const handleCoverImageChange = async (e) => {
+    const rawFile = e.target.files?.[0];
+    if (!rawFile) return;
+
+    setErrorMsg('');
+    setInfoMsg('⚡ Đang tối ưu dung lượng ảnh...');
+    setUploadingCover(true);
+    setCompressingCover(true);
+
+    try {
+      // Tự động nén ảnh qua Canvas (Resize <= 1600px, nén quality 0.82 -> 0.65)
+      const compressedFile = await compressImageFile(rawFile, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.82,
+        maxSizeMB: 0.8,
+      });
+
+      const originalSizeKB = Math.round(rawFile.size / 1024);
+      const newSizeKB = Math.round(compressedFile.size / 1024);
+      const compressionNote = originalSizeKB > newSizeKB
+        ? ` (${originalSizeKB}KB ➔ ${newSizeKB}KB)`
+        : '';
+
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64Url = event.target?.result;
+        setFormData((prev) => ({ ...prev, coverImage: base64Url }));
+        setCompressingCover(false);
+
+        try {
+          const uploadResult = await uploadService.uploadImage(compressedFile);
+          if (uploadResult?.url) {
+            setFormData((prev) => ({ ...prev, coverImage: uploadResult.url }));
+            setInfoMsg(`✓ Đã tối ưu${compressionNote} và tải ảnh bìa thành công!`);
+          }
+        } catch (err) {
+          setInfoMsg(`✓ Đã lưu ảnh bìa đã tối ưu${compressionNote} cục bộ cho bài viết.`);
+        } finally {
+          setUploadingCover(false);
+        }
+      };
+
+      reader.readAsDataURL(compressedFile);
+    } catch (compressErr) {
+      console.warn('Lỗi nén ảnh, sử dụng ảnh gốc:', compressErr);
+      setCompressingCover(false);
+
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64Url = event.target?.result;
+        setFormData((prev) => ({ ...prev, coverImage: base64Url }));
+
+        try {
+          const uploadResult = await uploadService.uploadImage(rawFile);
+          if (uploadResult?.url) {
+            setFormData((prev) => ({ ...prev, coverImage: uploadResult.url }));
+            setInfoMsg('✓ Đã tải và lưu trữ ảnh bìa thành công!');
+          }
+        } catch (err) {
+          setInfoMsg('✓ Đã lưu ảnh bìa cục bộ cho bài viết của bạn.');
+        } finally {
+          setUploadingCover(false);
+        }
+      };
+
+      reader.readAsDataURL(rawFile);
+    }
   };
 
   const handleRemoveCover = () => {
@@ -731,6 +857,53 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
             </div>
           );
         })()}
+
+        {/* Banner thông báo đã khôi phục bản nháp tự động */}
+        {hasRestoredDraft && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              borderRadius: '10px',
+              padding: '9px 14px',
+              marginBottom: '14px',
+              fontSize: '0.84rem',
+              color: '#1e40af',
+              boxShadow: '0 1px 3px rgba(30, 64, 175, 0.05)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1.05rem' }}>📋</span>
+              <span>
+                <strong>Đã khôi phục bản nháp:</strong> Hệ thống tự động phục hồi nội dung bạn đang viết dở.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleClearDraft}
+              style={{
+                background: '#fee2e2',
+                border: '1px solid #fecaca',
+                color: '#b91c1c',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                transition: 'all 0.15s ease',
+              }}
+              title="Xóa bản nháp này để viết bài hoàn toàn mới"
+            >
+              ✕ Xóa nháp
+            </button>
+          </div>
+        )}
 
         {/* Thanh chọn 3 định dạng bài đăng: Bài viết sâu | Khoảnh khắc ảnh | Video ngắn */}
         <div className="create-post-format-bar" style={{ display: 'flex', gap: '8px', marginBottom: '16px', background: '#f1f5f9', padding: '6px', borderRadius: '12px' }}>
@@ -1447,6 +1620,10 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
           activeEvent={activeEvent}
           buttonRect={submitEffect.buttonRect}
           onComplete={() => {
+            try {
+              localStorage.removeItem(DRAFT_STORAGE_KEY);
+            } catch (_) {}
+            setHasRestoredDraft(false);
             if (onPostCreated) {
               onPostCreated(submitEffect.createdData);
             }

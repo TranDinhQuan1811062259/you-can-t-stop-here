@@ -513,13 +513,19 @@ export const reactToPost = async (req, res) => {
 
             currentTypes.push(type);
             // Ghi nhận điểm thân thiết 2 chiều nếu tương tác lên bài của người khác
+            var bondLevelUp = null;
             if (post.user && String(post.user) !== String(userId)) {
-              recordMutualInteraction({
-                fromUserId: userId,
-                toUserId: post.user,
-                actionType: type,
-                points: 1,
-              }).catch(() => {});
+              try {
+                const bondRes = await recordMutualInteraction({
+                  fromUserId: userId,
+                  toUserId: post.user,
+                  actionType: type,
+                  points: 1,
+                });
+                if (bondRes?.levelUpInfo) {
+                  bondLevelUp = bondRes.levelUpInfo;
+                }
+              } catch (_) {}
             }
           }
 
@@ -601,6 +607,7 @@ export const reactToPost = async (req, res) => {
               reactions: post.reactions,
               cheersCount: post.cheersCount,
               showReactionCount: post.showReactionCount !== false,
+              bondLevelUp: bondLevelUp || undefined,
             },
           });
         }

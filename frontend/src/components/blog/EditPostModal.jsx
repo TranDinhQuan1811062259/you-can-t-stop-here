@@ -10,6 +10,7 @@ import { maskSensitiveText, analyzeContentSafety } from '../../utils/sensitiveFi
 import { PostAtmosphereSelector } from './PostAtmosphereSelector';
 import { PersonalMusicFormInput } from './PersonalMusicFormInput';
 import { AsmrKeyboardToggle } from '../common/AsmrKeyboardToggle';
+import { compressImageFile } from '../../utils/imageCompressor';
 
 export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
   const [categories, setCategories] = useState([]);
@@ -173,29 +174,57 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
   };
 
   const handleCoverImageChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const rawFile = e.target.files?.[0];
+    if (!rawFile) return;
 
     setUploadingCover(true);
     setErrorMsg('');
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const base64Url = event.target?.result;
-      setFormData((prev) => ({ ...prev, coverImage: base64Url }));
+    try {
+      const compressedFile = await compressImageFile(rawFile, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.82,
+        maxSizeMB: 0.8,
+      });
 
-      try {
-        const uploadResult = await uploadService.uploadImage(file);
-        if (uploadResult?.url) {
-          setFormData((prev) => ({ ...prev, coverImage: uploadResult.url }));
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64Url = event.target?.result;
+        setFormData((prev) => ({ ...prev, coverImage: base64Url }));
+
+        try {
+          const uploadResult = await uploadService.uploadImage(compressedFile);
+          if (uploadResult?.url) {
+            setFormData((prev) => ({ ...prev, coverImage: uploadResult.url }));
+          }
+        } catch (err) {
+          console.warn('Upload ảnh qua API ghi nhận:', err.message);
+        } finally {
+          setUploadingCover(false);
         }
-      } catch (err) {
-        console.warn('Upload ảnh qua API ghi nhận:', err.message);
-      } finally {
-        setUploadingCover(false);
-      }
-    };
-    reader.readAsDataURL(file);
+      };
+      reader.readAsDataURL(compressedFile);
+    } catch (compressErr) {
+      console.warn('Lỗi nén ảnh, sử dụng ảnh gốc:', compressErr);
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64Url = event.target?.result;
+        setFormData((prev) => ({ ...prev, coverImage: base64Url }));
+
+        try {
+          const uploadResult = await uploadService.uploadImage(rawFile);
+          if (uploadResult?.url) {
+            setFormData((prev) => ({ ...prev, coverImage: uploadResult.url }));
+          }
+        } catch (err) {
+          console.warn('Upload ảnh qua API ghi nhận:', err.message);
+        } finally {
+          setUploadingCover(false);
+        }
+      };
+      reader.readAsDataURL(rawFile);
+    }
   };
 
   const handleRemoveCover = () => {

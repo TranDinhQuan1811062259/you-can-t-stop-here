@@ -159,7 +159,14 @@ export const CommentSection = ({
         replyToUser: replyingTo ? replyingTo.userName : null,
       };
 
-      await commentService.createComment(postId, payload);
+      const commentRes = await commentService.createComment(postId, payload);
+      if (commentRes?.data?.bondLevelUp || commentRes?.bondLevelUp) {
+        window.dispatchEvent(
+          new CustomEvent('freedom_bond_level_up', {
+            detail: commentRes?.data?.bondLevelUp || commentRes?.bondLevelUp,
+          })
+        );
+      }
       setNewContent('');
       setAttachedGif('');
       setShowGifPicker(false);
