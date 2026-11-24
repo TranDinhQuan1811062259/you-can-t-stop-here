@@ -5,6 +5,8 @@ import { usePersonalHub } from '../../context/PersonalHubContext';
 import { useMusic } from '../../context/MusicContext';
 import { getAllPlaylists } from '../../data/playlists';
 import { playClickSound } from '../../utils/soundEffects';
+import { FlameSparksEffect } from '../common/FlameSparksEffect';
+import { getHighestBadge, checkNewlyUnlockedMilestone } from '../../utils/badgeHelper';
 import '../../styles/personalHub.css';
 
 const DEFAULT_EMPTY_AVATAR =
@@ -45,6 +47,12 @@ export const PersonalHubModal = () => {
 
   // Local state phản hồi check-in
   const [checkInFeedback, setCheckInFeedback] = useState(null);
+  const [showSparks, setShowSparks] = useState(false);
+  const [sparksOrigin, setSparksOrigin] = useState(null);
+  const [milestoneCelebration, setMilestoneCelebration] = useState(null);
+  const checkInButtonRef = useRef(null);
+
+  const highestBadge = useMemo(() => getHighestBadge(streakCount), [streakCount]);
 
   // Đồng bộ profile state khi user thay đổi
   useEffect(() => {
@@ -96,8 +104,20 @@ export const PersonalHubModal = () => {
   const handleCheckInClick = async () => {
     if (hasCheckedInToday) return;
     playClickSound();
+    const prevStreak = streakCount || 0;
+
+    if (checkInButtonRef.current) {
+      const rect = checkInButtonRef.current.getBoundingClientRect();
+      setSparksOrigin({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+    }
+
     const result = await checkInToday();
     if (result?.success) {
+      setShowSparks(true);
+      const newlyUnlocked = checkNewlyUnlockedMilestone(prevStreak, result.streakCount);
+      if (newlyUnlocked) {
+        setMilestoneCelebration(newlyUnlocked);
+      }
       setCheckInFeedback({
         type: 'success',
         text: `Tuyệt vời! Bạn đã giữ lửa ngày thứ ${result.streakCount} liên tục! 🔥`,
@@ -197,6 +217,20 @@ export const PersonalHubModal = () => {
                 <span className="hub-role-chip">
                   {user?.role === 'admin' ? 'Quản Trị Viên' : (user?.jobTitle || 'Thành viên')}
                 </span>
+                {highestBadge && (
+                  <span
+                    className="hub-role-chip"
+                    style={{
+                      background: highestBadge.bg,
+                      color: highestBadge.color,
+                      borderColor: highestBadge.border,
+                      fontWeight: 700,
+                    }}
+                    title={highestBadge.desc}
+                  >
+                    {highestBadge.icon} {highestBadge.name}
+                  </span>
+                )}
                 <span style={{ color: '#f59e0b', fontWeight: 700 }}>🔥 {streakCount} ngày</span>
               </div>
             </div>
@@ -274,8 +308,9 @@ export const PersonalHubModal = () => {
 
                 {/* Nút Điểm Danh */}
                 <button
+                  ref={checkInButtonRef}
                   type="button"
-                  className={`checkin-action-btn ${hasCheckedInToday ? 'already-checked' : 'can-checkin'}`}
+                  className={`checkin-action-btn ${hasCheckedInToday ? 'already-checked' : 'can-checkin'} ${showSparks ? 'button-spark-pulse' : ''}`}
                   onClick={handleCheckInClick}
                   disabled={hasCheckedInToday}
                   title={hasCheckedInToday ? 'Bạn đã điểm danh giữ lửa hôm nay rồi' : 'Bấm để điểm danh giữ lửa hôm nay'}
@@ -292,6 +327,30 @@ export const PersonalHubModal = () => {
                     </>
                   )}
                 </button>
+
+                {milestoneCelebration && (
+                  <div
+                    style={{
+                      marginTop: '14px',
+                      padding: '10px 14px',
+                      borderRadius: '12px',
+                      background: milestoneCelebration.bg,
+                      border: `1px solid ${milestoneCelebration.border}`,
+                      color: milestoneCelebration.color,
+                      fontSize: '0.84rem',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      animation: 'heartPop 0.4s ease',
+                      boxShadow: `0 0 20px ${milestoneCelebration.bg}`,
+                    }}
+                  >
+                    <span>🎉 CỘT MỐC MỚI:</span>
+                    <span>{milestoneCelebration.icon} {milestoneCelebration.name}</span>
+                  </div>
+                )}
 
                 {checkInFeedback && (
                   <p
@@ -558,6 +617,12 @@ export const PersonalHubModal = () => {
           )}
         </div>
       </div>
+      {showSparks && (
+        <FlameSparksEffect
+          origin={sparksOrigin}
+          onComplete={() => setShowSparks(false)}
+        />
+      )}
     </div>
   );
 };

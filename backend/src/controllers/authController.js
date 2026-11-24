@@ -1198,6 +1198,8 @@ export const getUserProfile = async (req, res) => {
           },
           socialLinks: targetUser.socialLinks || {},
           authProvider: targetUser.authProvider || 'local',
+          streakCount: targetUser.streakCount || 0,
+          lastCheckInDate: targetUser.lastCheckInDate || null,
           createdAt: targetUser.createdAt,
         },
         stats: {

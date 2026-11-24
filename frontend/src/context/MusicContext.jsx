@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { getPlaylistBySlug, getAllPlaylists, getTrackAudioSrc } from '../data/playlists';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { getPlaylistBySlug, getAllPlaylists, getTrackAudioSrc, FAVORITES_THEME_BASE } from '../data/playlists';
+import { usePersonalHub } from './PersonalHubContext';
 import {
   startWeatherAmbient,
   duckAmbientForMusic,
@@ -32,8 +33,46 @@ export const useMusic = () => {
 
 export const MusicProvider = ({ children }) => {
   const [themeSlug, setThemeSlug] = useState('winter');
-  const allThemes = getAllPlaylists();
-  const currentTheme = getPlaylistBySlug(themeSlug);
+
+  const personalHub = usePersonalHub();
+  const likedTracks = personalHub?.likedTracks || [];
+
+  const allCatalogTracks = useMemo(() => {
+    const playlists = getAllPlaylists();
+    const catalog = [];
+    playlists.forEach((p) => {
+      (p.tracks || []).forEach((t, index) => {
+        catalog.push({
+          ...t,
+          themeSlug: p.slug,
+          themeName: p.name,
+          themeIcon: p.icon,
+          catalogIndex: index,
+        });
+      });
+    });
+    return catalog;
+  }, []);
+
+  const favoriteTracks = useMemo(() => {
+    if (!Array.isArray(likedTracks) || likedTracks.length === 0) return [];
+    return allCatalogTracks.filter((t) => likedTracks.includes(t.id));
+  }, [allCatalogTracks, likedTracks]);
+
+  const favoritesTheme = useMemo(
+    () => ({
+      ...FAVORITES_THEME_BASE,
+      tracks: favoriteTracks,
+    }),
+    [favoriteTracks]
+  );
+
+  const allThemes = useMemo(() => {
+    const standard = getAllPlaylists();
+    return [...standard, favoritesTheme];
+  }, [favoritesTheme]);
+
+  const currentTheme = themeSlug === 'favorites' ? favoritesTheme : getPlaylistBySlug(themeSlug);
   const tracks = currentTheme?.tracks || [];
 
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
@@ -630,7 +669,7 @@ export const MusicProvider = ({ children }) => {
       return;
     }
     setThemeSlug(newSlug);
-    const newTheme = getPlaylistBySlug(newSlug);
+    const newTheme = newSlug === 'favorites' ? favoritesTheme : getPlaylistBySlug(newSlug);
     if (newTheme?.tracks && newTheme.tracks.length > 0) {
       const safeIndex = Math.max(0, Math.min(targetTrackIndex || 0, newTheme.tracks.length - 1));
       setCurrentTrackIndex(safeIndex);

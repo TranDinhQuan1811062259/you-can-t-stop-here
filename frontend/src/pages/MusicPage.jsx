@@ -15,8 +15,8 @@ export const MusicPage = () => {
   const { themeId } = useParams();
   const navigate = useNavigate();
 
-  const allThemes = getAllPlaylists();
   const player = useMusicPlayer();
+  const allThemes = player.allThemes || getAllPlaylists();
   const currentTheme = player.currentTheme || getPlaylistBySlug(themeId || 'winter');
 
   // Đồng bộ theme theo tham số URL nếu có thay đổi rõ ràng

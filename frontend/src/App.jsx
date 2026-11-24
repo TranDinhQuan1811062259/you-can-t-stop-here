@@ -17,14 +17,14 @@ function App() {
       <BrowserRouter>
         <AppErrorBoundary>
           <AuthProvider>
-            <ChatProvider>
-              <MusicProvider>
-                <PersonalHubProvider>
+            <PersonalHubProvider>
+              <ChatProvider>
+                <MusicProvider>
                   <AppRoutes />
                   <PersonalHubModal />
-                </PersonalHubProvider>
-              </MusicProvider>
-            </ChatProvider>
+                </MusicProvider>
+              </ChatProvider>
+            </PersonalHubProvider>
           </AuthProvider>
         </AppErrorBoundary>
       </BrowserRouter>

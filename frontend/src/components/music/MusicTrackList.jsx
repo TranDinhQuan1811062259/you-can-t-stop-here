@@ -1,6 +1,7 @@
 import React from 'react';
 import { playClickSound } from '../../utils/soundEffects';
 import { usePersonalHub } from '../../context/PersonalHubContext';
+import { useAuth } from '../../context/AuthContext';
 
 /**
  * Component hiển thị danh sách bài hát & bộ chọn chủ đề đa mùa
@@ -15,6 +16,7 @@ export const MusicTrackList = ({
 }) => {
   const tracks = theme?.tracks || [];
   const { likedTracks, toggleTrackLike, trackLikesMap } = usePersonalHub();
+  const { isAuthenticated, openLoginModal } = useAuth();
 
   return (
     <div className="music-tracklist-container">
@@ -25,6 +27,7 @@ export const MusicTrackList = ({
         </span>
         <div className="theme-pills-scroller">
           {allThemes.map((item) => {
+            const isFavorites = item.slug === 'favorites';
             const isSelected = item.slug === theme?.slug;
             const hasTracks = item.tracks && item.tracks.length > 0;
 
@@ -32,21 +35,28 @@ export const MusicTrackList = ({
               <button
                 key={item.id}
                 type="button"
-                className={`theme-pill-btn ${isSelected ? 'active' : ''} ${!hasTracks ? 'is-coming' : ''}`}
+                className={`theme-pill-btn ${isSelected ? 'active' : ''} ${isFavorites ? 'favorites-pill' : ''} ${!hasTracks && !isFavorites ? 'is-coming' : ''}`}
                 onClick={() => {
                   playClickSound();
                   onSelectTheme(item.slug);
                 }}
                 title={
-                  hasTracks
-                    ? `Chủ đề: ${item.name} (${item.tracks.length} bài hát)`
-                    : `Chủ đề: ${item.name} (Sắp ra mắt)`
+                  isFavorites
+                    ? `Nhạc Tôi Đã Thích (${item.tracks?.length || 0} bài)`
+                    : hasTracks
+                      ? `Chủ đề: ${item.name} (${item.tracks.length} bài hát)`
+                      : `Chủ đề: ${item.name} (Sắp ra mắt)`
                 }
               >
                 <span className="pill-icon">{item.icon}</span>
-                <span className="pill-name">{item.name}</span>
-                {!hasTracks && <span className="pill-badge-tiny">Sắp có</span>}
-                {hasTracks && (
+                <span className="pill-name">{isFavorites ? 'Nhạc Đã Thích' : item.name}</span>
+                {isFavorites ? (
+                  <span className="pill-track-count" style={{ background: 'rgba(244, 63, 94, 0.25)', color: '#fda4af' }}>
+                    {item.tracks?.length || 0}
+                  </span>
+                ) : !hasTracks ? (
+                  <span className="pill-badge-tiny">Sắp có</span>
+                ) : (
                   <span className="pill-track-count">{item.tracks.length}</span>
                 )}
               </button>
@@ -76,24 +86,68 @@ export const MusicTrackList = ({
       {/* Danh sách các bài hát trong playlist */}
       <div className="tracklist-items-wrapper">
         {tracks.length === 0 ? (
-          <div className="tracklist-empty-card">
-            <div className="empty-icon">🎧</div>
-            <h4 className="empty-title">Chủ đề đang chuẩn bị giai điệu</h4>
-            <p className="empty-desc">
-              Các bài hát cho chủ đề <strong>{theme?.name}</strong> đang được ghi âm và hoàn thiện.
-              Bạn có thể chuyển về <strong>Mùa Đông ❄️</strong> để thưởng thức các bản thu sẵn có!
-            </p>
-            <button
-              type="button"
-              className="empty-action-btn"
-              onClick={() => {
-                playClickSound();
-                onSelectTheme('winter');
-              }}
-            >
-              <i className="fa-solid fa-snowflake"></i> Về Playlist Mùa Đông
-            </button>
-          </div>
+          theme?.slug === 'favorites' ? (
+            !isAuthenticated ? (
+              <div className="tracklist-empty-card" style={{ borderColor: 'rgba(244, 63, 94, 0.35)', background: 'rgba(244, 63, 94, 0.05)' }}>
+                <div className="empty-icon" style={{ filter: 'drop-shadow(0 0 16px rgba(244, 63, 94, 0.4))' }}>❤️</div>
+                <h4 className="empty-title">Đăng Nhập Để Lưu Nhạc Yêu Thích</h4>
+                <p className="empty-desc">
+                  Hãy đăng nhập để lưu trữ các bài hát bạn yêu thích vào danh sách phát riêng và thưởng thức bất cứ lúc nào.
+                </p>
+                <button
+                  type="button"
+                  className="empty-action-btn"
+                  onClick={() => openLoginModal()}
+                  style={{
+                    background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    boxShadow: '0 4px 16px rgba(244, 63, 94, 0.35)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <i className="fa-solid fa-right-to-bracket"></i> Đăng Nhập Ngay
+                </button>
+              </div>
+            ) : (
+              <div className="tracklist-empty-card" style={{ borderColor: 'rgba(244, 63, 94, 0.35)', background: 'rgba(244, 63, 94, 0.05)' }}>
+                <div className="empty-icon">🤍</div>
+                <h4 className="empty-title">Bạn Chưa Thả Tim Bản Nhạc Nào</h4>
+                <p className="empty-desc">
+                  Hãy bấm vào biểu tượng <strong>❤️ Thả Tim</strong> trên các bản nhạc Mùa Đông hoặc Giving Some Efforts để gom chúng vào playlist này nhé!
+                </p>
+                <button
+                  type="button"
+                  className="empty-action-btn"
+                  onClick={() => {
+                    playClickSound();
+                    onSelectTheme('winter');
+                  }}
+                >
+                  <i className="fa-solid fa-snowflake"></i> Khám Phá Nhạc Mùa Đông
+                </button>
+              </div>
+            )
+          ) : (
+            <div className="tracklist-empty-card">
+              <div className="empty-icon">🎧</div>
+              <h4 className="empty-title">Chủ đề đang chuẩn bị giai điệu</h4>
+              <p className="empty-desc">
+                Các bài hát cho chủ đề <strong>{theme?.name}</strong> đang được ghi âm và hoàn thiện.
+                Bạn có thể chuyển về <strong>Mùa Đông ❄️</strong> để thưởng thức các bản thu sẵn có!
+              </p>
+              <button
+                type="button"
+                className="empty-action-btn"
+                onClick={() => {
+                  playClickSound();
+                  onSelectTheme('winter');
+                }}
+              >
+                <i className="fa-solid fa-snowflake"></i> Về Playlist Mùa Đông
+              </button>
+            </div>
+          )
         ) : (
           tracks.map((track, idx) => {
             const isActive = idx === currentTrackIndex;

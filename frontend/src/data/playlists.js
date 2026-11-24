@@ -211,6 +211,27 @@ Hy vọng khi nghe bài này, bạn cũng tìm được một chút cảm giác 
   },
 ];
 
+export const FAVORITES_THEME_BASE = {
+  id: 'favorites',
+  slug: 'favorites',
+  name: 'Nhạc Đã Thích',
+  title: 'Bộ Sưu Tập Nhạc Yêu Thích Của Bạn',
+  subtitle: 'Những giai điệu bạn đã thả tim và lưu giữ trong góc riêng',
+  badge: 'Yêu Thích ❤️',
+  icon: '❤️',
+  accentColor: '#f43f5e',
+  secondaryColor: '#e11d48',
+  glowColor: 'rgba(244, 63, 94, 0.22)',
+  atmosphere: {
+    type: 'favorites',
+    speed: 0.5,
+    density: 20,
+    vibeText: 'Ký ức ngọt ngào • Giai điệu thân quen • Góc riêng của bạn',
+  },
+  quote: 'Âm nhạc lưu giữ những khoảnh khắc mà lời nói không thể diễn tả hết.',
+  tracks: [],
+};
+
 /**
  * Lấy playlist theo slug hoặc ID
  * @param {string} slugOrId
@@ -219,6 +240,9 @@ Hy vọng khi nghe bài này, bạn cũng tìm được một chút cảm giác 
 export const getPlaylistBySlug = (slugOrId) => {
   if (!slugOrId) return PLAYLIST_THEMES[0];
   const clean = String(slugOrId).toLowerCase().trim();
+  if (clean === 'favorites' || clean === 'liked') {
+    return FAVORITES_THEME_BASE;
+  }
   const found = PLAYLIST_THEMES.find((p) => p.slug === clean || p.id === clean);
   return found || PLAYLIST_THEMES[0];
 };
