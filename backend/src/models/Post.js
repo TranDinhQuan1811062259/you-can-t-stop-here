@@ -2,6 +2,18 @@ import mongoose from 'mongoose';
 
 const postSchema = new mongoose.Schema(
   {
+    postType: {
+      type: String,
+      enum: ['article', 'photo', 'video'],
+      default: 'article',
+      index: true,
+    },
+    mediaUrls: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
     title: {
       type: String,
       required: [true, 'Tiêu đề tâm sự/bài viết là bắt buộc'],

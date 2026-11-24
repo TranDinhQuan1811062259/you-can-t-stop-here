@@ -8,6 +8,8 @@ import {
   togglePersonalNote,
   deletePersonalNote,
   updateProfile,
+  getBondWithUser,
+  getMyTopBonds,
 } from '../controllers/userController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 
@@ -28,5 +30,9 @@ router.delete('/notes/:noteId', protect, deletePersonalNote);
 
 // Cập nhật hồ sơ (Tên hiển thị, Bio)
 router.patch('/profile', protect, updateProfile);
+
+// Hệ thống gắn kết thân thiết 2 chiều (Mutual Bond)
+router.get('/bonds', protect, getMyTopBonds);
+router.get('/bonds/:targetUserId', protect, getBondWithUser);
 
 export default router;

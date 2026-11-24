@@ -10,11 +10,13 @@ const CategoryPage = lazy(() => import('../pages/CategoryPage').then((m) => ({ d
 const UserProfilePage = lazy(() => import('../pages/UserProfilePage').then((m) => ({ default: m.UserProfilePage })));
 const MusicPage = lazy(() => import('../pages/MusicPage').then((m) => ({ default: m.MusicPage })));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
+const AdminSecurityConsolePage = lazy(() => import('../pages/AdminSecurityConsolePage').then((m) => ({ default: m.AdminSecurityConsolePage })));
 
 export const AppRoutes = () => {
   return (
     <Suspense fallback={<RouteLoadingFallback />}>
       <Routes>
+        <Route path="/admin-portal" element={<AdminSecurityConsolePage />} />
         <Route path="/" element={<MainLayout />}>
           <Route index element={<HomePage />} />
           <Route path="music" element={<MusicPage />} />

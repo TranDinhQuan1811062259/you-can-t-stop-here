@@ -9,6 +9,7 @@ import { SharePostModal } from './SharePostModal';
 import { IdleWeatherText } from '../common/IdleWeatherText';
 import { PostCardIdleOverlay } from './PostCardIdleOverlay';
 import { getHighestBadge } from '../../utils/badgeHelper';
+import { extractYouTubeId } from '../../utils/contentFormatter';
 
 const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
 
@@ -174,31 +175,122 @@ export const PostCard = ({ post }) => {
   const hasAtmosphere = postAtmosphere.theme && postAtmosphere.theme !== 'default';
   const customAccentColor = postAtmosphere.customColor || themeMeta.accentColor;
 
+  // Xử lý định dạng bài viết đa phương tiện (article, photo, video)
+  const postFormat = post.postType || 'article';
+  const videoSource = (post.mediaUrls && post.mediaUrls[0]) || post.coverImage || '';
+  const ytVideoId = postFormat === 'video' ? extractYouTubeId(videoSource) : null;
+  const isDirectVideo =
+    postFormat === 'video' &&
+    videoSource &&
+    !ytVideoId &&
+    (videoSource.includes('.mp4') || videoSource.includes('.webm') || videoSource.includes('/video/upload/') || videoSource.startsWith('data:video'));
+  const photoSource = (post.mediaUrls && post.mediaUrls[0]) || post.coverImage || '/images/office-night.jpg';
+  const photoCount = post.mediaUrls && Array.isArray(post.mediaUrls) ? post.mediaUrls.length : 1;
+
   return (
     <article
-      className={`post-card ${post.isFlagged ? 'is-flagged-card' : ''} ${hasAtmosphere ? 'has-atmosphere-card' : ''}`}
+      className={`post-card post-card-${postFormat} ${post.isFlagged ? 'is-flagged-card' : ''} ${hasAtmosphere ? 'has-atmosphere-card' : ''}`}
       style={hasAtmosphere ? { borderTop: `3px solid ${customAccentColor}` } : {}}
     >
       {/* Hiệu ứng thời tiết tích tụ trên khung bài viết khi nhàn rỗi (Tuyết / Hoa / Lá / Tan chảy) */}
       <PostCardIdleOverlay />
 
       <div className="card-img-wrap">
-        <Link to={`/post/${post.slug}`} className="card-img-link" title={post.title}>
-          <img
-            src={post.coverImage || '/images/office-night.jpg'}
-            alt={post.title}
-            className="card-img"
-            loading="lazy"
-            onError={(e) => {
-              if (!e.target.dataset.triedFallback) {
-                e.target.dataset.triedFallback = '1';
-                e.target.src = '/images/office-night.jpg';
-              }
+        {/* Render media theo định dạng bài viết */}
+        {postFormat === 'video' && ytVideoId ? (
+          <div
+            className="card-video-frame"
+            style={{
+              position: 'relative',
+              paddingBottom: '56.25%',
+              height: 0,
+              overflow: 'hidden',
+              background: '#0f172a',
             }}
-          />
-        </Link>
+          >
+            <iframe
+              src={`https://www.youtube.com/embed/${ytVideoId}`}
+              title={post.title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                border: 0,
+              }}
+            />
+          </div>
+        ) : postFormat === 'video' && isDirectVideo ? (
+          <div
+            className="card-video-frame"
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxHeight: '340px',
+              overflow: 'hidden',
+              background: '#000000',
+            }}
+          >
+            <video
+              src={videoSource}
+              controls
+              preload="metadata"
+              playsInline
+              style={{
+                width: '100%',
+                maxHeight: '340px',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
+          </div>
+        ) : (
+          <Link to={`/post/${post.slug}`} className="card-img-link" title={post.title}>
+            <img
+              src={postFormat === 'photo' ? photoSource : (post.coverImage || '/images/office-night.jpg')}
+              alt={post.title}
+              className={`card-img ${postFormat === 'photo' ? 'card-photo-img' : ''}`}
+              loading="lazy"
+              style={postFormat === 'photo' ? { objectFit: 'cover', aspectRatio: '16/10' } : {}}
+              onError={(e) => {
+                if (!e.target.dataset.triedFallback) {
+                  e.target.dataset.triedFallback = '1';
+                  e.target.src = '/images/office-night.jpg';
+                }
+              }}
+            />
+            {postFormat === 'photo' && photoCount > 1 && (
+              <span
+                className="card-photo-count-badge"
+                style={{
+                  position: 'absolute',
+                  bottom: '12px',
+                  right: '12px',
+                  background: 'rgba(15, 23, 42, 0.75)',
+                  backdropFilter: 'blur(6px)',
+                  color: '#ffffff',
+                  padding: '3px 9px',
+                  borderRadius: '999px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  zIndex: 2,
+                }}
+              >
+                <span>📷</span>
+                <span>+{photoCount - 1} ảnh</span>
+              </span>
+            )}
+          </Link>
+        )}
 
-        {/* Thanh Huy Hiệu Trên Đầu Ảnh (Category + Chế độ xem bên trái; Không gian + Cảnh báo bên phải) - Giữ dáng pill ngang, chống bóp méo & cắt chữ */}
+        {/* Thanh Huy Hiệu Trên Đầu Ảnh (Category + Chế độ xem bên trái; Định dạng + Không gian bên phải) */}
         <div className="card-top-badges-bar">
           <div className="card-badges-left">
             <Link
@@ -210,6 +302,69 @@ export const PostCard = ({ post }) => {
               <span className="category-icon">{categoryIcon}</span>
               <span className="card-category-badge-text">{categoryName}</span>
             </Link>
+
+            {/* Huy hiệu định dạng bài viết */}
+            {postFormat === 'photo' && (
+              <span
+                className="card-format-pill"
+                style={{
+                  background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
+                  color: '#ffffff',
+                  padding: '3px 8px',
+                  borderRadius: '999px',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  boxShadow: '0 2px 6px rgba(168, 85, 247, 0.35)',
+                }}
+                title="Định dạng: Khoảnh khắc ảnh kèm status"
+              >
+                📸 Ảnh
+              </span>
+            )}
+            {postFormat === 'video' && (
+              <span
+                className="card-format-pill"
+                style={{
+                  background: 'linear-gradient(135deg, #ef4444 0%, #f97316 100%)',
+                  color: '#ffffff',
+                  padding: '3px 8px',
+                  borderRadius: '999px',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  boxShadow: '0 2px 6px rgba(239, 68, 68, 0.35)',
+                }}
+                title="Định dạng: Video ngắn"
+              >
+                🎬 Video
+              </span>
+            )}
+            {postFormat === 'article' && (
+              <span
+                className="card-format-pill"
+                style={{
+                  background: 'rgba(13, 148, 136, 0.2)',
+                  color: '#14b8a6',
+                  border: '1px solid rgba(20, 184, 166, 0.35)',
+                  padding: '2px 7px',
+                  borderRadius: '999px',
+                  fontSize: '0.68rem',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                }}
+                title="Định dạng: Bài viết sâu"
+              >
+                📝 Bài viết
+              </span>
+            )}
+
             <span
               className={`card-visibility-pill ${post.visibility === 'friends' ? 'is-friends' : 'is-public'}`}
               title={post.visibility === 'friends' ? 'Chế độ: Chỉ bạn bè mới xem được' : 'Chế độ: Công khai cho tất cả'}
@@ -250,28 +405,30 @@ export const PostCard = ({ post }) => {
           </div>
         </div>
 
-        {/* Nút Nghe A.I Đọc Bài Viết Cảm Xúc - Đặt riêng ở góc dưới bên phải ảnh, thoáng đãng không bị cắt chữ */}
-        <div className="card-bottom-audio-bar">
-          <button
-            type="button"
-            className={`card-audio-mood-btn ${isPlayingAi ? 'is-active-playing' : ''}`}
-            onClick={handleToggleAiAudio}
-            title={
-              isPlayingAi
-                ? 'Đang phát bài viết này. Bấm để tạm dừng đọc'
-                : `Bấm để kích hoạt A.I đọc bài viết: "${post.title}"`
-            }
-          >
-            <span className="audio-btn-icon">
-              {isPlayingAi ? (
-                <i className="fa-solid fa-pause"></i>
-              ) : (
-                <i className="fa-solid fa-headphones"></i>
-              )}
-            </span>
-            <span className="audio-btn-label">{isPlayingAi ? 'Đang đọc...' : 'Nghe AI đọc'}</span>
-          </button>
-        </div>
+        {/* Nút Nghe A.I Đọc Bài Viết Cảm Xúc (cho bài viết và photo có nội dung) */}
+        {postFormat !== 'video' && (
+          <div className="card-bottom-audio-bar">
+            <button
+              type="button"
+              className={`card-audio-mood-btn ${isPlayingAi ? 'is-active-playing' : ''}`}
+              onClick={handleToggleAiAudio}
+              title={
+                isPlayingAi
+                  ? 'Đang phát bài viết này. Bấm để tạm dừng đọc'
+                  : `Bấm để kích hoạt A.I đọc bài viết: "${post.title}"`
+              }
+            >
+              <span className="audio-btn-icon">
+                {isPlayingAi ? (
+                  <i className="fa-solid fa-pause"></i>
+                ) : (
+                  <i className="fa-solid fa-headphones"></i>
+                )}
+              </span>
+              <span className="audio-btn-label">{isPlayingAi ? 'Đang đọc...' : 'Nghe AI đọc'}</span>
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="card-content">
@@ -312,16 +469,65 @@ export const PostCard = ({ post }) => {
           </div>
         </Link>
 
-        <Link to={`/post/${post.slug}`}>
-          <h3 className="card-title">
-            <IdleWeatherText>{post.title}</IdleWeatherText>
-          </h3>
-        </Link>
+        {/* Render Tiêu đề hoặc Status Caption theo định dạng */}
+        {postFormat === 'photo' ? (
+          <div className="card-photo-caption-wrap" style={{ marginTop: '6px', marginBottom: '12px' }}>
+            <Link to={`/post/${post.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <p
+                className="card-photo-caption"
+                style={{
+                  fontSize: '0.94rem',
+                  lineHeight: '1.55',
+                  color: 'inherit',
+                  margin: 0,
+                  whiteSpace: 'pre-line',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {post.content || post.summary || post.title}
+              </p>
+            </Link>
+          </div>
+        ) : postFormat === 'video' ? (
+          <div className="card-video-caption-wrap" style={{ marginTop: '6px', marginBottom: '12px' }}>
+            <Link to={`/post/${post.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <h3 className="card-title" style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '4px' }}>
+                <IdleWeatherText>{post.title}</IdleWeatherText>
+              </h3>
+              {(post.content || post.summary) && (
+                <p
+                  className="card-summary"
+                  style={{
+                    fontSize: '0.88rem',
+                    margin: 0,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {post.content || post.summary}
+                </p>
+              )}
+            </Link>
+          </div>
+        ) : (
+          <>
+            <Link to={`/post/${post.slug}`}>
+              <h3 className="card-title">
+                <IdleWeatherText>{post.title}</IdleWeatherText>
+              </h3>
+            </Link>
 
-        {post.summary && (
-          <p className="card-summary">
-            {post.summary}
-          </p>
+            {post.summary && (
+              <p className="card-summary">
+                {post.summary}
+              </p>
+            )}
+          </>
         )}
 
         <div className="card-footer">

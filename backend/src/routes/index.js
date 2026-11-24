@@ -13,10 +13,12 @@ import timeCapsuleRoutes from './timeCapsuleRoutes.js';
 import ttsRoutes from './ttsRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
 import userRoutes from './userRoutes.js';
+import adminRoutes from './adminRoutes.js';
 
 const router = express.Router();
 
 router.use('/auth', authRoutes);
+router.use('/admin', adminRoutes);
 router.use('/user', userRoutes);
 router.use('/posts', postRoutes);
 router.use('/categories', categoryRoutes);
@@ -31,13 +33,14 @@ router.use('/stories', storyRoutes);
 router.use('/time-capsules', timeCapsuleRoutes);
 router.use('/tts', ttsRoutes);
 
-// Health check endpoint
+// Health check endpoint siêu nhẹ để đánh thức server
 router.get('/health', (req, res) => {
   res.json({
+    ok: true,
     name: "You Can't Stop Here API",
     status: 'OK',
     uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
+    timestamp: Date.now(),
   });
 });
 

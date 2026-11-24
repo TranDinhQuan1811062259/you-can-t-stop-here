@@ -11,6 +11,8 @@ import { ProfileMusicPlayer } from '../components/profile/ProfileMusicPlayer';
 import { Pagination } from '../components/common/Pagination';
 import { playClickSound } from '../utils/soundEffects';
 import { getHighestBadge } from '../utils/badgeHelper';
+import { ProfileQrModal } from '../components/profile/ProfileQrModal';
+import apiClient from '../services/apiClient';
 export const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
 
 export const getProfileAvatarSrc = (targetUser) => {
@@ -70,6 +72,8 @@ export const UserProfilePage = () => {
   const [error, setError] = useState(null);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
   const [profilePostsPage, setProfilePostsPage] = useState(1);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [mutualBondData, setMutualBondData] = useState(null);
 
   const fetchProfile = async () => {
     try {
@@ -77,6 +81,14 @@ export const UserProfilePage = () => {
       setError(null);
       const res = await authService.getUserProfile(userId);
       setProfileData(res.data);
+
+      // Tải điểm gắn kết 2 chiều (Mutual Bond) nếu đã đăng nhập và đang xem profile người khác
+      if (currentUser && userId && String(currentUser._id) !== String(userId)) {
+        try {
+          const bondRes = await apiClient.get(`/user/bonds/${userId}`);
+          setMutualBondData(bondRes?.data?.data || null);
+        } catch (_) {}
+      }
     } catch (err) {
       setError(err.message || 'Không thể tải thông tin trang cá nhân này.');
     } finally {
@@ -348,6 +360,30 @@ export const UserProfilePage = () => {
                   </span>
                 );
               })()}
+
+              {/* Badge Cấp Bậc Thân Thiết 2 Chiều (Mutual Bond Tier) */}
+              {mutualBondData && mutualBondData.mutualScore > 0 && (
+                <span
+                  style={{
+                    background: mutualBondData.tierInfo?.bg || 'rgba(56, 189, 248, 0.15)',
+                    color: mutualBondData.tierInfo?.color || '#38bdf8',
+                    border: `1px solid ${mutualBondData.tierInfo?.border || 'rgba(56, 189, 248, 0.35)'}`,
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxShadow: `0 0 10px ${mutualBondData.tierInfo?.bg || 'transparent'}`,
+                  }}
+                  title={`Điểm thân thiết 2 chiều: ${mutualBondData.mutualScore} điểm (${mutualBondData.tierInfo?.desc || ''})`}
+                >
+                  <span>{mutualBondData.tierInfo?.name}</span>
+                  <span style={{ opacity: 0.85, fontSize: '0.72rem' }}>({mutualBondData.mutualScore}đ)</span>
+                </span>
+              )}
+
               {isSelf ? (
                 <span
                   style={{
@@ -724,6 +760,37 @@ export const UserProfilePage = () => {
                 </button>
               </div>
             )}
+
+            {/* Nút Mở Mã QR Hồ Sơ Scan-to-Profile */}
+            <button
+              type="button"
+              className="profile-share-qr-btn"
+              onClick={() => {
+                playClickSound();
+                setIsQrModalOpen(true);
+              }}
+              style={{
+                marginTop: '10px',
+                background: 'rgba(56, 189, 248, 0.1)',
+                border: '1px solid rgba(56, 189, 248, 0.35)',
+                color: '#38bdf8',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                fontSize: '0.84rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                width: '100%',
+                transition: 'all 0.2s ease',
+              }}
+              title="Quét hoặc chia sẻ mã QR trang cá nhân này"
+            >
+              <span>📱</span>
+              <span>Mã QR & Chia Sẻ Link</span>
+            </button>
           </div>
         </div>
       </div>
@@ -822,6 +889,13 @@ export const UserProfilePage = () => {
           </div>
         )}
       </div>
+
+      {/* Modal Quét Mã QR & Chia Sẻ Hồ Sơ (Scan-To-Profile) */}
+      <ProfileQrModal
+        isOpen={isQrModalOpen}
+        onClose={() => setIsQrModalOpen(false)}
+        user={user}
+      />
     </div>
   );
 };

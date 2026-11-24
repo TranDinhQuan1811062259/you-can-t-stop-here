@@ -823,6 +823,23 @@ export const MusicProvider = ({ children }) => {
     togglePlay();
   }, [togglePlay]);
 
+  // 🎵 Preload metadata nhẹ cho bài kế tiếp (nextTrack) khi bài hiện tại đang phát
+  useEffect(() => {
+    if (!isPlaying || !tracks || tracks.length <= 1) return;
+    try {
+      const nextIdx = (currentTrackIndex + 1) % tracks.length;
+      const nextTrackItem = tracks[nextIdx];
+      if (nextTrackItem) {
+        const nextSrc = getTargetTrackSrc(nextTrackItem);
+        if (nextSrc && typeof Audio !== 'undefined') {
+          const preloader = new Audio();
+          preloader.preload = 'metadata';
+          preloader.src = nextSrc;
+        }
+      }
+    } catch (_) {}
+  }, [isPlaying, tracks, currentTrackIndex, getTargetTrackSrc]);
+
   // Đăng ký toàn bộ sự kiện của Audio element (Chỉ 1 lần duy nhất trên toàn hệ thống)
   useEffect(() => {
     const audio = audioRef.current;

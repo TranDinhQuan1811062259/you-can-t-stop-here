@@ -181,6 +181,22 @@ export const AuthModal = () => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isColdStartWaking, setIsColdStartWaking] = useState(false);
+
+  // Phát hiện yêu cầu kéo dài > 3s do Render server đang khởi động từ trạng thái ngủ đông
+  useEffect(() => {
+    let timer = null;
+    if (loading) {
+      timer = setTimeout(() => {
+        setIsColdStartWaking(true);
+      }, 3000);
+    } else {
+      setIsColdStartWaking(false);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [loading]);
 
   // 📳 Hiệu ứng rung nhẹ (Shake) phản hồi vi tương tác khi nhập OTP sai hoặc chưa đủ ký tự
   const [isOtpShaking, setIsOtpShaking] = useState(false);
@@ -1167,6 +1183,30 @@ export const AuthModal = () => {
         {errorMsg && (
           <div className="alert-message error" style={{ margin: '12px 0', background: '#fef2f2', color: '#b91c1c', border: '1.5px solid #fca5a5', padding: '10px 14px', borderRadius: '8px', fontWeight: 600 }}>
             <span style={{ color: '#b91c1c' }}>⚠️</span> {errorMsg}
+          </div>
+        )}
+
+        {/* Thông báo máy chủ khởi động chậm do Cold Start (> 3s) */}
+        {isColdStartWaking && (
+          <div
+            className="alert-message cold-start"
+            style={{
+              margin: '10px 0',
+              background: 'rgba(245, 158, 11, 0.12)',
+              color: '#d97706',
+              border: '1.5px solid rgba(245, 158, 11, 0.35)',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '0.84rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              animation: 'fadeIn 0.3s ease',
+            }}
+          >
+            <i className="fa-solid fa-spinner fa-spin"></i>
+            <span>Đang đánh thức máy chủ (mất khoảng 20–40s lần đầu)...</span>
           </div>
         )}
 

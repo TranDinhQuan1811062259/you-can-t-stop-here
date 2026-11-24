@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import User from '../models/User.js';
 import TrackStat from '../models/TrackStat.js';
+import MutualBond from '../models/MutualBond.js';
+import { getBondTierInfo } from '../utils/mutualBondHelper.js';
 import { isDbConnected } from '../config/db.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { saveUserToStore } from '../utils/persistentStore.js';
@@ -491,3 +493,103 @@ export const updateProfile = async (req, res) => {
     return sendError(res, { message: 'Không thể cập nhật hồ sơ', status: 500 });
   }
 };
+
+/**
+ * GET /api/user/bonds/:targetUserId
+ * Lấy mức độ thân thiết 2 chiều giữa người dùng hiện tại và chủ hồ sơ
+ */
+export const getBondWithUser = async (req, res) => {
+  try {
+    const { targetUserId } = req.params;
+    const currentUserId = req.user?._id;
+
+    if (!targetUserId || !currentUserId || String(targetUserId) === String(currentUserId)) {
+      return sendSuccess(res, {
+        data: {
+          mutualScore: 0,
+          tier: 'none',
+          tierInfo: getBondTierInfo(0),
+        },
+      });
+    }
+
+    const fromStr = String(currentUserId);
+    const toStr = String(targetUserId);
+    const isFromSmaller = fromStr < toStr;
+    const userA = isFromSmaller ? currentUserId : targetUserId;
+    const userB = isFromSmaller ? targetUserId : currentUserId;
+
+    let bond = null;
+    if (isDbConnected) {
+      bond = await MutualBond.findOne({ userA, userB }).lean();
+    }
+
+    const mutualScore = bond?.mutualScore || 0;
+    const tierInfo = getBondTierInfo(mutualScore);
+
+    return sendSuccess(res, {
+      message: 'Lấy độ thân thiết thành công',
+      data: {
+        mutualScore,
+        tier: tierInfo.key,
+        tierInfo,
+        scoreAtoB: isFromSmaller ? (bond?.scoreAtoB || 0) : (bond?.scoreBtoA || 0),
+        scoreBtoA: isFromSmaller ? (bond?.scoreBtoA || 0) : (bond?.scoreAtoB || 0),
+        lastInteractionAt: bond?.lastInteractionAt || null,
+      },
+    });
+  } catch (err) {
+    console.warn('[GetBondWithUser Error]:', err);
+    return sendSuccess(res, {
+      data: { mutualScore: 0, tier: 'none', tierInfo: getBondTierInfo(0) },
+    });
+  }
+};
+
+/**
+ * GET /api/user/bonds
+ * Lấy danh sách Top người bạn thân thiết nhất của user đang đăng nhập
+ */
+export const getMyTopBonds = async (req, res) => {
+  try {
+    const currentUserId = req.user?._id;
+    if (!currentUserId || !isDbConnected) {
+      return sendSuccess(res, { data: [] });
+    }
+
+    const bonds = await MutualBond.find({
+      $or: [{ userA: currentUserId }, { userB: currentUserId }],
+      mutualScore: { $gt: 0 },
+    })
+      .sort({ mutualScore: -1 })
+      .limit(8)
+      .populate('userA', 'name avatar jobTitle role streakCount')
+      .populate('userB', 'name avatar jobTitle role streakCount')
+      .lean();
+
+    const formatted = bonds
+      .map((b) => {
+        const isUserA = String(b.userA?._id) === String(currentUserId);
+        const partner = isUserA ? b.userB : b.userA;
+        const tierInfo = getBondTierInfo(b.mutualScore);
+        return {
+          _id: b._id,
+          partner,
+          mutualScore: b.mutualScore,
+          tier: b.tier,
+          tierInfo,
+          lastInteractionAt: b.lastInteractionAt,
+        };
+      })
+      .filter((item) => Boolean(item.partner));
+
+    return sendSuccess(res, {
+      message: 'Lấy danh sách kết nối thân thiết thành công',
+      data: formatted,
+    });
+  } catch (err) {
+    console.warn('[GetMyTopBonds Error]:', err);
+    return sendSuccess(res, { data: [] });
+  }
+};
+

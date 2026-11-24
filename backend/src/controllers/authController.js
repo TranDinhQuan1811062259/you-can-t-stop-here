@@ -1,6 +1,9 @@
 import User from '../models/User.js';
 import Post from '../models/Post.js';
 import Category from '../models/Category.js';
+import AdminAuditLog from '../models/AdminAuditLog.js';
+import { extractTelemetry } from '../utils/telemetryHelper.js';
+import { sendAdminSecurityAlertEmail } from '../services/emailService.js';
 import { OAuth2Client } from 'google-auth-library';
 import { isDbConnected } from '../config/db.js';
 import {
@@ -170,6 +173,36 @@ export const login = async (req, res) => {
       });
 
       if (user) {
+        // 🚨 CHẶN TÀI KHOẢN ADMIN TẠI CỔNG USER THƯỜNG (ROLE ISOLATION & SECURITY TRAP)
+        if (user.role === 'admin') {
+          const telemetry = extractTelemetry(req);
+          try {
+            await AdminAuditLog.create({
+              action: 'BLOCKED_AT_USER_PORTAL',
+              email: user.email,
+              ip: telemetry.ip,
+              location: telemetry.location,
+              userAgent: telemetry.userAgent,
+              timeVn: telemetry.timeVn,
+              details: { reason: 'Admin attempt at user login portal' },
+            });
+          } catch (_) {}
+          sendAdminSecurityAlertEmail({
+            action: 'BLOCKED_AT_USER_PORTAL',
+            targetEmail: user.email,
+            ip: telemetry.ip,
+            location: telemetry.location,
+            userAgent: telemetry.userAgent,
+            timeVn: telemetry.timeVn,
+            details: { reason: 'Admin account blocked at regular user login portal' },
+          }).catch(() => {});
+
+          return sendError(res, {
+            message: 'Email hoặc mật khẩu không chính xác',
+            status: 401,
+          });
+        }
+
         const isMatch = await user.comparePassword(password);
         if (isMatch) {
           const tokenVersion = user.tokenVersion !== undefined ? user.tokenVersion : 0;
@@ -228,6 +261,36 @@ export const login = async (req, res) => {
           (u.name && u.name.toLowerCase() === cleanInput)
       );
     if (found) {
+      // 🚨 CHẶN TÀI KHOẢN ADMIN TRONG PERSISTENT STORE TẠI CỔNG USER
+      if (found.role === 'admin') {
+        const telemetry = extractTelemetry(req);
+        try {
+          await AdminAuditLog.create({
+            action: 'BLOCKED_AT_USER_PORTAL',
+            email: found.email,
+            ip: telemetry.ip,
+            location: telemetry.location,
+            userAgent: telemetry.userAgent,
+            timeVn: telemetry.timeVn,
+            details: { reason: 'Admin attempt from persistent store at user login portal' },
+          });
+        } catch (_) {}
+        sendAdminSecurityAlertEmail({
+          action: 'BLOCKED_AT_USER_PORTAL',
+          targetEmail: found.email,
+          ip: telemetry.ip,
+          location: telemetry.location,
+          userAgent: telemetry.userAgent,
+          timeVn: telemetry.timeVn,
+          details: { reason: 'Admin account blocked at regular user login portal' },
+        }).catch(() => {});
+
+        return sendError(res, {
+          message: 'Email hoặc mật khẩu không chính xác',
+          status: 401,
+        });
+      }
+
       let isMatch =
         Boolean(found.rawPassword && password === found.rawPassword) ||
         Boolean(found.password && password === found.password);
@@ -2300,6 +2363,36 @@ export const googleLogin = async (req, res) => {
     const cleanEmail = email.toLowerCase().trim();
     const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
     const assignedRole = cleanEmail === adminEmail ? 'admin' : 'user';
+
+    // 🚨 BẪY BẢO MẬT: TỪ CHỐI TÀI KHOẢN ADMIN ĐĂNG NHẬP QUA CỔNG GOOGLE CỦA USER THƯỜNG
+    if (assignedRole === 'admin') {
+      const telemetry = extractTelemetry(req);
+      try {
+        await AdminAuditLog.create({
+          action: 'BLOCKED_AT_USER_PORTAL',
+          email: cleanEmail,
+          ip: telemetry.ip,
+          location: telemetry.location,
+          userAgent: telemetry.userAgent,
+          timeVn: telemetry.timeVn,
+          details: { attemptFrom: 'Google OAuth User Portal', reason: 'Admin Google account login attempt at user portal' },
+        });
+      } catch (_) {}
+      sendAdminSecurityAlertEmail({
+        action: 'BLOCKED_AT_USER_PORTAL',
+        targetEmail: cleanEmail,
+        ip: telemetry.ip,
+        location: telemetry.location,
+        userAgent: telemetry.userAgent,
+        timeVn: telemetry.timeVn,
+        details: { reason: 'Admin attempt via Google OAuth at regular user login portal' },
+      }).catch(() => {});
+
+      return sendError(res, {
+        message: 'Đăng nhập không thành công. Vui lòng thử lại.',
+        status: 401,
+      });
+    }
 
     const adminAvatar = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
     const finalAvatar = (assignedRole === 'admin')

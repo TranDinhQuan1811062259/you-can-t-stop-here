@@ -1,5 +1,6 @@
 import Comment from '../models/Comment.js';
 import Post from '../models/Post.js';
+import { recordMutualInteraction } from '../utils/mutualBondHelper.js';
 import { checkDbReady } from '../config/db.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { loadStore, saveStore } from '../utils/persistentStore.js';
@@ -169,6 +170,14 @@ export const createComment = async (req, res) => {
         if (postDoc) {
           const authorId = postDoc.user?.toString();
           if (authorId && authorId !== req.user._id?.toString()) {
+            // Ghi nhận điểm thân thiết 2 chiều (bình luận mang lại 2 điểm)
+            recordMutualInteraction({
+              fromUserId: req.user._id,
+              toUserId: authorId,
+              actionType: 'comment',
+              points: 2,
+            }).catch(() => {});
+
             await createNotification({
               recipientId: authorId,
               sender: req.user,

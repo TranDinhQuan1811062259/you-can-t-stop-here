@@ -94,6 +94,7 @@ export const usePosts = (queryParams = {}) => {
     queryParams.q,
     queryParams.sort,
     queryParams.visibility,
+    queryParams.postType,
   ]);
 
   useEffect(() => {

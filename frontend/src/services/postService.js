@@ -81,6 +81,10 @@ export const postService = {
           );
         }
 
+        if (params.postType && params.postType !== 'all') {
+          filtered = filtered.filter((p) => (p.postType || 'article') === params.postType);
+        }
+
         if (params.tag) {
           const cleanTag = params.tag.replace(/^#/, '').trim().toLowerCase();
           filtered = filtered.filter((p) => (p.tags || []).some((t) => t.toLowerCase() === cleanTag));

@@ -13,6 +13,8 @@ import {
   setCampfireSoundEnabled,
 } from '../../utils/campfireAudio';
 import { HonorCardModal } from './HonorCardModal';
+import { ProfileQrModal } from '../profile/ProfileQrModal';
+import apiClient from '../../services/apiClient';
 import '../../styles/personalHub.css';
 
 const DEFAULT_EMPTY_AVATAR =
@@ -58,6 +60,8 @@ export const PersonalHubModal = () => {
   const [milestoneCelebration, setMilestoneCelebration] = useState(null);
   const [campfireSoundOn, setCampfireSoundOn] = useState(() => isCampfireSoundEnabled());
   const [isHonorCardOpen, setIsHonorCardOpen] = useState(false);
+  const [isProfileQrOpen, setIsProfileQrOpen] = useState(false);
+  const [topBonds, setTopBonds] = useState([]);
   const [activeTooltipDay, setActiveTooltipDay] = useState(null);
   const checkInButtonRef = useRef(null);
 
@@ -231,6 +235,24 @@ export const PersonalHubModal = () => {
       setProfileBio(user.bio || '');
     }
   }, [user]);
+
+  // Tải danh sách kết nối thân thiết 2 chiều khi mở tab Hồ sơ
+  useEffect(() => {
+    if (!isHubOpen || activeTab !== 'favorites') return;
+    let isMounted = true;
+    apiClient
+      .get('/user/bonds')
+      .then((res) => {
+        if (isMounted) {
+          const list = res?.data?.data || [];
+          setTopBonds(Array.isArray(list) ? list : []);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [isHubOpen, activeTab]);
 
   // Đóng khi bấm phím Escape (Quy tắc 3 GEMINI.md)
   useEffect(() => {
@@ -825,6 +847,91 @@ export const PersonalHubModal = () => {
                 )}
               </div>
 
+              {/* Danh sách kết nối thân thiết 2 chiều (Mutual Bonds) */}
+              <div>
+                <h4 className="hub-section-title">
+                  <span>
+                    <i className="fa-solid fa-users-rays" style={{ color: '#38bdf8', marginRight: '6px' }}></i>
+                    Kết Nối Thân Thiết 2 Chiều
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{topBonds.length} kết nối</span>
+                </h4>
+
+                {topBonds.length === 0 ? (
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>
+                    Tương tác qua lại (thả tim, bình luận) cùng bạn bè để cùng xây dựng điểm gắn kết tri kỷ!
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {topBonds.map((bond) => {
+                      const partner = bond.partner;
+                      const partnerAvatar = partner?.avatar || DEFAULT_EMPTY_AVATAR;
+                      return (
+                        <Link
+                          key={bond._id}
+                          to={`/profile/${partner?._id}`}
+                          onClick={closeHub}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '8px 12px',
+                            background: 'rgba(30, 41, 59, 0.45)',
+                            border: '1px solid rgba(255, 255, 255, 0.06)',
+                            borderRadius: '10px',
+                            textDecoration: 'none',
+                            color: '#f8fafc',
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                            <img
+                              src={partnerAvatar}
+                              alt={partner?.name}
+                              style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+                              onError={(e) => {
+                                e.target.src = DEFAULT_EMPTY_AVATAR;
+                              }}
+                            />
+                            <div style={{ minWidth: 0 }}>
+                              <div
+                                style={{
+                                  fontSize: '0.84rem',
+                                  fontWeight: 700,
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}
+                              >
+                                {partner?.name}
+                              </div>
+                              <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                                {partner?.jobTitle || 'Thành viên'}
+                              </div>
+                            </div>
+                          </div>
+
+                          <span
+                            style={{
+                              background: bond.tierInfo?.bg || 'rgba(56, 189, 248, 0.15)',
+                              color: bond.tierInfo?.color || '#38bdf8',
+                              border: `1px solid ${bond.tierInfo?.border || 'rgba(56, 189, 248, 0.35)'}`,
+                              padding: '2px 8px',
+                              borderRadius: '999px',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {bond.tierInfo?.name} ({bond.mutualScore}đ)
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               {/* Form cập nhật hồ sơ cá nhân nhanh */}
               <div>
                 <h4 className="hub-section-title">
@@ -832,13 +939,39 @@ export const PersonalHubModal = () => {
                     <i className="fa-solid fa-user-pen" style={{ color: '#38bdf8', marginRight: '6px' }}></i>
                     Cập Nhật Hồ Sơ Nhanh
                   </span>
-                  <Link
-                    to={`/profile/${user?._id}`}
-                    onClick={closeHub}
-                    style={{ fontSize: '0.74rem', color: '#38bdf8', textDecoration: 'none' }}
-                  >
-                    Xem chi tiết →
-                  </Link>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClickSound();
+                        setIsProfileQrOpen(true);
+                      }}
+                      style={{
+                        background: 'rgba(56, 189, 248, 0.12)',
+                        border: '1px solid rgba(56, 189, 248, 0.3)',
+                        color: '#38bdf8',
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                      }}
+                      title="Xem và chia sẻ mã QR trang cá nhân của bạn"
+                    >
+                      <i className="fa-solid fa-qrcode"></i>
+                      <span>Mã QR Hồ Sơ</span>
+                    </button>
+                    <Link
+                      to={`/profile/${user?._id}`}
+                      onClick={closeHub}
+                      style={{ fontSize: '0.74rem', color: '#38bdf8', textDecoration: 'none' }}
+                    >
+                      Xem chi tiết →
+                    </Link>
+                  </div>
                 </h4>
 
                 <form onSubmit={handleUpdateProfileSubmit} className="hub-profile-form">
@@ -899,6 +1032,11 @@ export const PersonalHubModal = () => {
         isOpen={isHonorCardOpen}
         onClose={() => setIsHonorCardOpen(false)}
         streakCount={streakCount}
+      />
+      <ProfileQrModal
+        isOpen={isProfileQrOpen}
+        onClose={() => setIsProfileQrOpen(false)}
+        user={user}
       />
     </div>
   );

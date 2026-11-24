@@ -53,6 +53,8 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
   });
 
   const [activeTab, setActiveTab] = useState('edit'); // 'edit' hoặc 'preview'
+  const [postFormat, setPostFormat] = useState('article'); // 'article' | 'photo' | 'video'
+  const [videoUrlInput, setVideoUrlInput] = useState('');
   const [uploadingCover, setUploadingCover] = useState(false);
   const [isCoverCameraOpen, setIsCoverCameraOpen] = useState(false);
   const [importingDoc, setImportingDoc] = useState(false);
@@ -533,9 +535,64 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
       setFormData((prev) => ({ ...prev, category: currentCategory }));
     }
 
-    if (!formData.title?.trim() || !formData.summary?.trim() || !formData.content?.trim()) {
-      setErrorMsg('Vui lòng điền đầy đủ tiêu đề, tóm tắt và nội dung bài viết.');
-      return;
+    let finalTitle = formData.title?.trim() || '';
+    let finalSummary = formData.summary?.trim() || '';
+    let finalContent = formData.content?.trim() || '';
+    let finalCover = formData.coverImage?.trim() || '';
+    let finalMediaUrls = [];
+
+    // Validation riêng theo từng định dạng bài viết
+    if (postFormat === 'photo') {
+      if (!finalContent) {
+        setErrorMsg('Vui lòng nhập cảm xúc hoặc dòng trạng thái cho khoảnh khắc ảnh!');
+        return;
+      }
+      if (finalContent.length > 300) {
+        setErrorMsg(`Khoảnh khắc ảnh tối đa 300 ký tự (Hiện tại: ${finalContent.length} ký tự)!`);
+        return;
+      }
+      if (!finalCover) {
+        setErrorMsg('Khoảnh khắc ảnh bắt buộc phải có ít nhất 1 hình ảnh bìa!');
+        return;
+      }
+      finalMediaUrls = [finalCover];
+      if (!finalTitle) {
+        finalTitle = finalContent.slice(0, 40) + (finalContent.length > 40 ? '...' : '');
+      }
+      if (!finalSummary) {
+        finalSummary = finalContent.slice(0, 100);
+      }
+    } else if (postFormat === 'video') {
+      if (!finalContent) {
+        setErrorMsg('Vui lòng nhập chú thích cho thước phim ngắn!');
+        return;
+      }
+      if (finalContent.length > 250) {
+        setErrorMsg(`Chú thích video ngắn tối đa 250 ký tự (Hiện tại: ${finalContent.length} ký tự)!`);
+        return;
+      }
+      const vidUrl = videoUrlInput.trim() || finalCover;
+      if (!vidUrl) {
+        setErrorMsg('Thước phim ngắn bắt buộc phải có đường dẫn Video (YouTube, MP4, v.v.)!');
+        return;
+      }
+      finalCover = vidUrl;
+      finalMediaUrls = [vidUrl];
+      if (!finalTitle) {
+        finalTitle = finalContent.slice(0, 40) + (finalContent.length > 40 ? '...' : '');
+      }
+      if (!finalSummary) {
+        finalSummary = finalContent.slice(0, 100);
+      }
+    } else {
+      // Bài viết sâu
+      if (!finalTitle || !finalSummary || !finalContent) {
+        setErrorMsg('Vui lòng điền đầy đủ tiêu đề, tóm tắt và nội dung bài viết.');
+        return;
+      }
+      if (finalCover) {
+        finalMediaUrls = [finalCover];
+      }
     }
 
     setLoading(true);
@@ -543,19 +600,21 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
 
     try {
       // Tự động chèn dấu chấm vào từ ngữ nhạy cảm (ví dụ Die -> D.I.E, chết -> c.h.ế.t)
-      const cleanTitle = maskSensitiveText(formData.title.trim());
-      const cleanSummary = maskSensitiveText(formData.summary.trim());
-      const cleanContent = maskSensitiveText(formData.content);
+      const cleanTitle = maskSensitiveText(finalTitle);
+      const cleanSummary = maskSensitiveText(finalSummary);
+      const cleanContent = maskSensitiveText(finalContent);
       const cleanTags = formData.tags
         ? formData.tags.split(',').map((t) => maskSensitiveText(t.trim().replace(/^#/, ''))).filter(Boolean)
         : [];
 
       const res = await postService.createPost({
+        postType: postFormat,
+        mediaUrls: finalMediaUrls,
         title: cleanTitle,
         summary: cleanSummary,
         content: cleanContent,
         category: currentCategory,
-        coverImage: formData.coverImage || undefined,
+        coverImage: finalCover || undefined,
         tags: cleanTags,
         showReactionCount: formData.showReactionCount,
         allowComments: formData.allowComments,
@@ -674,18 +733,108 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
           );
         })()}
 
+        {/* Thanh chọn 3 định dạng bài đăng: Bài viết sâu | Khoảnh khắc ảnh | Video ngắn */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', background: '#f1f5f9', padding: '6px', borderRadius: '12px' }}>
+          <button
+            type="button"
+            onClick={() => {
+              setPostFormat('article');
+              setErrorMsg('');
+            }}
+            style={{
+              flex: 1,
+              padding: '9px 10px',
+              borderRadius: '8px',
+              border: 'none',
+              background: postFormat === 'article' ? '#ffffff' : 'transparent',
+              color: postFormat === 'article' ? '#0284c7' : '#64748b',
+              fontWeight: 700,
+              fontSize: '0.84rem',
+              cursor: 'pointer',
+              boxShadow: postFormat === 'article' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.2s',
+            }}
+          >
+            <span>📝</span>
+            <span>Bài Viết Sâu</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setPostFormat('photo');
+              setErrorMsg('');
+            }}
+            style={{
+              flex: 1,
+              padding: '9px 10px',
+              borderRadius: '8px',
+              border: 'none',
+              background: postFormat === 'photo' ? '#ffffff' : 'transparent',
+              color: postFormat === 'photo' ? '#0d9488' : '#64748b',
+              fontWeight: 700,
+              fontSize: '0.84rem',
+              cursor: 'pointer',
+              boxShadow: postFormat === 'photo' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.2s',
+            }}
+          >
+            <span>📸</span>
+            <span>Khoảnh Khắc Ảnh (≤300)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setPostFormat('video');
+              setErrorMsg('');
+            }}
+            style={{
+              flex: 1,
+              padding: '9px 10px',
+              borderRadius: '8px',
+              border: 'none',
+              background: postFormat === 'video' ? '#ffffff' : 'transparent',
+              color: postFormat === 'video' ? '#ea580c' : '#64748b',
+              fontWeight: 700,
+              fontSize: '0.84rem',
+              cursor: 'pointer',
+              boxShadow: postFormat === 'video' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.2s',
+            }}
+          >
+            <span>🎬</span>
+            <span>Video Ngắn (≤250)</span>
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="modal-form">
-          <div className="form-group">
-            <label>Tiêu đề bài viết / cảm nghĩ *</label>
-            <input
-              type="text"
-              name="title"
-              placeholder="Ví dụ: Hôm nay mình đã vượt qua ngày thứ 21 áp lực liên miên..."
-              value={formData.title}
-              onChange={handleChange}
-              required
-            />
-          </div>
+          {/* Tiêu đề: chỉ bắt buộc khi là Bài viết sâu */}
+          {postFormat === 'article' && (
+            <div className="form-group">
+              <label>Tiêu đề bài viết / cảm nghĩ *</label>
+              <input
+                type="text"
+                name="title"
+                placeholder="Ví dụ: Hôm nay mình đã vượt qua ngày thứ 21 áp lực liên miên..."
+                value={formData.title}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          )}
 
           <div className="form-group category-select-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
@@ -825,122 +974,227 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
             )}
           </div>
 
-          {/* Ảnh bìa bài viết (Hỗ trợ Ảnh JPG/PNG và Ảnh động GIF 🎬) */}
-          <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <label style={{ margin: 0 }}>Ảnh bìa bài viết (Hỗ trợ JPG/PNG, GIF & Chụp trực tiếp 🎬)</label>
-              <button
-                type="button"
-                className="page-btn"
-                onClick={() => setIsCoverCameraOpen(true)}
-                style={{
-                  fontSize: '0.8rem',
-                  padding: '4px 10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  background: '#ecfdf5',
-                  borderColor: '#6ee7b7',
-                  color: '#047857',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                📸 Chụp từ Camera/Webcam
-              </button>
-            </div>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <input
-                type="file"
-                accept="image/*,.gif"
-                onChange={handleCoverImageChange}
-                disabled={uploadingCover}
-                style={{ fontSize: '0.85rem' }}
-              />
-              <span style={{ fontSize: '0.8rem', color: '#64748b' }}>hoặc dán link GIF:</span>
+          {/* Đường dẫn Video ngắn khi chọn định dạng Video */}
+          {postFormat === 'video' && (
+            <div className="form-group">
+              <label style={{ fontWeight: 700 }}>Đường dẫn Video (YouTube, MP4, Cloudinary...) *</label>
               <input
                 type="url"
-                placeholder="https://.../cover.gif"
-                value={formData.coverImage?.startsWith('http') ? formData.coverImage : ''}
-                onChange={(e) => setFormData((prev) => ({ ...prev, coverImage: e.target.value }))}
-                style={{ flex: 1, minWidth: '180px', fontSize: '0.85rem', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-              />
-              {uploadingCover && (
-                <span style={{ fontSize: '0.85rem', color: 'var(--primary-hover)', fontWeight: 600 }}>
-                  ☁️ Đang xử lý ảnh bìa/GIF...
-                </span>
-              )}
-            </div>
-
-            {formData.coverImage && (
-              <div className="cover-preview-box">
-                <img
-                  src={formData.coverImage}
-                  alt="Ảnh bìa bài viết hoặc GIF đã chọn"
-                  className="cover-preview-img"
-                />
-                <button
-                  type="button"
-                  className="cover-remove-btn"
-                  title="Xóa ảnh bìa"
-                  onClick={handleRemoveCover}
-                >
-                  ✕
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="form-group">
-            <label>Đoạn tóm tắt ngắn (1-2 câu hiển thị ở trang chủ) *</label>
-            <input
-              type="text"
-              name="summary"
-              placeholder="Tóm tắt ngắn gọn cảm xúc cốt lõi của bạn..."
-              value={formData.summary}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          {/* Khu vực soạn thảo Visual WYSIWYG */}
-          <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <label style={{ margin: 0 }}>Nội dung bài viết (Trực quan & Hỗ trợ Ctrl+Z) *</label>
-              
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button
-                  type="button"
-                  className={`toolbar-btn ${activeTab === 'edit' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('edit')}
-                >
-                  ✍️ Soạn thảo trực quan
-                </button>
-                <button
-                  type="button"
-                  className={`toolbar-btn ${activeTab === 'preview' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('preview')}
-                >
-                  👁️ Xem trước
-                </button>
-              </div>
-            </div>
-
-            {activeTab === 'edit' ? (
-              <RichVisualEditor
-                value={formData.content}
-                onChange={handleContentChange}
-                placeholder="Hãy thoải mái viết ra những gì bạn đang trăn trở. Chèn hình ảnh, video YouTube và icon cảm xúc để bộc lộ trọn vẹn cảm xúc của bạn..."
-              />
-            ) : (
-              <div
-                className="preview-pane"
-                dangerouslySetInnerHTML={{
-                  __html: formatPostContent(formData.content || '<em>(Chưa có nội dung để xem trước)</em>'),
+                placeholder="Ví dụ: https://www.youtube.com/watch?v=... hoặc https://res.cloudinary.com/.../video.mp4"
+                value={videoUrlInput}
+                onChange={(e) => {
+                  setVideoUrlInput(e.target.value);
+                  setErrorMsg('');
+                }}
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #ea580c',
+                  fontSize: '0.9rem',
+                  boxSizing: 'border-box',
                 }}
               />
-            )}
-          </div>
+              <span style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                Hỗ trợ nhúng trực tiếp clip từ YouTube hoặc các liên kết tệp video định dạng MP4/WebM.
+              </span>
+            </div>
+          )}
+
+          {/* Ảnh bìa bài viết hoặc ảnh khoảnh khắc */}
+          {postFormat !== 'video' && (
+            <div className="form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ margin: 0, fontWeight: 700 }}>
+                  {postFormat === 'photo' ? 'Hình ảnh khoảnh khắc (Bắt buộc) 📸' : 'Ảnh bìa bài viết (Hỗ trợ JPG/PNG, GIF & Chụp trực tiếp 🎬)'}
+                </label>
+                <button
+                  type="button"
+                  className="page-btn"
+                  onClick={() => setIsCoverCameraOpen(true)}
+                  style={{
+                    fontSize: '0.8rem',
+                    padding: '4px 10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    background: '#ecfdf5',
+                    borderColor: '#6ee7b7',
+                    color: '#047857',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  📸 Chụp từ Camera/Webcam
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <input
+                  type="file"
+                  accept="image/*,.gif"
+                  onChange={handleCoverImageChange}
+                  disabled={uploadingCover}
+                  style={{ fontSize: '0.85rem' }}
+                />
+                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>hoặc dán link ảnh/GIF:</span>
+                <input
+                  type="url"
+                  placeholder="https://.../photo.jpg"
+                  value={formData.coverImage?.startsWith('http') ? formData.coverImage : ''}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, coverImage: e.target.value }))}
+                  style={{ flex: 1, minWidth: '180px', fontSize: '0.85rem', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                />
+                {uploadingCover && (
+                  <span style={{ fontSize: '0.85rem', color: 'var(--primary-hover)', fontWeight: 600 }}>
+                    ☁️ Đang xử lý ảnh bìa/GIF...
+                  </span>
+                )}
+              </div>
+
+              {formData.coverImage && (
+                <div className="cover-preview-box">
+                  <img
+                    src={formData.coverImage}
+                    alt="Ảnh khoảnh khắc đã chọn"
+                    className="cover-preview-img"
+                  />
+                  <button
+                    type="button"
+                    className="cover-remove-btn"
+                    title="Xóa ảnh"
+                    onClick={handleRemoveCover}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Đoạn tóm tắt: chỉ hiển thị cho Bài viết sâu */}
+          {postFormat === 'article' && (
+            <div className="form-group">
+              <label>Đoạn tóm tắt ngắn (1-2 câu hiển thị ở trang chủ) *</label>
+              <input
+                type="text"
+                name="summary"
+                placeholder="Tóm tắt ngắn gọn cảm xúc cốt lõi của bạn..."
+                value={formData.summary}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          )}
+
+          {/* Khu vực soạn thảo nội dung theo định dạng */}
+          {postFormat === 'photo' ? (
+            <div className="form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ margin: 0, fontWeight: 700 }}>Dòng trạng thái / Cảm nghĩ khoảnh khắc *</label>
+                <span
+                  style={{
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    color: formData.content.length > 280 ? '#ef4444' : formData.content.length > 240 ? '#f59e0b' : '#0d9488',
+                  }}
+                >
+                  {formData.content.length} / 300 ký tự
+                </span>
+              </div>
+              <textarea
+                name="content"
+                rows={4}
+                maxLength={300}
+                placeholder="Viết một vài dòng ngắn về khoảnh khắc này (tối đa 300 ký tự)..."
+                value={formData.content}
+                onChange={handleChange}
+                required
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  border: formData.content.length > 280 ? '1.5px solid #ef4444' : '1.5px solid #cbd5e1',
+                  fontSize: '0.92rem',
+                  lineHeight: 1.5,
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                }}
+              />
+            </div>
+          ) : postFormat === 'video' ? (
+            <div className="form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ margin: 0, fontWeight: 700 }}>Chú thích thước phim ngắn *</label>
+                <span
+                  style={{
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    color: formData.content.length > 230 ? '#ef4444' : formData.content.length > 200 ? '#f59e0b' : '#ea580c',
+                  }}
+                >
+                  {formData.content.length} / 250 ký tự
+                </span>
+              </div>
+              <textarea
+                name="content"
+                rows={3}
+                maxLength={250}
+                placeholder="Dòng thông điệp hoặc cảm nghĩ về thước phim này (tối đa 250 ký tự)..."
+                value={formData.content}
+                onChange={handleChange}
+                required
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  border: formData.content.length > 230 ? '1.5px solid #ef4444' : '1.5px solid #cbd5e1',
+                  fontSize: '0.92rem',
+                  lineHeight: 1.5,
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                }}
+              />
+            </div>
+          ) : (
+            <div className="form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ margin: 0 }}>Nội dung bài viết (Trực quan & Hỗ trợ Ctrl+Z) *</label>
+                
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button
+                    type="button"
+                    className={`toolbar-btn ${activeTab === 'edit' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('edit')}
+                  >
+                    ✍️ Soạn thảo trực quan
+                  </button>
+                  <button
+                    type="button"
+                    className={`toolbar-btn ${activeTab === 'preview' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('preview')}
+                  >
+                    👁️ Xem trước
+                  </button>
+                </div>
+              </div>
+
+              {activeTab === 'edit' ? (
+                <RichVisualEditor
+                  value={formData.content}
+                  onChange={handleContentChange}
+                  placeholder="Hãy thoải mái viết ra những gì bạn đang trăn trở. Chèn hình ảnh, video YouTube và icon cảm xúc để bộc lộ trọn vẹn cảm xúc của bạn..."
+                />
+              ) : (
+                <div
+                  className="preview-pane"
+                  dangerouslySetInnerHTML={{
+                    __html: formatPostContent(formData.content || '<em>(Chưa có nội dung để xem trước)</em>'),
+                  }}
+                />
+              )}
+            </div>
+          )}
 
           <div className="form-group">
             <label>Thẻ tag liên quan (cách nhau bằng dấu phẩy)</label>

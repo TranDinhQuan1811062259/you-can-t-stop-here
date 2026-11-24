@@ -17,7 +17,7 @@ import { PostAtmosphereSoundBar } from '../components/blog/PostAtmosphereSoundBa
 import { ATMOSPHERE_THEMES, BACKGROUND_PRESETS } from '../utils/postAtmosphereEngine';
 import { SharePostModal } from '../components/blog/SharePostModal';
 import { IdleWeatherText } from '../components/common/IdleWeatherText';
-import { formatPostContent } from '../utils/contentFormatter';
+import { formatPostContent, extractYouTubeId } from '../utils/contentFormatter';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { playClickSound } from '../utils/soundEffects';
@@ -654,6 +654,50 @@ export const PostDetailPage = () => {
                   <span style={{ fontSize: '1rem', flexShrink: 0 }}>{categoryData.icon}</span>
                   <span className="badge-text-ellipsis">{categoryData.name}</span>
                 </Link>
+
+                {/* Huy hiệu định dạng bài viết: photo / video */}
+                {post.postType === 'photo' && (
+                  <span
+                    className="post-header-badge"
+                    style={{
+                      background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
+                      color: '#ffffff',
+                      padding: '4px 14px',
+                      borderRadius: '999px',
+                      fontWeight: 800,
+                      fontSize: '0.8rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      boxShadow: '0 2px 8px rgba(168, 85, 247, 0.35)',
+                    }}
+                    title="Định dạng: Khoảnh khắc ảnh"
+                  >
+                    <span>📸</span>
+                    <span>Khoảnh khắc ảnh</span>
+                  </span>
+                )}
+                {post.postType === 'video' && (
+                  <span
+                    className="post-header-badge"
+                    style={{
+                      background: 'linear-gradient(135deg, #ef4444 0%, #f97316 100%)',
+                      color: '#ffffff',
+                      padding: '4px 14px',
+                      borderRadius: '999px',
+                      fontWeight: 800,
+                      fontSize: '0.8rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      boxShadow: '0 2px 8px rgba(239, 68, 68, 0.35)',
+                    }}
+                    title="Định dạng: Video ngắn"
+                  >
+                    <span>🎬</span>
+                    <span>Video ngắn</span>
+                  </span>
+                )}
                 <span
                   className={`post-header-badge post-header-badge-visibility ${post.visibility === 'friends' ? 'is-friends' : 'is-public'} ${isCustomBg ? 'custom-atm-visibility-pill' : ''}`}
                   style={{
@@ -1022,18 +1066,114 @@ export const PostDetailPage = () => {
                 </div>
               </div>
 
-              {post.coverImage && (
-                <img
-                  src={post.coverImage}
-                  alt={post.title}
-                  className="post-featured-image"
-                  onError={(e) => {
-                    if (!e.target.dataset.triedFallback) {
-                      e.target.dataset.triedFallback = '1';
-                      e.target.src = '/images/office-night.jpg';
-                    }
-                  }}
-                />
+              {/* Media hiển thị: Video ngắn / Khoảnh khắc ảnh / Ảnh bìa bài viết */}
+              {post.postType === 'video' ? (
+                (() => {
+                  const vUrl = (post.mediaUrls && post.mediaUrls[0]) || post.coverImage || '';
+                  const ytId = extractYouTubeId(vUrl);
+                  if (ytId) {
+                    return (
+                      <div
+                        style={{
+                          position: 'relative',
+                          paddingBottom: '56.25%',
+                          height: 0,
+                          overflow: 'hidden',
+                          borderRadius: '16px',
+                          marginBottom: '24px',
+                          boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
+                          background: '#0f172a',
+                        }}
+                      >
+                        <iframe
+                          src={`https://www.youtube.com/embed/${ytId}`}
+                          title={post.title}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            border: 0,
+                          }}
+                        />
+                      </div>
+                    );
+                  }
+                  return (
+                    <div style={{ borderRadius: '16px', overflow: 'hidden', marginBottom: '24px', background: '#000000' }}>
+                      <video
+                        src={vUrl}
+                        controls
+                        preload="metadata"
+                        playsInline
+                        style={{ width: '100%', maxHeight: '520px', display: 'block', objectFit: 'contain' }}
+                      />
+                    </div>
+                  );
+                })()
+              ) : post.postType === 'photo' ? (
+                <div style={{ marginBottom: '24px' }}>
+                  {post.mediaUrls && post.mediaUrls.length > 1 ? (
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: post.mediaUrls.length === 2 ? '1fr 1fr' : 'repeat(auto-fit, minmax(280px, 1fr))',
+                        gap: '12px',
+                        borderRadius: '16px',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {post.mediaUrls.map((imgUrl, idx) => (
+                        <a
+                          key={idx}
+                          href={imgUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Bấm để mở ảnh kích thước lớn"
+                          style={{ display: 'block', overflow: 'hidden', borderRadius: '12px' }}
+                        >
+                          <img
+                            src={imgUrl}
+                            alt={`${post.title} - ${idx + 1}`}
+                            style={{ width: '100%', height: '320px', objectFit: 'cover', display: 'block', transition: 'transform 0.3s' }}
+                            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <img
+                      src={(post.mediaUrls && post.mediaUrls[0]) || post.coverImage || '/images/office-night.jpg'}
+                      alt={post.title}
+                      className="post-featured-image"
+                      style={{ borderRadius: '16px', maxHeight: '560px', objectFit: 'cover' }}
+                      onError={(e) => {
+                        if (!e.target.dataset.triedFallback) {
+                          e.target.dataset.triedFallback = '1';
+                          e.target.src = '/images/office-night.jpg';
+                        }
+                      }}
+                    />
+                  )}
+                </div>
+              ) : (
+                post.coverImage && (
+                  <img
+                    src={post.coverImage}
+                    alt={post.title}
+                    className="post-featured-image"
+                    onError={(e) => {
+                      if (!e.target.dataset.triedFallback) {
+                        e.target.dataset.triedFallback = '1';
+                        e.target.src = '/images/office-night.jpg';
+                      }
+                    }}
+                  />
+                )
               )}
 
               {/* Thanh Điều Khiển Không Gian Cảm Xúc & Âm Thanh Đặc Trưng */}

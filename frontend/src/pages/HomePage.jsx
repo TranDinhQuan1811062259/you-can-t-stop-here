@@ -32,6 +32,7 @@ export const HomePage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState('newest'); // 'newest' | 'oldest' | 'az' | 'za' | 'most_engaged' | 'least_engaged'
   const [visibilityFilter, setVisibilityFilter] = useState('all'); // 'all' | 'public' | 'friends'
+  const [selectedPostType, setSelectedPostType] = useState('all'); // 'all' | 'article' | 'photo' | 'video'
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   // States cho Story 24h
@@ -64,7 +65,7 @@ export const HomePage = () => {
   // Khi tag, tìm kiếm hoặc tiêu chí lọc thay đổi, reset về trang 1
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedTag, searchQuery, sortBy, visibilityFilter, selectedCategory]);
+  }, [selectedTag, searchQuery, sortBy, visibilityFilter, selectedCategory, selectedPostType]);
 
   const { posts, pagination, loading, error } = usePosts({
     category: selectedCategory,
@@ -72,6 +73,7 @@ export const HomePage = () => {
     q: searchQuery,
     sort: sortBy,
     visibility: visibilityFilter,
+    postType: selectedPostType !== 'all' ? selectedPostType : undefined,
     page: currentPage,
     limit: 6,
   });
@@ -438,32 +440,71 @@ export const HomePage = () => {
 
         {/* Thanh Công Cụ Bộ Lọc Sắp Xếp & Chế Độ Bài Viết (Mới nhất, Cũ nhất, A-Z, Tương tác...) */}
         <div className="posts-filter-toolbar">
-          <div className="filter-toolbar-left">
-            <span className="filter-label">Hiển thị:</span>
-            <div className="filter-pill-group">
-              <button
-                type="button"
-                className={`filter-pill ${visibilityFilter === 'all' ? 'active' : ''}`}
-                onClick={() => setVisibilityFilter('all')}
-              >
-                Tất cả
-              </button>
-              <button
-                type="button"
-                className={`filter-pill ${visibilityFilter === 'public' ? 'active' : ''}`}
-                onClick={() => setVisibilityFilter('public')}
-                title="Chỉ hiển thị các bài viết công khai"
-              >
-                🌐 Công khai
-              </button>
-              <button
-                type="button"
-                className={`filter-pill ${visibilityFilter === 'friends' ? 'active' : ''}`}
-                onClick={() => setVisibilityFilter('friends')}
-                title="Chỉ hiển thị các bài viết của bạn bè"
-              >
-                👥 Chỉ bạn bè
-              </button>
+          <div className="filter-toolbar-left" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span className="filter-label" style={{ minWidth: '70px', fontWeight: 600 }}>Định dạng:</span>
+              <div className="filter-pill-group">
+                <button
+                  type="button"
+                  className={`filter-pill ${selectedPostType === 'all' ? 'active' : ''}`}
+                  onClick={() => setSelectedPostType('all')}
+                >
+                  Tất cả
+                </button>
+                <button
+                  type="button"
+                  className={`filter-pill ${selectedPostType === 'article' ? 'active' : ''}`}
+                  onClick={() => setSelectedPostType('article')}
+                  title="Chỉ hiển thị bài viết tâm sự sâu sắc"
+                >
+                  📝 Bài viết sâu
+                </button>
+                <button
+                  type="button"
+                  className={`filter-pill ${selectedPostType === 'photo' ? 'active' : ''}`}
+                  onClick={() => setSelectedPostType('photo')}
+                  title="Chỉ hiển thị khoảnh khắc ảnh kèm status"
+                >
+                  📸 Khoảnh khắc ảnh
+                </button>
+                <button
+                  type="button"
+                  className={`filter-pill ${selectedPostType === 'video' ? 'active' : ''}`}
+                  onClick={() => setSelectedPostType('video')}
+                  title="Chỉ hiển thị video & thước phim ngắn"
+                >
+                  🎬 Video ngắn
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span className="filter-label" style={{ minWidth: '70px', fontWeight: 600 }}>Chế độ:</span>
+              <div className="filter-pill-group">
+                <button
+                  type="button"
+                  className={`filter-pill ${visibilityFilter === 'all' ? 'active' : ''}`}
+                  onClick={() => setVisibilityFilter('all')}
+                >
+                  Tất cả
+                </button>
+                <button
+                  type="button"
+                  className={`filter-pill ${visibilityFilter === 'public' ? 'active' : ''}`}
+                  onClick={() => setVisibilityFilter('public')}
+                  title="Chỉ hiển thị các bài viết công khai"
+                >
+                  🌐 Công khai
+                </button>
+                <button
+                  type="button"
+                  className={`filter-pill ${visibilityFilter === 'friends' ? 'active' : ''}`}
+                  onClick={() => setVisibilityFilter('friends')}
+                  title="Chỉ hiển thị các bài viết của bạn bè"
+                >
+                  👥 Chỉ bạn bè
+                </button>
+              </div>
             </div>
           </div>
 

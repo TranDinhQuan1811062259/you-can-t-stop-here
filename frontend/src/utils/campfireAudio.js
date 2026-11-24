@@ -53,7 +53,11 @@ export const playCampfireSound = async ({ volume = 0.45 } = {}) => {
 
     // Kích hoạt lại AudioContext nếu đang ở trạng thái suspended do Autoplay Policy
     if (ctx.state === 'suspended') {
-      await ctx.resume();
+      try {
+        await ctx.resume();
+      } catch (resumeErr) {
+        console.warn('[CampfireAudio] Autoplay policy blocked resume:', resumeErr);
+      }
     }
 
     const now = ctx.currentTime;

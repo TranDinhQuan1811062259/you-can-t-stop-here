@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
@@ -13,6 +13,14 @@ import { AppRoutes } from './routes/AppRoutes';
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 function App() {
+  // Silent wake-up ping khi App khởi tạo lần đầu (đánh thức Render server ngủ đông)
+  useEffect(() => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+      fetch(`${baseUrl}/health`).catch(() => {});
+    } catch (_) {}
+  }, []);
+
   return (
     <GoogleOAuthProvider clientId={googleClientId}>
       <BrowserRouter>

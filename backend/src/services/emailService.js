@@ -530,4 +530,156 @@ export const sendTimeCapsuleUnlockedEmail = async ({ toEmail, title, content, cr
   }
 };
 
+/**
+ * =========================================================================
+ * 🚨 CẢNH BÁO AN NINH ADMIN (BREVO EMAIL ALERT & AUDIT MONITORING)
+ * =========================================================================
+ * Gửi email cảnh báo khẩn cấp tới các Quản trị viên khi có sự kiện đăng nhập Admin:
+ * - LOGIN_SUCCESS: Đăng nhập thành công cổng Admin Console
+ * - LOGIN_FAILED: Đăng nhập thất bại (sai mật khẩu / cố tình dò pass)
+ * - BLOCKED_AT_USER_PORTAL: Cố tình đăng nhập tài khoản Admin tại cổng User thường
+ */
+export const sendAdminSecurityAlertEmail = async ({
+  action,
+  targetEmail,
+  ip = '127.0.0.1',
+  location = 'Không xác định / Local',
+  userAgent = 'Unknown Device',
+  timeVn = '',
+  details = {},
+}) => {
+  try {
+    const User = (await import('../models/User.js')).default;
+    const adminUsers = await User.find({ role: 'admin' }, 'email name').lean();
+
+    const fallbackAdminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
+    let recipientEmails = (adminUsers || []).map((u) => u.email.toLowerCase().trim());
+    if (recipientEmails.length === 0) {
+      recipientEmails = [fallbackAdminEmail];
+    }
+
+    // Nếu là LOGIN_SUCCESS, ưu tiên gửi cho các Admin còn lại; nếu chỉ có 1 Admin thì gửi cho chính Admin đó
+    if (action === 'LOGIN_SUCCESS' && recipientEmails.length > 1) {
+      recipientEmails = recipientEmails.filter((em) => em !== targetEmail.toLowerCase().trim());
+    }
+
+    const actionMeta = {
+      LOGIN_SUCCESS: {
+        title: 'Xác Nhận Đăng Nhập Cổng Quản Trị Thành Công',
+        badge: '🟢 ĐĂNG NHẬP THÀNH CÔNG',
+        color: '#22c55e',
+        bgColor: 'rgba(34, 197, 94, 0.1)',
+        desc: 'Hệ thống vừa ghi nhận một phiên đăng nhập Quản Trị Viên thành công vào Security Console.',
+      },
+      LOGIN_FAILED: {
+        title: 'CẢNH BÁO: Đăng Nhập Cổng Quản Trị Thất Bại',
+        badge: '🔴 ĐĂNG NHẬP THẤT BẠI',
+        color: '#ef4444',
+        bgColor: 'rgba(239, 68, 68, 0.1)',
+        desc: 'Có người vừa thử đăng nhập vào Security Console với tài khoản Admin nhưng không thành công.',
+      },
+      BLOCKED_AT_USER_PORTAL: {
+        title: 'CẢNH BÁO BẢO MẬT: Chặn Tài Khoản Admin Tại Cổng Thường',
+        badge: '⚠️ BẪY AN NINH KÍCH HOẠT',
+        color: '#f59e0b',
+        bgColor: 'rgba(245, 158, 11, 0.1)',
+        desc: 'Hệ thống đã tự động CHẶN một nỗ lực sử dụng tài khoản Admin tại cổng đăng nhập của người dùng thông thường.',
+      },
+    };
+
+    const meta = actionMeta[action] || actionMeta.LOGIN_FAILED;
+    const nowTime = timeVn || new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="vi">
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { margin: 0; padding: 0; background-color: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #f1f5f9; }
+          .wrap { width: 100%; max-width: 600px; margin: 30px auto; background: #111827; border-radius: 16px; overflow: hidden; border: 1.5px solid ${meta.color}; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+          .header { background: #0f172a; padding: 28px 24px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.08); }
+          .badge { display: inline-block; background: ${meta.bgColor}; color: ${meta.color}; border: 1px solid ${meta.color}; padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: 1px; }
+          .header h1 { margin: 12px 0 4px; font-size: 20px; color: #f8fafc; font-weight: 800; }
+          .body { padding: 26px 24px; line-height: 1.6; font-size: 14px; color: #cbd5e1; }
+          .info-table { width: 100%; border-collapse: collapse; margin: 20px 0; background: #1e293b; border-radius: 10px; overflow: hidden; }
+          .info-table td { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
+          .info-table td.label { width: 32%; color: #94a3b8; font-weight: 600; }
+          .info-table td.val { color: #f8fafc; font-weight: 700; word-break: break-all; }
+          .footer { background: #0a0f1d; padding: 18px 24px; text-align: center; font-size: 11px; color: #64748b; border-top: 1px solid rgba(255,255,255,0.05); }
+        </style>
+      </head>
+      <body>
+        <div class="wrap">
+          <div class="header">
+            <span class="badge">${meta.badge}</span>
+            <h1>${meta.title}</h1>
+          </div>
+          <div class="body">
+            <p>${meta.desc}</p>
+            <table class="info-table">
+              <tr>
+                <td class="label">Tài khoản đích:</td>
+                <td class="val">${targetEmail}</td>
+              </tr>
+              <tr>
+                <td class="label">Thời gian (VN):</td>
+                <td class="val">${nowTime}</td>
+              </tr>
+              <tr>
+                <td class="label">Địa chỉ IP:</td>
+                <td class="val" style="color: ${meta.color};">${ip}</td>
+              </tr>
+              <tr>
+                <td class="label">Vị trí ước tính:</td>
+                <td class="val">${location}</td>
+              </tr>
+              <tr>
+                <td class="label">Thiết bị & Trình duyệt:</td>
+                <td class="val" style="font-size: 12px; font-weight: 400; font-family: monospace;">${userAgent}</td>
+              </tr>
+            </table>
+            <p style="font-size: 12px; color: #94a3b8; margin-top: 16px;">
+              Nếu hành động này không phải do bạn thực hiện, vui lòng truy cập ngay Security Console để kiểm tra nhật ký và đổi mật khẩu quản trị.
+            </p>
+          </div>
+          <div class="footer">
+            You Can't Stop Here • Security Telemetry & Automated Audit System
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Gửi email cho từng Quản trị viên
+    for (const adminEmail of recipientEmails) {
+      // 1. Ưu tiên gửi qua Brevo HTTP API
+      const brevoRes = await sendEmailViaBrevo({
+        toEmail: adminEmail,
+        subject: `[SECURITY ALERT] ${meta.title} (${ip})`,
+        htmlContent,
+      });
+
+      if (!brevoRes.success) {
+        // 2. Fallback sang Nodemailer Transporter
+        const transporter = await getTransporter();
+        const senderEmail = (process.env.EMAIL_USER || process.env.MAIL_USER || DIRECT_GMAIL_USER || 'anthonyq012025@gmail.com').trim();
+        await transporter.sendMail({
+          from: `"Freedom Security" <${senderEmail}>`,
+          to: adminEmail,
+          subject: `[SECURITY ALERT] ${meta.title} (${ip})`,
+          html: htmlContent,
+        });
+      }
+      console.log(`[SECURITY ALERT] 🛡️ Đã gửi cảnh báo ${action} tới Admin: ${adminEmail}`);
+    }
+
+    return true;
+  } catch (err) {
+    console.error(`[SECURITY ALERT] ❌ Lỗi khi gửi cảnh báo an ninh:`, err.message);
+    return false;
+  }
+};
+
+
 

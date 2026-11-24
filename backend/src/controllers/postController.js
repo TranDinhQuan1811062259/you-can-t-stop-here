@@ -1,6 +1,7 @@
 import Post from '../models/Post.js';
 import Category from '../models/Category.js';
 import User from '../models/User.js';
+import { recordMutualInteraction } from '../utils/mutualBondHelper.js';
 import { checkDbReady } from '../config/db.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { slugify } from '../utils/slugify.js';
@@ -93,7 +94,7 @@ export const getPosts = async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.max(1, parseInt(req.query.limit) || 6);
-    const { category, tag, q, sort = 'newest', visibility = 'all' } = req.query;
+    const { category, tag, q, sort = 'newest', visibility = 'all', postType = 'all' } = req.query;
 
     const store = loadStore();
     let allPosts = [...(store.posts || [])];
@@ -214,6 +215,11 @@ export const getPosts = async (req, res) => {
       filtered = filtered.filter((p) => !p.visibility || p.visibility === 'public');
     } else if (visibility === 'friends') {
       filtered = filtered.filter((p) => p.visibility === 'friends');
+    }
+
+    // Lọc theo định dạng bài viết (postType: 'all' | 'article' | 'photo' | 'video')
+    if (postType && postType !== 'all') {
+      filtered = filtered.filter((p) => (p.postType || 'article') === postType);
     }
 
     // Sắp xếp bài viết linh hoạt theo yêu cầu người dùng
@@ -506,6 +512,15 @@ export const reactToPost = async (req, res) => {
             }
 
             currentTypes.push(type);
+            // Ghi nhận điểm thân thiết 2 chiều nếu tương tác lên bài của người khác
+            if (post.user && String(post.user) !== String(userId)) {
+              recordMutualInteraction({
+                fromUserId: userId,
+                toUserId: post.user,
+                actionType: type,
+                points: 1,
+              }).catch(() => {});
+            }
           }
 
           // Cập nhật reactions array
@@ -855,6 +870,8 @@ export const toggleReactionVisibility = async (req, res) => {
 export const createPost = async (req, res) => {
   try {
     const {
+      postType = 'article',
+      mediaUrls = [],
       title,
       summary,
       content,
@@ -872,14 +889,80 @@ export const createPost = async (req, res) => {
       atmosphere,
     } = req.body;
 
-    if (!title || !summary || !content || !category) {
-      return sendError(res, {
-        message: 'Vui lòng cung cấp đầy đủ Tiêu đề, Tóm tắt, Nội dung và Danh mục',
-        status: 400,
-      });
+    let finalTitle = (title || '').trim();
+    let finalSummary = (summary || '').trim();
+    let finalContent = (content || '').trim();
+    let finalCoverImage = (coverImage || '').trim();
+    let finalMediaUrls = Array.isArray(mediaUrls) ? mediaUrls.filter(Boolean) : [];
+
+    // Validation chặt chẽ theo từng định dạng bài viết
+    if (postType === 'photo') {
+      if (!finalContent) {
+        return sendError(res, {
+          message: 'Vui lòng nhập nội dung hoặc cảm nghĩ cho khoảnh khắc ảnh!',
+          status: 400,
+        });
+      }
+      if (finalContent.length > 300) {
+        return sendError(res, {
+          message: `Nội dung khoảnh khắc ảnh tối đa 300 ký tự (Hiện tại: ${finalContent.length} ký tự)!`,
+          status: 400,
+        });
+      }
+      if (finalMediaUrls.length === 0 && !finalCoverImage) {
+        return sendError(res, {
+          message: 'Khoảnh khắc ảnh bắt buộc phải có ít nhất 1 hình ảnh!',
+          status: 400,
+        });
+      }
+      if (!finalCoverImage && finalMediaUrls.length > 0) {
+        finalCoverImage = finalMediaUrls[0];
+      }
+      if (!finalTitle) {
+        finalTitle = finalContent.slice(0, 40) + (finalContent.length > 40 ? '...' : '');
+      }
+      if (!finalSummary) {
+        finalSummary = finalContent.slice(0, 100);
+      }
+    } else if (postType === 'video') {
+      if (!finalContent) {
+        return sendError(res, {
+          message: 'Vui lòng nhập chú thích cho video ngắn!',
+          status: 400,
+        });
+      }
+      if (finalContent.length > 250) {
+        return sendError(res, {
+          message: `Chú thích video ngắn tối đa 250 ký tự (Hiện tại: ${finalContent.length} ký tự)!`,
+          status: 400,
+        });
+      }
+      if (finalMediaUrls.length === 0 && !finalCoverImage) {
+        return sendError(res, {
+          message: 'Thước phim ngắn bắt buộc phải có đường dẫn video (YouTube, MP4, v.v.)!',
+          status: 400,
+        });
+      }
+      if (!finalCoverImage && finalMediaUrls.length > 0) {
+        finalCoverImage = finalMediaUrls[0];
+      }
+      if (!finalTitle) {
+        finalTitle = finalContent.slice(0, 40) + (finalContent.length > 40 ? '...' : '');
+      }
+      if (!finalSummary) {
+        finalSummary = finalContent.slice(0, 100);
+      }
+    } else {
+      // Mặc định: article
+      if (!finalTitle || !finalSummary || !finalContent || !category) {
+        return sendError(res, {
+          message: 'Vui lòng cung cấp đầy đủ Tiêu đề, Tóm tắt, Nội dung và Danh mục',
+          status: 400,
+        });
+      }
     }
 
-    let baseSlug = slugify(title);
+    let baseSlug = slugify(finalTitle || `post-${Date.now()}`);
     let uniqueSlug = baseSlug;
 
     // Đảm bảo slug là duy nhất
@@ -901,22 +984,24 @@ export const createPost = async (req, res) => {
     const parsedTags = Array.isArray(tags) ? tags : tags ? tags.split(',').map((t) => t.trim().replace(/^#/, '')) : [];
 
     // Tự động làm sạch & chèn dấu chấm vào từ ngữ nhạy cảm (D.I.E, c.h.ế.t, t.ự t.ử...)
-    const cleanTitle = maskSensitiveText(title.trim());
-    const cleanSummary = maskSensitiveText(summary.trim());
-    const cleanContent = maskSensitiveText(content);
+    const cleanTitle = maskSensitiveText(finalTitle.trim());
+    const cleanSummary = maskSensitiveText(finalSummary.trim());
+    const cleanContent = maskSensitiveText(finalContent);
     const cleanTags = parsedTags.map((t) => maskSensitiveText(t));
 
     // Phân tích độ an toàn & yếu tố Chính trị nhạy cảm
-    const safetyCheck = analyzeContentSafety(title, summary, content, parsedTags);
+    const safetyCheck = analyzeContentSafety(finalTitle, finalSummary, finalContent, parsedTags);
 
     const newPostData = {
       _id: `post_${Date.now()}`,
+      postType,
+      mediaUrls: finalMediaUrls,
       title: cleanTitle,
       slug: uniqueSlug,
       summary: cleanSummary,
       content: cleanContent,
       category: resolvedCategory,
-      coverImage: coverImage || '/images/sun.jpg',
+      coverImage: finalCoverImage || '/images/sun.jpg',
       tags: cleanTags,
       user: req.user ? {
         _id: req.user._id,
@@ -991,6 +1076,8 @@ export const createPost = async (req, res) => {
         }
 
         const mongoPost = await Post.create({
+          postType: newPostData.postType || 'article',
+          mediaUrls: newPostData.mediaUrls || [],
           title: newPostData.title,
           slug: newPostData.slug,
           summary: newPostData.summary,
