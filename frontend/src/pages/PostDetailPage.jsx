@@ -22,6 +22,8 @@ import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { playClickSound } from '../utils/soundEffects';
 import { getHighestBadge } from '../utils/badgeHelper';
+import { ReadingProgressBar } from '../components/blog/ReadingProgressBar';
+import { calculateReadingTime } from '../utils/readingTime';
 
 export const PostDetailPage = () => {
   const { slug } = useParams();
@@ -467,15 +469,12 @@ export const PostDetailPage = () => {
     customArticleStyle.borderColor = `${themeMeta.accentColor}60`;
   }
 
+  const readingTimeInfo = calculateReadingTime(post);
+
   return (
     <div className="post-detail-wrap">
-      {/* 📖 Thanh tiến trình đọc bài viết (Reading Progress Bar) */}
-      <div className="reading-progress-bar-container" aria-hidden="true">
-        <div
-          className="reading-progress-bar-fill"
-          style={{ transform: `scaleX(${readingProgress})` }}
-        />
-      </div>
+      {/* 📖 Thanh tiến trình đọc bài viết 60fps (Reading Progress Bar) */}
+      <ReadingProgressBar post={post} />
 
       {/* 📋 Toast thông báo sao chép liên kết */}
       {copyToast && (
@@ -917,6 +916,17 @@ export const PostDetailPage = () => {
                     >
                       <span>👁️</span>
                       <span>{post.views || 1} lượt đọc</span>
+                    </span>
+                    <span
+                      className="post-stat-item"
+                      style={{
+                        color: isCustomBg ? '#fef08a' : '#d97706',
+                        fontWeight: 700,
+                        textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
+                      }}
+                      title="Thời gian đọc ước tính"
+                    >
+                      <span>{readingTimeInfo.text}</span>
                     </span>
                   </div>
 

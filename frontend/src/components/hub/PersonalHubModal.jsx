@@ -15,6 +15,7 @@ import {
 import { triggerHaptic } from '../../utils/haptics';
 import { HonorCardModal } from './HonorCardModal';
 import { ProfileQrModal } from '../profile/ProfileQrModal';
+import { MutualMemoriesDrawer } from '../profile/MutualMemoriesDrawer';
 import apiClient from '../../services/apiClient';
 import '../../styles/personalHub.css';
 
@@ -63,6 +64,7 @@ export const PersonalHubModal = () => {
   const [isHonorCardOpen, setIsHonorCardOpen] = useState(false);
   const [isProfileQrOpen, setIsProfileQrOpen] = useState(false);
   const [topBonds, setTopBonds] = useState([]);
+  const [memoriesPartner, setMemoriesPartner] = useState(null);
   const [activeTooltipDay, setActiveTooltipDay] = useState(null);
   const checkInButtonRef = useRef(null);
 
@@ -942,20 +944,53 @@ export const PersonalHubModal = () => {
                             </div>
                           </div>
 
-                          <span
-                            style={{
-                              background: bond.tierInfo?.bg || 'rgba(56, 189, 248, 0.15)',
-                              color: bond.tierInfo?.color || '#38bdf8',
-                              border: `1px solid ${bond.tierInfo?.border || 'rgba(56, 189, 248, 0.35)'}`,
-                              padding: '2px 8px',
-                              borderRadius: '999px',
-                              fontSize: '0.72rem',
-                              fontWeight: 700,
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {bond.tierInfo?.name} ({bond.mutualScore}đ)
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                            <span
+                              style={{
+                                background: bond.tierInfo?.bg || 'rgba(56, 189, 248, 0.15)',
+                                color: bond.tierInfo?.color || '#38bdf8',
+                                border: `1px solid ${bond.tierInfo?.border || 'rgba(56, 189, 248, 0.35)'}`,
+                                padding: '2px 8px',
+                                borderRadius: '999px',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {bond.tierInfo?.name} ({bond.mutualScore}đ)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                playClickSound();
+                                setMemoriesPartner({
+                                  targetUserId: partner?._id,
+                                  partnerName: partner?.name,
+                                  partnerAvatar,
+                                });
+                              }}
+                              style={{
+                                background: 'rgba(245, 158, 11, 0.2)',
+                                border: '1px solid rgba(245, 158, 11, 0.45)',
+                                color: '#f59e0b',
+                                borderRadius: '6px',
+                                padding: '3px 8px',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                transition: 'all 0.15s ease',
+                              }}
+                              title="Xem Nhật Ký Tri Kỷ 2 chiều"
+                            >
+                              <span>📖</span>
+                              <span>Nhật ký</span>
+                            </button>
+                          </div>
                         </Link>
                       );
                     })}
@@ -1069,6 +1104,15 @@ export const PersonalHubModal = () => {
         onClose={() => setIsProfileQrOpen(false)}
         user={user}
       />
+      {memoriesPartner && (
+        <MutualMemoriesDrawer
+          isOpen={Boolean(memoriesPartner)}
+          onClose={() => setMemoriesPartner(null)}
+          targetUserId={memoriesPartner.targetUserId}
+          partnerName={memoriesPartner.partnerName}
+          partnerAvatar={memoriesPartner.partnerAvatar}
+        />
+      )}
     </div>
   );
 };

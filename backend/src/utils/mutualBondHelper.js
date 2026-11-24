@@ -100,6 +100,9 @@ export const recordMutualInteraction = async ({
   toUserId,
   actionType = 'like',
   points = 1,
+  postId = null,
+  postTitle = '',
+  snippet = '',
 }) => {
   if (!fromUserId || !toUserId) return null;
   const fromStr = String(fromUserId);
@@ -161,6 +164,25 @@ export const recordMutualInteraction = async ({
     const isLevelUp = (TIER_ORDER[newTier] || 0) > (TIER_ORDER[oldTier] || 0);
 
     bond.tier = newTier;
+
+    // 📖 LƯU MỐC KỶ NIỆM (MUTUAL MEMORIES TIMELINE - TỐI ĐA 15 MỐC MỚI NHẤT)
+    if (!Array.isArray(bond.recentMemories)) {
+      bond.recentMemories = [];
+    }
+    const memoryItem = {
+      actorId: fromUserId,
+      type: actionType === 'comment' ? 'comment' : 'reaction',
+      actionDetail: actionType,
+      postId: postId || null,
+      postTitle: postTitle ? String(postTitle).trim().slice(0, 120) : '',
+      snippet: snippet ? String(snippet).trim().slice(0, 160) : '',
+      createdAt: now,
+    };
+    bond.recentMemories.unshift(memoryItem);
+    if (bond.recentMemories.length > 15) {
+      bond.recentMemories = bond.recentMemories.slice(0, 15);
+    }
+
     await bond.save();
 
     // 🌟 PHÁT HIỆN THĂNG HẠNG THÂN THIẾT (BOND LEVEL-UP DELIGHT)

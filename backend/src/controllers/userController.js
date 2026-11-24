@@ -593,3 +593,95 @@ export const getMyTopBonds = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/user/bonds/:targetUserId/memories
+ * Lấy hành trình tương tác và nhật ký kỷ niệm 2 chiều (Mutual Memories Timeline)
+ */
+export const getMutualMemories = async (req, res) => {
+  try {
+    const { targetUserId } = req.params;
+    const currentUserId = req.user?._id;
+
+    if (!currentUserId) {
+      return sendError(res, { message: 'Vui lòng đăng nhập để xem nhật ký', status: 401 });
+    }
+
+    if (!targetUserId || !mongoose.Types.ObjectId.isValid(targetUserId)) {
+      return sendError(res, { message: 'ID người dùng không hợp lệ', status: 400 });
+    }
+
+    if (String(currentUserId) === String(targetUserId)) {
+      return sendError(res, { message: 'Không thể xem nhật ký gắn kết với chính mình', status: 400 });
+    }
+
+    if (!isDbConnected) {
+      return sendSuccess(res, {
+        data: {
+          mutualScore: 0,
+          tier: 'none',
+          tierInfo: getBondTierInfo(0),
+          scoreAtoB: 0,
+          scoreBtoA: 0,
+          partner: null,
+          recentMemories: [],
+        },
+      });
+    }
+
+    const partnerUser = await User.findById(targetUserId).select('name avatar jobTitle role streakCount').lean();
+    if (!partnerUser) {
+      return sendError(res, { message: 'Không tìm thấy người dùng này', status: 404 });
+    }
+
+    const fromStr = String(currentUserId);
+    const toStr = String(targetUserId);
+    const isFromSmaller = fromStr < toStr;
+    const userA = isFromSmaller ? currentUserId : targetUserId;
+    const userB = isFromSmaller ? targetUserId : currentUserId;
+
+    const bond = await MutualBond.findOne({ userA, userB })
+      .populate('recentMemories.actorId', 'name avatar')
+      .lean();
+
+    const mutualScore = bond?.mutualScore || 0;
+    const tierInfo = getBondTierInfo(mutualScore);
+    const scoreAtoB = isFromSmaller ? (bond?.scoreAtoB || 0) : (bond?.scoreBtoA || 0); // Điểm Bạn gửi tới Partner
+    const scoreBtoA = isFromSmaller ? (bond?.scoreBtoA || 0) : (bond?.scoreAtoB || 0); // Điểm Partner gửi tới Bạn
+
+    const rawMemories = Array.isArray(bond?.recentMemories) ? bond.recentMemories : [];
+    const formattedMemories = rawMemories.map((m) => {
+      const actorIdStr = String(m.actorId?._id || m.actorId);
+      const isSelf = actorIdStr === String(currentUserId);
+      return {
+        _id: m._id,
+        actorId: actorIdStr,
+        actorName: isSelf ? 'Bạn' : (m.actorId?.name || partnerUser.name || 'Bạn đồng hành'),
+        actorAvatar: isSelf ? (req.user?.avatar || '') : (m.actorId?.avatar || partnerUser.avatar || ''),
+        isSelf,
+        type: m.type || 'reaction',
+        actionDetail: m.actionDetail || '',
+        postId: m.postId || null,
+        postTitle: m.postTitle || '',
+        snippet: m.snippet || '',
+        createdAt: m.createdAt,
+      };
+    });
+
+    return sendSuccess(res, {
+      message: 'Lấy nhật ký tri kỷ thành công',
+      data: {
+        mutualScore,
+        tier: tierInfo.key,
+        tierInfo,
+        scoreAtoB,
+        scoreBtoA,
+        partner: partnerUser,
+        recentMemories: formattedMemories,
+      },
+    });
+  } catch (err) {
+    console.error('[GetMutualMemories Error]:', err);
+    return sendError(res, { message: 'Không thể tải nhật ký tri kỷ', status: 500 });
+  }
+};
+

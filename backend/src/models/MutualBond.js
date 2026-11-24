@@ -53,6 +53,44 @@ const mutualBondSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Lưu tối đa 15 mốc kỷ niệm/tương tác gần nhất giữa 2 người (timeline)
+    recentMemories: [
+      {
+        actorId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          required: true,
+        },
+        type: {
+          type: String,
+          enum: ['reaction', 'comment'],
+          default: 'reaction',
+        },
+        actionDetail: {
+          type: String,
+          default: '',
+        },
+        postId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Post',
+          default: null,
+        },
+        postTitle: {
+          type: String,
+          default: '',
+          maxlength: 120,
+        },
+        snippet: {
+          type: String,
+          default: '',
+          maxlength: 160,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

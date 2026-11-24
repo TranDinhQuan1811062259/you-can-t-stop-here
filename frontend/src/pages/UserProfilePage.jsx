@@ -12,6 +12,7 @@ import { Pagination } from '../components/common/Pagination';
 import { playClickSound } from '../utils/soundEffects';
 import { getHighestBadge } from '../utils/badgeHelper';
 import { ProfileQrModal } from '../components/profile/ProfileQrModal';
+import { MutualMemoriesDrawer } from '../components/profile/MutualMemoriesDrawer';
 import apiClient from '../services/apiClient';
 export const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
 
@@ -74,6 +75,7 @@ export const UserProfilePage = () => {
   const [profilePostsPage, setProfilePostsPage] = useState(1);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [mutualBondData, setMutualBondData] = useState(null);
+  const [isMemoriesDrawerOpen, setIsMemoriesDrawerOpen] = useState(false);
 
   const fetchProfile = async () => {
     try {
@@ -363,7 +365,12 @@ export const UserProfilePage = () => {
 
               {/* Badge Cấp Bậc Thân Thiết 2 Chiều (Mutual Bond Tier) */}
               {mutualBondData && mutualBondData.mutualScore > 0 && (
-                <span
+                <button
+                  type="button"
+                  onClick={() => {
+                    playClickSound();
+                    setIsMemoriesDrawerOpen(true);
+                  }}
                   style={{
                     background: mutualBondData.tierInfo?.bg || 'rgba(56, 189, 248, 0.15)',
                     color: mutualBondData.tierInfo?.color || '#38bdf8',
@@ -375,13 +382,16 @@ export const UserProfilePage = () => {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px',
+                    cursor: 'pointer',
                     boxShadow: `0 0 10px ${mutualBondData.tierInfo?.bg || 'transparent'}`,
+                    transition: 'all 0.15s ease',
                   }}
-                  title={`Điểm thân thiết 2 chiều: ${mutualBondData.mutualScore} điểm (${mutualBondData.tierInfo?.desc || ''})`}
+                  title={`Bấm để mở Nhật Ký Tri Kỷ với ${user.name}`}
                 >
                   <span>{mutualBondData.tierInfo?.name}</span>
                   <span style={{ opacity: 0.85, fontSize: '0.72rem' }}>({mutualBondData.mutualScore}đ)</span>
-                </span>
+                  <span style={{ fontSize: '0.7rem' }}>📖</span>
+                </button>
               )}
 
               {isSelf ? (
@@ -758,6 +768,36 @@ export const UserProfilePage = () => {
                 >
                   ✉️ Nhắn tin
                 </button>
+
+                {/* Nút Xem Nhật Ký Tri Kỷ */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    playClickSound();
+                    setIsMemoriesDrawerOpen(true);
+                  }}
+                  style={{
+                    marginTop: '8px',
+                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(239, 68, 68, 0.15) 100%)',
+                    border: '1px solid rgba(245, 158, 11, 0.4)',
+                    color: '#d97706',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    fontSize: '0.84rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    width: '100%',
+                    transition: 'all 0.2s ease',
+                  }}
+                  title={`Xem dòng thời gian và nhật ký tương tác tri kỷ với ${user.name}`}
+                >
+                  <span>📖</span>
+                  <span>Nhật Ký Tri Kỷ</span>
+                </button>
               </div>
             )}
 
@@ -895,6 +935,15 @@ export const UserProfilePage = () => {
         isOpen={isQrModalOpen}
         onClose={() => setIsQrModalOpen(false)}
         user={user}
+      />
+
+      {/* Drawer Nhật Ký Tri Kỷ */}
+      <MutualMemoriesDrawer
+        isOpen={isMemoriesDrawerOpen}
+        onClose={() => setIsMemoriesDrawerOpen(false)}
+        targetUserId={user._id || user.id}
+        partnerName={user.name}
+        partnerAvatar={getProfileAvatarSrc(user)}
       />
     </div>
   );

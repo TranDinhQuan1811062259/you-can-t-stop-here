@@ -10,6 +10,7 @@ import {
   updateProfile,
   getBondWithUser,
   getMyTopBonds,
+  getMutualMemories,
 } from '../controllers/userController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 
@@ -34,5 +35,6 @@ router.patch('/profile', protect, updateProfile);
 // Hệ thống gắn kết thân thiết 2 chiều (Mutual Bond)
 router.get('/bonds', protect, getMyTopBonds);
 router.get('/bonds/:targetUserId', protect, getBondWithUser);
+router.get('/bonds/:targetUserId/memories', protect, getMutualMemories);
 
 export default router;

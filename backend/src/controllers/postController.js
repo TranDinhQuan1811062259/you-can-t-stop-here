@@ -521,6 +521,9 @@ export const reactToPost = async (req, res) => {
                   toUserId: post.user,
                   actionType: type,
                   points: 1,
+                  postId: post._id,
+                  postTitle: post.title,
+                  snippet: '',
                 });
                 if (bondRes?.levelUpInfo) {
                   bondLevelUp = bondRes.levelUpInfo;

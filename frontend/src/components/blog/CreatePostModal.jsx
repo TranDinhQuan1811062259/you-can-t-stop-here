@@ -13,6 +13,7 @@ import { PostSubmitAtmosphereOverlay } from './PostSubmitAtmosphereOverlay';
 import { getActiveSeason } from '../../utils/seasonUtils';
 import { eventService } from '../../services/eventService';
 import { compressImageFile } from '../../utils/imageCompressor';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 
 const DEFAULT_FALLBACK_CATEGORIES = [
   { _id: 'cat_work_life', name: 'Công Sở & Sự Nghiệp', icon: '💼', slug: 'cong-so' },
@@ -65,7 +66,9 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
   const [infoMsg, setInfoMsg] = useState('');
   const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
 
+  const { isOnline, isOffline } = useNetworkStatus();
   const DRAFT_STORAGE_KEY = 'freedom_post_draft_v1';
+  const OFFLINE_QUEUE_KEY = 'freedom_offline_post_queue_v1';
 
   // Quản lý tạo thể loại bài viết mới trực tiếp
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
@@ -167,6 +170,39 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
   // ==========================================
   // TỰ ĐỘNG KHÔI PHỤC VÀ LƯU BẢN NHÁP (DRAFT)
   // ==========================================
+  useEffect(() => {
+    // Lắng nghe sự kiện khôi phục từ hàng đợi ngoại tuyến khi có mạng trở lại
+    const handleOpenFromQueue = (e) => {
+      const q = e.detail?.queuedPost;
+      if (q) {
+        setFormData((prev) => ({
+          ...prev,
+          title: q.title || '',
+          summary: q.summary || '',
+          content: q.content || '',
+          category: q.category || prev.category,
+          tags: q.tags || '',
+          coverImage: q.coverImage || '',
+          showReactionCount: q.showReactionCount !== false,
+          allowComments: q.allowComments !== false,
+          audioMood: q.audioMood || 'auto',
+          voiceGender: q.voiceGender || 'female',
+          voiceRegion: q.voiceRegion || 'north',
+          personalMusic: q.personalMusic || prev.personalMusic,
+          atmosphere: q.atmosphere || prev.atmosphere,
+        }));
+        if (q.postFormat) setPostFormat(q.postFormat);
+        if (q.videoUrlInput) setVideoUrlInput(q.videoUrlInput);
+        setInfoMsg('✓ Đã nạp bài viết từ hàng đợi ngoại tuyến. Bạn có thể kiểm tra và đăng bài ngay!');
+      }
+    };
+
+    window.addEventListener('freedom_open_create_post_from_queue', handleOpenFromQueue);
+    return () => {
+      window.removeEventListener('freedom_open_create_post_from_queue', handleOpenFromQueue);
+    };
+  }, []);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -721,6 +757,41 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
       }
     }
 
+    // 🛡️ BẢO VỆ KHI NGOẠI TUYẾN (OFFLINE RESILIENCE)
+    if (isOffline) {
+      try {
+        const offlineQueueItem = {
+          postType: postFormat,
+          mediaUrls: finalMediaUrls,
+          title: finalTitle,
+          summary: finalSummary,
+          content: finalContent,
+          category: currentCategory,
+          coverImage: finalCover || undefined,
+          tags: formData.tags || '',
+          videoUrlInput,
+          showReactionCount: formData.showReactionCount,
+          allowComments: formData.allowComments,
+          audioMood: formData.audioMood || 'auto',
+          voiceGender: formData.voiceGender || 'female',
+          voiceRegion: formData.voiceRegion || 'north',
+          personalMusic: formData.personalMusic,
+          atmosphere: formData.atmosphere,
+          pendingSync: true,
+          savedAt: Date.now(),
+        };
+        localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(offlineQueueItem));
+        window.dispatchEvent(new Event('freedom_offline_queue_updated'));
+        setInfoMsg('✓ Bạn đang ngoại tuyến. Bài viết đã được lưu an toàn vào hàng đợi thiết bị! Khi có mạng trở lại, hệ thống sẽ nhắc bạn gửi bài ngay.');
+        setTimeout(() => {
+          onClose();
+        }, 1800);
+      } catch (err) {
+        setErrorMsg('Không thể lưu vào bộ nhớ máy: ' + err.message);
+      }
+      return;
+    }
+
     setLoading(true);
     setErrorMsg('');
 
@@ -803,6 +874,29 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
             }}
           >
             {infoMsg}
+          </div>
+        )}
+
+        {/* Cảnh báo trạng thái ngoại tuyến (Offline Network Guard) */}
+        {isOffline && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              background: '#fff7ed',
+              border: '1px solid #fed7aa',
+              borderRadius: '10px',
+              padding: '10px 14px',
+              marginBottom: '14px',
+              fontSize: '0.84rem',
+              color: '#c2410c',
+            }}
+          >
+            <span style={{ fontSize: '1.25rem' }}>📡</span>
+            <div>
+              <strong>Bạn đang ngoại tuyến:</strong> Nội dung đã được khóa an toàn trên máy, có thể nhấn <em>"Lưu chờ đăng khi có mạng"</em> để lưu vào hàng đợi chờ có mạng.
+            </div>
           </div>
         )}
 
@@ -1597,10 +1691,18 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
               ref={submitButtonRef}
               type="submit"
               className="modal-submit-btn"
-              style={{ flex: 2, margin: 0 }}
+              style={{
+                flex: 2,
+                margin: 0,
+                background: isOffline ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' : undefined,
+              }}
               disabled={loading || uploadingCover || importingDoc}
             >
-              {loading ? 'Đang gửi...' : 'Đăng Tâm Sự Ngay'}
+              {loading
+                ? 'Đang gửi...'
+                : isOffline
+                ? '💾 Lưu Chờ Đăng Khi Có Mạng'
+                : 'Đăng Tâm Sự Ngay'}
             </button>
           </div>
         </form>
@@ -1622,6 +1724,8 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
           onComplete={() => {
             try {
               localStorage.removeItem(DRAFT_STORAGE_KEY);
+              localStorage.removeItem(OFFLINE_QUEUE_KEY);
+              window.dispatchEvent(new Event('freedom_offline_queue_updated'));
             } catch (_) {}
             setHasRestoredDraft(false);
             if (onPostCreated) {

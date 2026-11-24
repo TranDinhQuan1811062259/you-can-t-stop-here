@@ -178,6 +178,9 @@ export const createComment = async (req, res) => {
                 toUserId: authorId,
                 actionType: 'comment',
                 points: 2,
+                postId: postDoc._id,
+                postTitle: postDoc.title,
+                snippet: cleanContent.slice(0, 100),
               });
               if (bondRes?.levelUpInfo) {
                 bondLevelUp = bondRes.levelUpInfo;
