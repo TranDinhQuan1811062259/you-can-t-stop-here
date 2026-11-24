@@ -211,23 +211,64 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.title || !formData.summary || !formData.content) {
-      setErrorMsg('Vui lòng điền đầy đủ Tiêu đề, Tóm tắt và Nội dung.');
-      return;
+    const postFormat = post?.postType || 'article';
+
+    let finalTitle = formData.title.trim();
+    let finalSummary = formData.summary.trim();
+    let finalContent = formData.content?.trim() || '';
+
+    // Validation chặt chẽ theo định dạng bài viết
+    if (postFormat === 'photo') {
+      if (!finalContent) {
+        setErrorMsg('Vui lòng nhập cảm xúc hoặc dòng trạng thái cho khoảnh khắc ảnh!');
+        return;
+      }
+      if (finalContent.length > 300) {
+        setErrorMsg(`Khoảnh khắc ảnh tối đa 300 ký tự (Hiện tại: ${finalContent.length} ký tự)!`);
+        return;
+      }
+      if (!finalTitle) {
+        finalTitle = finalContent.slice(0, 40) + (finalContent.length > 40 ? '...' : '');
+      }
+      if (!finalSummary) {
+        finalSummary = finalContent.slice(0, 100);
+      }
+    } else if (postFormat === 'video') {
+      if (!finalContent) {
+        setErrorMsg('Vui lòng nhập chú thích cho video ngắn!');
+        return;
+      }
+      if (finalContent.length > 250) {
+        setErrorMsg(`Chú thích video ngắn tối đa 250 ký tự (Hiện tại: ${finalContent.length} ký tự)!`);
+        return;
+      }
+      if (!finalTitle) {
+        finalTitle = finalContent.slice(0, 40) + (finalContent.length > 40 ? '...' : '');
+      }
+      if (!finalSummary) {
+        finalSummary = finalContent.slice(0, 100);
+      }
+    } else {
+      if (!finalTitle || !finalSummary || !finalContent) {
+        setErrorMsg('Vui lòng điền đầy đủ Tiêu đề, Tóm tắt và Nội dung bài viết.');
+        return;
+      }
     }
 
     setLoading(true);
     setErrorMsg('');
 
     try {
-      const cleanTitle = maskSensitiveText(formData.title.trim());
-      const cleanSummary = maskSensitiveText(formData.summary.trim());
-      const cleanContent = maskSensitiveText(formData.content);
+      const cleanTitle = maskSensitiveText(finalTitle);
+      const cleanSummary = maskSensitiveText(finalSummary);
+      const cleanContent = maskSensitiveText(finalContent);
       const cleanTags = formData.tags
         ? formData.tags.split(',').map((t) => maskSensitiveText(t.trim().replace(/^#/, ''))).filter(Boolean)
         : [];
 
       const payload = {
+        postType: postFormat,
+        mediaUrls: post?.mediaUrls || (formData.coverImage ? [formData.coverImage] : []),
         title: cleanTitle,
         author: formData.author.trim(),
         authorJob: formData.authorJob.trim(),
@@ -310,7 +351,17 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
             <span className="healing-icon-pill healing-icon-amber" style={{ width: '30px', height: '30px', fontSize: '0.85rem' }}>
               <i className="fa-solid fa-pen-to-square"></i>
             </span>
-            <span>Chỉnh Sửa Bài Viết</span>
+            <span>Chỉnh Sửa {post?.postType === 'photo' ? 'Khoảnh Khắc Ảnh' : post?.postType === 'video' ? 'Video Ngắn' : 'Bài Viết'}</span>
+            {post?.postType === 'photo' && (
+              <span style={{ fontSize: '0.72rem', background: 'linear-gradient(135deg, #a855f7, #ec4899)', color: '#fff', padding: '2px 8px', borderRadius: '999px', fontWeight: 700 }}>
+                📸 Ảnh (≤300 ký tự)
+              </span>
+            )}
+            {post?.postType === 'video' && (
+              <span style={{ fontSize: '0.72rem', background: 'linear-gradient(135deg, #ef4444, #f97316)', color: '#fff', padding: '2px 8px', borderRadius: '999px', fontWeight: 700 }}>
+                🎬 Video (≤250 ký tự)
+              </span>
+            )}
           </h3>
           <div style={{ marginRight: '36px' }}>
             <AsmrKeyboardToggle variant="pill" />
@@ -592,54 +643,131 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
             )}
           </div>
 
-          <div className="form-group">
-            <label>Đoạn tóm tắt ngắn *</label>
-            <input
-              type="text"
-              name="summary"
-              value={formData.summary}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          {/* Khu vực soạn thảo Visual WYSIWYG */}
-          <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <label style={{ margin: 0 }}>Nội dung bài viết (Trực quan & Hỗ trợ Ctrl+Z) *</label>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button
-                  type="button"
-                  className={`toolbar-btn ${activeTab === 'edit' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('edit')}
-                >
-                  ✍️ Soạn thảo trực quan
-                </button>
-                <button
-                  type="button"
-                  className={`toolbar-btn ${activeTab === 'preview' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('preview')}
-                >
-                  👁️ Xem trước
-                </button>
-              </div>
-            </div>
-
-            {activeTab === 'edit' ? (
-              <RichVisualEditor
-                value={formData.content}
-                onChange={handleContentChange}
-                placeholder="Nội dung bài viết tâm sự..."
+          {/* Đoạn tóm tắt (chỉ bắt buộc cho Bài viết sâu) */}
+          {post?.postType !== 'photo' && post?.postType !== 'video' ? (
+            <div className="form-group">
+              <label>Đoạn tóm tắt ngắn *</label>
+              <input
+                type="text"
+                name="summary"
+                value={formData.summary}
+                onChange={handleChange}
+                required
               />
-            ) : (
-              <div
-                className="preview-pane"
-                dangerouslySetInnerHTML={{
-                  __html: formatPostContent(formData.content || '<em>(Chưa có nội dung)</em>'),
+            </div>
+          ) : null}
+
+          {/* Khu vực soạn thảo: Textarea có bộ đếm ký tự cho Photo/Video; RichVisualEditor cho Article */}
+          {post?.postType === 'photo' ? (
+            <div className="form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+                <label style={{ margin: 0, fontWeight: 700 }}>Dòng trạng thái / Cảm nghĩ khoảnh khắc *</label>
+                <span
+                  style={{
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    color: formData.content.length > 280 ? '#ef4444' : formData.content.length > 240 ? '#f59e0b' : '#0d9488',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {formData.content.length} / 300 ký tự
+                </span>
+              </div>
+              <textarea
+                name="content"
+                rows={4}
+                maxLength={300}
+                placeholder="Cập nhật dòng trạng thái khoảnh khắc ảnh (tối đa 300 ký tự)..."
+                value={formData.content}
+                onChange={handleChange}
+                required
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  border: formData.content.length > 280 ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                  fontSize: '0.94rem',
+                  lineHeight: '1.5',
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
                 }}
               />
-            )}
-          </div>
+            </div>
+          ) : post?.postType === 'video' ? (
+            <div className="form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+                <label style={{ margin: 0, fontWeight: 700 }}>Chú thích video ngắn *</label>
+                <span
+                  style={{
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    color: formData.content.length > 230 ? '#ef4444' : formData.content.length > 200 ? '#f59e0b' : '#0d9488',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {formData.content.length} / 250 ký tự
+                </span>
+              </div>
+              <textarea
+                name="content"
+                rows={3}
+                maxLength={250}
+                placeholder="Cập nhật chú thích cho thước phim / video ngắn (tối đa 250 ký tự)..."
+                value={formData.content}
+                onChange={handleChange}
+                required
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  border: formData.content.length > 230 ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                  fontSize: '0.94rem',
+                  lineHeight: '1.5',
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                }}
+              />
+            </div>
+          ) : (
+            <div className="form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ margin: 0 }}>Nội dung bài viết (Trực quan & Hỗ trợ Ctrl+Z) *</label>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button
+                    type="button"
+                    className={`toolbar-btn ${activeTab === 'edit' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('edit')}
+                  >
+                    ✍️ Soạn thảo trực quan
+                  </button>
+                  <button
+                    type="button"
+                    className={`toolbar-btn ${activeTab === 'preview' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('preview')}
+                  >
+                    👁️ Xem trước
+                  </button>
+                </div>
+              </div>
+
+              {activeTab === 'edit' ? (
+                <RichVisualEditor
+                  value={formData.content}
+                  onChange={handleContentChange}
+                  placeholder="Nội dung bài viết tâm sự..."
+                />
+              ) : (
+                <div
+                  className="preview-pane"
+                  dangerouslySetInnerHTML={{
+                    __html: formatPostContent(formData.content || '<em>(Chưa có nội dung)</em>'),
+                  }}
+                />
+              )}
+            </div>
+          )}
 
           <div className="form-group">
             <label>Thẻ tag liên quan (cách nhau bằng dấu phẩy)</label>

@@ -238,6 +238,7 @@ export const ProfileQrModal = ({ isOpen, onClose, user, profileUrl }) => {
           style={{
             display: 'flex',
             alignItems: 'center',
+            flexWrap: 'wrap',
             gap: '8px',
             padding: '1rem 1.1rem',
             borderTop: '1px solid rgba(255, 255, 255, 0.08)',
@@ -249,8 +250,9 @@ export const ProfileQrModal = ({ isOpen, onClose, user, profileUrl }) => {
             type="button"
             onClick={handleCopyLink}
             style={{
-              flex: 1,
-              padding: '10px 10px',
+              flex: '1 1 135px',
+              minWidth: '130px',
+              padding: '11px 12px',
               borderRadius: '10px',
               background: 'rgba(255, 255, 255, 0.08)',
               border: '1px solid rgba(255, 255, 255, 0.15)',
@@ -263,6 +265,9 @@ export const ProfileQrModal = ({ isOpen, onClose, user, profileUrl }) => {
               justifyContent: 'center',
               gap: '6px',
               whiteSpace: 'nowrap',
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent',
+              transition: 'background 0.2s, transform 0.1s',
             }}
           >
             <span>🔗</span>
@@ -273,8 +278,9 @@ export const ProfileQrModal = ({ isOpen, onClose, user, profileUrl }) => {
             type="button"
             onClick={handleDownloadQr}
             style={{
-              flex: 1,
-              padding: '10px 10px',
+              flex: '1 1 135px',
+              minWidth: '130px',
+              padding: '11px 12px',
               borderRadius: '10px',
               background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
               border: 'none',
@@ -288,6 +294,9 @@ export const ProfileQrModal = ({ isOpen, onClose, user, profileUrl }) => {
               gap: '6px',
               boxShadow: '0 4px 15px rgba(2, 132, 199, 0.35)',
               whiteSpace: 'nowrap',
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent',
+              transition: 'background 0.2s, transform 0.1s',
             }}
           >
             <span>⬇️</span>
