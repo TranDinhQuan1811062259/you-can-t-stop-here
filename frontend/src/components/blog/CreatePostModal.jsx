@@ -567,6 +567,39 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
     });
   };
 
+  const applyImportedText = (fullText, fileName) => {
+    const paragraphs = fullText
+      .split(/\r?\n+/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+
+    let title = '';
+    let summary = '';
+
+    if (paragraphs.length > 0 && paragraphs[0].length <= 120) {
+      title = paragraphs[0].replace(/^[#\*\-_\s]+/, '').trim();
+    } else {
+      title = fileName.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+    }
+
+    if (paragraphs.length > 1) {
+      summary = paragraphs[1].slice(0, 180);
+    } else {
+      summary = title;
+    }
+
+    const htmlContent = paragraphs.map((p) => `<p>${p}</p>`).join('');
+
+    setFormData((prev) => ({
+      ...prev,
+      title: prev.title || title,
+      summary: prev.summary || summary,
+      content: prev.content ? `${prev.content}<p><br/></p>${htmlContent}` : htmlContent,
+    }));
+    setActiveTab('edit');
+    setInfoMsg(`✓ Đã nhập và hiển thị toàn bộ nội dung từ "${fileName}"!`);
+  };
+
   const handleDocFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -646,39 +679,6 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
         docFileInputRef.current.value = '';
       }
     }
-  };
-
-  const applyImportedText = (fullText, fileName) => {
-    const paragraphs = fullText
-      .split(/\r?\n+/)
-      .map((p) => p.trim())
-      .filter(Boolean);
-
-    let title = '';
-    let summary = '';
-
-    if (paragraphs.length > 0 && paragraphs[0].length <= 120) {
-      title = paragraphs[0].replace(/^[#\*\-_\s]+/, '').trim();
-    } else {
-      title = fileName.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
-    }
-
-    if (paragraphs.length > 1) {
-      summary = paragraphs[1].slice(0, 180);
-    } else {
-      summary = title;
-    }
-
-    const htmlContent = paragraphs.map((p) => `<p>${p}</p>`).join('');
-
-    setFormData((prev) => ({
-      ...prev,
-      title: prev.title || title,
-      summary: prev.summary || summary,
-      content: prev.content ? `${prev.content}<p><br/></p>${htmlContent}` : htmlContent,
-    }));
-    setActiveTab('edit');
-    setInfoMsg(`✓ Đã nhập và hiển thị toàn bộ nội dung từ "${fileName}"!`);
   };
 
   // ==========================================

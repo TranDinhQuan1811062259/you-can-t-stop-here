@@ -178,7 +178,7 @@ export const MutualMemoriesDrawer = ({
         </div>
 
         {/* Nội dung chính cuộn dọc */}
-        <div style={{ padding: '20px 22px', overflowY: 'auto', flex: 1 }}>
+        <div style={{ padding: 'clamp(14px, 4vw, 22px)', overflowY: 'auto', flex: 1 }}>
           {loading ? (
             <div style={{ padding: '40px 0', textAlign: 'center' }}>
               <LoadingSpinner />
@@ -363,6 +363,8 @@ export const MutualMemoriesDrawer = ({
                                   color: '#0284c7',
                                   fontWeight: 600,
                                   textDecoration: 'none',
+                                  wordBreak: 'break-word',
+                                  overflowWrap: 'anywhere',
                                 }}
                                 title="Bấm để mở bài viết này"
                               >

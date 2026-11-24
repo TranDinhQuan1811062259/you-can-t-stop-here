@@ -285,6 +285,14 @@ export const MoodPixelTrackerModal = ({ isOpen, onClose }) => {
     } catch (_) {}
   };
 
+  // Tính thống kê tỷ lệ cảm xúc trong tháng (khai báo trước khi các handler dùng)
+  const monthKeys = Object.keys(pixelData).filter((k) => k.startsWith(`${currentYear}-${currentMonth + 1}-`));
+  const stats = MOOD_PALETTES.map((m) => {
+    const count = monthKeys.filter((k) => pixelData[k]?.moodId === m.id).length;
+    const percent = monthKeys.length > 0 ? Math.round((count / monthKeys.length) * 100) : 0;
+    return { ...m, count, percent };
+  });
+
   const handleOpenExport = () => {
     playWarmthSound();
     setIsGeneratingImage(true);
@@ -333,14 +341,6 @@ export const MoodPixelTrackerModal = ({ isOpen, onClose }) => {
   };
 
   if (!isOpen) return null;
-
-  // Tính thống kê tỷ lệ cảm xúc trong tháng
-  const monthKeys = Object.keys(pixelData).filter((k) => k.startsWith(`${currentYear}-${currentMonth + 1}-`));
-  const stats = MOOD_PALETTES.map((m) => {
-    const count = monthKeys.filter((k) => pixelData[k]?.moodId === m.id).length;
-    const percent = monthKeys.length > 0 ? Math.round((count / monthKeys.length) * 100) : 0;
-    return { ...m, count, percent };
-  });
 
   return (
     <div

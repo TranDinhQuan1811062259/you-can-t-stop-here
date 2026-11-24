@@ -16,6 +16,7 @@ import { StoryViewerModal } from '../components/story/StoryViewerModal';
 import { IdleWeatherText } from '../components/common/IdleWeatherText';
 import { CommunityResilienceTree } from '../components/wellness/CommunityResilienceTree';
 import { GivingSomeEffortsSection } from '../components/wellness/GivingSomeEffortsSection';
+import { SectionErrorBoundary } from '../components/common/SectionErrorBoundary';
 
 export const HomePage = () => {
   const { isAuthenticated, openLoginModal } = useAuth();
@@ -384,7 +385,9 @@ export const HomePage = () => {
         <CommunityResilienceTree />
 
         {/* ⚡ Module Truyền Động Lực Tương Tác Thực Thụ: Giving Some Efforts (Tiếp Sức & 2 Nhịp Nhạc Studio WAV) */}
-        <GivingSomeEffortsSection />
+        <SectionErrorBoundary name="Giving Some Efforts">
+          <GivingSomeEffortsSection />
+        </SectionErrorBoundary>
 
         {/* Bộ lọc danh mục */}
         <CategoryFilter
@@ -531,17 +534,19 @@ export const HomePage = () => {
         {/* Chỉ hiển thị lỗi khi hoàn toàn không có bài viết nào */}
         {error && posts.length === 0 && <ErrorMessage message={error} />}
 
-        {loading ? (
-          <LoadingSpinner message="Đang tải những câu chuyện mới nhất..." />
-        ) : (
-          <>
-            <PostList posts={posts} />
-            <Pagination
-              pagination={pagination}
-              onPageChange={handlePageChange}
-            />
-          </>
-        )}
+        <SectionErrorBoundary name="Danh sách bài viết tâm sự" onRetry={() => handlePageChange(pagination.page || 1)}>
+          {loading ? (
+            <LoadingSpinner message="Đang tải những câu chuyện mới nhất..." />
+          ) : (
+            <>
+              <PostList posts={posts} />
+              <Pagination
+                pagination={pagination}
+                onPageChange={handlePageChange}
+              />
+            </>
+          )}
+        </SectionErrorBoundary>
       </section>
 
       {/* Social Buzz / Quote Block kế thừa từ template */}
