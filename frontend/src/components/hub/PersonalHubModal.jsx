@@ -12,6 +12,7 @@ import {
   isCampfireSoundEnabled,
   setCampfireSoundEnabled,
 } from '../../utils/campfireAudio';
+import { HonorCardModal } from './HonorCardModal';
 import '../../styles/personalHub.css';
 
 const DEFAULT_EMPTY_AVATAR =
@@ -56,6 +57,8 @@ export const PersonalHubModal = () => {
   const [sparksOrigin, setSparksOrigin] = useState(null);
   const [milestoneCelebration, setMilestoneCelebration] = useState(null);
   const [campfireSoundOn, setCampfireSoundOn] = useState(() => isCampfireSoundEnabled());
+  const [isHonorCardOpen, setIsHonorCardOpen] = useState(false);
+  const [activeTooltipDay, setActiveTooltipDay] = useState(null);
   const checkInButtonRef = useRef(null);
 
   const highestBadge = useMemo(() => getHighestBadge(streakCount), [streakCount]);
@@ -139,6 +142,84 @@ export const PersonalHubModal = () => {
       return days;
     } catch (err) {
       console.warn('[WeeklyStreak] Lỗi tính tuần:', err);
+      return [];
+    }
+  }, [hasCheckedInToday, streakCount]);
+
+  // Tính toán lưới 30 ngày gần nhất (30-Day Streak Heatmap) theo múi giờ Asia/Ho_Chi_Minh
+  const streakHeatmapDays = useMemo(() => {
+    try {
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      const todayStr = formatter.format(now);
+
+      const nowVN = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
+
+      const streakLength = streakCount || 0;
+      const streakEndDate = new Date(nowVN);
+      if (!hasCheckedInToday) {
+        streakEndDate.setDate(streakEndDate.getDate() - 1);
+      }
+      const streakStartDate = new Date(streakEndDate);
+      if (streakLength > 0) {
+        streakStartDate.setDate(streakStartDate.getDate() - (streakLength - 1));
+      }
+
+      const formatDateOnly = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      const streakStartStr = streakLength > 0 ? formatDateOnly(streakStartDate) : null;
+      const streakEndStr = streakLength > 0 ? formatDateOnly(streakEndDate) : null;
+
+      const days = [];
+      // 30 ngày gần nhất: từ 29 ngày trước đến hôm nay
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(nowVN);
+        d.setDate(nowVN.getDate() - i);
+        const dateStr = formatDateOnly(d);
+        const dayNum = d.getDate();
+        const monthNum = d.getMonth() + 1;
+        const displayDate = `${String(dayNum).padStart(2, '0')}/${String(monthNum).padStart(2, '0')}`;
+
+        const isToday = dateStr === todayStr;
+        let isCheckedIn = false;
+        if (isToday) {
+          isCheckedIn = Boolean(hasCheckedInToday);
+        } else if (streakLength > 0 && streakStartStr && streakEndStr) {
+          isCheckedIn = dateStr >= streakStartStr && dateStr <= streakEndStr;
+        }
+
+        // Cấp độ cường độ sắc ấm của ô nhiệt (0 - 4)
+        let intensity = 0;
+        if (isCheckedIn) {
+          if (streakLength >= 30) intensity = 4;
+          else if (streakLength >= 14) intensity = 3;
+          else if (streakLength >= 7) intensity = 2;
+          else intensity = 1;
+        }
+
+        days.push({
+          dateStr,
+          displayDate,
+          dayNum,
+          isToday,
+          isCheckedIn,
+          intensity,
+        });
+      }
+
+      return days;
+    } catch (err) {
+      console.warn('[StreakHeatmap] Lỗi tính lưới 30 ngày:', err);
       return [];
     }
   }, [hasCheckedInToday, streakCount]);
@@ -457,8 +538,8 @@ export const PersonalHubModal = () => {
                   </p>
                 )}
 
-                {/* Nút Bật/Tắt Âm Thanh Bùng Lửa */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '12px' }}>
+                {/* Nút Bật/Tắt Âm Thanh Bùng Lửa & Nút Chia Sẻ Danh Dự */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '14px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     className="streak-sfx-toggle-btn"
@@ -467,6 +548,19 @@ export const PersonalHubModal = () => {
                   >
                     <i className={`fa-solid ${campfireSoundOn ? 'fa-volume-high' : 'fa-volume-xmark'}`}></i>
                     <span>SFX Lửa: {campfireSoundOn ? 'BẬT' : 'TẮT'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="streak-share-card-btn"
+                    onClick={() => {
+                      playClickSound();
+                      setIsHonorCardOpen(true);
+                    }}
+                    title="Mở thẻ danh dự kiên trì để tải ảnh PNG hoặc sao chép chia sẻ"
+                  >
+                    <i className="fa-solid fa-award"></i>
+                    <span>Chia Sẻ Thẻ Danh Dự 🏆</span>
                   </button>
                 </div>
               </div>
@@ -502,6 +596,45 @@ export const PersonalHubModal = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* Widget Lưới Đốm Nhiệt Giữ Lửa 30 Ngày (30-Day Streak Heatmap) */}
+              <div className="streak-heatmap-card">
+                <div className="streak-heatmap-header">
+                  <div className="streak-heatmap-title">
+                    <i className="fa-solid fa-chart-simple" style={{ color: '#f59e0b' }}></i>
+                    <span>Lưới Đốm Nhiệt 30 Ngày (Asia/Ho_Chi_Minh)</span>
+                  </div>
+                  <span className="streak-heatmap-legend-count">
+                    {streakHeatmapDays.filter((d) => d.isCheckedIn).length}/30 ngày giữ lửa
+                  </span>
+                </div>
+
+                <div className="streak-heatmap-grid">
+                  {streakHeatmapDays.map((day) => (
+                    <div
+                      key={day.dateStr}
+                      className={`heatmap-cell intensity-${day.intensity} ${day.isToday ? 'is-today' : ''} ${day.isCheckedIn ? 'is-checked' : ''} ${activeTooltipDay === day.dateStr ? 'active-tap' : ''}`}
+                      onClick={() => setActiveTooltipDay(activeTooltipDay === day.dateStr ? null : day.dateStr)}
+                      title={`${day.displayDate} (${day.dateStr}): ${day.isCheckedIn ? `Đã giữ lửa 🔥 (Mức ${day.intensity})` : day.isToday ? 'Hôm nay - Chưa điểm danh' : 'Không điểm danh'}`}
+                    >
+                      {day.isToday && <span className="heatmap-today-indicator">•</span>}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Heatmap Legend */}
+                <div className="streak-heatmap-footer">
+                  <span className="heatmap-legend-text">Ít</span>
+                  <div className="heatmap-legend-dots">
+                    <span className="heatmap-cell legend-dot intensity-0" title="Chưa giữ lửa"></span>
+                    <span className="heatmap-cell legend-dot intensity-1" title="Cấp 1 (1-3 ngày)"></span>
+                    <span className="heatmap-cell legend-dot intensity-2" title="Cấp 2 (4-7 ngày)"></span>
+                    <span className="heatmap-cell legend-dot intensity-3" title="Cấp 3 (8-14 ngày)"></span>
+                    <span className="heatmap-cell legend-dot intensity-4" title="Cấp 4 (15+ ngày)"></span>
+                  </div>
+                  <span className="heatmap-legend-text">Nhiều 🔥</span>
                 </div>
               </div>
 
@@ -762,6 +895,11 @@ export const PersonalHubModal = () => {
           onComplete={() => setShowSparks(false)}
         />
       )}
+      <HonorCardModal
+        isOpen={isHonorCardOpen}
+        onClose={() => setIsHonorCardOpen(false)}
+        streakCount={streakCount}
+      />
     </div>
   );
 };
