@@ -11,6 +11,7 @@ import { IdleWeatherText } from '../common/IdleWeatherText';
 import { NotificationDropdown } from './NotificationDropdown';
 import { HeaderAudioVisualizer } from '../common/HeaderAudioVisualizer';
 import { useMusic } from '../../context/MusicContext';
+import { usePersonalHub } from '../../context/PersonalHubContext';
 
 // =============================================================================
 // TỐI ƯU CODE-SPLITTING: LAZY LOAD CÁC MODAL LỚN ĐỂ GIẢM KÍCH THƯỚC BUNDLE CHÍNH
@@ -95,6 +96,8 @@ export const Header = () => {
     closeProfileModal,
     isAuthModalOpen,
   } = useAuth();
+
+  const { openHub, streakCount } = usePersonalHub();
 
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -1409,10 +1412,12 @@ export const Header = () => {
                   />
                 </div>
 
-                <Link
-                  to={`/profile/${user?._id}`}
+                <button
+                  type="button"
                   className="header-profile-click"
-                  title={`Xem hồ sơ cá nhân: ${user?.name}`}
+                  onClick={() => openHub('streak')}
+                  title={`Personal Motivation Hub: ${user?.name}. Bấm để mở bảng điều khiển cá nhân`}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
                 >
                   <img
                     src={
@@ -1436,7 +1441,18 @@ export const Header = () => {
                   {user?.role === 'admin' && (
                     <span className="admin-badge-tag">ADMIN</span>
                   )}
-                </Link>
+                </button>
+
+                {/* Huy hiệu ngọn lửa nhỏ (🔥 {streakCount}) cạnh avatar */}
+                <button
+                  type="button"
+                  className="header-streak-badge-btn"
+                  onClick={() => openHub('streak')}
+                  title={`Chuỗi ${streakCount || 0} ngày giữ lửa. Bấm để mở Personal Motivation Hub`}
+                >
+                  <span className="header-streak-flame">🔥</span>
+                  <span>{streakCount || 0}</span>
+                </button>
 
                 {/* Nút Cài đặt tài khoản & hồ sơ */}
                 <button

@@ -138,6 +138,48 @@ const userSchema = new mongoose.Schema(
       timbre: { type: String, default: 'authentic' },
       recordedAt: { type: Date },
     },
+    // =========================================================================
+    // PERSONAL MOTIVATION VAULT & LIVE MUSIC INTERACTIONS (HUBS & STREAKS)
+    // =========================================================================
+    likedTracks: {
+      type: [String],
+      default: [],
+    },
+    savedQuotes: [
+      {
+        id: { type: String, default: () => new mongoose.Types.ObjectId().toString() },
+        text: { type: String, required: true },
+        author: { type: String, default: '' },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    streakCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    lastCheckInDate: {
+      type: Date,
+      default: null,
+    },
+    personalNotes: [
+      {
+        content: {
+          type: String,
+          required: [true, 'Nội dung mục tiêu không được để trống'],
+          trim: true,
+          maxlength: [300, 'Nội dung mục tiêu tối đa 300 ký tự'],
+        },
+        completed: {
+          type: Boolean,
+          default: false,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

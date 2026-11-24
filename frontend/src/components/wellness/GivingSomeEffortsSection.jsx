@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useMusic } from '../../context/MusicContext';
+import { usePersonalHub } from '../../context/PersonalHubContext';
 import { playStarChimeSound, playWarmthSound, playClickSound } from '../../utils/soundEffects';
 import { resumeAmbientAudioContext } from '../../utils/ambientSoundEngine';
 
@@ -101,6 +102,10 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
     cycleLoopMode,
     toggleShuffle,
   } = useMusic();
+
+  const { likedTracks, toggleTrackLike, trackLikesMap } = usePersonalHub();
+  const isEffortTrackLiked = isEffortTheme && currentTrack?.id ? likedTracks.includes(currentTrack.id) : false;
+  const effortLikesCount = isEffortTheme && currentTrack?.id ? (trackLikesMap[currentTrack.id] || 0) : 0;
 
   const [isExpanded, setIsExpanded] = useState(true);
   const [quoteIndex, setQuoteIndex] = useState(0);
@@ -390,8 +395,23 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
                   </h4>
                 </div>
 
-                <div className="audio-wav-badge" title="Định dạng Studio WAV Master 24-bit Hi-Fi">
-                  <span>HQ WAV</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {isEffortTheme && currentTrack?.id && (
+                    <button
+                      type="button"
+                      className={`music-heart-btn ${isEffortTrackLiked ? 'is-liked' : ''}`}
+                      onClick={() => toggleTrackLike(currentTrack.id)}
+                      title={isEffortTrackLiked ? 'Đã thích nhịp nhạc này. Bấm để bỏ thích' : 'Thả tim nhịp nhạc này'}
+                      style={{ padding: '3px 8px', fontSize: '0.74rem' }}
+                    >
+                      <i className={`fa-${isEffortTrackLiked ? 'solid' : 'regular'} fa-heart`}></i>
+                      <span>{effortLikesCount > 0 ? effortLikesCount : 'Thích'}</span>
+                    </button>
+                  )}
+
+                  <div className="audio-wav-badge" title="Định dạng Studio WAV Master 24-bit Hi-Fi">
+                    <span>HQ WAV</span>
+                  </div>
                 </div>
               </div>
 
@@ -415,7 +435,14 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
                   <div className="beat-btn-text">
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                       <strong className="beat-name">Nhịp 1: Bền Bỉ</strong>
-                      <kbd className="beat-kbd-hint" title="Bấm phím 1 để chọn nhanh">1</kbd>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        {trackLikesMap['effort-song-1'] > 0 && (
+                          <span style={{ fontSize: '0.7rem', color: '#f43f5e' }} title={`${trackLikesMap['effort-song-1']} lượt thích`}>
+                            ❤️ {trackLikesMap['effort-song-1']}
+                          </span>
+                        )}
+                        <kbd className="beat-kbd-hint" title="Bấm phím 1 để chọn nhanh">1</kbd>
+                      </div>
                     </div>
                     <span className="beat-desc">Song 1E • Vững bước qua deadline</span>
                   </div>
@@ -439,7 +466,14 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
                   <div className="beat-btn-text">
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                       <strong className="beat-name">Nhịp 2: Vươn Lên</strong>
-                      <kbd className="beat-kbd-hint" title="Bấm phím 2 để chọn nhanh">2</kbd>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        {trackLikesMap['effort-song-2'] > 0 && (
+                          <span style={{ fontSize: '0.7rem', color: '#f43f5e' }} title={`${trackLikesMap['effort-song-2']} lượt thích`}>
+                            ❤️ {trackLikesMap['effort-song-2']}
+                          </span>
+                        )}
+                        <kbd className="beat-kbd-hint" title="Bấm phím 2 để chọn nhanh">2</kbd>
+                      </div>
                     </div>
                     <span className="beat-desc">Song 2E • Ánh sáng cuối con đường</span>
                   </div>

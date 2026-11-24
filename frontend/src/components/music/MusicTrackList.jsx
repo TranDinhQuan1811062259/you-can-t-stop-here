@@ -1,5 +1,6 @@
 import React from 'react';
 import { playClickSound } from '../../utils/soundEffects';
+import { usePersonalHub } from '../../context/PersonalHubContext';
 
 /**
  * Component hiển thị danh sách bài hát & bộ chọn chủ đề đa mùa
@@ -13,6 +14,7 @@ export const MusicTrackList = ({
   onSelectTheme,
 }) => {
   const tracks = theme?.tracks || [];
+  const { likedTracks, toggleTrackLike, trackLikesMap } = usePersonalHub();
 
   return (
     <div className="music-tracklist-container">
@@ -149,8 +151,23 @@ export const MusicTrackList = ({
                   </div>
                 </div>
 
-                {/* Cột phải: Nút Play nhanh */}
-                <div className="track-right-action">
+                {/* Cột phải: Nút Thả Tim & Play nhanh */}
+                <div className="track-right-action" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className={`track-item-heart-btn ${track.id && likedTracks.includes(track.id) ? 'is-liked' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (track.id) toggleTrackLike(track.id);
+                    }}
+                    title={track.id && likedTracks.includes(track.id) ? 'Bỏ thích bản nhạc này' : 'Thả tim bản nhạc này'}
+                  >
+                    <i className={`fa-${track.id && likedTracks.includes(track.id) ? 'solid' : 'regular'} fa-heart`}></i>
+                    {track.id && trackLikesMap[track.id] > 0 && (
+                      <span style={{ fontSize: '0.74rem' }}>{trackLikesMap[track.id]}</span>
+                    )}
+                  </button>
+
                   <button
                     type="button"
                     className={`track-quick-play-btn ${isActive && isPlaying ? 'playing' : ''}`}

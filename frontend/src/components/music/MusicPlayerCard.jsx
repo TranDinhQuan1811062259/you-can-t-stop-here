@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { playClickSound } from '../../utils/soundEffects';
 import { TrackStoryModal } from './TrackStoryModal';
+import { usePersonalHub } from '../../context/PersonalHubContext';
 
 /**
  * Định dạng số giây thành chuỗi mm:ss
@@ -47,6 +48,9 @@ export const MusicPlayerCard = ({
   } = player;
 
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
+  const { likedTracks, toggleTrackLike, trackLikesMap } = usePersonalHub();
+  const isTrackLiked = currentTrack?.id ? likedTracks.includes(currentTrack.id) : false;
+  const trackLikesCount = currentTrack?.id ? (trackLikesMap[currentTrack.id] || 0) : 0;
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
@@ -159,6 +163,19 @@ export const MusicPlayerCard = ({
               <i className="fa-solid fa-envelope-open-text"></i>
               <span>Tâm sự sau bản thu</span>
               <span className="story-pill-dot" />
+            </button>
+          )}
+
+          {/* Nút Thả Tim (Like / Heart) Đồng Bộ Tài Khoản & Lượt Like Công Khai */}
+          {currentTrack?.id && (
+            <button
+              type="button"
+              className={`music-badge-pill music-heart-btn ${isTrackLiked ? 'is-liked' : ''}`}
+              onClick={() => toggleTrackLike(currentTrack.id)}
+              title={isTrackLiked ? 'Đã yêu thích bản nhạc này. Bấm để bỏ thích' : 'Thả tim bản nhạc này'}
+            >
+              <i className={`fa-${isTrackLiked ? 'solid' : 'regular'} fa-heart`}></i>
+              <span>{trackLikesCount > 0 ? `${trackLikesCount} Thích` : 'Thả Tim'}</span>
             </button>
           )}
 

@@ -4,6 +4,8 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
 import { ChatProvider } from './context/ChatContext';
 import { MusicProvider } from './context/MusicContext';
+import { PersonalHubProvider } from './context/PersonalHubContext';
+import { PersonalHubModal } from './components/hub/PersonalHubModal';
 import { AppErrorBoundary } from './components/common/AppErrorBoundary';
 import { AppRoutes } from './routes/AppRoutes';
 
@@ -17,7 +19,10 @@ function App() {
           <AuthProvider>
             <ChatProvider>
               <MusicProvider>
-                <AppRoutes />
+                <PersonalHubProvider>
+                  <AppRoutes />
+                  <PersonalHubModal />
+                </PersonalHubProvider>
               </MusicProvider>
             </ChatProvider>
           </AuthProvider>

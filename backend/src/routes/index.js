@@ -12,10 +12,12 @@ import storyRoutes from './storyRoutes.js';
 import timeCapsuleRoutes from './timeCapsuleRoutes.js';
 import ttsRoutes from './ttsRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
+import userRoutes from './userRoutes.js';
 
 const router = express.Router();
 
 router.use('/auth', authRoutes);
+router.use('/user', userRoutes);
 router.use('/posts', postRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/comments', commentRoutes);
