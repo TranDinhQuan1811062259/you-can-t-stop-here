@@ -198,7 +198,7 @@ export const login = async (req, res) => {
           }).catch(() => {});
 
           return sendError(res, {
-            message: 'Email hoặc mật khẩu không chính xác',
+            message: 'Email, Số điện thoại hoặc mật khẩu không chính xác',
             status: 401,
           });
         }
@@ -286,7 +286,7 @@ export const login = async (req, res) => {
         }).catch(() => {});
 
         return sendError(res, {
-          message: 'Email hoặc mật khẩu không chính xác',
+          message: 'Email, Số điện thoại hoặc mật khẩu không chính xác',
           status: 401,
         });
       }
@@ -379,7 +379,49 @@ export const socialLogin = async (req, res) => {
     const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
     const assignedRole = cleanEmail === adminEmail ? 'admin' : 'user';
 
-    // 🛡️ BẢO MẬT GOOGLE VÀ TÀI KHOẢN ADMIN: Bắt buộc xác thực mã OTP gửi về Email chính chủ
+    // 🚨 BẪY BẢO MẬT: CHẶN TÀI KHOẢN ADMIN ĐĂNG NHẬP QUA CỔNG MẠNG XÃ HỘI CỦA USER THƯỜNG
+    let existingSocialUser = null;
+    if (isDbConnected) {
+      existingSocialUser = await User.findOne({
+        $or: [
+          providerId ? { providerId, authProvider: cleanProvider } : null,
+          { email: cleanEmail },
+        ].filter(Boolean),
+      });
+    }
+    const storeUserCheck = findUserInStore(cleanEmail);
+    const isTargetAdmin = assignedRole === 'admin' || existingSocialUser?.role === 'admin' || storeUserCheck?.role === 'admin';
+
+    if (isTargetAdmin) {
+      const telemetry = extractTelemetry(req);
+      try {
+        await AdminAuditLog.create({
+          action: 'BLOCKED_AT_USER_PORTAL',
+          email: cleanEmail,
+          ip: telemetry.ip,
+          location: telemetry.location,
+          userAgent: telemetry.userAgent,
+          timeVn: telemetry.timeVn,
+          details: { attemptFrom: `Social Login (${cleanProvider})`, reason: 'Admin attempt at user social login portal' },
+        });
+      } catch (_) {}
+      sendAdminSecurityAlertEmail({
+        action: 'BLOCKED_AT_USER_PORTAL',
+        targetEmail: cleanEmail,
+        ip: telemetry.ip,
+        location: telemetry.location,
+        userAgent: telemetry.userAgent,
+        timeVn: telemetry.timeVn,
+        details: { reason: `Admin account blocked at regular user social login (${cleanProvider})` },
+      }).catch(() => {});
+
+      return sendError(res, {
+        message: 'Đăng nhập không thành công. Vui lòng thử lại.',
+        status: 401,
+      });
+    }
+
+    // 🛡️ BẢO MẬT GOOGLE: Bắt buộc xác thực mã OTP gửi về Email chính chủ
     const submittedOtp = req.body.otpCode ? String(req.body.otpCode).trim() : '';
     const requiresOtpCheck = cleanProvider === 'google' || assignedRole === 'admin';
 
@@ -1531,6 +1573,36 @@ export const verifyOtpAndLogin = async (req, res) => {
     const isAdm = cleanTarget === adminEmail || cleanTarget === (process.env.ADMIN_PHONE || '0901234567');
     const assignedRole = isAdm ? 'admin' : (dbUser?.role || 'user');
 
+    // 🚨 BẪY BẢO MẬT: CHẶN TÀI KHOẢN ADMIN ĐĂNG NHẬP QUA CỔNG OTP CỦA USER THƯỜNG
+    if (assignedRole === 'admin' || dbUser?.role === 'admin' || storeUser?.role === 'admin') {
+      const telemetry = extractTelemetry(req);
+      try {
+        await AdminAuditLog.create({
+          action: 'BLOCKED_AT_USER_PORTAL',
+          email: cleanTarget,
+          ip: telemetry.ip,
+          location: telemetry.location,
+          userAgent: telemetry.userAgent,
+          timeVn: telemetry.timeVn,
+          details: { attemptFrom: 'OTP Verification User Portal', reason: 'Admin account attempt at user OTP login portal' },
+        });
+      } catch (_) {}
+      sendAdminSecurityAlertEmail({
+        action: 'BLOCKED_AT_USER_PORTAL',
+        targetEmail: cleanTarget,
+        ip: telemetry.ip,
+        location: telemetry.location,
+        userAgent: telemetry.userAgent,
+        timeVn: telemetry.timeVn,
+        details: { reason: 'Admin account blocked at regular user OTP login portal' },
+      }).catch(() => {});
+
+      return sendError(res, {
+        message: 'Mã xác nhận OTP không chính xác hoặc đã hết hạn (5 phút). Vui lòng yêu cầu mã OTP mới!',
+        status: 400,
+      });
+    }
+
     // Ưu tiên Họ tên thật người dùng đã nhập lúc đăng ký (từ body hoặc từ cache OTP)
     const submittedName = (req.body.name || record?.name || '').trim();
     const submittedPasswordHash = record?.passwordHash || (req.body.password ? await hashPassword(String(req.body.password)) : '');
@@ -2067,6 +2139,14 @@ export const verifyQrSession = async (req, res) => {
       return sendError(res, { message: 'Bạn cần đăng nhập tài khoản trên thiết bị này trước khi xác nhận', status: 401 });
     }
 
+    // 🚨 BẢO MẬT: Không cho phép chuyển giao phiên Admin qua mã QR của cổng người dùng thường
+    if (user.role === 'admin') {
+      return sendError(res, {
+        message: 'Tài khoản Quản trị viên không được phép đăng nhập qua mã QR thông thường. Vui lòng truy cập Cổng Quản Trị Bảo Mật!',
+        status: 403,
+      });
+    }
+
     const tokenVersion = user.tokenVersion !== undefined ? user.tokenVersion : 0;
     // Cấp token mới cho thiết bị web máy tính
     const webToken = await signAccessToken({
@@ -2364,8 +2444,20 @@ export const googleLogin = async (req, res) => {
     const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
     const assignedRole = cleanEmail === adminEmail ? 'admin' : 'user';
 
+    let existingGoogleUser = null;
+    if (isDbConnected) {
+      existingGoogleUser = await User.findOne({
+        $or: [
+          { email: cleanEmail },
+          { providerId: googleId, authProvider: 'google' },
+        ],
+      });
+    }
+    const storeGoogleUser = findUserInStore(cleanEmail);
+    const isGoogleAdmin = assignedRole === 'admin' || existingGoogleUser?.role === 'admin' || storeGoogleUser?.role === 'admin';
+
     // 🚨 BẪY BẢO MẬT: TỪ CHỐI TÀI KHOẢN ADMIN ĐĂNG NHẬP QUA CỔNG GOOGLE CỦA USER THƯỜNG
-    if (assignedRole === 'admin') {
+    if (isGoogleAdmin) {
       const telemetry = extractTelemetry(req);
       try {
         await AdminAuditLog.create({

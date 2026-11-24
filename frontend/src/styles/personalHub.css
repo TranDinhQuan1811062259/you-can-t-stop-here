@@ -1503,12 +1503,65 @@
   color: #94a3b8;
 }
 
-/* Responsive Mobile */
+/* Tooltip phản hồi trực quan khi chạm vào ô nhiệt trên màn hình cảm ứng Mobile (Touch/Tap) */
+.heatmap-touch-tooltip-banner {
+  margin-top: 10px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 8px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  animation: fadeIn 0.2s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+}
+
+.heatmap-touch-tooltip-banner .tooltip-date {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #fde68a;
+  white-space: nowrap;
+}
+
+.heatmap-touch-tooltip-banner .tooltip-status {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  flex: 1;
+  text-align: left;
+}
+
+.heatmap-touch-tooltip-banner .tooltip-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.heatmap-touch-tooltip-banner .tooltip-close-btn:hover {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* Responsive Mobile (Tối ưu chuyên sâu cho 360px - 430px) */
 @media (max-width: 640px) {
+  .personal-hub-overlay {
+    align-items: flex-end;
+    justify-content: center;
+  }
+
   .personal-hub-drawer {
     max-width: 100%;
-    height: 92vh;
+    height: 94vh;
     border-radius: 20px 20px 0 0;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
     align-self: flex-end;
     animation: hubDrawerSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
@@ -1518,7 +1571,101 @@
     to { transform: translateY(0); }
   }
 
+  .hub-header {
+    padding: 1rem 1.15rem;
+  }
+
+  .hub-nav-tabs {
+    padding: 6px 8px;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .hub-nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hub-tab-btn {
+    padding: 7px 6px;
+    font-size: 0.76rem;
+    white-space: nowrap;
+  }
+
+  .hub-content-body {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .streak-hero-card {
+    padding: 1.4rem 1rem;
+  }
+
+  .streak-flame-icon-large {
+    font-size: 2.8rem;
+  }
+
   .streak-hero-count {
     font-size: 2.2rem;
+  }
+
+  .streak-hero-desc {
+    font-size: 0.78rem;
+    margin-bottom: 1.1rem;
+  }
+
+  .checkin-action-btn {
+    padding: 11px 18px;
+    font-size: 0.88rem;
+  }
+
+  .weekly-days-grid {
+    gap: 4px;
+  }
+
+  .weekly-day-box {
+    padding: 6px 1px;
+    border-radius: 8px;
+  }
+
+  .weekly-day-label {
+    font-size: 0.62rem;
+  }
+
+  .weekly-day-badge {
+    width: 24px;
+    height: 24px;
+    font-size: 0.7rem;
+  }
+
+  .weekly-day-flame {
+    font-size: 0.88rem;
+  }
+
+  .streak-heatmap-grid {
+    gap: 4px;
+  }
+
+  .milestones-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+}
+
+@media (max-width: 380px) {
+  .hub-tab-btn {
+    font-size: 0.72rem;
+    padding: 6px 4px;
+  }
+
+  .streak-hero-count {
+    font-size: 1.95rem;
+  }
+
+  .streak-share-card-btn,
+  .streak-sfx-toggle-btn {
+    font-size: 0.68rem;
+    padding: 4px 8px;
   }
 }

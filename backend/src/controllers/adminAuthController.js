@@ -149,15 +149,20 @@ export const adminLogin = async (req, res) => {
       timeVn: telemetry.timeVn,
     }).catch(() => {});
 
+    const adminUserData = {
+      _id: adminUser._id,
+      name: adminUser.name,
+      email: adminUser.email,
+      role: 'admin',
+      jobTitle: adminUser.jobTitle || 'Quản Trị Viên Hệ Thống',
+      avatar: adminUser.avatar || '',
+    };
+
     return sendSuccess(res, {
       message: 'Đăng nhập Cổng Quản Trị thành công',
       data: {
-        _id: adminUser._id,
-        name: adminUser.name,
-        email: adminUser.email,
-        role: 'admin',
-        jobTitle: adminUser.jobTitle || 'Quản Trị Viên Hệ Thống',
-        avatar: adminUser.avatar || '',
+        ...adminUserData,
+        user: adminUserData,
         token,
         refreshToken,
       },
@@ -200,6 +205,7 @@ export const adminTelemetry = async (req, res) => {
 export const getSecurityLogs = async (req, res) => {
   try {
     const logs = await AdminAuditLog.find()
+      .select('action email ip location userAgent timeVn details createdAt')
       .sort({ createdAt: -1 })
       .limit(50)
       .lean();

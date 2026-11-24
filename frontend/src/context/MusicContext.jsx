@@ -823,7 +823,10 @@ export const MusicProvider = ({ children }) => {
     togglePlay();
   }, [togglePlay]);
 
-  // 🎵 Preload metadata nhẹ cho bài kế tiếp (nextTrack) khi bài hiện tại đang phát
+  // 🎵 Preload metadata nhẹ cho bài kế tiếp (nextTrack) khi bài hiện tại đang phát (Singleton & Cleanup an toàn)
+  const preloaderAudioRef = useRef(null);
+  const lastPreloadedSrcRef = useRef('');
+
   useEffect(() => {
     if (!isPlaying || !tracks || tracks.length <= 1) return;
     try {
@@ -831,13 +834,26 @@ export const MusicProvider = ({ children }) => {
       const nextTrackItem = tracks[nextIdx];
       if (nextTrackItem) {
         const nextSrc = getTargetTrackSrc(nextTrackItem);
-        if (nextSrc && typeof Audio !== 'undefined') {
-          const preloader = new Audio();
-          preloader.preload = 'metadata';
-          preloader.src = nextSrc;
+        if (nextSrc && nextSrc !== lastPreloadedSrcRef.current && typeof Audio !== 'undefined') {
+          lastPreloadedSrcRef.current = nextSrc;
+          if (!preloaderAudioRef.current) {
+            preloaderAudioRef.current = new Audio();
+            preloaderAudioRef.current.preload = 'metadata';
+          }
+          preloaderAudioRef.current.src = nextSrc;
         }
       }
     } catch (_) {}
+
+    return () => {
+      // Dọn dẹp tài nguyên preloader khi unmount hoặc bài phát thay đổi (Quy tắc 3 GEMINI.md)
+      if (preloaderAudioRef.current) {
+        try {
+          preloaderAudioRef.current.src = '';
+          preloaderAudioRef.current.load();
+        } catch (_) {}
+      }
+    };
   }, [isPlaying, tracks, currentTrackIndex, getTargetTrackSrc]);
 
   // Đăng ký toàn bộ sự kiện của Audio element (Chỉ 1 lần duy nhất trên toàn hệ thống)

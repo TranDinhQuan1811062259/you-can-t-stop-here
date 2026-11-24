@@ -42,6 +42,7 @@ export const sendEmailViaBrevo = async ({ toEmail, subject, htmlContent, textCon
         'content-type': 'application/json',
       },
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(8000), // Timeout 8 giây chống treo server
     });
 
     const responseText = await response.text();

@@ -3,9 +3,16 @@ import React, { useEffect, useRef } from 'react';
 /**
  * Hiệu ứng Canvas Hạt Tia Lửa (Flame Sparks Confetti)
  * Dùng HTML5 Canvas thuần, 60fps mượt mà, tự động dọn dẹp bộ nhớ và animation frame khi kết thúc.
+ * Đã tối ưu hóa chống re-render lặp (Ref callback) & dọn dẹp triệt để tài nguyên (Quy tắc 3 GEMINI.md).
  */
 export const FlameSparksEffect = ({ origin, duration = 2500, onComplete }) => {
   const canvasRef = useRef(null);
+
+  // Lưu giữ callback và vị trí origin vào Refs để chống re-render lặp khi cha truyền inline functions / objects
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+  const originRef = useRef(origin);
+  originRef.current = origin;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -14,10 +21,10 @@ export const FlameSparksEffect = ({ origin, duration = 2500, onComplete }) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let animationFrameId;
+    let animationFrameId = null;
     let isCancelled = false;
 
-    // Thiết lập kích thước canvas theo khung nhìn
+    // Thiết lập kích thước canvas theo khung nhìn màn hình
     const setCanvasSize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -25,9 +32,10 @@ export const FlameSparksEffect = ({ origin, duration = 2500, onComplete }) => {
     setCanvasSize();
     window.addEventListener('resize', setCanvasSize);
 
-    // Điểm xuất phát của hạt lửa (mặc định từ vị trí truyền vào hoặc giữa màn hình)
-    const startX = origin?.x ?? window.innerWidth / 2;
-    const startY = origin?.y ?? window.innerHeight * 0.55;
+    // Điểm xuất phát của hạt lửa (từ vị trí click hoặc giữa màn hình)
+    const currentOrigin = originRef.current;
+    const startX = currentOrigin?.x ?? window.innerWidth / 2;
+    const startY = currentOrigin?.y ?? window.innerHeight * 0.55;
 
     const sparkColors = [
       '#FF4500', // Đỏ cam rực
@@ -116,23 +124,24 @@ export const FlameSparksEffect = ({ origin, duration = 2500, onComplete }) => {
         animationFrameId = requestAnimationFrame(render);
       } else {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (typeof onComplete === 'function') {
-          onComplete();
+        if (typeof onCompleteRef.current === 'function') {
+          onCompleteRef.current();
         }
       }
     };
 
     animationFrameId = requestAnimationFrame(render);
 
-    // Cleanup triệt để khi unmount (Quy tắc 3 GEMINI.md)
+    // Dọn dẹp tài nguyên triệt để khi unmount (Quy tắc 3 GEMINI.md)
     return () => {
       isCancelled = true;
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
       }
       window.removeEventListener('resize', setCanvasSize);
     };
-  }, [duration, onComplete, origin]);
+  }, [duration]); // Chỉ phụ thuộc vào duration nguyên bản, không tạo vòng lặp vô tận
 
   return (
     <canvas

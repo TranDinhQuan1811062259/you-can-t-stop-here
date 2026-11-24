@@ -646,6 +646,35 @@ export const PersonalHubModal = () => {
                   ))}
                 </div>
 
+                {/* Tooltip phản hồi trực quan khi chạm vào ô (Tối ưu cho Mobile Touch / Tap) */}
+                {activeTooltipDay && (() => {
+                  const targetDay = streakHeatmapDays.find((d) => d.dateStr === activeTooltipDay);
+                  if (!targetDay) return null;
+                  return (
+                    <div className="heatmap-touch-tooltip-banner">
+                      <span className="tooltip-date">📅 {targetDay.displayDate}:</span>
+                      <span className="tooltip-status">
+                        {targetDay.isCheckedIn
+                          ? `Đã giữ lửa liên tục 🔥 (Cấp ${targetDay.intensity})`
+                          : targetDay.isToday
+                          ? 'Hôm nay (Chưa điểm danh)'
+                          : 'Chưa điểm danh ngày này'}
+                      </span>
+                      <button
+                        type="button"
+                        className="tooltip-close-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveTooltipDay(null);
+                        }}
+                        title="Đóng chi tiết ngày"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })()}
+
                 {/* Heatmap Legend */}
                 <div className="streak-heatmap-footer">
                   <span className="heatmap-legend-text">Ít</span>

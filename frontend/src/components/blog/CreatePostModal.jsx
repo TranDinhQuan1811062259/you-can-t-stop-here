@@ -640,8 +640,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
-        className="modal-box"
-        style={{ maxWidth: '820px', width: '95%' }}
+        className="modal-box create-post-modal-box"
         onClick={(e) => e.stopPropagation()}
       >
         <button className="modal-close-btn" onClick={onClose}>
@@ -734,16 +733,17 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
         })()}
 
         {/* Thanh chọn 3 định dạng bài đăng: Bài viết sâu | Khoảnh khắc ảnh | Video ngắn */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', background: '#f1f5f9', padding: '6px', borderRadius: '12px' }}>
+        <div className="create-post-format-bar" style={{ display: 'flex', gap: '8px', marginBottom: '16px', background: '#f1f5f9', padding: '6px', borderRadius: '12px' }}>
           <button
             type="button"
+            className={`create-format-btn ${postFormat === 'article' ? 'active' : ''}`}
             onClick={() => {
               setPostFormat('article');
               setErrorMsg('');
             }}
             style={{
               flex: 1,
-              padding: '9px 10px',
+              padding: '9px 8px',
               borderRadius: '8px',
               border: 'none',
               background: postFormat === 'article' ? '#ffffff' : 'transparent',
@@ -757,21 +757,24 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
               justifyContent: 'center',
               gap: '6px',
               transition: 'all 0.2s',
+              whiteSpace: 'nowrap',
             }}
           >
             <span>📝</span>
-            <span>Bài Viết Sâu</span>
+            <span className="format-text-full">Bài Viết Sâu</span>
+            <span className="format-text-short">Bài Viết</span>
           </button>
 
           <button
             type="button"
+            className={`create-format-btn ${postFormat === 'photo' ? 'active' : ''}`}
             onClick={() => {
               setPostFormat('photo');
               setErrorMsg('');
             }}
             style={{
               flex: 1,
-              padding: '9px 10px',
+              padding: '9px 8px',
               borderRadius: '8px',
               border: 'none',
               background: postFormat === 'photo' ? '#ffffff' : 'transparent',
@@ -785,21 +788,24 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
               justifyContent: 'center',
               gap: '6px',
               transition: 'all 0.2s',
+              whiteSpace: 'nowrap',
             }}
           >
             <span>📸</span>
-            <span>Khoảnh Khắc Ảnh (≤300)</span>
+            <span className="format-text-full">Khoảnh Khắc Ảnh (≤300)</span>
+            <span className="format-text-short">Ảnh (≤300)</span>
           </button>
 
           <button
             type="button"
+            className={`create-format-btn ${postFormat === 'video' ? 'active' : ''}`}
             onClick={() => {
               setPostFormat('video');
               setErrorMsg('');
             }}
             style={{
               flex: 1,
-              padding: '9px 10px',
+              padding: '9px 8px',
               borderRadius: '8px',
               border: 'none',
               background: postFormat === 'video' ? '#ffffff' : 'transparent',
@@ -813,10 +819,12 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
               justifyContent: 'center',
               gap: '6px',
               transition: 'all 0.2s',
+              whiteSpace: 'nowrap',
             }}
           >
             <span>🎬</span>
-            <span>Video Ngắn (≤250)</span>
+            <span className="format-text-full">Video Ngắn (≤250)</span>
+            <span className="format-text-short">Video (≤250)</span>
           </button>
         </div>
 
@@ -1090,13 +1098,14 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
           {/* Khu vực soạn thảo nội dung theo định dạng */}
           {postFormat === 'photo' ? (
             <div className="form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
                 <label style={{ margin: 0, fontWeight: 700 }}>Dòng trạng thái / Cảm nghĩ khoảnh khắc *</label>
                 <span
                   style={{
                     fontSize: '0.8rem',
                     fontWeight: 700,
                     color: formData.content.length > 280 ? '#ef4444' : formData.content.length > 240 ? '#f59e0b' : '#0d9488',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {formData.content.length} / 300 ký tự
@@ -1124,13 +1133,14 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
             </div>
           ) : postFormat === 'video' ? (
             <div className="form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
                 <label style={{ margin: 0, fontWeight: 700 }}>Chú thích thước phim ngắn *</label>
                 <span
                   style={{
                     fontSize: '0.8rem',
                     fontWeight: 700,
                     color: formData.content.length > 230 ? '#ef4444' : formData.content.length > 200 ? '#f59e0b' : '#ea580c',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {formData.content.length} / 250 ký tự

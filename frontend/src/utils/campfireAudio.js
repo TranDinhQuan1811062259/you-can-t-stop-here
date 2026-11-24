@@ -41,6 +41,35 @@ export const setCampfireSoundEnabled = (enabled) => {
   } catch (_) {}
 };
 
+// Danh sách các AudioNode đang hoạt động để dọn dẹp triệt để khi hoàn tất (Quy tắc 3 GEMINI.md)
+let activeCampfireNodes = [];
+let campfireCleanupTimer = null;
+
+/**
+ * Ngắt kết nối và giải phóng toàn bộ các node âm thanh đang phát
+ */
+export const stopCampfireSound = () => {
+  if (campfireCleanupTimer) {
+    clearTimeout(campfireCleanupTimer);
+    campfireCleanupTimer = null;
+  }
+  if (activeCampfireNodes.length > 0) {
+    activeCampfireNodes.forEach((node) => {
+      try {
+        if (typeof node.stop === 'function') {
+          node.stop();
+        }
+      } catch (_) {}
+      try {
+        if (typeof node.disconnect === 'function') {
+          node.disconnect();
+        }
+      } catch (_) {}
+    });
+    activeCampfireNodes = [];
+  }
+};
+
 /**
  * Phát hiệu ứng tiếng củi lửa lách tách và bùng lửa ấm áp kéo dài khoảng 0.7s - 0.85s
  */
@@ -48,10 +77,13 @@ export const playCampfireSound = async ({ volume = 0.45 } = {}) => {
   if (!isCampfireSoundEnabled()) return;
 
   try {
+    // Thu hồi các node âm thanh cũ nếu đang phát dang dở
+    stopCampfireSound();
+
     const ctx = getAudioContext();
     if (!ctx) return;
 
-    // Kích hoạt lại AudioContext nếu đang ở trạng thái suspended do Autoplay Policy
+    // Kích hoạt lại AudioContext nếu đang ở trạng thái suspended do Autoplay Policy (Quy tắc 4 GEMINI.md)
     if (ctx.state === 'suspended') {
       try {
         await ctx.resume();
@@ -62,11 +94,13 @@ export const playCampfireSound = async ({ volume = 0.45 } = {}) => {
 
     const now = ctx.currentTime;
     const duration = 0.85;
+    const currentNodes = [];
 
     // Master Gain Node cho toàn bộ hiệu ứng
     const masterGain = ctx.createGain();
     masterGain.gain.setValueAtTime(Math.max(0, Math.min(1, volume)), now);
     masterGain.connect(ctx.destination);
+    currentNodes.push(masterGain);
 
     // =========================================================================
     // 1. TIẾNG BÙNG LỬA TRẦM ẤM (WARM IGNITION WHOOSH)
@@ -93,6 +127,7 @@ export const playCampfireSound = async ({ volume = 0.45 } = {}) => {
 
     osc.start(now);
     osc.stop(now + 0.7);
+    currentNodes.push(osc, oscFilter, oscGain);
 
     // =========================================================================
     // 2. TIẾNG THỞ CỦA NGỌN LỬA (FLAME AIR BREATH NOISE)
@@ -125,6 +160,7 @@ export const playCampfireSound = async ({ volume = 0.45 } = {}) => {
 
     noiseSource.start(now);
     noiseSource.stop(now + duration);
+    currentNodes.push(noiseSource, noiseFilter, noiseGain);
 
     // =========================================================================
     // 3. TIẾNG CỦI LÁCH TÁCH (CAMPFIRE CRACKLES / MICRO-POPS)
@@ -160,14 +196,15 @@ export const playCampfireSound = async ({ volume = 0.45 } = {}) => {
 
       popSource.start(popTime);
       popSource.stop(popTime + popDuration);
+      currentNodes.push(popSource, popFilter, popGain);
     });
 
-    // Tự động ngắt kết nối sau khi phát xong để chống rò rỉ bộ nhớ
-    setTimeout(() => {
-      try {
-        masterGain.disconnect();
-      } catch (_) {}
-    }, duration * 1000 + 100);
+    activeCampfireNodes = currentNodes;
+
+    // Tự động ngắt kết nối và giải phóng toàn bộ AudioNode sau khi phát xong (Quy tắc 3 GEMINI.md)
+    campfireCleanupTimer = setTimeout(() => {
+      stopCampfireSound();
+    }, duration * 1000 + 120);
   } catch (err) {
     console.warn('[CampfireAudio] Không thể phát âm thanh campfire:', err);
   }

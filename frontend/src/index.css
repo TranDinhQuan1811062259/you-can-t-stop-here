@@ -23176,4 +23176,329 @@ body.theme-light .user-milestone-pill,
   color: #334155;
 }
 
+/* =============================================================================
+   CHUYÊN MỤC TỐI ƯU MOBILE UX & RESPONSIVE LAYOUT (360px - 430px)
+   ============================================================================= */
+
+/* 1. Thanh chọn định dạng bài đăng (Create Post Format Bar) */
+.create-post-format-bar .format-text-short {
+  display: none;
+}
+.create-post-format-bar .format-text-full {
+  display: inline;
+}
+
+.create-post-modal-box {
+  max-width: 820px !important;
+  width: 95% !important;
+}
+
+/* 2. Responsive cho Modal Tạo Bài Viết trên Mobile */
+@media (max-width: 640px) {
+  .modal-backdrop {
+    padding: 8px !important;
+  }
+
+  .modal-box.create-post-modal-box {
+    padding: 18px 14px !important;
+    border-radius: 16px !important;
+    max-height: 94vh !important;
+    width: 100% !important;
+  }
+
+  .create-post-format-bar {
+    gap: 4px !important;
+    padding: 4px !important;
+  }
+
+  .create-post-format-bar .create-format-btn {
+    padding: 7px 4px !important;
+    font-size: 0.76rem !important;
+    gap: 4px !important;
+  }
+
+  .create-post-format-bar .format-text-full {
+    display: none !important;
+  }
+
+  .create-post-format-bar .format-text-short {
+    display: inline !important;
+  }
+
+  .doc-import-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    padding: 10px 12px !important;
+  }
+
+  .doc-import-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+/* 3. Responsive cho Thanh Filter Toolbar (HomePage Filter & Sort Pills) */
+@media (max-width: 768px) {
+  .posts-filter-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+  }
+
+  .filter-toolbar-left {
+    width: 100%;
+    gap: 10px !important;
+  }
+
+  .filter-toolbar-left > div {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 6px !important;
+    width: 100%;
+  }
+
+  .filter-toolbar-left .filter-label {
+    min-width: unset !important;
+    font-size: 0.78rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+  }
+
+  .filter-pill-group,
+  .filter-pills-group {
+    display: flex;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden;
+    width: 100%;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    gap: 6px !important;
+  }
+
+  .filter-pill-group::-webkit-scrollbar,
+  .filter-pills-group::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-pill {
+    padding: 5px 12px !important;
+    font-size: 0.8rem !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  .filter-toolbar-right {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 4px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  }
+
+  .filter-toolbar-right .filter-label {
+    font-size: 0.78rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+  }
+
+  .sort-select-wrapper {
+    width: 100%;
+  }
+
+  .sort-select-box {
+    width: 100% !important;
+    padding: 8px 12px !important;
+    font-size: 0.84rem !important;
+    box-sizing: border-box;
+  }
+}
+
+/* 4. Responsive cho Trang Cá Nhân (UserProfilePage) trên Mobile 360px - 430px */
+@media (max-width: 640px) {
+  .user-profile-page.container {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    padding-top: 12px !important;
+  }
+
+  .profile-header-card {
+    border-radius: 12px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .profile-cover-banner {
+    height: 110px !important;
+  }
+
+  .profile-header-content {
+    padding: 0 14px 20px !important;
+    gap: 14px !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  .profile-avatar-wrap {
+    margin-top: -45px !important;
+  }
+
+  .profile-avatar-img {
+    width: 90px !important;
+    height: 90px !important;
+  }
+
+  .profile-main-meta {
+    min-width: 0 !important;
+    width: 100% !important;
+    padding-top: 4px !important;
+  }
+
+  .profile-name-row {
+    justify-content: center !important;
+    gap: 6px !important;
+  }
+
+  .profile-display-name {
+    font-size: 1.35rem !important;
+  }
+
+  .profile-bio-box {
+    border-left: none !important;
+    border-top: 3px solid var(--primary-color) !important;
+    border-radius: 0 0 10px 10px !important;
+    padding: 10px 12px !important;
+    text-align: left !important;
+  }
+
+  .profile-bio-text {
+    font-size: 0.86rem !important;
+  }
+
+  .profile-bio-hashtags-list {
+    justify-content: center !important;
+  }
+
+  .profile-social-badges {
+    justify-content: center !important;
+  }
+
+  .profile-actions-column {
+    width: 100% !important;
+    align-items: stretch !important;
+    padding-top: 4px !important;
+  }
+
+  .profile-self-actions,
+  .profile-other-actions {
+    width: 100% !important;
+    align-items: stretch !important;
+  }
+
+  .profile-edit-btn,
+  .profile-chat-btn,
+  .profile-share-qr-btn,
+  .friend-add-btn {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  .friend-badge-wrap {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Lưới Thống Kê 2x2 Cân Đối Rất Đẹp trên Mobile */
+  .profile-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .profile-stat-card {
+    padding: 12px 10px !important;
+    gap: 10px !important;
+    border-radius: 10px !important;
+  }
+
+  .stat-card-icon {
+    font-size: 1.5rem !important;
+  }
+
+  .stat-card-number {
+    font-size: 1.2rem !important;
+  }
+
+  .stat-card-label {
+    font-size: 0.72rem !important;
+  }
+
+  .profile-posts-section {
+    padding: 16px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  .profile-posts-header .hero-title {
+    font-size: 1.35rem !important;
+  }
+}
+
+/* 5. Tối ưu Thẻ Bài Viết (PostCard) trên màn hình hẹp 360px - 430px */
+@media (max-width: 480px) {
+  .post-card {
+    border-radius: 12px;
+  }
+
+  .card-top-badges-bar {
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    width: calc(100% - 12px);
+    gap: 4px;
+  }
+
+  .card-badges-left {
+    gap: 4px;
+    flex-wrap: wrap;
+    max-width: 75%;
+  }
+
+  .card-category-badge {
+    padding: 3px 8px !important;
+    font-size: 0.68rem !important;
+    max-width: 140px !important;
+  }
+
+  .card-category-badge .card-category-badge-text {
+    max-width: 100px !important;
+  }
+
+  .card-format-pill {
+    padding: 2px 6px !important;
+    font-size: 0.64rem !important;
+  }
+
+  .card-content {
+    padding: 14px 12px !important;
+  }
+
+  .card-author-name {
+    font-size: 0.88rem !important;
+  }
+
+  .card-author-sub {
+    font-size: 0.72rem !important;
+  }
+}
+
 

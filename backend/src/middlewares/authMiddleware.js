@@ -136,3 +136,10 @@ export const optionalProtect = async (req, res, next) => {
   }
   return next();
 };
+
+/**
+ * Bí danh (Aliases) để tương thích ngược và nhất quán giữa các module
+ */
+export const authenticateToken = protect;
+export const requireAdmin = adminOnly;
+
