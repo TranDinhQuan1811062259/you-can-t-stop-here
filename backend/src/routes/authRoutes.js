@@ -2,6 +2,7 @@ import express from 'express';
 import {
   register,
   login,
+  googleLogin,
   socialLogin,
   getMe,
   updateProfile,
@@ -51,6 +52,7 @@ router.post('/qr/simulate', (req, res, next) => {
 // Xác thực & Tài khoản (Bảo vệ bởi Rate Limiting & Cooldown chống Brute-force & Spam bom mail)
 router.post('/register', otpTargetCooldownLimiter, otpSendLimiter, register);
 router.post('/login', authLimiter, login);
+router.post('/google', authLimiter, googleLogin);
 router.post('/refresh-token', authLimiter, refreshToken);
 router.post('/logout', authLimiter, optionalProtect, logout);
 router.post('/logout-all', authLimiter, protect, logoutAll);

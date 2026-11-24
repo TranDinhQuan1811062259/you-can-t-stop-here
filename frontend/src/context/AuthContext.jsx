@@ -475,6 +475,48 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
+   * Đăng nhập qua Google Identity Services (Client-side ID Token Verification)
+   */
+  const loginWithGoogle = async (credential) => {
+    try {
+      const res = await authService.googleLogin(credential);
+      const rawData = res?.data?.data || res?.data || {};
+
+      const receivedToken = rawData.token || res?.token || null;
+      if (!receivedToken) {
+        throw new Error(res?.data?.message || 'Không nhận được mã xác thực token từ máy chủ!');
+      }
+
+      const receivedRefreshToken = rawData.refreshToken || res?.refreshToken || null;
+      const { token: _t, refreshToken: _rt, ...extractedUser } = rawData;
+      const safeUser = ensureAdminPrivileges(extractedUser);
+
+      setToken(receivedToken);
+      setUser(safeUser);
+      syncAuthStorage(safeUser, receivedToken, receivedRefreshToken);
+      setIsAuthModalOpen(false);
+
+      // Đồng bộ đăng nhập sang các tab khác qua BroadcastChannel & Storage
+      authBroadcastChannel?.postMessage({
+        type: 'LOGIN',
+        user: safeUser,
+        token: receivedToken,
+        refreshToken: receivedRefreshToken,
+      });
+      try {
+        localStorage.setItem('freedom_login_signal', String(Date.now()));
+      } catch (_) {}
+
+      window.dispatchEvent(new Event('profile_updated'));
+      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
+      return { data: { token: receivedToken, refreshToken: receivedRefreshToken, ...safeUser } };
+    } catch (err) {
+      console.error('[Auth] Đăng nhập Google thất bại:', err);
+      throw err;
+    }
+  };
+
+  /**
    * Cập nhật thông tin cá nhân của người dùng
    */
   const updateUserProfile = (updatedUser) => {
@@ -586,6 +628,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         loginWithOtp,
+        loginWithGoogle,
         register,
         socialLogin,
         updateUserProfile,

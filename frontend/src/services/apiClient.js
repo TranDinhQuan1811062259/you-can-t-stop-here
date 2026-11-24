@@ -68,6 +68,7 @@ apiClient.interceptors.response.use(
     // Kiểm tra xem lỗi có phải là 401 Unauthorized và có thể làm mới token ngầm hay không
     const isAuthEndpoint =
       originalRequest?.url?.includes('/auth/login') ||
+      originalRequest?.url?.includes('/auth/google') ||
       originalRequest?.url?.includes('/auth/register') ||
       originalRequest?.url?.includes('/auth/refresh-token') ||
       originalRequest?.url?.includes('/auth/social-login') ||

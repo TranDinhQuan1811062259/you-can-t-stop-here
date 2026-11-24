@@ -7,6 +7,9 @@ export const authService = {
   // Đăng nhập
   login: (credentials) => apiClient.post('/auth/login', credentials),
 
+  // Đăng nhập bằng Google Identity Services (Client-side ID Token)
+  googleLogin: (credential) => apiClient.post('/auth/google', { credential }),
+
   // Làm mới Access Token ngầm (Silent Refresh Token)
   refreshToken: (data) => apiClient.post('/auth/refresh-token', data),
 

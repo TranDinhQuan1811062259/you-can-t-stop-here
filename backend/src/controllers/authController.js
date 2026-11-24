@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import Post from '../models/Post.js';
 import Category from '../models/Category.js';
+import { OAuth2Client } from 'google-auth-library';
 import { isDbConnected } from '../config/db.js';
 import {
   signToken,
@@ -2252,6 +2253,205 @@ export const logoutAll = async (req, res) => {
     return sendError(res, {
       message: error.message || 'Lỗi khi thu hồi phiên trên toàn bộ thiết bị',
       status: 500,
+    });
+  }
+};
+
+/**
+ * 🚀 Đăng nhập / Đăng ký qua Google Identity Services (Client-side ID Token Verification)
+ * POST /api/auth/google
+ * Body: { credential }
+ */
+export const googleLogin = async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) {
+      return sendError(res, {
+        message: 'Thiếu Google credential ID token.',
+        status: 400,
+      });
+    }
+
+    const clientId = (process.env.GOOGLE_CLIENT_ID || '').trim();
+    if (!clientId) {
+      return sendError(res, {
+        message: 'Máy chủ chưa được cấu hình biến môi trường GOOGLE_CLIENT_ID.',
+        status: 500,
+      });
+    }
+
+    const client = new OAuth2Client(clientId);
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: clientId,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      return sendError(res, {
+        message: 'Không thể xác thực thông tin tài khoản từ Google ID token.',
+        status: 400,
+      });
+    }
+
+    const { email, name, picture, sub: googleId } = payload;
+    const cleanEmail = email.toLowerCase().trim();
+    const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
+    const assignedRole = cleanEmail === adminEmail ? 'admin' : 'user';
+
+    const adminAvatar = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
+    const finalAvatar = (assignedRole === 'admin')
+      ? adminAvatar
+      : (picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80');
+
+    let user = null;
+
+    if (isDbConnected) {
+      // Tìm tài khoản theo email hoặc theo cặp provider + providerId (googleId)
+      user = await User.findOne({
+        $or: [
+          { email: cleanEmail },
+          { providerId: googleId, authProvider: 'google' },
+        ],
+      });
+
+      if (user) {
+        // Hợp nhất tài khoản: cập nhật nếu chưa có
+        if (name && (!user.name || user.name === 'Thành viên')) {
+          user.name = name.trim();
+        }
+        if (picture && (!user.avatar || user.avatar.includes('/images/man.jpg'))) {
+          user.avatar = finalAvatar;
+        }
+        if (!user.providerId) {
+          user.providerId = googleId;
+        }
+        if (!user.authProvider || user.authProvider === 'local') {
+          user.authProvider = 'google';
+        }
+        user.isVerified = true;
+        await user.save();
+      } else {
+        // Tạo tài khoản người dùng mới
+        user = await User.create({
+          name: name ? name.trim() : 'Google User',
+          email: cleanEmail,
+          password: `google_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+          role: assignedRole,
+          authProvider: 'google',
+          providerId: googleId,
+          jobTitle: 'Thành viên cộng đồng',
+          avatar: finalAvatar,
+          coverImage: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
+          bio: 'Đã kết nối tài khoản an toàn qua Google Identity Services.',
+          isVerified: true,
+        });
+      }
+
+      const tokenVersion = user.tokenVersion !== undefined ? user.tokenVersion : 0;
+      const token = await signAccessToken({
+        id: user._id,
+        role: user.role,
+        name: user.name,
+        email: user.email,
+        jobTitle: user.jobTitle,
+        tokenVersion,
+      });
+      const refreshToken = await signRefreshToken({
+        id: user._id,
+        tokenVersion,
+      });
+
+      const responseData = {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        jobTitle: user.jobTitle,
+        avatar: user.avatar,
+        coverImage: user.coverImage,
+        bio: user.bio,
+        customLayout: user.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
+        profileMusic: user.profileMusic || {
+          enabled: true,
+          title: 'Lofi Chill - Đêm muộn ở văn phòng',
+          artist: 'Freedom Chill Beat',
+          sourceType: 'preset',
+          presetId: 'lofi_night',
+          url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
+        },
+        socialLinks: user.socialLinks || {},
+        authProvider: user.authProvider || 'google',
+        token,
+        refreshToken,
+      };
+
+      saveUserToStore(responseData);
+
+      return sendSuccess(res, {
+        message: 'Đăng nhập Google thành công!',
+        data: responseData,
+      });
+    }
+
+    // Mock store nếu DB không khả dụng
+    const existingStoreUser = findUserInStore(cleanEmail);
+    const targetId = existingStoreUser ? existingStoreUser._id : `u_google_${Date.now()}`;
+
+    const mockUser = {
+      ...(existingStoreUser || {}),
+      _id: targetId,
+      name: name ? name.trim() : (existingStoreUser?.name || 'Google User'),
+      email: cleanEmail,
+      role: existingStoreUser?.role || assignedRole,
+      jobTitle: existingStoreUser?.jobTitle || 'Thành viên cộng đồng',
+      avatar: finalAvatar,
+      coverImage: existingStoreUser?.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
+      bio: existingStoreUser?.bio || 'Đã kết nối tài khoản an toàn qua Google Identity Services.',
+      authProvider: 'google',
+      providerId: googleId,
+      isVerified: true,
+      customLayout: existingStoreUser?.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
+      profileMusic: existingStoreUser?.profileMusic || {
+        enabled: true,
+        title: 'Lofi Chill - Đêm muộn ở văn phòng',
+        artist: 'Freedom Chill Beat',
+        sourceType: 'preset',
+        presetId: 'lofi_night',
+        url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
+      },
+    };
+
+    saveUserToStore(mockUser);
+
+    const tokenVersion = mockUser.tokenVersion !== undefined ? mockUser.tokenVersion : 0;
+    const token = await signAccessToken({
+      id: mockUser._id,
+      role: mockUser.role,
+      name: mockUser.name,
+      email: mockUser.email,
+      tokenVersion,
+    });
+    const refreshToken = await signRefreshToken({
+      id: mockUser._id,
+      tokenVersion,
+    });
+
+    const responseData = {
+      ...mockUser,
+      token,
+      refreshToken,
+    };
+
+    return sendSuccess(res, {
+      message: 'Đăng nhập Google thành công!',
+      data: responseData,
+    });
+  } catch (error) {
+    console.error('[AUTH GOOGLE ERROR]:', error);
+    return sendError(res, {
+      message: error.message || 'Xác thực Google ID token thất bại.',
+      status: 401,
     });
   }
 };

@@ -10,6 +10,7 @@
     "postinstall": "node scripts/patch-vite-junction.js"
   },
   "dependencies": {
+    "@react-oauth/google": "^0.13.5",
     "axios": "^1.7.9",
     "dompurify": "^3.4.18",
     "react": "^18.3.1",

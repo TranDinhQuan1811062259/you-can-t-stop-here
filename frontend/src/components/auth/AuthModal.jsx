@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth, ensureAdminPrivileges } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
 
@@ -142,6 +143,7 @@ export const AuthModal = () => {
     closeAuthModal,
     login,
     loginWithOtp,
+    loginWithGoogle,
     register,
     socialLogin,
     setUser,
@@ -211,6 +213,38 @@ export const AuthModal = () => {
       if (successTimerRef.current) clearTimeout(successTimerRef.current);
     };
   }, []);
+
+  // 🚀 Xử lý đăng nhập bằng Google Identity Services (Client-side ID Token)
+  const handleGoogleSuccess = async (credentialResponse) => {
+    const idToken = credentialResponse?.credential;
+    if (!idToken) {
+      setErrorMsg('Không nhận được thông tin xác thực từ Google.');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('Đang xác thực với Google...');
+
+    try {
+      await loginWithGoogle(idToken);
+      setSuccessMsg('✓ Đăng nhập Google thành công!');
+      setTimeout(() => {
+        closeAuthModal();
+      }, 300);
+    } catch (err) {
+      console.error('[Google Login Error]:', err);
+      setErrorMsg(
+        err.response?.data?.message || err.message || 'Đăng nhập Google thất bại. Vui lòng thử lại!'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setErrorMsg('Đăng nhập Google không thành công hoặc bạn đã đóng cửa sổ.');
+  };
 
   // State cho luồng ĐĂNG KÝ BẰNG MẠNG XÃ HỘI (Lấy dữ liệu thực từ Google, Facebook, Twitter, v.v.)
   const [socialRegData, setSocialRegData] = useState(null);
@@ -2019,6 +2053,44 @@ export const AuthModal = () => {
                 </>
               )}
             </form>
+
+            {/* TIẾP TỤC VỚI GOOGLE (GOOGLE IDENTITY SERVICES) */}
+            <div style={{ marginTop: '16px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  margin: '0 0 12px 0',
+                  color: '#94a3b8',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                }}
+              >
+                <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+                <span style={{ padding: '0 10px', color: '#64748b' }}>Hoặc tiếp tục với</span>
+                <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  width: '100%',
+                  minHeight: '44px',
+                }}
+              >
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  text="continue_with"
+                  shape="pill"
+                  size="large"
+                  width="100%"
+                  locale="vi"
+                  theme="outline"
+                />
+              </div>
+            </div>
           </>
         )}
       </div>
