@@ -103,9 +103,21 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
     toggleShuffle,
   } = useMusic();
 
-  const { likedTracks, toggleTrackLike, trackLikesMap } = usePersonalHub();
-  const isEffortTrackLiked = isEffortTheme && currentTrack?.id ? likedTracks.includes(currentTrack.id) : false;
-  const effortLikesCount = isEffortTheme && currentTrack?.id ? (trackLikesMap[currentTrack.id] || 0) : 0;
+  // Kiểm tra xem hiện tại có đang phát đúng bài của Giving Some Efforts hay không (khai báo trước khi dùng)
+  const isEffortTheme = themeSlug === 'giving-some-efforts';
+  const currentEffortTrackIdx = isEffortTheme ? currentTrackIndex : -1;
+  const isSong1Playing = isEffortTheme && currentTrackIndex === 0 && isPlaying;
+  const isSong2Playing = isEffortTheme && currentTrackIndex === 1 && isPlaying;
+
+  const { likedTracks = [], toggleTrackLike, trackLikesMap = {} } = usePersonalHub() || {};
+  const isEffortTrackLiked =
+    isEffortTheme && currentTrack?.id && Array.isArray(likedTracks)
+      ? likedTracks.includes(currentTrack.id)
+      : false;
+  const effortLikesCount =
+    isEffortTheme && currentTrack?.id && trackLikesMap
+      ? (trackLikesMap[currentTrack.id] || 0)
+      : 0;
 
   const [isExpanded, setIsExpanded] = useState(true);
   const [quoteIndex, setQuoteIndex] = useState(0);
@@ -141,12 +153,6 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
       return 1386;
     }
   });
-
-  // Kiểm tra xem hiện tại có đang phát đúng bài của Giving Some Efforts hay không
-  const isEffortTheme = themeSlug === 'giving-some-efforts';
-  const currentEffortTrackIdx = isEffortTheme ? currentTrackIndex : -1;
-  const isSong1Playing = isEffortTheme && currentTrackIndex === 0 && isPlaying;
-  const isSong2Playing = isEffortTheme && currentTrackIndex === 1 && isPlaying;
 
   // Dọn dẹp toàn bộ timer khi unmount (Quy tắc 3 GEMINI.md)
   useEffect(() => {
