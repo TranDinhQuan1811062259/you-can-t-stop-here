@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { playClickSound, playNotificationTone } from '../../utils/soundEffects';
+import { triggerToneHaptic } from '../../utils/haptics';
 
 const OFFLINE_QUEUE_KEY = 'freedom_offline_post_queue_v1';
 
@@ -29,11 +30,12 @@ export const OfflineSyncToast = () => {
     }
   }, []);
 
-  // Kiểm tra hàng đợi khi mount và khi mạng online trở lại kèm âm báo kết nối cá nhân hóa
+  // Kiểm tra hàng đợi khi mount và khi mạng online trở lại kèm âm báo & nhịp rung đồng bộ
   useEffect(() => {
     if (isOnline) {
       if (wasOfflineRef.current) {
         playNotificationTone(null, { volume: 0.5 });
+        triggerToneHaptic();
         wasOfflineRef.current = false;
       }
       checkQueue();

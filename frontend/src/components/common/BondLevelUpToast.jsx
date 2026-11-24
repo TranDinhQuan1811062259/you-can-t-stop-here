@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { triggerHaptic } from '../../utils/haptics';
+import { triggerHaptic, triggerToneHaptic } from '../../utils/haptics';
 import {
   playCampfireSound,
   playNotificationTone,
@@ -17,11 +17,13 @@ export const BondLevelUpToast = () => {
       if (!data || !data.tierName) return;
 
       setLevelUpData(data);
-      triggerHaptic([20, 40, 20]);
 
       if (isCampfireSoundEnabled()) {
         playNotificationTone(null, { volume: 0.55 });
         playCampfireSound({ volume: 0.35 });
+        triggerToneHaptic();
+      } else {
+        triggerHaptic([20, 40, 20]);
       }
 
       if (hideTimer) clearTimeout(hideTimer);

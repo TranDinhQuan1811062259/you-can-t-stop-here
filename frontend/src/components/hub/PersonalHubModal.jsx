@@ -16,7 +16,7 @@ import {
   setStoredNotificationTone,
   playNotificationTone,
 } from '../../utils/campfireAudio';
-import { triggerHaptic } from '../../utils/haptics';
+import { triggerHaptic, triggerToneHaptic } from '../../utils/haptics';
 import { HonorCardModal } from './HonorCardModal';
 import { ProfileQrModal } from '../profile/ProfileQrModal';
 import { MutualMemoriesDrawer } from '../profile/MutualMemoriesDrawer';
@@ -86,7 +86,7 @@ export const PersonalHubModal = () => {
     playClickSound();
     setSelectedTone(toneId);
     setStoredNotificationTone(toneId);
-    triggerHaptic([15]);
+    triggerToneHaptic(toneId);
     if (toneId !== 'muted') {
       playNotificationTone(toneId, { volume: 0.5 });
     }
