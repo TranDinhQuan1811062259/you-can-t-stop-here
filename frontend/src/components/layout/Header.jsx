@@ -262,15 +262,29 @@ export const Header = () => {
     return () => cancelAnimationFrame(rafId);
   }, [activeTopicSlug, headerTopics.length]);
 
+  const isLoggedIn = Boolean(isAuthenticated && token && user);
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') || '');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [emptySearchHint, setEmptySearchHint] = useState(false);
   const [liveResults, setLiveResults] = useState([]);
   const [isSearchingLive, setIsSearchingLive] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const searchContainerRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const emptySearchTimerRef = useRef(null);
+  const userMenuRef = useRef(null);
 
   useEffect(() => {
     setSearchTerm(searchParams.get('q') || '');
   }, [searchParams]);
+
+  useEffect(() => {
+    return () => {
+      if (emptySearchTimerRef.current) {
+        clearTimeout(emptySearchTimerRef.current);
+      }
+    };
+  }, []);
 
   // Gợi ý tìm kiếm trực tiếp ngay khi gõ từ khóa (Live Search Suggestions)
   useEffect(() => {
@@ -313,32 +327,58 @@ export const Header = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Đóng hộp gợi ý tìm kiếm khi click chuột ra ngoài
+  // Đóng hộp gợi ý tìm kiếm & menu tài khoản khi click ra ngoài hoặc bấm Esc
   useEffect(() => {
     const handleOutsideClick = (e) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
         setIsSearchFocused(false);
+        setEmptySearchHint(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    const handleEscClose = (e) => {
+      if (e.key === 'Escape') {
+        setIsUserMenuOpen(false);
+        setEmptySearchHint(false);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleEscClose);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscClose);
+    };
   }, []);
 
   const handleSearchSubmit = (e) => {
     e?.preventDefault();
     playClickSound();
-    setIsSearchFocused(false);
-    if (searchTerm.trim()) {
-      navigate(`/?q=${encodeURIComponent(searchTerm.trim())}`);
-      setTimeout(() => {
-        const postsEl = document.getElementById('posts-section');
-        if (postsEl) {
-          postsEl.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 150);
-    } else {
-      navigate('/');
+    const trimmed = searchTerm.trim();
+    if (!trimmed) {
+      setIsSearchFocused(true);
+      setEmptySearchHint(true);
+      if (emptySearchTimerRef.current) {
+        clearTimeout(emptySearchTimerRef.current);
+      }
+      emptySearchTimerRef.current = setTimeout(() => {
+        setEmptySearchHint(false);
+        emptySearchTimerRef.current = null;
+      }, 2600);
+      searchInputRef.current?.focus();
+      return;
     }
+
+    setEmptySearchHint(false);
+    setIsSearchFocused(false);
+    navigate(`/?q=${encodeURIComponent(trimmed)}`);
+    setTimeout(() => {
+      const postsEl = document.getElementById('posts-section');
+      if (postsEl) {
+        postsEl.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 150);
   };
 
   const fetchFestiveEvent = () => {
@@ -505,9 +545,12 @@ export const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Tự động đóng dropdown trạm chữa lành khi chuyển trang
+  // Tự động đóng dropdown khi chuyển trang
   useEffect(() => {
     setIsWellnessDropdownOpen(false);
+    setIsUserMenuOpen(false);
+    setIsSearchFocused(false);
+    setEmptySearchHint(false);
   }, [location?.pathname]);
 
   // Lắng nghe sự kiện mở Lò Đốt Muộn Phiền từ bất kỳ đâu (Banner, Pet, Chat, Phím tắt)
@@ -1324,7 +1367,7 @@ export const Header = () => {
           {/* Cụm Giữa Hàng 1: Thanh Tìm Kiếm Thông Minh & Khẩu Hiệu (Lấp đầy khoảng trống trung tâm) */}
           <div className="header-top-center">
             <div ref={searchContainerRef} className="header-search-wrapper">
-              <form className="header-search-form" onSubmit={handleSearchSubmit}>
+              <form className="header-search-form" onSubmit={handleSearchSubmit} noValidate>
                 {/* Nút Tìm Kiếm (Kính lúp tương tác có thể click trực tiếp) */}
                 <button
                   type="submit"
@@ -1336,13 +1379,23 @@ export const Header = () => {
                 </button>
 
                 <input
+                  ref={searchInputRef}
                   type="text"
-                  placeholder="Tìm kiếm tâm sự, lời khuyên, bài viết..."
+                  placeholder="Tìm kiếm tâm sự, lời khuyên..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    const nextVal = e.target.value;
+                    setSearchTerm(nextVal);
+                    if (nextVal.trim()) {
+                      setEmptySearchHint(false);
+                    }
+                  }}
                   onFocus={() => setIsSearchFocused(true)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Escape') setIsSearchFocused(false);
+                    if (e.key === 'Escape') {
+                      setIsSearchFocused(false);
+                      setEmptySearchHint(false);
+                    }
                   }}
                   className="header-search-input"
                 />
@@ -1353,6 +1406,7 @@ export const Header = () => {
                     className="header-search-clear"
                     onClick={() => {
                       setSearchTerm('');
+                      setEmptySearchHint(false);
                       navigate('/');
                     }}
                     title="Xóa từ khóa"
@@ -1372,6 +1426,14 @@ export const Header = () => {
                   <i className="fa-solid fa-arrow-right" style={{ fontSize: '0.65rem' }}></i>
                 </button>
               </form>
+
+              {/* Gợi ý nhẹ khi bấm Tìm lúc ô tìm kiếm đang trống (thay thế tooltip trình duyệt mặc định) */}
+              {emptySearchHint && !searchTerm.trim() && (
+                <div className="header-search-empty-hint" role="status" aria-live="polite">
+                  <i className="fa-regular fa-lightbulb" aria-hidden="true"></i>
+                  <span>Nhập từ khóa tâm sự, chủ đề hoặc tác giả bạn muốn tìm...</span>
+                </div>
+              )}
 
               {/* Hộp Gợi Ý Tìm Kiếm Trực Tiếp (Live Search Suggestions Dropdown) */}
               {isSearchFocused && searchTerm.trim().length >= 2 && (
@@ -1442,17 +1504,19 @@ export const Header = () => {
               )}
             </div>
 
-            <div className="header-daily-quote-pill" title="Slogan truyền động lực cộng đồng Freedom">
-              <span className="quote-sparkle" style={{ color: 'var(--pastel-amber)' }}>
-                <i className="fa-solid fa-feather-pointed"></i>
-              </span>
-              <span className="quote-text">Chậm lại để nghỉ ngơi, đừng dừng lại!</span>
-            </div>
+            {!isLoggedIn && (
+              <div className="header-daily-quote-pill" title="Slogan truyền động lực cộng đồng Freedom">
+                <span className="quote-sparkle" style={{ color: 'var(--pastel-amber)' }}>
+                  <i className="fa-solid fa-feather-pointed"></i>
+                </span>
+                <span className="quote-text">Chậm lại để nghỉ ngơi, đừng dừng lại!</span>
+              </div>
+            )}
           </div>
 
-          {/* User Profile / Admin / Auth actions (Cực kỳ thoáng đãng ở góc phải hàng 1) */}
+          {/* User Profile / Admin / Auth actions (Gọn thoáng, gom Cài đặt & Đăng xuất vào dropdown Avatar) */}
           <div className="header-user-wrap">
-            {Boolean(isAuthenticated && token && user) ? (
+            {isLoggedIn ? (
               <div className="header-user-badge">
                 {/* Chuông Thông Báo (Lời mời kết bạn, tin nhắn, tương tác bài viết) */}
                 <div className="header-notif-bell-container" style={{ position: 'relative' }}>
@@ -1478,38 +1542,7 @@ export const Header = () => {
                   />
                 </div>
 
-                <button
-                  type="button"
-                  className="header-profile-click"
-                  onClick={() => openHub('streak')}
-                  title={`Personal Motivation Hub: ${user?.name}. Bấm để mở bảng điều khiển cá nhân`}
-                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
-                >
-                  <img
-                    src={
-                      user?.avatar && !user?.avatar.includes('google_avatar') && !user?.avatar.includes('man.jpg')
-                        ? user.avatar
-                        : ((user?.role === 'admin' || user?.email === 'anthonyq012025@gmail.com')
-                            ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg'
-                            : DEFAULT_EMPTY_AVATAR)
-                    }
-                    alt={user?.name}
-                    onError={(e) => {
-                      e.target.src = (user?.role === 'admin' || user?.email === 'anthonyq012025@gmail.com')
-                        ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg'
-                        : DEFAULT_EMPTY_AVATAR;
-                    }}
-                    className="header-avatar"
-                  />
-                  <span className="header-username-text">
-                    {user?.name?.split('(')[0]?.trim() || user?.name}
-                  </span>
-                  {user?.role === 'admin' && (
-                    <span className="admin-badge-tag">ADMIN</span>
-                  )}
-                </button>
-
-                {/* Huy hiệu ngọn lửa nhỏ (🔥 {streakCount}) cạnh avatar */}
+                {/* Huy hiệu ngọn lửa nhỏ (🔥 {streakCount}) */}
                 <button
                   type="button"
                   className="header-streak-badge-btn"
@@ -1536,19 +1569,6 @@ export const Header = () => {
                   </button>
                 )}
 
-                {/* Nút Cài đặt tài khoản & hồ sơ */}
-                <button
-                  type="button"
-                  className="header-account-btn"
-                  onClick={openProfileModal}
-                  title="Cài đặt thông tin tài khoản, giao diện & nhạc nền"
-                >
-                  <span className="btn-icon">
-                    <i className="fa-solid fa-gear"></i>
-                  </span>
-                  <span>Cài đặt</span>
-                </button>
-
                 {/* Nút Quản lý Lễ Hội (Chỉ Admin) */}
                 {user?.role === 'admin' && !activeFestiveEvent && (
                   <button
@@ -1562,21 +1582,123 @@ export const Header = () => {
                   </button>
                 )}
 
-                {/* Nút Đăng xuất an toàn */}
-                <button
-                  type="button"
-                  className="header-logout-btn"
-                  onClick={() => {
-                    playClickSound();
-                    setIsLogoutConfirmOpen(true);
-                  }}
-                  title="Đăng xuất khỏi tài khoản"
-                >
-                  <span className="btn-icon">
-                    <i className="fa-solid fa-arrow-right-from-bracket"></i>
-                  </span>
-                  <span>Đăng xuất</span>
-                </button>
+                {/* Dropdown Avatar: Gộp Trang cá nhân, Motivation Hub, Cài đặt & Đăng xuất */}
+                <div className="header-user-menu-wrap" ref={userMenuRef}>
+                  <button
+                    type="button"
+                    className={`header-profile-click ${isUserMenuOpen ? 'is-open' : ''}`}
+                    onClick={() => {
+                      playClickSound();
+                      setIsUserMenuOpen((prev) => !prev);
+                    }}
+                    title={`Tài khoản: ${user?.name}. Bấm để mở menu cài đặt & đăng xuất`}
+                    aria-expanded={isUserMenuOpen}
+                    aria-haspopup="menu"
+                  >
+                    <img
+                      src={
+                        user?.avatar && !user?.avatar.includes('google_avatar') && !user?.avatar.includes('man.jpg')
+                          ? user.avatar
+                          : ((user?.role === 'admin' || user?.email === 'anthonyq012025@gmail.com')
+                              ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg'
+                              : DEFAULT_EMPTY_AVATAR)
+                      }
+                      alt={user?.name}
+                      onError={(e) => {
+                        e.target.src = (user?.role === 'admin' || user?.email === 'anthonyq012025@gmail.com')
+                          ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg'
+                          : DEFAULT_EMPTY_AVATAR;
+                      }}
+                      className="header-avatar"
+                    />
+                    <span className="header-username-text">
+                      {user?.name?.split('(')[0]?.trim() || user?.name}
+                    </span>
+                    {user?.role === 'admin' && (
+                      <span className="admin-badge-tag">ADMIN</span>
+                    )}
+                    <i
+                      className={`fa-solid fa-chevron-${isUserMenuOpen ? 'up' : 'down'} header-user-chevron`}
+                      aria-hidden="true"
+                    ></i>
+                  </button>
+
+                  {isUserMenuOpen && (
+                    <div className="header-user-dropdown" role="menu" aria-label="Menu tài khoản">
+                      <div className="header-user-dropdown-head">
+                        <div className="header-user-dropdown-name">
+                          <span>{user?.name?.split('(')[0]?.trim() || user?.name}</span>
+                          {user?.role === 'admin' && (
+                            <span className="admin-badge-tag">ADMIN</span>
+                          )}
+                        </div>
+                        {user?.email && (
+                          <div className="header-user-dropdown-email">{user.email}</div>
+                        )}
+                      </div>
+
+                      {(user?._id || user?.id) && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="header-user-dropdown-item"
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            playClickSound();
+                            navigate(`/profile/${user._id || user.id}`);
+                          }}
+                        >
+                          <i className="fa-regular fa-user" aria-hidden="true"></i>
+                          <span>Trang cá nhân</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="header-user-dropdown-item"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          playClickSound();
+                          openHub('streak');
+                        }}
+                      >
+                        <span aria-hidden="true">🔥</span>
+                        <span>Hành trình giữ lửa ({streakCount || 0})</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="header-user-dropdown-item"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          playClickSound();
+                          openProfileModal();
+                        }}
+                      >
+                        <i className="fa-solid fa-gear" aria-hidden="true"></i>
+                        <span>Cài đặt</span>
+                      </button>
+
+                      <div className="header-user-dropdown-divider" />
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="header-user-dropdown-item is-danger"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          playClickSound();
+                          setIsLogoutConfirmOpen(true);
+                        }}
+                      >
+                        <i className="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
+                        <span>Đăng xuất</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="header-guest-btns">

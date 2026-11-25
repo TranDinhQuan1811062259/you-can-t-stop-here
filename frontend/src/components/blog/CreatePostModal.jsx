@@ -1304,13 +1304,13 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
                   📸 Chụp từ Camera/Webcam
                 </button>
               </div>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', maxWidth: '100%', minWidth: 0 }}>
                 <input
                   type="file"
                   accept="image/*,.gif"
                   onChange={handleCoverImageChange}
                   disabled={uploadingCover}
-                  style={{ fontSize: '0.85rem' }}
+                  style={{ fontSize: '0.85rem', maxWidth: '100%', minWidth: 0, flex: '1 1 180px' }}
                 />
                 <span style={{ fontSize: '0.8rem', color: '#64748b' }}>hoặc dán link ảnh/GIF:</span>
                 <input
@@ -1318,7 +1318,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
                   placeholder="https://.../photo.jpg"
                   value={formData.coverImage?.startsWith('http') ? formData.coverImage : ''}
                   onChange={(e) => setFormData((prev) => ({ ...prev, coverImage: e.target.value }))}
-                  style={{ flex: 1, minWidth: '180px', fontSize: '0.85rem', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                  style={{ flex: '1 1 180px', minWidth: 0, maxWidth: '100%', fontSize: '0.85rem', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
                 />
                 {uploadingCover && (
                   <span style={{ fontSize: '0.85rem', color: 'var(--primary-hover)', fontWeight: 600 }}>
@@ -1484,7 +1484,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
             />
           </div>
 
-          <div className="form-group" style={{ marginTop: '14px', background: 'rgba(99, 102, 241, 0.05)', padding: '14px 16px', borderRadius: '10px', border: '1px solid rgba(99, 102, 241, 0.25)' }}>
+          <div className="form-group" style={{ marginTop: '14px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', marginLeft: 0, marginRight: 0, background: 'rgba(99, 102, 241, 0.05)', padding: '14px 16px', borderRadius: '10px', border: '1px solid rgba(99, 102, 241, 0.25)' }}>
             <label style={{ fontWeight: 700, color: '#4338ca', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', fontSize: '0.95rem' }}>
               <span>🎧</span>
               <span>Bản đọc truyền cảm & Giọng đọc tâm sự (Tiếng Việt)</span>
@@ -1493,9 +1493,9 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
               Bạn có thể chọn giọng đọc Nam hoặc Nữ, ngữ điệu vùng miền (Bắc / Trung / Nam) và cảm xúc mặc định khi người nghe bấm nút "Nghe đọc".
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '12px', marginBottom: '10px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
               {/* Chọn Giới Tính Giọng Đọc */}
-              <div>
+              <div style={{ minWidth: 0, maxWidth: '100%' }}>
                 <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '4px' }}>
                   👤 Giới tính giọng đọc:
                 </label>
@@ -1550,7 +1550,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
               </div>
 
               {/* Chọn Ngôn Ngữ Vùng Miền */}
-              <div>
+              <div style={{ minWidth: 0, maxWidth: '100%' }}>
                 <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '4px' }}>
                   📍 Vùng miền đặc trưng:
                 </label>
@@ -1560,6 +1560,9 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
                   onChange={handleChange}
                   style={{
                     width: '100%',
+                    maxWidth: '100%',
+                    minWidth: 0,
+                    boxSizing: 'border-box',
                     padding: '8px 10px',
                     borderRadius: '8px',
                     border: '1.5px solid #c7d2fe',
@@ -1577,7 +1580,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
             </div>
 
             {/* Chọn Cảm Xúc Bài Viết */}
-            <div>
+            <div style={{ minWidth: 0, maxWidth: '100%' }}>
               <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '4px' }}>
                 🎭 Tâm trạng ngữ điệu:
               </label>
@@ -1587,6 +1590,9 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
                 onChange={handleChange}
                 style={{
                   width: '100%',
+                  maxWidth: '100%',
+                  minWidth: 0,
+                  boxSizing: 'border-box',
                   padding: '9px 12px',
                   borderRadius: '8px',
                   border: '1.5px solid #c7d2fe',
