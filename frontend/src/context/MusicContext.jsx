@@ -11,6 +11,7 @@ import {
   setMelodicSeason,
   setMasterMute,
 } from '../utils/ambientSoundEngine';
+import { hasUserInteracted, onFirstUserGesture } from '../utils/audio-gesture-guard';
 
 const MusicContext = createContext(null);
 
@@ -1060,91 +1061,62 @@ export const MusicProvider = ({ children }) => {
   // TỰ ĐỘNG KÍCH HOẠT HIỆU ỨNG MÙA ĐÔNG & NHẠC (SAFE AUTOPLAY POLICY)
   // =========================================================================
   useEffect(() => {
-    // 1. Tự động kích hoạt âm thanh hiệu ứng mùa đông (tiếng gió bấc & bếp lửa)
-    try {
-      startWeatherAmbient('winter');
-    } catch (_) {}
-
     const explicitlyPaused = sessionStorage.getItem('freedom_user_explicit_paused') === 'true';
-    if (explicitlyPaused || userExplicitPausedRef.current) return;
-
     const initialTrack = tracks[0];
-    if (!initialTrack) return;
-
     const audio = audioRef.current;
-    if (!audio) return;
 
-    const targetSrc = getTargetTrackSrc(initialTrack);
-    if (!audio.src || !audio.src.endsWith(targetSrc)) {
-      audio.src = targetSrc;
+    if (audio && initialTrack) {
+      const targetSrc = getTargetTrackSrc(initialTrack);
+      if (!audio.src || !audio.src.endsWith(targetSrc)) {
+        audio.src = targetSrc;
+      }
     }
 
-    // Callback lắng nghe cử chỉ tương tác đầu tiên của người dùng nếu browser chặn autoplay
-    const onFirstUserGesture = async () => {
-      window.removeEventListener('pointerdown', onFirstUserGesture);
-      window.removeEventListener('keydown', onFirstUserGesture);
-      window.removeEventListener('click', onFirstUserGesture);
-      window.removeEventListener('touchstart', onFirstUserGesture);
-
-      // Đánh thức Web Audio Context của hiệu ứng môi trường
+    const startAudioWithGesture = async () => {
+      // Đánh thức Web Audio Context của hiệu ứng môi trường mùa đông sau user gesture
       try {
         await resumeAmbientAudioContext();
         startWeatherAmbient('winter');
       } catch (_) {}
 
       // Phát nhạc nếu người dùng chưa bấm dừng thủ công
-      if (!userExplicitPausedRef.current && sessionStorage.getItem('freedom_user_explicit_paused') !== 'true') {
+      if (!explicitlyPaused && !userExplicitPausedRef.current && sessionStorage.getItem('freedom_user_explicit_paused') !== 'true') {
         const audioEl = audioRef.current;
-        if (audioEl && audioEl.paused) {
+        if (audioEl && initialTrack && audioEl.paused) {
           try {
-            await audioEl.play();
+            const playPromise = audioEl.play();
+            if (playPromise !== undefined) {
+              await playPromise;
+            }
             setIsPlaying(true);
             setIsAutoplayBlocked(false);
             duckAmbientForMusic();
           } catch (e) {
             if (e?.name === 'AbortError') return;
-            console.warn('[MusicAutoplay] User gesture play restricted:', e);
             setIsPlaying(false);
+            setIsAutoplayBlocked(true);
           }
         }
       }
     };
 
-    const attemptAutoplay = async () => {
-      // 1. Thử kích hoạt sớm Web Audio Context của hiệu ứng môi trường mùa đông
-      try {
-        await resumeAmbientAudioContext();
-        startWeatherAmbient('winter');
-      } catch (_) {}
+    // QA & Autoplay Policy: Không tạo AudioContext hoặc audio.play() khi chưa có tương tác đầu tiên
+    if (hasUserInteracted()) {
+      startAudioWithGesture();
+      return undefined;
+    }
 
-      // 2. Thử tự động phát nhạc nền ngay từ đầu (có bọc try/catch chống lỗi trình duyệt)
-      try {
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          await playPromise;
-          setIsPlaying(true);
-          setIsAutoplayBlocked(false);
-          duckAmbientForMusic();
-        }
-      } catch (err) {
-        if (err?.name === 'AbortError') return;
-        console.info('[MusicAutoplay] Autoplay policy prevented immediate playback, unlocking on first interaction.');
-        setIsPlaying(false);
-        setIsAutoplayBlocked(true);
-        window.addEventListener('pointerdown', onFirstUserGesture, { once: true });
-        window.addEventListener('keydown', onFirstUserGesture, { once: true });
-        window.addEventListener('click', onFirstUserGesture, { once: true });
-        window.addEventListener('touchstart', onFirstUserGesture, { once: true });
-      }
-    };
+    setIsPlaying(false);
+    if (!explicitlyPaused && !userExplicitPausedRef.current) {
+      setIsAutoplayBlocked(true);
+    }
 
-    attemptAutoplay();
+    const unsubscribe = onFirstUserGesture(() => {
+      startAudioWithGesture();
+    });
 
     return () => {
-      window.removeEventListener('pointerdown', onFirstUserGesture);
-      window.removeEventListener('keydown', onFirstUserGesture);
-      window.removeEventListener('click', onFirstUserGesture);
-      window.removeEventListener('touchstart', onFirstUserGesture);
+      unsubscribe();
     };
   }, []);
 

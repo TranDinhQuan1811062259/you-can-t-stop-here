@@ -6,6 +6,8 @@
  * - Cung cấp 5 bản nhạc nền Lofi / Healing / Mưa Rơi / Deep Focus / Acoustic du dương.
  */
 
+import { hasUserInteracted } from './audio-gesture-guard';
+
 let storyAudioCtx = null;
 let currentStorySources = [];
 let storyMasterGain = null;
@@ -13,10 +15,11 @@ let activePresetId = null;
 
 const getStoryAudioContext = () => {
   if (typeof window === 'undefined') return null;
+  if (!hasUserInteracted()) return null;
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextClass) return null;
 
-  if (!storyAudioCtx) {
+  if (!storyAudioCtx || storyAudioCtx.state === 'closed') {
     storyAudioCtx = new AudioContextClass();
   }
   if (storyAudioCtx.state === 'suspended') {

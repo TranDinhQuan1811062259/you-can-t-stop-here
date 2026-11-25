@@ -5,10 +5,14 @@
  * Tinh chỉnh chuẩn phím cơ bôi trơn (Lubed Switch): Trầm ấm, êm ái, KHÔNG BỊ RÈ, KHÔNG CHÁT TAI!
  */
 
+import { hasUserInteracted, markUserInteracted } from './audio-gesture-guard';
+
 let audioCtx = null;
 
 const getAudioContext = () => {
-  if (!audioCtx) {
+  if (typeof window === 'undefined') return null;
+  if (!hasUserInteracted()) return null;
+  if (!audioCtx || audioCtx.state === 'closed') {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     if (AudioContextClass) {
       audioCtx = new AudioContextClass();
@@ -572,6 +576,9 @@ export const initGlobalKeyboardAsmr = () => {
   if (isListenerAttached || typeof window === 'undefined') return;
 
   const handleGlobalKeyDown = (e) => {
+    if (e?.isTrusted !== false) {
+      markUserInteracted();
+    }
     if (!isAsmrKeyboardEnabled()) return;
 
     const target = e.target;

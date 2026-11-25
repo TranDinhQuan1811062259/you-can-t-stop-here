@@ -534,18 +534,18 @@ img {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  flex: 1 1 280px;
-  min-width: 260px;
-  max-width: 700px;
+  gap: 10px;
+  flex: 1 1 220px;
+  min-width: 0;
+  max-width: 680px;
   margin: 0 auto;
-  padding: 0 8px;
+  padding: 0 6px;
 }
 
 .header-search-wrapper {
   position: relative;
-  flex: 1 1 280px !important;
-  min-width: 250px !important;
+  flex: 1 1 200px;
+  min-width: 0;
   max-width: 460px;
   width: 100%;
 }
@@ -8938,20 +8938,22 @@ body.theme-dark .ambient-orb.orb-4,
 }
 
 .season-winter .hero-title {
-  background: linear-gradient(180deg, #ffffff 0%, #e0f2fe 35%, #7dd3fc 70%, #0284c7 100%) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  background-clip: text !important;
-  filter: drop-shadow(0 2px 10px rgba(56, 189, 248, 0.45));
-  text-shadow: none !important;
-  font-weight: 850 !important;
+  color: #f8fafc;
+  -webkit-text-fill-color: currentColor;
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  filter: none !important;
+  text-shadow: 0 2px 12px rgba(14, 165, 233, 0.28);
+  font-weight: 800;
 }
 
-.season-winter .hero-title span {
-  background: linear-gradient(180deg, #ffffff 0%, #bae6fd 30%, #38bdf8 70%, #0369a1 100%) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  background-clip: text !important;
+.season-winter .hero-title .hero-title-accent {
+  color: #38bdf8;
+  -webkit-text-fill-color: currentColor;
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
 }
 
 .season-winter .hero-tag-pill {
@@ -9717,27 +9719,29 @@ body.theme-dark .site-header .logo-text:not(.seasonal-logo-text),
   white-space: nowrap !important;
 }
 
-/* 1. Mùa Đông (Winter) - Ánh băng đỉnh chữ tự nhiên cho Logo Brand */
+/* 1. Mùa Đông (Winter) - Xanh băng sắc nét, không dùng background-clip/drop-shadow kép */
 .site-header .seasonal-logo-text.season-winter,
 body.theme-dark .site-header .seasonal-logo-text.season-winter,
 [data-theme="dark"] .site-header .seasonal-logo-text.season-winter,
 .mode-dark .site-header .seasonal-logo-text.season-winter {
-  background: linear-gradient(180deg, #ffffff 0%, #e0f2fe 30%, #38bdf8 70%, #0284c7 100%) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  background-clip: text !important;
-  filter: drop-shadow(0 2px 6px rgba(56, 189, 248, 0.35));
-  text-shadow: none !important;
+  color: #38bdf8 !important;
+  -webkit-text-fill-color: #38bdf8 !important;
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  filter: none !important;
+  text-shadow: 0 2px 8px rgba(56, 189, 248, 0.35);
 }
 body.theme-light .site-header .seasonal-logo-text.season-winter,
 [data-theme="light"] .site-header .seasonal-logo-text.season-winter,
 .mode-light .site-header .seasonal-logo-text.season-winter {
-  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 35%, #0369a1 100%) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  background-clip: text !important;
-  filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.8));
-  text-shadow: none !important;
+  color: #0284c7 !important;
+  -webkit-text-fill-color: #0284c7 !important;
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  filter: none !important;
+  text-shadow: 0 1px 2px rgba(2, 132, 199, 0.16);
 }
 
 /* 2. Mùa Xuân (Spring) - Hồng hoa đào tươi mới */
@@ -15003,11 +15007,11 @@ body.has-floating-audio-player.floating-audio-minimized .floating-quick-preferen
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  flex: 1 1 280px !important;
-  min-width: 250px !important;
-  max-width: 680px !important;
+  flex: 1 1 200px !important;
+  min-width: 0 !important;
+  max-width: 640px !important;
   margin: 0 auto !important;
-  gap: 10px !important;
+  gap: 8px !important;
 }
 
 .site-header .header-user-wrap {
@@ -15016,7 +15020,8 @@ body.has-floating-audio-player.floating-audio-minimized .floating-quick-preferen
 }
 
 .header-brand-wrap {
-  flex-shrink: 0 !important;
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
   display: flex !important;
   align-items: center !important;
   gap: 6px !important;
@@ -16241,52 +16246,61 @@ body.theme-light .inline-friend-chip:hover,
 /* 1. HERO TITLE: Bỏ gradient transparent vô hình, dùng chữ đặc tương phản cao kèm hiệu ứng 3D trôi nổi */
 
 .hero-title {
-  display: inline-block !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  text-align: center !important;
   position: relative !important;
   cursor: pointer !important;
-  transition: filter 0.25s ease, text-shadow 0.25s ease !important;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+  will-change: auto !important;
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
+  filter: none !important;
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  transition: color 0.25s ease, text-shadow 0.25s ease !important;
 }
 
 .hero-title::before {
-  content: '';
-  position: absolute;
-  inset: -8px -14px;
-  background: transparent;
-  pointer-events: auto;
-  z-index: 1;
+  content: none !important;
+  display: none !important;
 }
 
 .hero-title:hover {
   transform: none !important;
-  filter: drop-shadow(0 8px 24px rgba(13, 148, 136, 0.45)) !important;
+  filter: none !important;
 }
 
 .hero-title:active {
-  transform: translateY(1px) scale(0.99) !important;
+  transform: translateY(1px) scale(0.995) !important;
 }
 
-/* Mùa Đông (Winter) + Chế độ Ngày: Ánh băng chuyển sắc tương phản cao, đỉnh ánh tuyết sáng nhẹ, thân chữ navy/sapphire đậm sâu */
+/* Mùa Đông (Winter) + Chế độ Ngày: Chữ sapphire sắc nét duy nhất 1 lớp, tương phản cao */
 .mode-light .season-winter .hero-title,
 body.theme-light .season-winter .hero-title,
 [data-theme="light"] .season-winter .hero-title {
-  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 32%, #0369a1 70%, #0c4a6e 100%) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  background-clip: text !important;
-  filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.95)) drop-shadow(0 2px 6px rgba(3, 105, 161, 0.25));
-  text-shadow: none !important;
-  font-weight: 850 !important;
+  color: #0c4a6e !important;
+  -webkit-text-fill-color: #0c4a6e !important;
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  filter: none !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.88) !important;
+  font-weight: 800 !important;
 }
 
-.mode-light .season-winter .hero-title span,
-body.theme-light .season-winter .hero-title span,
-[data-theme="light"] .season-winter .hero-title span {
-  background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 35%, #0369a1 100%) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  background-clip: text !important;
+.mode-light .season-winter .hero-title > span:not(.idle-weather-text-wrap),
+.mode-light .season-winter .hero-title .hero-title-accent,
+body.theme-light .season-winter .hero-title > span:not(.idle-weather-text-wrap),
+body.theme-light .season-winter .hero-title .hero-title-accent,
+[data-theme="light"] .season-winter .hero-title > span:not(.idle-weather-text-wrap),
+[data-theme="light"] .season-winter .hero-title .hero-title-accent {
+  color: #0284c7 !important;
+  -webkit-text-fill-color: #0284c7 !important;
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
 }
 
 /* Mùa Xuân (Spring) + Chế độ Ngày: chữ đậm đỏ hồng sâu trên nền trắng pastel */
@@ -16300,26 +16314,31 @@ body.theme-light .hero-title,
   color: #be185d !important;
   -webkit-text-fill-color: #be185d !important;
   background: none !important;
-  -webkit-background-clip: unset !important;
-  background-clip: unset !important;
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.95),
-    0 2px 8px rgba(190, 24, 93, 0.25),
-    0 4px 14px rgba(190, 24, 93, 0.15) !important;
-  font-weight: 900 !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  filter: none !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9) !important;
+  font-weight: 800 !important;
 }
 
-.season-spring .hero-title span,
-.mode-light .season-spring .hero-title span,
-body.theme-light .season-spring .hero-title span,
-[data-theme="light"] .season-spring .hero-title span,
-.mode-light .hero-title span,
-body.theme-light .hero-title span,
-[data-theme="light"] .hero-title span {
+.season-spring .hero-title > span:not(.idle-weather-text-wrap),
+.season-spring .hero-title .hero-title-accent,
+.mode-light .season-spring .hero-title > span:not(.idle-weather-text-wrap),
+.mode-light .season-spring .hero-title .hero-title-accent,
+body.theme-light .season-spring .hero-title > span:not(.idle-weather-text-wrap),
+body.theme-light .season-spring .hero-title .hero-title-accent,
+[data-theme="light"] .season-spring .hero-title > span:not(.idle-weather-text-wrap),
+[data-theme="light"] .season-spring .hero-title .hero-title-accent,
+.mode-light .hero-title > span:not(.idle-weather-text-wrap),
+.mode-light .hero-title .hero-title-accent,
+body.theme-light .hero-title > span:not(.idle-weather-text-wrap),
+body.theme-light .hero-title .hero-title-accent,
+[data-theme="light"] .hero-title > span:not(.idle-weather-text-wrap),
+[data-theme="light"] .hero-title .hero-title-accent {
   color: #db2777 !important;
   -webkit-text-fill-color: #db2777 !important;
   background: none !important;
-  -webkit-background-clip: unset !important;
+  -webkit-background-clip: border-box !important;
 }
 
 /* Mùa Hạ (Summer) + Chế độ Ngày: chữ cam vàng đậm */
@@ -16329,19 +16348,20 @@ body.theme-light .season-summer .hero-title {
   color: #b45309 !important;
   -webkit-text-fill-color: #b45309 !important;
   background: none !important;
-  -webkit-background-clip: unset !important;
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9),
-    0 2px 8px rgba(180, 83, 9, 0.2) !important;
+  -webkit-background-clip: border-box !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.85) !important;
 }
 
-.season-summer .hero-title span,
-.mode-light .season-summer .hero-title span,
-body.theme-light .season-summer .hero-title span {
+.season-summer .hero-title > span:not(.idle-weather-text-wrap),
+.season-summer .hero-title .hero-title-accent,
+.mode-light .season-summer .hero-title > span:not(.idle-weather-text-wrap),
+.mode-light .season-summer .hero-title .hero-title-accent,
+body.theme-light .season-summer .hero-title > span:not(.idle-weather-text-wrap),
+body.theme-light .season-summer .hero-title .hero-title-accent {
   color: #d97706 !important;
   -webkit-text-fill-color: #d97706 !important;
   background: none !important;
-  -webkit-background-clip: unset !important;
+  -webkit-background-clip: border-box !important;
 }
 
 /* Mùa Thu (Autumn) + Chế độ Ngày: chữ cam đỏ sâu */
@@ -16351,47 +16371,59 @@ body.theme-light .season-autumn .hero-title {
   color: #c2410c !important;
   -webkit-text-fill-color: #c2410c !important;
   background: none !important;
-  -webkit-background-clip: unset !important;
+  -webkit-background-clip: border-box !important;
   font-style: normal !important;
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9),
-    0 2px 8px rgba(194, 65, 12, 0.2) !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.85) !important;
 }
 
-/* Chế độ Đêm: giữ nguyên chữ trắng sáng */
+/* Chế độ Đêm: giữ nguyên chữ trắng sáng 1 lớp duy nhất + accent theo mùa */
 .mode-dark .hero-title,
 body.theme-dark .hero-title,
 [data-theme="dark"] .hero-title {
   color: #f8fafc !important;
   -webkit-text-fill-color: #f8fafc !important;
   background: none !important;
-  -webkit-background-clip: unset !important;
-  text-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.7),
-    0 4px 14px rgba(0, 0, 0, 0.5),
-    0 8px 24px rgba(0, 0, 0, 0.35) !important;
-  font-weight: 900 !important;
+  -webkit-background-clip: border-box !important;
+  filter: none !important;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5) !important;
+  font-weight: 800 !important;
 }
 
-.mode-dark .hero-title span,
-body.theme-dark .hero-title span,
-[data-theme="dark"] .hero-title span {
+.mode-dark .hero-title > span:not(.idle-weather-text-wrap),
+.mode-dark .hero-title .hero-title-accent,
+body.theme-dark .hero-title > span:not(.idle-weather-text-wrap),
+body.theme-dark .hero-title .hero-title-accent,
+[data-theme="dark"] .hero-title > span:not(.idle-weather-text-wrap),
+[data-theme="dark"] .hero-title .hero-title-accent {
   color: #38bdf8 !important;
   -webkit-text-fill-color: #38bdf8 !important;
   background: none !important;
-  -webkit-background-clip: unset !important;
+  -webkit-background-clip: border-box !important;
 }
 
 .mode-dark .season-spring .hero-title,
 body.theme-dark .season-spring .hero-title,
 [data-theme="dark"] .season-spring .hero-title {
-  color: #f9a8d4 !important;
-  -webkit-text-fill-color: #f9a8d4 !important;
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
 }
 
-.mode-dark .season-spring .hero-title span {
-  color: #fbcfe8 !important;
-  -webkit-text-fill-color: #fbcfe8 !important;
+.mode-dark .season-spring .hero-title > span:not(.idle-weather-text-wrap),
+.mode-dark .season-spring .hero-title .hero-title-accent {
+  color: #f472b6 !important;
+  -webkit-text-fill-color: #f472b6 !important;
+}
+
+.mode-dark .season-summer .hero-title > span:not(.idle-weather-text-wrap),
+.mode-dark .season-summer .hero-title .hero-title-accent {
+  color: #fbbf24 !important;
+  -webkit-text-fill-color: #fbbf24 !important;
+}
+
+.mode-dark .season-autumn .hero-title > span:not(.idle-weather-text-wrap),
+.mode-dark .season-autumn .hero-title .hero-title-accent {
+  color: #fb923c !important;
+  -webkit-text-fill-color: #fb923c !important;
 }
 
 /* 2. CARD TITLE: Viền rõ nét hơn + Màu chữ nổi bật */
@@ -24441,6 +24473,328 @@ body.theme-light .peek-bond-bar,
   background: #f1f5f9;
   border-color: #e2e8f0;
 }
+
+/* ========================================================
+   7. HERO TITLE SINGLE-LAYER CRISP POLISH & HEADER OVERFLOW FIX
+   - Triệt tiêu triệt để lỗi chữ Hero "YOU CAN'T STOP HERE" bị nhân đôi/đè nhau
+   - Bảo đảm Header & nút "Đăng Nhập" hiển thị nguyên vẹn ở 768px - 1280px & Mobile
+   ======================================================== */
+
+/* 7.1 Hero Title 1 lớp duy nhất, sắc nét trên mọi theme/mùa */
+.hero-banner .hero-title {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  text-align: center !important;
+  font-family: 'Be Vietnam Pro', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-weight: 800 !important;
+  font-size: clamp(1.7rem, 4.4vw, 2.85rem) !important;
+  line-height: 1.24 !important;
+  letter-spacing: -0.02em !important;
+  will-change: auto !important;
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  filter: none !important;
+}
+
+.hero-banner .hero-title::before {
+  content: none !important;
+  display: none !important;
+}
+
+.hero-banner .hero-title:hover {
+  transform: none !important;
+  filter: none !important;
+}
+
+.hero-banner .hero-title .idle-weather-text-wrap,
+.hero-banner .hero-title .idle-weather-inner-text {
+  will-change: auto !important;
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
+  transform: none !important;
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+/* Chế độ Đêm */
+body.theme-dark .hero-banner .hero-title,
+[data-theme="dark"] .hero-banner .hero-title,
+.mode-dark .hero-banner .hero-title {
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45) !important;
+}
+
+body.theme-dark .hero-banner .hero-title .hero-title-accent,
+[data-theme="dark"] .hero-banner .hero-title .hero-title-accent,
+.mode-dark .hero-banner .hero-title .hero-title-accent {
+  color: #38bdf8 !important;
+  -webkit-text-fill-color: #38bdf8 !important;
+  text-shadow: none !important;
+}
+
+.mode-dark.season-spring .hero-banner .hero-title .hero-title-accent,
+body.theme-dark .season-spring .hero-banner .hero-title .hero-title-accent {
+  color: #f472b6 !important;
+  -webkit-text-fill-color: #f472b6 !important;
+}
+
+.mode-dark.season-summer .hero-banner .hero-title .hero-title-accent,
+body.theme-dark .season-summer .hero-banner .hero-title .hero-title-accent {
+  color: #fbbf24 !important;
+  -webkit-text-fill-color: #fbbf24 !important;
+}
+
+.mode-dark.season-autumn .hero-banner .hero-title .hero-title-accent,
+body.theme-dark .season-autumn .hero-banner .hero-title .hero-title-accent {
+  color: #fb923c !important;
+  -webkit-text-fill-color: #fb923c !important;
+}
+
+/* Chế độ Ngày */
+body.theme-light .hero-banner .hero-title,
+[data-theme="light"] .hero-banner .hero-title,
+.mode-light .hero-banner .hero-title {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.85) !important;
+}
+
+body.theme-light .hero-banner .hero-title .hero-title-accent,
+[data-theme="light"] .hero-banner .hero-title .hero-title-accent,
+.mode-light .hero-banner .hero-title .hero-title-accent {
+  color: #0284c7 !important;
+  -webkit-text-fill-color: #0284c7 !important;
+  text-shadow: none !important;
+}
+
+.mode-light.season-spring .hero-banner .hero-title,
+body.theme-light .season-spring .hero-banner .hero-title {
+  color: #9d174d !important;
+  -webkit-text-fill-color: #9d174d !important;
+}
+
+.mode-light.season-spring .hero-banner .hero-title .hero-title-accent,
+body.theme-light .season-spring .hero-banner .hero-title .hero-title-accent {
+  color: #db2777 !important;
+  -webkit-text-fill-color: #db2777 !important;
+}
+
+.mode-light.season-summer .hero-banner .hero-title,
+body.theme-light .season-summer .hero-banner .hero-title {
+  color: #92400e !important;
+  -webkit-text-fill-color: #92400e !important;
+}
+
+.mode-light.season-summer .hero-banner .hero-title .hero-title-accent,
+body.theme-light .season-summer .hero-banner .hero-title .hero-title-accent {
+  color: #d97706 !important;
+  -webkit-text-fill-color: #d97706 !important;
+}
+
+.mode-light.season-autumn .hero-banner .hero-title,
+body.theme-light .season-autumn .hero-banner .hero-title {
+  color: #9a3412 !important;
+  -webkit-text-fill-color: #9a3412 !important;
+}
+
+.mode-light.season-autumn .hero-banner .hero-title .hero-title-accent,
+body.theme-light .season-autumn .hero-banner .hero-title .hero-title-accent {
+  color: #ea580c !important;
+  -webkit-text-fill-color: #ea580c !important;
+}
+
+/* 7.2 Bảo vệ Header & nút Đăng Nhập / Đăng Ký không bị tràn cắt chữ ở 768px - 1280px & Mobile */
+.site-header .header-guest-btns {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+  flex-wrap: nowrap !important;
+}
+
+.site-header .nav-btn-login,
+.site-header .nav-btn-register {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+@media (max-width: 1280px) {
+  .site-header .header-container {
+    padding: 6px 12px !important;
+    gap: 8px !important;
+  }
+
+  .site-header .header-brand-wrap {
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    gap: 6px !important;
+  }
+
+  .site-header .logo-link {
+    min-width: 0 !important;
+    flex-shrink: 1 !important;
+    gap: 6px !important;
+  }
+
+  .site-header .logo-text,
+  .site-header .seasonal-logo-text,
+  .site-header .seasonal-logo-text .idle-weather-text-wrap,
+  .site-header .seasonal-logo-text .idle-weather-inner-text {
+    font-size: 1.04rem !important;
+    letter-spacing: 0.25px !important;
+  }
+
+  .site-header .header-top-center {
+    min-width: 0 !important;
+    flex: 1 1 170px !important;
+    max-width: 420px !important;
+    padding: 0 4px !important;
+    gap: 6px !important;
+  }
+
+  .site-header .header-search-wrapper {
+    min-width: 0 !important;
+    flex: 1 1 170px !important;
+    max-width: 100% !important;
+  }
+
+  .site-header .header-live-waveform-pill .live-track-title {
+    max-width: 82px !important;
+  }
+
+  .site-header .nav-btn-login,
+  .site-header .nav-btn-register {
+    padding: 6px 12px !important;
+    font-size: 0.82rem !important;
+  }
+}
+
+@media (max-width: 1120px) {
+  .site-header .logo-text,
+  .site-header .seasonal-logo-text,
+  .site-header .seasonal-logo-text .idle-weather-text-wrap,
+  .site-header .seasonal-logo-text .idle-weather-inner-text {
+    font-size: 0.96rem !important;
+    letter-spacing: 0.15px !important;
+  }
+
+  .site-header .header-festive-event-pill .festive-pill-name {
+    display: none !important;
+  }
+
+  .site-header .header-live-waveform-pill .live-track-title {
+    display: none !important;
+  }
+
+  .site-header .header-live-waveform-pill {
+    padding: 4px 8px !important;
+    max-width: none !important;
+  }
+}
+
+/* Ngưỡng 768px - 960px (Mở DevTools song song / Tablet / Split Window) */
+@media (max-width: 960px) {
+  .site-header .header-container {
+    flex-wrap: wrap !important;
+    row-gap: 6px !important;
+    column-gap: 8px !important;
+    padding: 6px 12px !important;
+  }
+
+  .site-header .header-brand-wrap {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .site-header .logo-text,
+  .site-header .seasonal-logo-text,
+  .site-header .seasonal-logo-text .idle-weather-text-wrap,
+  .site-header .seasonal-logo-text .idle-weather-inner-text {
+    font-size: clamp(0.84rem, 2.2vw, 0.98rem) !important;
+    letter-spacing: 0.1px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .site-header .seasonal-logo-sparkle {
+    display: none !important;
+  }
+
+  .site-header .header-user-wrap {
+    flex-shrink: 0 !important;
+    margin-left: auto !important;
+  }
+
+  .site-header .header-top-center {
+    display: flex !important;
+    order: 3 !important;
+    flex: 1 0 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 2px 0 2px !important;
+  }
+
+  .site-header .header-search-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 100% !important;
+  }
+
+  .site-header .header-dashboard-bar {
+    padding: 6px 8px 8px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none !important;
+  }
+
+  .site-header .header-dashboard-bar::-webkit-scrollbar {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-banner .hero-title {
+    font-size: clamp(1.5rem, 6.2vw, 2.05rem) !important;
+  }
+
+  .site-header .header-container {
+    padding: 6px 8px !important;
+    gap: 4px !important;
+  }
+
+  .site-header .logo-text,
+  .site-header .seasonal-logo-text,
+  .site-header .seasonal-logo-text .idle-weather-text-wrap,
+  .site-header .seasonal-logo-text .idle-weather-inner-text {
+    font-size: clamp(0.76rem, 3.5vw, 0.9rem) !important;
+    letter-spacing: 0 !important;
+  }
+
+  .site-header .header-guest-btns {
+    gap: 4px !important;
+  }
+
+  .site-header .nav-btn-login,
+  .site-header .nav-btn-register {
+    padding: 5px 10px !important;
+    font-size: 0.76rem !important;
+  }
+}
+
 
 
 

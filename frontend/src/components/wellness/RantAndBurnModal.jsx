@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { playClickSound, playWarmthSound } from '../../utils/soundEffects';
+import { hasUserInteracted } from '../../utils/audio-gesture-guard';
 
 // Danh sách các thẻ tâm trạng xả giận nhanh
 const QUICK_RANT_TAGS = [
@@ -216,7 +217,8 @@ class FireAudioSynthesizer {
   }
 
   init() {
-    if (!this.ctx) {
+    if (typeof window === 'undefined' || !hasUserInteracted()) return;
+    if (!this.ctx || this.ctx.state === 'closed') {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (AudioContextClass) {
         this.ctx = new AudioContextClass();

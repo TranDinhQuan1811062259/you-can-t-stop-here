@@ -6,6 +6,7 @@ import {
   playNotificationTone,
   stopNotificationTone,
 } from './campfireAudio';
+import { hasUserInteracted, markUserInteracted } from './audio-gesture-guard';
 
 export {
   NOTIFICATION_TONES,
@@ -26,10 +27,11 @@ let audioCtx = null;
 // Khởi tạo AudioContext an toàn sau tương tác người dùng
 export const getAudioContext = () => {
   if (typeof window === 'undefined') return null;
+  if (!hasUserInteracted()) return null;
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextClass) return null;
 
-  if (!audioCtx) {
+  if (!audioCtx || audioCtx.state === 'closed') {
     audioCtx = new AudioContextClass();
   }
   if (audioCtx.state === 'suspended') {
@@ -129,7 +131,7 @@ let lastHoverTime = 0;
  * Phát âm thanh hover cực kỳ êm dịu ("tick/pop" nhẹ) khi rê chuột qua nút/liên kết
  */
 export const playHoverSound = () => {
-  if (!isSoundEnabled()) return;
+  if (!isSoundEnabled() || !hasUserInteracted()) return;
   const nowMs = performance.now();
   if (nowMs - lastHoverTime < 70) return;
   lastHoverTime = nowMs;
@@ -2270,6 +2272,9 @@ export const initGlobalSoundEffects = () => {
   document.addEventListener(
     'click',
     (e) => {
+      if (e?.isTrusted !== false) {
+        markUserInteracted();
+      }
       const target = e.target;
       if (!target) return;
       if (target.closest && target.closest(INTERACTIVE_SELECTOR)) {
@@ -2279,10 +2284,11 @@ export const initGlobalSoundEffects = () => {
     { passive: true }
   );
 
-  // Sự kiện Hover nhẹ
+  // Sự kiện Hover nhẹ (chỉ phát sau khi đã có user gesture hợp lệ)
   document.addEventListener(
     'mouseover',
     (e) => {
+      if (!hasUserInteracted()) return;
       const target = e.target;
       if (!target) return;
       if (target.closest && target.closest(INTERACTIVE_SELECTOR)) {

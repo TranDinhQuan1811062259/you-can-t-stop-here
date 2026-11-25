@@ -6,6 +6,7 @@ import {
   setPostAtmosphereVolume,
   isAtmospherePlaying,
 } from '../../utils/postAtmosphereEngine';
+import { onFirstUserGesture, hasUserInteracted } from '../../utils/audio-gesture-guard';
 
 export const PostAtmosphereSoundBar = ({ atmosphere, postTitle }) => {
   if (!atmosphere || !atmosphere.theme || atmosphere.theme === 'default') {
@@ -17,18 +18,27 @@ export const PostAtmosphereSoundBar = ({ atmosphere, postTitle }) => {
   const [volume, setVolume] = useState(0.45);
   const [isDucked, setIsDucked] = useState(false);
 
-  // Khởi động âm thanh không gian khi người đọc vào trang bài viết
+  // Khởi động âm thanh không gian khi người đọc vào trang bài viết (chỉ tạo AudioContext sau user gesture)
   useEffect(() => {
     let timer = null;
+    let unsubscribeGesture = null;
+
     if (atmosphere.soundEnabled !== false) {
+      const startSafely = () => {
+        try {
+          const started = startPostAtmosphere(atmosphere.theme, volume);
+          setIsPlaying(Boolean(started));
+        } catch (e) {
+          setIsPlaying(false);
+        }
+      };
+
       // Delay nhẹ 600ms để hiệu ứng chuyển trang hoàn tất mượt mà
       timer = setTimeout(() => {
-        try {
-          startPostAtmosphere(atmosphere.theme, volume);
-          setIsPlaying(true);
-        } catch (e) {
-          // Trình duyệt có thể cần tương tác click của người dùng
-          setIsPlaying(false);
+        if (hasUserInteracted()) {
+          startSafely();
+        } else {
+          unsubscribeGesture = onFirstUserGesture(startSafely);
         }
       }, 600);
     }
@@ -54,6 +64,7 @@ export const PostAtmosphereSoundBar = ({ atmosphere, postTitle }) => {
 
     return () => {
       if (timer) clearTimeout(timer);
+      if (unsubscribeGesture) unsubscribeGesture();
       stopPostAtmosphere();
       window.removeEventListener('freedom_post_atmosphere_state_change', handleState);
       window.removeEventListener('freedom_ambient_sound_changed', handleAmbientDuck);

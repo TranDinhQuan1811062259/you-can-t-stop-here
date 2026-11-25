@@ -419,7 +419,7 @@ export const HomePage = () => {
           badgeContent={<span className="hero-tag-pill">Cộng đồng sẻ chia của người đi làm</span>}
           titleContent={
             <IdleWeatherText>
-              YOU CAN'T <span>STOP HERE</span>
+              YOU CAN'T <span className="hero-title-accent">STOP HERE</span>
             </IdleWeatherText>
           }
           subtitle="Trút bỏ những áp lực deadline, kiệt sức và bất an nơi công sở. Bạn có thể chậm lại để nghỉ ngơi, nhưng đừng dừng lại. Chúng mình luôn ở đây cùng bạn!"

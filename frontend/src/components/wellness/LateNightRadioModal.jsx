@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { playClickSound } from '../../utils/soundEffects';
+import { hasUserInteracted } from '../../utils/audio-gesture-guard';
 import { AnonymousWhisperWall } from './AnonymousWhisperWall';
 import {
   getFabPos,
@@ -120,6 +121,7 @@ let masterGainNode = null;
 let cleanupCurrentEngineFn = null;
 
 const ensureAudioContext = () => {
+  if (typeof window === 'undefined' || !hasUserInteracted()) return null;
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextClass) return null;
   if (!radioAudioCtx || radioAudioCtx.state === 'closed') {

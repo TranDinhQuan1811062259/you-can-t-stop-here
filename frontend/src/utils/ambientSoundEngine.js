@@ -8,6 +8,8 @@
  *   và khôi phục êm ái khi dừng bài hát.
  */
 
+import { hasUserInteracted } from './audio-gesture-guard';
+
 let audioCtx = null;
 
 // Gain Nodes quản lý âm lượng độc lập
@@ -29,10 +31,11 @@ let activeEventSources = [];
 
 const getAudioContext = () => {
   if (typeof window === 'undefined') return null;
+  if (!hasUserInteracted()) return null;
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextClass) return null;
 
-  if (!audioCtx) {
+  if (!audioCtx || audioCtx.state === 'closed') {
     audioCtx = new AudioContextClass();
   }
   if (audioCtx.state === 'suspended') {
@@ -918,6 +921,7 @@ export const restoreAmbientFromMusic = () => {
  * Đánh thức AudioContext an toàn khi có cử chỉ tương tác đầu tiên của người dùng (Quy tắc 4 GEMINI.md)
  */
 export const resumeAmbientAudioContext = async () => {
+  if (!hasUserInteracted()) return null;
   const ctx = getAudioContext();
   if (ctx && ctx.state === 'suspended') {
     try {
@@ -950,7 +954,7 @@ export const setMasterMute = (muted) => {
 // Đảm bảo AudioContext tự động phục hồi khi tab chuyển từ ẩn sang hiện
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && audioCtx && audioCtx.state === 'suspended') {
+    if (!document.hidden && hasUserInteracted() && audioCtx && audioCtx.state === 'suspended') {
       audioCtx.resume().catch(() => {});
     }
   });

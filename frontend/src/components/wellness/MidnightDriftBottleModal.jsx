@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { playClickSound, playSingingBowlSound } from '../../utils/soundEffects';
 import { triggerAsmrKeySound } from '../../utils/keyboardSoundEngine';
+import { hasUserInteracted } from '../../utils/audio-gesture-guard';
 
 const INITIAL_DRIFT_BOTTLES = [
   {
@@ -94,7 +95,7 @@ export const MidnightDriftBottleModal = ({ isOpen, onClose }) => {
 
   // Thiết lập Web Audio DSP Graph để lọc tạp âm từ video gốc
   const initDeNoiseAudioGraph = () => {
-    if (isAudioGraphConnectedRef.current || !audioElRef.current) return;
+    if (isAudioGraphConnectedRef.current || !audioElRef.current || !hasUserInteracted()) return;
     try {
       const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
       if (!AudioCtxClass) return;

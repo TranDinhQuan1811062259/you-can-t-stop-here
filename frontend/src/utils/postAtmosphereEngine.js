@@ -215,6 +215,8 @@ export const PARTICLE_EFFECTS = [
 // WEB AUDIO API ENGINE CHUYÊN DỤNG CHO BÀI VIẾT
 // =========================================================================
 
+import { hasUserInteracted } from './audio-gesture-guard';
+
 let postAudioCtx = null;
 let postMasterGain = null;
 let currentAtmosphereSources = [];
@@ -225,10 +227,11 @@ let isDuckByMusic = false;
 
 const getPostAudioContext = () => {
   if (typeof window === 'undefined') return null;
+  if (!hasUserInteracted()) return null;
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextClass) return null;
 
-  if (!postAudioCtx) {
+  if (!postAudioCtx || postAudioCtx.state === 'closed') {
     postAudioCtx = new AudioContextClass();
   }
   if (postAudioCtx.state === 'suspended') {
@@ -586,11 +589,11 @@ export const stopPostAtmosphere = (notify = true) => {
 export const startPostAtmosphere = (themeId, targetVolume = 0.5) => {
   if (!themeId || themeId === 'default') {
     stopPostAtmosphere();
-    return;
+    return false;
   }
 
   const ctx = getPostAudioContext();
-  if (!ctx) return;
+  if (!ctx) return false;
 
   // Dọn dẹp âm thanh cũ
   stopPostAtmosphere(false);
@@ -627,6 +630,7 @@ export const startPostAtmosphere = (themeId, targetVolume = 0.5) => {
   }
 
   notifyAtmosphereState();
+  return true;
 };
 
 export const setPostAtmosphereVolume = (vol) => {
