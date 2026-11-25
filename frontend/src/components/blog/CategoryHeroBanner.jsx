@@ -442,8 +442,8 @@ export const CategoryHeroBanner = ({
 
       state.lastDeltaX = effectiveX;
 
-      // Predictive Warm-Cache: khi người dùng kéo đạt >= 50% ngưỡng chuyển chủ đề, âm thầm nạp trước trang 1
-      if (hasTarget) {
+      // Predictive Warm-Cache: khi người dùng kéo đạt >= 50% ngưỡng chuyển chủ đề, âm thầm nạp trước trang 1 (bỏ qua route ngoài như /music)
+      if (hasTarget && !targetTopic.isExternalSection) {
         const dynamicThreshold = getDynamicThreshold();
         if (Math.abs(effectiveX) >= dynamicThreshold * 0.5) {
           const targetSlug = targetTopic.slug || '';
@@ -496,7 +496,7 @@ export const CategoryHeroBanner = ({
       const threshold = getDynamicThreshold();
 
       // Predictive Warm-Cache cho cử chỉ vuốt trackpad ngang >= 50% ngưỡng
-      if (hasTarget && Math.abs(clampedX) >= threshold * 0.5) {
+      if (hasTarget && !targetTopic.isExternalSection && Math.abs(clampedX) >= threshold * 0.5) {
         const targetSlug = targetTopic.slug || '';
         if (prefetchedSlugThisGestureRef.current !== targetSlug) {
           prefetchedSlugThisGestureRef.current = targetSlug;

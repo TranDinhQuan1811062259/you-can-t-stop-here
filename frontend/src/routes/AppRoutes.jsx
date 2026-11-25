@@ -4,11 +4,11 @@ import { MainLayout } from '../components/layout/MainLayout';
 import { RouteLoadingFallback } from '../components/common/RouteLoadingFallback';
 import { HomePage } from '../pages/HomePage';
 import { CategoryPage } from '../pages/CategoryPage';
+import { MusicPage } from '../pages/MusicPage';
 
-// Tối ưu Code-Splitting cho các trang phụ, giữ HomePage & CategoryPage tải sẵn chống nháy Suspense khi chuyển chủ đề
+// Tối ưu Code-Splitting cho các trang phụ, giữ HomePage, CategoryPage & MusicPage tải sẵn chống nháy Suspense
 const PostDetailPage = lazy(() => import('../pages/PostDetailPage').then((m) => ({ default: m.PostDetailPage })));
 const UserProfilePage = lazy(() => import('../pages/UserProfilePage').then((m) => ({ default: m.UserProfilePage })));
-const MusicPage = lazy(() => import('../pages/MusicPage').then((m) => ({ default: m.MusicPage })));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
 const AdminSecurityConsolePage = lazy(() => import('../pages/AdminSecurityConsolePage').then((m) => ({ default: m.AdminSecurityConsolePage })));
 

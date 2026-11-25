@@ -12,7 +12,7 @@ import { useCategoryRegistry, enrichCategoryMeta, setPendingBannerTransition } f
 
 export const CategoryPage = () => {
   const { categorySlug } = useParams();
-  const { categories, coreTopics } = useCategoryRegistry();
+  const { categories, carouselTopics } = useCategoryRegistry();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState('newest');
@@ -65,15 +65,15 @@ export const CategoryPage = () => {
 
   // Phân giải tên & icon trực tiếp từ Registry đồng bộ theo slug (không bao giờ lấy nhầm từ bài viết cũ)
   const matchedTopic =
-    coreTopics.find((t) => t.slug === categorySlug || t._id === categorySlug) ||
+    carouselTopics.find((t) => t.slug === categorySlug || t._id === categorySlug) ||
     categories.find((t) => t.slug === categorySlug || t._id === categorySlug) ||
     enrichCategoryMeta({ slug: categorySlug });
 
-  const bannerTopics = coreTopics.some((t) => t.slug === categorySlug)
-    ? coreTopics
+  const bannerTopics = carouselTopics.some((t) => t.slug === categorySlug)
+    ? carouselTopics
     : matchedTopic
-    ? [...coreTopics, matchedTopic]
-    : coreTopics;
+    ? [...carouselTopics, matchedTopic]
+    : carouselTopics;
 
   const matchedPostCategory =
     posts[0]?.category?.slug === categorySlug ? posts[0].category : null;

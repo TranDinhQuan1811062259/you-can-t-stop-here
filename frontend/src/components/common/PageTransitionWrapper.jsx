@@ -26,7 +26,7 @@ export const DASHBOARD_ROUTES = [
 ];
 
 const isTopicPath = (pathname = '') =>
-  pathname === '/' || pathname.startsWith('/category/');
+  pathname === '/' || pathname.startsWith('/category/') || pathname === '/music' || pathname.startsWith('/music/');
 
 const extractSlugFromLocation = (loc) => {
   const pathname = loc?.pathname || '';
@@ -38,13 +38,16 @@ const extractSlugFromLocation = (loc) => {
   if (pathname.startsWith('/category/')) {
     return decodeURIComponent(pathname.replace(/^\/category\//, '').split('/')[0] || '');
   }
+  if (pathname === '/music' || pathname.startsWith('/music/')) {
+    return '__music__';
+  }
   return null;
 };
 
 export const PageTransitionWrapper = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { coreTopics: topics } = useCategoryRegistry();
+  const { carouselTopics: topics } = useCategoryRegistry();
 
   const [transitionDirection, setTransitionDirection] = useState('forward');
   const [isTransitioning, setIsTransitioning] = useState(false);

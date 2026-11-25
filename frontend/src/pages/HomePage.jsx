@@ -10,8 +10,6 @@ import { Pagination } from '../components/common/Pagination';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { CommunityMoodWall } from '../components/blog/CommunityMoodWall';
 import { StoryBar } from '../components/story/StoryBar';
-import { CreateStoryModal } from '../components/story/CreateStoryModal';
-import { StoryViewerModal } from '../components/story/StoryViewerModal';
 import { IdleWeatherText } from '../components/common/IdleWeatherText';
 import { CommunityResilienceTree } from '../components/wellness/CommunityResilienceTree';
 import { GivingSomeEffortsSection } from '../components/wellness/GivingSomeEffortsSection';
@@ -27,6 +25,27 @@ const CreatePostModal = lazy(() =>
     default: m.CreatePostModal || m.default,
   }))
 );
+
+const CreateStoryModal = lazy(() =>
+  import('../components/story/CreateStoryModal').then((m) => ({
+    default: m.CreateStoryModal || m.default,
+  }))
+);
+
+const StoryViewerModal = lazy(() =>
+  import('../components/story/StoryViewerModal').then((m) => ({
+    default: m.StoryViewerModal || m.default,
+  }))
+);
+
+let hasPreloadedCreatePostModal = false;
+const preloadCreatePostModal = () => {
+  if (hasPreloadedCreatePostModal) return;
+  hasPreloadedCreatePostModal = true;
+  import('../components/blog/CreatePostModal').catch(() => {
+    hasPreloadedCreatePostModal = false;
+  });
+};
 
 const QUICK_FEATURE_PILLS = [
   {
@@ -71,7 +90,7 @@ export const HomePage = () => {
   const searchQuery = searchParams.get('q') || '';
   const categoryParam = searchParams.get('category') || '';
 
-  const { categories, coreTopics, appendCategory } = useCategoryRegistry();
+  const { categories, carouselTopics, appendCategory } = useCategoryRegistry();
   const [selectedCategory, setSelectedCategory] = useState(categoryParam);
   const [isCommitSwitching, setIsCommitSwitching] = useState(false);
   const switchResetTimerRef = useRef(null);
@@ -136,7 +155,7 @@ export const HomePage = () => {
 
   const matchedTopic = selectedCategory
     ? categories.find((t) => t.slug === selectedCategory || t._id === selectedCategory) ||
-      coreTopics.find((t) => t.slug === selectedCategory || t._id === selectedCategory) ||
+      carouselTopics.find((t) => t.slug === selectedCategory || t._id === selectedCategory) ||
       enrichCategoryMeta({ slug: selectedCategory })
     : null;
   const currentCategoryName = matchedTopic?.name || (selectedCategory ? selectedCategory.replace(/-/g, ' ') : '');
@@ -146,8 +165,8 @@ export const HomePage = () => {
   const handleCategorySelect = useCallback(
     (categorySlug, forcedDirection = null) => {
       const normalized = categorySlug || '';
-      const currentIdx = coreTopics.findIndex((t) => t.slug === (selectedCategory || ''));
-      const nextIdx = coreTopics.findIndex((t) => t.slug === normalized);
+      const currentIdx = carouselTopics.findIndex((t) => t.slug === (selectedCategory || ''));
+      const nextIdx = carouselTopics.findIndex((t) => t.slug === normalized);
       const computedDir =
         forcedDirection ||
         (currentIdx !== -1 && nextIdx !== -1 && nextIdx !== currentIdx
@@ -169,7 +188,7 @@ export const HomePage = () => {
       setSearchParams(nextParams);
       setCurrentPage(1);
     },
-    [coreTopics, selectedCategory, searchParams, setSearchParams]
+    [carouselTopics, selectedCategory, searchParams, setSearchParams]
   );
 
   const handleClearTag = () => {
@@ -188,6 +207,8 @@ export const HomePage = () => {
       {isAuthenticated ? (
         <button
           className="hero-btn-primary"
+          onMouseEnter={preloadCreatePostModal}
+          onFocus={preloadCreatePostModal}
           onClick={() => setIsCreateOpen(true)}
         >
           <i className="fa-solid fa-feather-pointed" style={{ marginRight: '8px' }}></i> Viết tâm sự của bạn hôm nay
@@ -251,7 +272,7 @@ export const HomePage = () => {
       {/* Hero Banner / Banner Chủ Đề thống nhất Gesture 60fps & Dual-Card Peek */}
       {selectedCategory ? (
         <CategoryHeroBanner
-          topics={coreTopics}
+          topics={carouselTopics}
           activeSlug={selectedCategory}
           variant="category"
           swipeEnabled={true}
@@ -265,6 +286,16 @@ export const HomePage = () => {
             }, 900);
           }}
           onNavigateTopic={(targetTopic, dir) => {
+            if (targetTopic?.isExternalSection) {
+              navigate(targetTopic.path, {
+                state: {
+                  transitionDirection: dir || 'next',
+                  targetSlug: targetTopic.slug,
+                  fromSlug: selectedCategory,
+                },
+              });
+              return;
+            }
             if (!targetTopic?.slug) {
               handleCategorySelect('', dir || 'prev');
               if (typeof window !== 'undefined') {
@@ -301,7 +332,7 @@ export const HomePage = () => {
         />
       ) : selectedTag ? (
         <CategoryHeroBanner
-          topics={coreTopics}
+          topics={carouselTopics}
           activeSlug=""
           variant="tag"
           swipeEnabled={false}
@@ -326,7 +357,7 @@ export const HomePage = () => {
         />
       ) : searchQuery ? (
         <CategoryHeroBanner
-          topics={coreTopics}
+          topics={carouselTopics}
           activeSlug=""
           variant="search"
           swipeEnabled={false}
@@ -355,7 +386,7 @@ export const HomePage = () => {
         />
       ) : (
         <CategoryHeroBanner
-          topics={coreTopics}
+          topics={carouselTopics}
           activeSlug=""
           variant="home"
           swipeEnabled={true}
@@ -603,27 +634,35 @@ export const HomePage = () => {
         </Suspense>
       )}
 
-      {/* Modal Tạo / Sửa Story 24h */}
-      <CreateStoryModal
-        isOpen={isCreateStoryOpen}
-        onClose={() => {
-          setIsCreateStoryOpen(false);
-          setStoryToEdit(null);
-        }}
-        storyToEdit={storyToEdit}
-      />
+      {/* Modal Tạo / Sửa Story 24h (Lazy-loaded) */}
+      {isCreateStoryOpen && (
+        <Suspense fallback={null}>
+          <CreateStoryModal
+            isOpen={isCreateStoryOpen}
+            onClose={() => {
+              setIsCreateStoryOpen(false);
+              setStoryToEdit(null);
+            }}
+            storyToEdit={storyToEdit}
+          />
+        </Suspense>
+      )}
 
-      {/* Modal Xem Story 24h Toàn Màn Hình */}
-      <StoryViewerModal
-        isOpen={isViewStoryOpen}
-        onClose={() => setIsViewStoryOpen(false)}
-        initialIndex={activeStoryIndex}
-        stories={storiesList}
-        onEditStory={(story) => {
-          setStoryToEdit(story);
-          setIsCreateStoryOpen(true);
-        }}
-      />
+      {/* Modal Xem Story 24h Toàn Màn Hình (Lazy-loaded) */}
+      {isViewStoryOpen && (
+        <Suspense fallback={null}>
+          <StoryViewerModal
+            isOpen={isViewStoryOpen}
+            onClose={() => setIsViewStoryOpen(false)}
+            initialIndex={activeStoryIndex}
+            stories={storiesList}
+            onEditStory={(story) => {
+              setStoryToEdit(story);
+              setIsCreateStoryOpen(true);
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

@@ -1658,6 +1658,11 @@ export const Header = () => {
               {/* Tab Không Gian Nhạc & Playlist Đa Mùa */}
               <NavLink
                 to="/music"
+                state={{ transitionDirection: 'next', targetSlug: '__music__' }}
+                onClick={() => {
+                  playClickSound();
+                  setPendingBannerTransition('next', '__music__');
+                }}
                 className={({ isActive }) => `dashboard-3d-item tab-music ${isActive ? 'active' : ''}`}
                 title="Dashboard: Không Gian Nhạc & Playlist Mùa Đông (Winter Chill)"
               >

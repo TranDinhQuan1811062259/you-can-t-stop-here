@@ -4648,9 +4648,17 @@ body.theme-dark .back-home-btn,
 
 .footer-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 36px;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 48px;
+  align-items: start;
   margin-bottom: 40px;
+}
+
+@media (max-width: 768px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
 }
 
 .footer-col h3 {

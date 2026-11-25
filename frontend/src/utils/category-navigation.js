@@ -81,6 +81,21 @@ export const CORE_CATEGORIES_FALLBACK = [
 
 const CORE_META_BY_SLUG = new Map(CORE_CATEGORIES_FALLBACK.map((c) => [c.slug, c]));
 
+export const MUSIC_TOPIC = {
+  _id: '__music__',
+  path: '/music',
+  slug: '__music__',
+  name: 'Góc Nhạc',
+  shortLabel: 'Góc Nhạc',
+  icon: '🎧',
+  faIcon: 'fa-solid fa-compact-disc',
+  tabClass: 'tab-music',
+  colorClass: 'healing-icon-cyan',
+  accentColor: '#38bdf8',
+  isExternalSection: true,
+  description: 'Không gian nhạc chữa lành & playlist đa chủ đề giúp bạn thả lỏng tâm trí',
+};
+
 export const CORE_TOPICS = [
   HOME_TOPIC,
   ...CORE_CATEGORIES_FALLBACK.map((c) => ({
@@ -88,6 +103,8 @@ export const CORE_TOPICS = [
     path: `/category/${c.slug}`,
   })),
 ];
+
+export const CAROUSEL_TOPICS = [...CORE_TOPICS, MUSIC_TOPIC];
 
 const normalizeSlugValue = (slug = '') => {
   const raw = String(slug || '').trim();
@@ -297,6 +314,7 @@ export const useCategoryRegistry = () => {
   }, []);
 
   const topics = useMemo(() => CORE_TOPICS, []);
+  const carouselTopics = useMemo(() => CAROUSEL_TOPICS, []);
 
   const appendCategory = (created) => {
     const createdSlug = normalizeSlugValue(created?.slug);
@@ -306,7 +324,7 @@ export const useCategoryRegistry = () => {
     setCategories(updated);
   };
 
-  return { categories, coreTopics: CORE_TOPICS, topics, appendCategory };
+  return { categories, coreTopics: CORE_TOPICS, carouselTopics, topics, appendCategory };
 };
 
 /**
