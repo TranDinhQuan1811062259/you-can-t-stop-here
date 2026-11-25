@@ -8,6 +8,7 @@ import { formatDate } from '../../utils/formatDate';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { maskSensitiveText } from '../../utils/sensitiveFilter';
 import { AsmrKeyboardToggle } from '../common/AsmrKeyboardToggle';
+import { AuthorQuickPeekWrapper } from '../profile/AuthorQuickPeekCard';
 
 const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
 
@@ -496,34 +497,48 @@ export const CommentSection = ({
             return (
               <div key={c._id} className="comment-card-wrapper">
                 <div className="comment-card">
-                  <Link
-                    to={`/profile/${c.user?._id || encodeURIComponent(c.user?.name || 'user')}`}
-                    title={`Xem trang cá nhân của ${c.user?.name || 'người dùng'}`}
-                    onMouseEnter={() => scheduleProfilePrefetch(c.user, false)}
-                    onMouseLeave={cancelProfilePrefetch}
-                    onFocus={() => scheduleProfilePrefetch(c.user, true)}
+                  <AuthorQuickPeekWrapper
+                    targetUserId={c.user?._id}
+                    fallbackName={c.user?.name || 'Thành viên'}
+                    fallbackAvatar={c.user?.avatar}
+                    fallbackJob={c.user?.jobTitle}
                   >
-                    <img
-                      src={getSafeAvatar(c.user?.avatar)}
-                      alt={c.user?.name}
-                      className="comment-avatar"
-                    />
-                  </Link>
+                    <Link
+                      to={`/profile/${c.user?._id || encodeURIComponent(c.user?.name || 'user')}`}
+                      title={`Xem trang cá nhân của ${c.user?.name || 'người dùng'}`}
+                      onMouseEnter={() => scheduleProfilePrefetch(c.user, false)}
+                      onMouseLeave={cancelProfilePrefetch}
+                      onFocus={() => scheduleProfilePrefetch(c.user, true)}
+                    >
+                      <img
+                        src={getSafeAvatar(c.user?.avatar)}
+                        alt={c.user?.name}
+                        className="comment-avatar"
+                      />
+                    </Link>
+                  </AuthorQuickPeekWrapper>
                   <div className="comment-body-wrap">
                     <div className="comment-top-row">
                       <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-                        <Link
-                          to={`/profile/${c.user?._id || encodeURIComponent(c.user?.name || 'user')}`}
-                          style={{ textDecoration: 'none' }}
-                          title={`Xem trang cá nhân của ${c.user?.name || 'người dùng'}`}
-                          onMouseEnter={() => scheduleProfilePrefetch(c.user, false)}
-                          onMouseLeave={cancelProfilePrefetch}
-                          onFocus={() => scheduleProfilePrefetch(c.user, true)}
+                        <AuthorQuickPeekWrapper
+                          targetUserId={c.user?._id}
+                          fallbackName={c.user?.name || 'Thành viên'}
+                          fallbackAvatar={c.user?.avatar}
+                          fallbackJob={c.user?.jobTitle}
                         >
-                          <span className="comment-user-name">
-                            {c.user?.name || 'Thành viên'}
-                          </span>
-                        </Link>
+                          <Link
+                            to={`/profile/${c.user?._id || encodeURIComponent(c.user?.name || 'user')}`}
+                            style={{ textDecoration: 'none' }}
+                            title={`Xem trang cá nhân của ${c.user?.name || 'người dùng'}`}
+                            onMouseEnter={() => scheduleProfilePrefetch(c.user, false)}
+                            onMouseLeave={cancelProfilePrefetch}
+                            onFocus={() => scheduleProfilePrefetch(c.user, true)}
+                          >
+                            <span className="comment-user-name">
+                              {c.user?.name || 'Thành viên'}
+                            </span>
+                          </Link>
+                        </AuthorQuickPeekWrapper>
 
                         {isPostAuthor && (
                           <span className="post-author-badge-tag">
