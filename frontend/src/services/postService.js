@@ -8,6 +8,8 @@ const WARM_CACHE_MAX_ENTRIES = 20;   // Giới hạn LRU tối đa 20 query gầ
 // LRU Warm-Cache trong RAM (cách ly theo auth scope) & In-Flight Request Deduplication
 const warmPostsCache = new Map();
 const inFlightPostsRequests = new Map();
+const warmPostDetailCache = new Map();
+const inFlightPostDetailRequests = new Map();
 let warmCacheEpoch = 0;
 
 const getAuthCacheScope = () => {
@@ -100,10 +102,53 @@ const setWarmCachedPosts = (key, response) => {
   });
 };
 
+export const buildPostDetailCacheKey = (slug) => {
+  const normalizedSlug = String(slug || '').trim().toLowerCase();
+  return JSON.stringify({
+    scope: getAuthCacheScope(),
+    slug: normalizedSlug,
+  });
+};
+
+export const getWarmCachedPostBySlug = (slug) => {
+  if (!slug) return null;
+  const key = buildPostDetailCacheKey(slug);
+  const entry = warmPostDetailCache.get(key);
+  if (!entry) return null;
+
+  if (Date.now() - entry.cachedAt > WARM_CACHE_TTL_MS) {
+    warmPostDetailCache.delete(key);
+    return null;
+  }
+
+  // Cập nhật LRU: đưa entry vừa đọc về cuối Map
+  warmPostDetailCache.delete(key);
+  warmPostDetailCache.set(key, entry);
+  return entry.response;
+};
+
+const setWarmCachedPostBySlug = (key, response) => {
+  if (!response || response.fromCache) return;
+  if (warmPostDetailCache.has(key)) {
+    warmPostDetailCache.delete(key);
+  } else if (warmPostDetailCache.size >= WARM_CACHE_MAX_ENTRIES) {
+    const oldestKey = warmPostDetailCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      warmPostDetailCache.delete(oldestKey);
+    }
+  }
+  warmPostDetailCache.set(key, {
+    response,
+    cachedAt: Date.now(),
+  });
+};
+
 export const invalidatePostsCache = () => {
   warmCacheEpoch += 1;
   warmPostsCache.clear();
   inFlightPostsRequests.clear();
+  warmPostDetailCache.clear();
+  inFlightPostDetailRequests.clear();
 };
 
 if (typeof window !== 'undefined' && !window.__freedomPostsCacheEventsBound) {
@@ -302,17 +347,57 @@ export const postService = {
     }
   },
 
-  // Lấy chi tiết bài viết theo slug
-  getPostBySlug: async (slug) => {
-    try {
-      return await apiClient.get(`/posts/slug/${slug}`);
-    } catch (err) {
-      const cached = [...getOfflineCreatedPosts(), ...getCachedPosts()];
-      const found = cached.find((p) => p.slug === slug || p._id === slug);
-      if (found) {
-        return { data: found, success: true, fromCache: true };
+  // Lấy chi tiết bài viết theo slug (hỗ trợ Warm-Cache 45s & In-Flight Request Deduplication)
+  getPostBySlug: async (slug, options = {}) => {
+    if (!slug) throw new Error('Slug bài viết không hợp lệ');
+    const force = Boolean(options?.force);
+    const normalizedSlug = String(slug || '').trim();
+    const cacheKey = buildPostDetailCacheKey(normalizedSlug);
+
+    if (!force) {
+      const warmHit = getWarmCachedPostBySlug(normalizedSlug);
+      if (warmHit) {
+        return warmHit;
       }
-      throw err;
+
+      const existingPromise = inFlightPostDetailRequests.get(cacheKey);
+      if (existingPromise) {
+        return existingPromise;
+      }
+    }
+
+    const requestEpoch = warmCacheEpoch;
+
+    const requestPromise = (async () => {
+      try {
+        const res = await apiClient.get(`/posts/slug/${encodeURIComponent(normalizedSlug)}`);
+        if (res && res.data) {
+          if (requestEpoch === warmCacheEpoch) {
+            setWarmCachedPostBySlug(cacheKey, res);
+          }
+          return res;
+        }
+      } catch (err) {
+        const cached = [...getOfflineCreatedPosts(), ...getCachedPosts()];
+        const found = cached.find((p) => p.slug === normalizedSlug || p._id === normalizedSlug);
+        if (found) {
+          return { data: found, success: true, fromCache: true };
+        }
+        throw err;
+      }
+      return { data: null, success: false };
+    })();
+
+    if (!force) {
+      inFlightPostDetailRequests.set(cacheKey, requestPromise);
+    }
+
+    try {
+      return await requestPromise;
+    } finally {
+      if (inFlightPostDetailRequests.get(cacheKey) === requestPromise) {
+        inFlightPostDetailRequests.delete(cacheKey);
+      }
     }
   },
 
@@ -473,4 +558,22 @@ export const prefetchPosts = (params = {}) => {
     return Promise.resolve(existingWarm);
   }
   return postService.getPosts(normalized).catch(() => null);
+};
+
+/**
+ * Predictive Post Detail Warm-Cache Prefetcher:
+ * Nạp trước âm thầm chi tiết bài viết khi người dùng hover chuột 120ms hoặc focus bàn phím vào PostCard.
+ * Tận dụng In-Flight Deduplication để không bao giờ tạo request trùng lặp.
+ */
+export const prefetchPostBySlug = (slug) => {
+  if (!slug) return Promise.resolve(null);
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return Promise.resolve(null);
+  }
+  const cleanSlug = String(slug).trim();
+  const existingWarm = getWarmCachedPostBySlug(cleanSlug);
+  if (existingWarm) {
+    return Promise.resolve(existingWarm);
+  }
+  return postService.getPostBySlug(cleanSlug).catch(() => null);
 };

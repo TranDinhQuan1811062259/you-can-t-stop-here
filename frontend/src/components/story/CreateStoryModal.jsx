@@ -37,6 +37,7 @@ export const CreateStoryModal = ({ isOpen, onClose, storyToEdit = null }) => {
   const [isEraser, setIsEraser] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
   const historyRef = useRef([]);
+  const initCanvasTimerRef = useRef(null);
 
   const isEditing = Boolean(storyToEdit);
 
@@ -127,15 +128,27 @@ export const CreateStoryModal = ({ isOpen, onClose, storyToEdit = null }) => {
       setIsPlayingPreview(false);
       historyRef.current = [];
 
-      setTimeout(() => {
+      if (initCanvasTimerRef.current) {
+        clearTimeout(initCanvasTimerRef.current);
+      }
+      initCanvasTimerRef.current = setTimeout(() => {
+        initCanvasTimerRef.current = null;
         initCanvas();
       }, 100);
     } else {
+      if (initCanvasTimerRef.current) {
+        clearTimeout(initCanvasTimerRef.current);
+        initCanvasTimerRef.current = null;
+      }
       stopStoryMusic();
       setIsPlayingPreview(false);
     }
 
     return () => {
+      if (initCanvasTimerRef.current) {
+        clearTimeout(initCanvasTimerRef.current);
+        initCanvasTimerRef.current = null;
+      }
       stopStoryMusic();
     };
   }, [isOpen, storyToEdit]);

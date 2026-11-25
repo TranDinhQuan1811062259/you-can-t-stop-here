@@ -334,6 +334,8 @@ export const RantAndBurnModal = ({ isOpen, onClose, onOpenCafe }) => {
   const canvasRef = useRef(null);
   const animFrameRef = useRef(null);
   const particlesRef = useRef([]);
+  const rumbleTimerRef = useRef(null);
+  const burnTimerRef = useRef(null);
 
   // Tách YouTube ID
   const extractYouTubeId = (urlOrId) => {
@@ -376,8 +378,36 @@ export const RantAndBurnModal = ({ isOpen, onClose, onOpenCafe }) => {
     } else {
       fireSynth.stop();
       setIsSadMusicPlaying(false);
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+      if (rumbleTimerRef.current) {
+        clearTimeout(rumbleTimerRef.current);
+        rumbleTimerRef.current = null;
+      }
+      if (burnTimerRef.current) {
+        clearTimeout(burnTimerRef.current);
+        burnTimerRef.current = null;
+      }
     }
+
+    return () => {
+      fireSynth.stop();
+      setIsSadMusicPlaying(false);
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+      if (rumbleTimerRef.current) {
+        clearTimeout(rumbleTimerRef.current);
+        rumbleTimerRef.current = null;
+      }
+      if (burnTimerRef.current) {
+        clearTimeout(burnTimerRef.current);
+        burnTimerRef.current = null;
+      }
+    };
   }, [isOpen]);
 
   // Phân tích cường độ cảm xúc
@@ -420,6 +450,11 @@ export const RantAndBurnModal = ({ isOpen, onClose, onOpenCafe }) => {
     }
 
     particlesRef.current = particles;
+
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
 
     const render = () => {
       ctx.clearRect(0, 0, width, height);
@@ -481,18 +516,37 @@ export const RantAndBurnModal = ({ isOpen, onClose, onOpenCafe }) => {
     initParticles();
 
     // Rung giật màn hình nhẹ nhàng trong 1.5s
-    setTimeout(() => setRumble(false), 1500);
+    if (rumbleTimerRef.current) clearTimeout(rumbleTimerRef.current);
+    rumbleTimerRef.current = setTimeout(() => {
+      setRumble(false);
+      rumbleTimerRef.current = null;
+    }, 1500);
 
     // Sau 3.8s: Đốt xong hoàn toàn, biến thành tro tàn và nảy mầm cây
-    setTimeout(() => {
+    if (burnTimerRef.current) clearTimeout(burnTimerRef.current);
+    burnTimerRef.current = setTimeout(() => {
       fireSynth.stop();
       setBurnStage('ashes');
       setRantText(''); // Xóa sổ hoàn toàn dữ liệu trên RAM
+      burnTimerRef.current = null;
     }, 3800);
   };
 
   const handleResetForNext = () => {
     playClickSound();
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+    if (rumbleTimerRef.current) {
+      clearTimeout(rumbleTimerRef.current);
+      rumbleTimerRef.current = null;
+    }
+    if (burnTimerRef.current) {
+      clearTimeout(burnTimerRef.current);
+      burnTimerRef.current = null;
+    }
+    setRumble(false);
     setBurnStage('writing');
     setRantText('');
     const randIdx = Math.floor(Math.random() * HEALING_AFFIRMATIONS.length);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { postService } from '../services/postService';
+import { postService, getWarmCachedPostBySlug } from '../services/postService';
 import { formatDate } from '../utils/formatDate';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -31,11 +31,12 @@ export const PostDetailPage = () => {
   const { user } = useAuth();
   const { openChatWithUser, handleAddFriend, friendsList } = useChat();
 
-  const [post, setPost] = useState(null);
+  const warmHit = getWarmCachedPostBySlug(slug);
+  const [post, setPost] = useState(() => warmHit?.data || null);
   const [recentPosts, setRecentPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !warmHit?.data);
   const [error, setError] = useState(null);
-  const [cheers, setCheers] = useState(0);
+  const [cheers, setCheers] = useState(() => warmHit?.data?.cheersCount || warmHit?.data?.reactionsCount || 0);
   const [hasCheered, setHasCheered] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
@@ -198,10 +199,24 @@ export const PostDetailPage = () => {
     };
   }, []);
 
-  const fetchPostDetail = useCallback((targetSlug) => {
+  const fetchPostDetail = useCallback((targetSlug, options = {}) => {
     const currentSlug = targetSlug || slug;
+    const force = Boolean(options?.force);
+
+    if (!force) {
+      const warmEntry = getWarmCachedPostBySlug(currentSlug);
+      if (warmEntry?.data) {
+        if (!isMountedRef.current || activeSlugRef.current !== currentSlug) return;
+        setPost(warmEntry.data);
+        setCheers(warmEntry.data.cheersCount || warmEntry.data.reactionsCount || warmEntry.data.reactionCounts?.total || 0);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+    }
+
     postService
-      .getPostBySlug(currentSlug)
+      .getPostBySlug(currentSlug, { force })
       .then((res) => {
         if (!isMountedRef.current || activeSlugRef.current !== currentSlug) return;
         setPost(res.data);
@@ -235,8 +250,16 @@ export const PostDetailPage = () => {
   }, [slug]);
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
+    const warmEntry = getWarmCachedPostBySlug(slug);
+    if (warmEntry?.data) {
+      setPost(warmEntry.data);
+      setCheers(warmEntry.data.cheersCount || warmEntry.data.reactionsCount || warmEntry.data.reactionCounts?.total || 0);
+      setLoading(false);
+      setError(null);
+    } else {
+      setLoading(true);
+      setError(null);
+    }
     setHasCheered(false);
 
     fetchPostDetail(slug);
@@ -263,16 +286,18 @@ export const PostDetailPage = () => {
 
     const handleRefresh = () => {
       if (isMountedRef.current) {
-        fetchPostDetail(activeSlugRef.current);
+        fetchPostDetail(activeSlugRef.current, { force: true });
       }
     };
 
     window.addEventListener('profile_updated', handleRefresh);
     window.addEventListener('post_updated', handleRefresh);
+    window.addEventListener('freedom_auth_changed', handleRefresh);
 
     return () => {
       window.removeEventListener('profile_updated', handleRefresh);
       window.removeEventListener('post_updated', handleRefresh);
+      window.removeEventListener('freedom_auth_changed', handleRefresh);
     };
   }, [slug, fetchPostDetail]);
 

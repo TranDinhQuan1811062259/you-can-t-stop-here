@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { formatDate } from '../../utils/formatDate';
-import { postService } from '../../services/postService';
+import { postService, prefetchPostBySlug } from '../../services/postService';
 import { playClickSound } from '../../utils/soundEffects';
 import { ATMOSPHERE_THEMES } from '../../utils/postAtmosphereEngine';
 import { SharePostModal } from './SharePostModal';
@@ -37,6 +37,35 @@ export const PostCard = ({ post }) => {
   const [isPlayingAi, setIsPlayingAi] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [localSharesCount, setLocalSharesCount] = useState(post.sharesCount || post.repostCount || 0);
+
+  // Predictive Post Detail Warm-Cache: Nạp trước bài viết âm thầm khi hover 120ms hoặc focus
+  const hoverPrefetchTimerRef = useRef(null);
+
+  const cancelPostPrefetch = () => {
+    if (hoverPrefetchTimerRef.current) {
+      clearTimeout(hoverPrefetchTimerRef.current);
+      hoverPrefetchTimerRef.current = null;
+    }
+  };
+
+  const schedulePostPrefetch = (immediate = false) => {
+    cancelPostPrefetch();
+    if (!post?.slug) return;
+    if (immediate) {
+      prefetchPostBySlug(post.slug);
+      return;
+    }
+    hoverPrefetchTimerRef.current = setTimeout(() => {
+      hoverPrefetchTimerRef.current = null;
+      prefetchPostBySlug(post.slug);
+    }, 120);
+  };
+
+  useEffect(() => {
+    return () => {
+      cancelPostPrefetch();
+    };
+  }, []);
 
   // Lắng nghe trạng thái phát âm thanh A.I toàn cục
   useEffect(() => {
@@ -193,6 +222,9 @@ export const PostCard = ({ post }) => {
     <article
       className={`post-card post-card-${postFormat} ${post.isFlagged ? 'is-flagged-card' : ''} ${hasAtmosphere ? 'has-atmosphere-card' : ''}`}
       style={hasAtmosphere ? { borderTop: `3px solid ${customAccentColor}` } : {}}
+      onMouseEnter={() => schedulePostPrefetch(false)}
+      onMouseLeave={cancelPostPrefetch}
+      onFocus={() => schedulePostPrefetch(true)}
     >
       {/* Hiệu ứng thời tiết tích tụ trên khung bài viết khi nhàn rỗi (Tuyết / Hoa / Lá / Tan chảy) */}
       <PostCardIdleOverlay />
