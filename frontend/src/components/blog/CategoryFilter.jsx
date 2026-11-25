@@ -16,27 +16,22 @@ export const CategoryFilter = ({
   const barRef = useRef(null);
   const pillRefs = useRef({});
 
-  // Tự động cuộn mượt pill chủ đề đang chọn vào giữa thanh danh mục
+  // Tự động cuộn mượt pill chủ đề đang chọn vào giữa thanh danh mục (CHỈ cuộn ngang trong track, cấm cuộn dọc trang)
   useEffect(() => {
     const key = activeCategory || '';
     const activeEl = pillRefs.current[key];
-    if (!activeEl) return;
+    const container = barRef.current;
+    if (!activeEl || !container) return;
 
     const rafId = requestAnimationFrame(() => {
-      try {
-        activeEl.scrollIntoView({
-          behavior: 'smooth',
-          inline: 'center',
-          block: 'nearest',
-        });
-      } catch (_) {
-        const container = barRef.current;
-        if (container) {
-          const targetLeft =
-            activeEl.offsetLeft - container.clientWidth / 2 + activeEl.offsetWidth / 2;
-          container.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
-        }
-      }
+      const containerRect = container.getBoundingClientRect();
+      const activeRect = activeEl.getBoundingClientRect();
+      const targetLeft =
+        container.scrollLeft +
+        (activeRect.left - containerRect.left) -
+        container.clientWidth / 2 +
+        activeRect.width / 2;
+      container.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
     });
 
     return () => cancelAnimationFrame(rafId);

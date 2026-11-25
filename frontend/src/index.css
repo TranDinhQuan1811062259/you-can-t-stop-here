@@ -23661,6 +23661,17 @@ body.theme-light .user-milestone-pill,
 
 .category-hero-banner.is-swipe-enabled {
   cursor: grab;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+}
+
+.category-hero-banner.is-swipe-enabled *:not(input):not(textarea):not([contenteditable="true"]) {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
 }
 
 .category-hero-banner.is-dragging {
@@ -23689,7 +23700,7 @@ body.theme-light .user-milestone-pill,
   position: relative;
   z-index: 2;
   will-change: transform, opacity;
-  transform: translate3d(calc(var(--drag-x, 0px) * 0.42), 0, 0)
+  transform: translate3d(calc(var(--drag-x, 0px) * 0.45), 0, 0)
     scale(calc(1 - var(--drag-progress, 0) * 0.035));
   opacity: calc(1 - var(--drag-progress, 0) * 0.48);
 }
@@ -24795,7 +24806,50 @@ body.theme-light .season-autumn .hero-banner .hero-title .hero-title-accent {
   }
 }
 
+/* ========================================================
+   8. MASCOT & RESILIENCE TREE OVERLAP GUARD + HERO RAIL SPACING
+   ======================================================== */
+.floating-festive-mascot-widget.is-compact-hero {
+  width: 80px !important;
+}
 
+.floating-festive-mascot-widget.is-compact-hero .mascot-graphic-wrap {
+  width: 48px !important;
+  height: 48px !important;
+}
 
+.floating-festive-mascot-widget.is-compact-hero .mascot-label-pill {
+  max-width: 80px !important;
+  font-size: 0.62rem !important;
+  padding: 2px 6px !important;
+}
 
+.desk-companion-pet-root.is-over-hero {
+  opacity: 0.94;
+}
+
+.desk-companion-pet-root.is-over-hero .pet-gear-toggle-btn {
+  width: 24px !important;
+  height: 24px !important;
+  font-size: 0.7rem !important;
+}
+
+.hero-banner.variant-home .category-spatial-rail {
+  margin-top: 20px;
+}
+
+@media (max-width: 640px) {
+  .community-resilience-tree-section {
+    padding: 14px 14px !important;
+  }
+
+  .tree-actions-btn-group {
+    gap: 8px !important;
+  }
+
+  .tree-actions-btn-group button {
+    font-size: 0.76rem !important;
+    padding: 7px 11px !important;
+  }
+}
 

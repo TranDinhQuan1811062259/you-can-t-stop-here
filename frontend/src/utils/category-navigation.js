@@ -1,7 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { categoryService } from '../services/categoryService';
 
-const CATEGORIES_CACHE_KEY = 'freedom_cached_categories_v1';
+const CATEGORIES_CACHE_KEY = 'freedom_cached_categories_v2';
+const LEGACY_CATEGORIES_CACHE_KEY = 'freedom_cached_categories_v1';
+
+// Các chủ đề ngoài lề được thêm thừa trước đây cần loại bỏ triệt để khỏi điều hướng & dải dot
+const EXTRANEOUS_CATEGORY_SLUGS = new Set([
+  'thoi-su-tinh-hinh-the-gioi',
+  'chien-su-xung-dot-hoa-binh',
+  'goc-nhin-xa-hoi',
+  'tam-su-doi-song-thuong-nhat',
+]);
 
 export const HOME_TOPIC = {
   _id: '__home__',
@@ -18,7 +27,7 @@ export const HOME_TOPIC = {
     'Trút bỏ những áp lực deadline, kiệt sức và bất an nơi công sở. Bạn có thể chậm lại để nghỉ ngơi, nhưng đừng dừng lại.',
 };
 
-// Thứ tự chuyên mục gốc đồng bộ 100% với Backend persistentStore & Header Category Pills
+// Danh sách 4 chuyên mục chính thức gốc đồng bộ 100% với Seed & Header/Banner
 export const CORE_CATEGORIES_FALLBACK = [
   {
     _id: 'cat_1',
@@ -68,73 +77,45 @@ export const CORE_CATEGORIES_FALLBACK = [
     colorClass: 'healing-icon-amber',
     accentColor: '#fbbf24',
   },
-  {
-    _id: 'cat_5',
-    name: 'Thời Sự & Tình Hình Thế Giới (Global Affairs)',
-    shortLabel: 'Thời Sự',
-    slug: 'thoi-su-tinh-hinh-the-gioi',
-    description: 'Điểm tin thời cuộc, diễn biến quốc tế & góc nhìn toàn cầu',
-    icon: '🌍',
-    faIcon: 'fa-solid fa-earth-americas',
-    tabClass: 'tab-global',
-    colorClass: 'healing-icon-sage',
-    accentColor: '#38bdf8',
-  },
-  {
-    _id: 'cat_6',
-    name: 'Chiến Sự, Xung Đột & Hòa Bình (Conflict & Peace)',
-    shortLabel: 'Hòa Bình',
-    slug: 'chien-su-xung-dot-hoa-binh',
-    description: 'Bình luận thời cuộc, góc nhìn nhân đạo & khát vọng hòa bình',
-    icon: '🕊️',
-    faIcon: 'fa-solid fa-dove',
-    tabClass: 'tab-global',
-    colorClass: 'healing-icon-sage',
-    accentColor: '#60a5fa',
-  },
-  {
-    _id: 'cat_7',
-    name: 'Góc Nhìn & Xã Hội (Perspective & Society)',
-    shortLabel: 'Góc Nhìn',
-    slug: 'goc-nhin-xa-hoi',
-    description: 'Quan điểm đa chiều về thời cuộc và đời sống xã hội',
-    icon: '🌐',
-    faIcon: 'fa-solid fa-globe',
-    tabClass: 'tab-restart',
-    colorClass: 'healing-icon-sage',
-    accentColor: '#a78bfa',
-  },
-  {
-    _id: 'cat_8',
-    name: 'Tâm Sự & Đời Sống Thường Nhật (Life Stories)',
-    shortLabel: 'Đời Sống',
-    slug: 'tam-su-doi-song-thuong-nhat',
-    description: 'Những dòng tâm sự thật, trải lòng nhẹ nhàng không phán xét',
-    icon: '☕',
-    faIcon: 'fa-solid fa-mug-hot',
-    tabClass: 'tab-wins',
-    colorClass: 'healing-icon-amber',
-    accentColor: '#fb923c',
-  },
 ];
 
 const CORE_META_BY_SLUG = new Map(CORE_CATEGORIES_FALLBACK.map((c) => [c.slug, c]));
+
+export const CORE_TOPICS = [
+  HOME_TOPIC,
+  ...CORE_CATEGORIES_FALLBACK.map((c) => ({
+    ...c,
+    path: `/category/${c.slug}`,
+  })),
+];
+
+const normalizeSlugValue = (slug = '') => {
+  const raw = String(slug || '').trim();
+  if (!raw) return '';
+  try {
+    return decodeURIComponent(raw);
+  } catch (_) {
+    return raw;
+  }
+};
 
 /**
  * Suy đoán icon, shortLabel và màu sắc thống nhất cho cả danh mục mặc định lẫn danh mục người dùng tự tạo
  */
 export const enrichCategoryMeta = (rawCat) => {
-  if (!rawCat || !rawCat.slug) return null;
-  if (rawCat.slug === '' || rawCat._id === '__home__') return HOME_TOPIC;
+  if (!rawCat || rawCat.slug === undefined || rawCat.slug === null) return null;
+  const slug = normalizeSlugValue(rawCat.slug);
+  if (slug === '' || rawCat._id === '__home__') return HOME_TOPIC;
 
-  const core = CORE_META_BY_SLUG.get(rawCat.slug);
-  const name = rawCat.name || core?.name || rawCat.slug.replace(/-/g, ' ');
+  const core = CORE_META_BY_SLUG.get(slug);
+  const name = rawCat.name || core?.name || slug.replace(/-/g, ' ');
   const lower = name.toLowerCase();
 
   if (core) {
     return {
       ...core,
       ...rawCat,
+      slug,
       name,
       shortLabel: rawCat.shortLabel || core.shortLabel,
       icon: rawCat.icon || core.icon,
@@ -143,7 +124,7 @@ export const enrichCategoryMeta = (rawCat) => {
       colorClass: rawCat.colorClass || core.colorClass,
       accentColor: rawCat.accentColor || core.accentColor,
       description: rawCat.description || core.description,
-      path: `/category/${rawCat.slug}`,
+      path: `/category/${slug}`,
     };
   }
 
@@ -177,24 +158,6 @@ export const enrichCategoryMeta = (rawCat) => {
     tabClass = 'tab-wins';
     accentColor = '#fbbf24';
     fallbackEmoji = '✨';
-  } else if (lower.includes('thế giới') || lower.includes('quốc tế') || lower.includes('thời sự') || lower.includes('global')) {
-    faIcon = 'fa-solid fa-earth-americas';
-    colorClass = 'healing-icon-sage';
-    tabClass = 'tab-global';
-    accentColor = '#38bdf8';
-    fallbackEmoji = '🌍';
-  } else if (lower.includes('chiến sự') || lower.includes('hòa bình') || lower.includes('xung đột')) {
-    faIcon = 'fa-solid fa-dove';
-    colorClass = 'healing-icon-sage';
-    tabClass = 'tab-global';
-    accentColor = '#60a5fa';
-    fallbackEmoji = '🕊️';
-  } else if (lower.includes('tâm sự') || lower.includes('đời sống') || lower.includes('life')) {
-    faIcon = 'fa-solid fa-mug-hot';
-    colorClass = 'healing-icon-amber';
-    tabClass = 'tab-wins';
-    accentColor = '#fb923c';
-    fallbackEmoji = '☕';
   }
 
   // Rút gọn nhãn trên thanh Header Pill nếu tên quá dài
@@ -203,6 +166,7 @@ export const enrichCategoryMeta = (rawCat) => {
 
   return {
     ...rawCat,
+    slug,
     name,
     shortLabel: rawCat.shortLabel || shortLabel,
     icon: rawCat.icon || fallbackEmoji,
@@ -211,28 +175,29 @@ export const enrichCategoryMeta = (rawCat) => {
     tabClass,
     accentColor,
     description: rawCat.description || 'Không gian chia sẻ và đồng cảm cùng cộng đồng',
-    path: `/category/${rawCat.slug}`,
+    path: `/category/${slug}`,
   };
 };
 
 /**
- * Chuẩn hóa danh sách chủ đề, giữ thứ tự nhất quán giữa Header, Banner & Pages
+ * Chuẩn hóa danh sách chủ đề, giữ thứ tự 4 chủ đề chính thức gốc và lọc bỏ các chủ đề ngoài ý muốn
  */
 export const normalizeCategoryList = (rawList) => {
   const input = Array.isArray(rawList) && rawList.length > 0 ? rawList : CORE_CATEGORIES_FALLBACK;
   const bySlug = new Map();
 
-  // Đảm bảo danh mục cốt lõi luôn hiện diện trước theo đúng thứ tự chuẩn
+  // Đảm bảo 4 danh mục chính thức gốc luôn hiện diện trước theo đúng thứ tự chuẩn
   CORE_CATEGORIES_FALLBACK.forEach((def) => {
     bySlug.set(def.slug, enrichCategoryMeta(def));
   });
 
-  // Cập nhật thông tin hoặc bổ sung thêm các danh mục do server/người dùng tạo
+  // Cập nhật thông tin hoặc bổ sung thêm các danh mục hợp lệ do người dùng tạo (bỏ qua 4 slug bị thêm thừa)
   input.forEach((item) => {
-    if (!item || !item.slug) return;
-    const enriched = enrichCategoryMeta(item);
+    const slug = normalizeSlugValue(item?.slug);
+    if (!slug || EXTRANEOUS_CATEGORY_SLUGS.has(slug)) return;
+    const enriched = enrichCategoryMeta({ ...item, slug });
     if (enriched) {
-      bySlug.set(item.slug, enriched);
+      bySlug.set(slug, enriched);
     }
   });
 
@@ -244,6 +209,9 @@ const readCachedCategories = () => {
     if (typeof window === 'undefined' || !window.localStorage) {
       return normalizeCategoryList(CORE_CATEGORIES_FALLBACK);
     }
+    try {
+      localStorage.removeItem(LEGACY_CATEGORIES_CACHE_KEY);
+    } catch (_) {}
     const raw = localStorage.getItem(CATEGORIES_CACHE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
@@ -270,7 +238,7 @@ const persistSharedCategories = (list) => {
 
 /**
  * Hook dùng chung cho Header, HomePage, CategoryPage và PageTransitionWrapper
- * Trả về danh sách chủ đề đồng bộ tức thì (0ms) và tự động đồng bộ từ API
+ * Cung cấp coreTopics (5 mục chính thức gốc) và danh sách categories đã chuẩn hóa
  */
 export const useCategoryRegistry = () => {
   const [categories, setCategories] = useState(() => sharedCategoriesMemory);
@@ -312,8 +280,9 @@ export const useCategoryRegistry = () => {
 
     const handleCategoryCreated = (e) => {
       const created = e?.detail?.category;
-      if (!created || !created.slug) return;
-      const updated = normalizeCategoryList([...sharedCategoriesMemory, created]);
+      const createdSlug = normalizeSlugValue(created?.slug);
+      if (!createdSlug || EXTRANEOUS_CATEGORY_SLUGS.has(createdSlug)) return;
+      const updated = normalizeCategoryList([...sharedCategoriesMemory, { ...created, slug: createdSlug }]);
       persistSharedCategories(updated);
       if (mounted) {
         setCategories(updated);
@@ -327,24 +296,25 @@ export const useCategoryRegistry = () => {
     };
   }, []);
 
-  const topics = useMemo(() => [HOME_TOPIC, ...categories], [categories]);
+  const topics = useMemo(() => CORE_TOPICS, []);
 
   const appendCategory = (created) => {
-    if (!created || !created.slug) return;
-    const updated = normalizeCategoryList([...sharedCategoriesMemory, created]);
+    const createdSlug = normalizeSlugValue(created?.slug);
+    if (!createdSlug || EXTRANEOUS_CATEGORY_SLUGS.has(createdSlug)) return;
+    const updated = normalizeCategoryList([...sharedCategoriesMemory, { ...created, slug: createdSlug }]);
     persistSharedCategories(updated);
     setCategories(updated);
   };
 
-  return { categories, topics, appendCategory };
+  return { categories, coreTopics: CORE_TOPICS, topics, appendCategory };
 };
 
 /**
  * Tìm chủ đề hiện tại, chủ đề trước và chủ đề tiếp theo theo đúng 1 bước duy nhất
  */
 export const getAdjacentTopics = (topics = [], activeSlug = '') => {
-  const safeTopics = Array.isArray(topics) && topics.length > 0 ? topics : [HOME_TOPIC, ...CORE_CATEGORIES_FALLBACK];
-  const normalizedSlug = String(activeSlug || '');
+  const safeTopics = Array.isArray(topics) && topics.length > 0 ? topics : CORE_TOPICS;
+  const normalizedSlug = normalizeSlugValue(activeSlug);
   const currentIndex = safeTopics.findIndex(
     (t) => t.slug === normalizedSlug || t._id === normalizedSlug
   );
@@ -379,7 +349,7 @@ let pendingBannerTransition = {
 export const setPendingBannerTransition = (direction, targetSlug = '') => {
   pendingBannerTransition = {
     direction: direction === 'prev' || direction === 'next' ? direction : null,
-    targetSlug: String(targetSlug || ''),
+    targetSlug: normalizeSlugValue(targetSlug),
     timestamp: Date.now(),
   };
 
@@ -396,7 +366,7 @@ export const setPendingBannerTransition = (direction, targetSlug = '') => {
 };
 
 export const peekPendingBannerTransition = (currentSlug = '') => {
-  const normalized = String(currentSlug || '');
+  const normalized = normalizeSlugValue(currentSlug);
   if (
     pendingBannerTransition.direction &&
     pendingBannerTransition.targetSlug === normalized &&
@@ -408,7 +378,10 @@ export const peekPendingBannerTransition = (currentSlug = '') => {
 };
 
 export const clearPendingBannerTransition = (targetSlug) => {
-  if (targetSlug === undefined || pendingBannerTransition.targetSlug === String(targetSlug || '')) {
+  if (
+    targetSlug === undefined ||
+    pendingBannerTransition.targetSlug === normalizeSlugValue(targetSlug)
+  ) {
     pendingBannerTransition = { direction: null, targetSlug: '', timestamp: 0 };
   }
 };

@@ -94,11 +94,56 @@ export const DeskCompanionPet = () => {
     return resolveAntiCollision('pet', raw, true);
   });
   const [isDragging, setIsDragging] = useState(false);
+  const [isOverHeroBanner, setIsOverHeroBanner] = useState(false);
   const dragStartRef = useRef({ mouseX: 0, mouseY: 0, btnX: 0, btnY: 0 });
   const hasMovedRef = useRef(false);
   const activePointerIdRef = useRef(null);
   const bubbleTimerRef = useRef(null);
   const asideRef = useRef(null);
+
+  // Phát hiện xem Mascot đang nằm trong vùng chiều cao của Banner chủ đề / tiêu đề h1 để thu gọn & né chồng đè
+  useEffect(() => {
+    let checkTimer = null;
+    const evaluateHeroOverlap = () => {
+      if (typeof document === 'undefined') return;
+      const banner = document.querySelector('.category-hero-banner, .hero-banner');
+      if (!banner) {
+        setIsOverHeroBanner(false);
+        return;
+      }
+      const bannerRect = banner.getBoundingClientRect();
+      const titleEl = banner.querySelector('.hero-title');
+      const titleRect = titleEl ? titleEl.getBoundingClientRect() : bannerRect;
+      const widgetRect = asideRef.current?.getBoundingClientRect();
+      const widgetTop = widgetRect ? widgetRect.top : btnPos.y;
+      const widgetBottom = widgetRect ? widgetRect.bottom : btnPos.y + 76;
+
+      const overlapsBand =
+        bannerRect.height > 0 &&
+        bannerRect.bottom > 64 &&
+        widgetBottom >= Math.max(0, titleRect.top - 36) &&
+        widgetTop <= bannerRect.bottom + 24;
+
+      setIsOverHeroBanner(overlapsBand);
+    };
+
+    const scheduleCheck = () => {
+      if (checkTimer) clearTimeout(checkTimer);
+      checkTimer = setTimeout(evaluateHeroOverlap, 60);
+    };
+
+    evaluateHeroOverlap();
+    window.addEventListener('scroll', scheduleCheck, { passive: true });
+    window.addEventListener('resize', scheduleCheck);
+    window.addEventListener('freedom_topic_switching', scheduleCheck);
+
+    return () => {
+      if (checkTimer) clearTimeout(checkTimer);
+      window.removeEventListener('scroll', scheduleCheck);
+      window.removeEventListener('resize', scheduleCheck);
+      window.removeEventListener('freedom_topic_switching', scheduleCheck);
+    };
+  }, [btnPos.y]);
 
   // Tự động kiểm tra và thụt lề nếu bị cấn vào mép phải màn hình
   useEffect(() => {
@@ -160,9 +205,11 @@ export const DeskCompanionPet = () => {
     return () => window.removeEventListener('freedom_fab_pos_changed', handleRecheckCollision);
   }, []);
 
-  // Tự động nhắc nhở thư giãn ngẫu nhiên mỗi 75 giây
+  // Tự động nhắc nhở thư giãn ngẫu nhiên mỗi 75 giây (Tự hoãn bật bong bóng khi đang ở vùng Banner hẹp)
   useEffect(() => {
     const timer = setInterval(() => {
+      const vpW = typeof window !== 'undefined' ? window.innerWidth : 1200;
+      if (isOverHeroBanner && vpW <= 960) return;
       const randomQ = WELLNESS_QUOTES[Math.floor(Math.random() * WELLNESS_QUOTES.length)];
       setCurrentQuote(randomQ);
       setShowSpeechBubble(true);
@@ -173,7 +220,7 @@ export const DeskCompanionPet = () => {
       clearInterval(timer);
       clearTimeout(bubbleTimerRef.current);
     };
-  }, []);
+  }, [isOverHeroBanner]);
 
   // Xử lý kéo thả bằng Pointer Events (chống dính chuột, mượt mà trên cả điện thoại & PC)
   const handlePointerDown = (e) => {
@@ -383,15 +430,16 @@ export const DeskCompanionPet = () => {
     : (typeof window !== 'undefined' ? window.innerWidth : 1200);
   const isRightSide = btnPos.x > screenWidth / 2;
   const isTopSide = btnPos.y < 230;
+  const useCompactBubble = isOverHeroBanner || screenWidth <= 768;
 
   return (
     <aside
       ref={asideRef}
-      className={`desk-companion-pet-root ${isDragging ? 'is-dragging' : ''} ${isRightSide ? 'docked-right' : 'docked-left'}`}
+      className={`desk-companion-pet-root ${isDragging ? 'is-dragging' : ''} ${isRightSide ? 'docked-right' : 'docked-left'} ${isOverHeroBanner ? 'is-over-hero' : ''}`}
       style={{
         position: 'fixed',
-        left: isDragging ? `${btnPos.x}px` : (!isRightSide ? '24px' : 'auto'),
-        right: isDragging ? 'auto' : (isRightSide ? '32px' : 'auto'),
+        left: isDragging ? `${btnPos.x}px` : (!isRightSide ? (screenWidth <= 640 ? '12px' : '24px') : 'auto'),
+        right: isDragging ? 'auto' : (isRightSide ? (screenWidth <= 640 ? '12px' : '24px') : 'auto'),
         top: `${btnPos.y}px`,
         zIndex: isDragging ? 10001 : 9996,
         userSelect: 'none',
@@ -400,7 +448,7 @@ export const DeskCompanionPet = () => {
         cursor: isDragging ? 'grabbing' : 'grab',
         transition: isDragging
           ? 'none'
-          : 'left 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)',
+          : 'left 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.22s ease',
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -410,29 +458,44 @@ export const DeskCompanionPet = () => {
       aria-label="Bé thú cưng bàn làm việc"
     >
       {/* ========================================================
-          1. BONG BÓNG LỜI THOẠI 3D GLASSMORPHISM (TỰ HƯỚNG RA KHOẢNG TRỐNG TRÁI/PHẢI)
+          1. BONG BÓNG LỜI THOẠI 3D GLASSMORPHISM (TỰ THU GỌN & HƯỚNG DƯỚI KHI GẦN HERO BANNER H1)
          ======================================================== */}
       {showSpeechBubble && (
         <div
-          className={`pet-speech-bubble-3d ${isRightSide ? 'bubble-dock-right' : 'bubble-dock-left'} ${isTopSide ? 'bubble-dock-top' : 'bubble-dock-bottom'}`}
+          className={`pet-speech-bubble-3d ${isRightSide ? 'bubble-dock-right' : 'bubble-dock-left'} ${isTopSide ? 'bubble-dock-top' : 'bubble-dock-bottom'} ${useCompactBubble ? 'is-compact-hero-bubble' : ''}`}
           style={{
             position: 'absolute',
-            [isRightSide ? 'right' : 'left']: 'calc(100% + 14px)',
-            [isRightSide ? 'left' : 'right']: 'auto',
-            top: isTopSide ? '0' : 'auto',
-            bottom: isTopSide ? 'auto' : '0',
-            width: '270px',
-            maxWidth: 'calc(100vw - 36px)',
+            ...(useCompactBubble
+              ? {
+                  top: 'calc(100% + 8px)',
+                  bottom: 'auto',
+                  [isRightSide ? 'right' : 'left']: '0',
+                  [isRightSide ? 'left' : 'right']: 'auto',
+                  width: '205px',
+                  maxWidth: 'calc(100vw - 28px)',
+                  padding: '8px 11px',
+                  borderRadius: '14px',
+                  fontSize: '0.74rem',
+                  lineHeight: 1.4,
+                }
+              : {
+                  [isRightSide ? 'right' : 'left']: 'calc(100% + 14px)',
+                  [isRightSide ? 'left' : 'right']: 'auto',
+                  top: isTopSide ? '0' : 'auto',
+                  bottom: isTopSide ? 'auto' : '0',
+                  width: '260px',
+                  maxWidth: 'calc(100vw - 36px)',
+                  padding: '12px 14px',
+                  borderRadius: '18px',
+                  fontSize: '0.82rem',
+                  lineHeight: 1.55,
+                }),
             background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.94) 0%, rgba(30, 41, 59, 0.92) 100%)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',
             border: `1.5px solid ${currentConfig.accentColor}`,
-            borderRadius: '18px',
-            padding: '12px 14px',
             boxShadow: `0 14px 34px rgba(0, 0, 0, 0.55), 0 0 20px ${currentConfig.glowColor}, inset 0 1px 0 rgba(255, 255, 255, 0.2)`,
             color: '#f8fafc',
-            fontSize: '0.82rem',
-            lineHeight: 1.55,
             fontWeight: 600,
             pointerEvents: 'auto',
             animation: 'petBubblePop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
@@ -480,17 +543,31 @@ export const DeskCompanionPet = () => {
 
           {/* Mũi tên bong bóng chỉ về bé thú cưng */}
           <div
-            style={{
-              position: 'absolute',
-              [isRightSide ? 'right' : 'left']: '-8px',
-              top: '20px',
-              width: 0,
-              height: 0,
-              borderTop: '7px solid transparent',
-              borderBottom: '7px solid transparent',
-              [isRightSide ? 'borderLeft' : 'borderRight']: `8px solid ${currentConfig.accentColor}`,
-              filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.3))',
-            }}
+            style={
+              useCompactBubble
+                ? {
+                    position: 'absolute',
+                    top: '-8px',
+                    [isRightSide ? 'right' : 'left']: '22px',
+                    width: 0,
+                    height: 0,
+                    borderLeft: '7px solid transparent',
+                    borderRight: '7px solid transparent',
+                    borderBottom: `8px solid ${currentConfig.accentColor}`,
+                    filter: 'drop-shadow(0 -2px 3px rgba(0,0,0,0.3))',
+                  }
+                : {
+                    position: 'absolute',
+                    [isRightSide ? 'right' : 'left']: '-8px',
+                    top: '20px',
+                    width: 0,
+                    height: 0,
+                    borderTop: '7px solid transparent',
+                    borderBottom: '7px solid transparent',
+                    [isRightSide ? 'borderLeft' : 'borderRight']: `8px solid ${currentConfig.accentColor}`,
+                    filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.3))',
+                  }
+            }
           />
         </div>
       )}
@@ -742,18 +819,18 @@ export const DeskCompanionPet = () => {
           className={`pet-3d-sphere ${isPettingAnim ? 'is-petting' : ''} ${isEatingAnim ? 'is-eating' : ''}`}
           style={{
             position: 'relative',
-            width: isMinimized ? '50px' : '70px',
-            height: isMinimized ? '50px' : '70px',
+            width: isMinimized ? '48px' : (isOverHeroBanner ? '54px' : '66px'),
+            height: isMinimized ? '48px' : (isOverHeroBanner ? '54px' : '66px'),
             borderRadius: '50%',
             background: currentConfig.bgGradient,
             border: `3px solid ${currentConfig.accentColor}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: isMinimized ? '1.8rem' : '2.5rem',
+            fontSize: isMinimized ? '1.7rem' : (isOverHeroBanner ? '1.95rem' : '2.35rem'),
             cursor: isDragging ? 'grabbing' : 'pointer',
             boxShadow: `0 10px 24px rgba(0, 0, 0, 0.45), 0 0 16px ${currentConfig.glowColor}, inset 0 3px 6px rgba(255, 255, 255, 0.8), inset 0 -4px 6px rgba(0, 0, 0, 0.25)`,
-            transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease',
+            transition: 'width 0.22s ease, height 0.22s ease, font-size 0.22s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease',
           }}
         >
           {/* Tay cầm kéo thả 3D siêu nhỏ */}

@@ -201,7 +201,7 @@ export const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { topics: headerTopics } = useCategoryRegistry();
+  const { coreTopics: headerTopics } = useCategoryRegistry();
   const categoryPillsTrackRef = useRef(null);
   const pillRefs = useRef({});
   const hoverPrefetchTimerRef = useRef(null);
@@ -241,27 +241,22 @@ export const Header = () => {
     }, 120);
   };
 
-  // Tự động cuộn mượt thanh danh mục trên Header để pill chủ đề đang chọn luôn nằm giữa tầm nhìn
+  // Tự động cuộn mượt thanh danh mục trên Header (CHỈ cuộn ngang trong track, tránh ảnh hưởng cuộn dọc của trang)
   useEffect(() => {
     if (activeTopicSlug === null) return;
     const activeEl = pillRefs.current[activeTopicSlug];
-    if (!activeEl) return;
+    const container = categoryPillsTrackRef.current;
+    if (!activeEl || !container) return;
 
     const rafId = requestAnimationFrame(() => {
-      try {
-        activeEl.scrollIntoView({
-          behavior: 'smooth',
-          inline: 'center',
-          block: 'nearest',
-        });
-      } catch (_) {
-        const container = categoryPillsTrackRef.current;
-        if (container) {
-          const targetLeft =
-            activeEl.offsetLeft - container.clientWidth / 2 + activeEl.offsetWidth / 2;
-          container.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
-        }
-      }
+      const containerRect = container.getBoundingClientRect();
+      const activeRect = activeEl.getBoundingClientRect();
+      const targetLeft =
+        container.scrollLeft +
+        (activeRect.left - containerRect.left) -
+        container.clientWidth / 2 +
+        activeRect.width / 2;
+      container.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
     });
 
     return () => cancelAnimationFrame(rafId);
@@ -726,6 +721,7 @@ export const Header = () => {
           <div className="header-brand-wrap">
             <Link
               to="/"
+              state={{ targetSlug: '', forceScrollTop: true, transitionDirection: 'prev' }}
               className={`logo-link seasonal-logo-wrap season-${activeSeason.id}`}
               onClick={closeNav}
               title="You Can't Stop Here - Về trang chủ"

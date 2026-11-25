@@ -31,7 +31,7 @@ export const HomePage = () => {
   const searchQuery = searchParams.get('q') || '';
   const categoryParam = searchParams.get('category') || '';
 
-  const { categories, topics, appendCategory } = useCategoryRegistry();
+  const { categories, coreTopics, appendCategory } = useCategoryRegistry();
   const [selectedCategory, setSelectedCategory] = useState(categoryParam);
   const [isCommitSwitching, setIsCommitSwitching] = useState(false);
   const switchResetTimerRef = useRef(null);
@@ -95,7 +95,8 @@ export const HomePage = () => {
   });
 
   const matchedTopic = selectedCategory
-    ? topics.find((t) => t.slug === selectedCategory || t._id === selectedCategory) ||
+    ? categories.find((t) => t.slug === selectedCategory || t._id === selectedCategory) ||
+      coreTopics.find((t) => t.slug === selectedCategory || t._id === selectedCategory) ||
       enrichCategoryMeta({ slug: selectedCategory })
     : null;
   const currentCategoryName = matchedTopic?.name || (selectedCategory ? selectedCategory.replace(/-/g, ' ') : '');
@@ -105,8 +106,8 @@ export const HomePage = () => {
   const handleCategorySelect = useCallback(
     (categorySlug, forcedDirection = null) => {
       const normalized = categorySlug || '';
-      const currentIdx = topics.findIndex((t) => t.slug === (selectedCategory || ''));
-      const nextIdx = topics.findIndex((t) => t.slug === normalized);
+      const currentIdx = coreTopics.findIndex((t) => t.slug === (selectedCategory || ''));
+      const nextIdx = coreTopics.findIndex((t) => t.slug === normalized);
       const computedDir =
         forcedDirection ||
         (currentIdx !== -1 && nextIdx !== -1 && nextIdx !== currentIdx
@@ -128,7 +129,7 @@ export const HomePage = () => {
       setSearchParams(nextParams);
       setCurrentPage(1);
     },
-    [topics, selectedCategory, searchParams, setSearchParams]
+    [coreTopics, selectedCategory, searchParams, setSearchParams]
   );
 
   const handleClearTag = () => {
@@ -303,7 +304,7 @@ export const HomePage = () => {
       {/* Hero Banner / Banner Chủ Đề thống nhất Gesture 60fps & Dual-Card Peek */}
       {selectedCategory ? (
         <CategoryHeroBanner
-          topics={topics}
+          topics={coreTopics}
           activeSlug={selectedCategory}
           variant="category"
           swipeEnabled={true}
@@ -317,6 +318,13 @@ export const HomePage = () => {
             }, 900);
           }}
           onNavigateTopic={(targetTopic, dir) => {
+            if (!targetTopic?.slug) {
+              handleCategorySelect('', dir || 'prev');
+              if (typeof window !== 'undefined') {
+                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+              }
+              return;
+            }
             handleCategorySelect(targetTopic.slug, dir);
           }}
           badgeContent={
@@ -331,7 +339,12 @@ export const HomePage = () => {
             <div style={{ marginTop: '12px' }}>
               <button
                 type="button"
-                onClick={() => handleCategorySelect('', 'prev')}
+                onClick={() => {
+                  handleCategorySelect('', 'prev');
+                  if (typeof window !== 'undefined') {
+                    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                  }
+                }}
                 className="hero-back-link"
               >
                 <i className="fa-solid fa-arrow-left" style={{ marginRight: '6px' }}></i> Xem tất cả các câu chuyện khác
@@ -341,7 +354,7 @@ export const HomePage = () => {
         />
       ) : selectedTag ? (
         <CategoryHeroBanner
-          topics={topics}
+          topics={coreTopics}
           activeSlug=""
           variant="tag"
           swipeEnabled={false}
@@ -366,7 +379,7 @@ export const HomePage = () => {
         />
       ) : searchQuery ? (
         <CategoryHeroBanner
-          topics={topics}
+          topics={coreTopics}
           activeSlug=""
           variant="search"
           swipeEnabled={false}
@@ -395,7 +408,7 @@ export const HomePage = () => {
         />
       ) : (
         <CategoryHeroBanner
-          topics={topics}
+          topics={coreTopics}
           activeSlug=""
           variant="home"
           swipeEnabled={true}

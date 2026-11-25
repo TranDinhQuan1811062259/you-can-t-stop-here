@@ -17,7 +17,7 @@ import {
 // Giữ export DASHBOARD_ROUTES để tương thích ngược tuyệt đối (Quy tắc 2 GEMINI.md)
 export const DASHBOARD_ROUTES = [
   HOME_TOPIC,
-  ...CORE_CATEGORIES_FALLBACK.slice(0, 4).map((c) => ({
+  ...CORE_CATEGORIES_FALLBACK.map((c) => ({
     path: `/category/${c.slug}`,
     label: c.shortLabel || c.name,
     icon: c.icon,
@@ -28,8 +28,13 @@ export const DASHBOARD_ROUTES = [
 const isTopicPath = (pathname = '') =>
   pathname === '/' || pathname.startsWith('/category/');
 
-const extractSlugFromPath = (pathname = '') => {
-  if (pathname === '/') return '';
+const extractSlugFromLocation = (loc) => {
+  const pathname = loc?.pathname || '';
+  if (pathname === '/') {
+    const params = new URLSearchParams(loc?.search || '');
+    if (params.get('tag') || params.get('q')) return null;
+    return decodeURIComponent(params.get('category') || '');
+  }
   if (pathname.startsWith('/category/')) {
     return decodeURIComponent(pathname.replace(/^\/category\//, '').split('/')[0] || '');
   }
@@ -39,7 +44,7 @@ const extractSlugFromPath = (pathname = '') => {
 export const PageTransitionWrapper = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { topics } = useCategoryRegistry();
+  const { coreTopics: topics } = useCategoryRegistry();
 
   const [transitionDirection, setTransitionDirection] = useState('forward');
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -97,7 +102,7 @@ export const PageTransitionWrapper = ({ children }) => {
     };
   }, []);
 
-  const currentSlug = extractSlugFromPath(location.pathname);
+  const currentSlug = extractSlugFromLocation(location);
   const { currentIndex, prevTopic, nextTopic } =
     currentSlug !== null
       ? getAdjacentTopics(topics, currentSlug)
@@ -105,7 +110,7 @@ export const PageTransitionWrapper = ({ children }) => {
 
   // Tính hướng trượt đồng bộ khi route thay đổi
   if (prevPathRef.current !== location.pathname) {
-    const prevSlug = extractSlugFromPath(prevPathRef.current);
+    const prevSlug = extractSlugFromLocation({ pathname: prevPathRef.current, search: '' });
     const pendingDir = currentSlug !== null ? peekPendingBannerTransition(currentSlug) : null;
     const stateDir = location.state?.transitionDirection;
     let nextDir = transitionDirection;
@@ -302,6 +307,9 @@ export const PageTransitionWrapper = ({ children }) => {
         }
         if (Math.abs(deltaX) > 14) {
           state.isHorizontalSwipe = true;
+          try {
+            window.getSelection?.()?.removeAllRanges?.();
+          } catch (_) {}
           containerRef.current?.classList.add('is-page-dragging');
           contentBoxRef.current?.classList.add('is-page-dragging');
           try {

@@ -12,8 +12,8 @@
  * và KHÔNG BAO GIỜ bị đè / che khuất nhau!
  */
 
-// Tự động reset và đồng bộ toạ độ lề phải chuẩn xác 32px với khoảng cách đều đặn 16px giữa các nút
-const FAB_ALIGN_VERSION = 'freedom_fab_aligned_v25';
+// Tự động reset và đồng bộ toạ độ lề phải chuẩn xác, tránh che lấp vùng Hero Banner
+const FAB_ALIGN_VERSION = 'freedom_fab_aligned_v26';
 if (typeof window !== 'undefined') {
   try {
     if (localStorage.getItem(FAB_ALIGN_VERSION) !== 'true') {
@@ -30,11 +30,11 @@ if (typeof window !== 'undefined') {
 export const FAB_SIZES = {
   chat: { width: 56, height: 56 },
   write: { width: 156, height: 44 },
-  mascot: { width: 108, height: 86 },
+  mascot: { width: 88, height: 74 },
   pwa: { width: 136, height: 40 }, // Chuẩn kích thước mini pill mặc định của thanh PWA
   pref: { width: 52, height: 52 },
   radio: { width: 310, height: 46 },
-  pet: { width: 104, height: 76 }, // 70px thú cưng + 6px gap + 28px nút bánh răng/xương + viền/đổ bóng
+  pet: { width: 92, height: 68 }, // Thu gọn nhẹ chiều ngang để bám mép phải an toàn
 };
 
 export const MARGIN_LEFT = 24;
@@ -178,6 +178,8 @@ export const getFabPos = (type) => {
     const chatH = chatDim.height;
     const mascotH = mascotDim.height;
     const pwaH = pwaDim.height;
+    const stackGap = vpHeight < 780 ? 10 : FAB_GAP;
+    const safeMinLowerY = Math.max(MARGIN_TOP, Math.round(vpHeight * 0.44));
 
     if (type === 'write') {
       // 1. Nút Viết tâm sự mặc định: Nằm ở góc dưới cùng bên phải, cách đáy safeMarginBottom, cách lề phải safeMarginRight
@@ -186,31 +188,31 @@ export const getFabPos = (type) => {
         y: Math.max(MARGIN_TOP, vpHeight - writeH - safeMarginBottom),
       };
     } else if (type === 'chat') {
-      // 2. Nút Chat mặc định: Nằm ngay phía trên nút Viết tâm sự (khoảng cách đều 16px)
+      // 2. Nút Chat mặc định: Nằm ngay phía trên nút Viết tâm sự
       currentPos = {
         x: Math.max(safeMarginLeft, vpWidth - chatDim.width - safeMarginRight),
-        y: Math.max(MARGIN_TOP, vpHeight - writeH - safeMarginBottom - chatH - FAB_GAP),
+        y: Math.max(MARGIN_TOP, vpHeight - writeH - safeMarginBottom - chatH - stackGap),
       };
     } else if (type === 'mascot') {
-      // 3. Nút Sự kiện lễ hội mặc định: Nằm phía trên nút Chat (khoảng cách đều 16px)
+      // 3. Nút Sự kiện lễ hội mặc định: Giữ ở nửa dưới bên phải, không leo lên vùng Hero h1
       currentPos = {
         x: Math.max(safeMarginLeft, vpWidth - mascotDim.width - safeMarginRight),
-        y: Math.max(MARGIN_TOP, vpHeight - writeH - safeMarginBottom - chatH - FAB_GAP - mascotH - FAB_GAP),
+        y: Math.max(safeMinLowerY, vpHeight - writeH - safeMarginBottom - chatH - stackGap - mascotH - stackGap),
       };
     } else if (type === 'pwa') {
-      // 4. Thanh Cài đặt App mặc định: Nằm phía trên nút Sự kiện lễ hội (khoảng cách đều 16px)
+      // 4. Thanh Cài đặt App mặc định
       currentPos = {
         x: Math.max(safeMarginLeft, vpWidth - pwaDim.width - safeMarginRight),
-        y: Math.max(MARGIN_TOP, vpHeight - writeH - safeMarginBottom - chatH - FAB_GAP - mascotH - FAB_GAP - pwaH - FAB_GAP),
+        y: Math.max(safeMinLowerY, vpHeight - writeH - safeMarginBottom - chatH - stackGap - mascotH - stackGap - pwaH - stackGap),
       };
     } else if (type === 'pet') {
-      // 5. Bé Thú Cưng Bàn Làm Việc (DeskCompanionPet) mặc định: Bám sát mép phải, phía trên thanh Cài đặt App (khoảng cách đều 16px)
+      // 5. Bé Thú Cưng Bàn Làm Việc mặc định: Bám sát mép phải ở nửa dưới màn hình, tránh vùng Hero Banner
       const petH = petDim.height;
       currentPos = {
         x: Math.max(safeMarginLeft, vpWidth - petDim.width - safeMarginRight),
         y: Math.max(
-          MARGIN_TOP,
-          vpHeight - writeH - safeMarginBottom - chatH - FAB_GAP - mascotH - FAB_GAP - pwaH - FAB_GAP - petH - FAB_GAP
+          safeMinLowerY,
+          vpHeight - writeH - safeMarginBottom - chatH - stackGap - mascotH - stackGap - pwaH - stackGap - petH - stackGap
         ),
       };
     } else if (type === 'pref') {

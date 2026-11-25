@@ -12,7 +12,7 @@ import { useCategoryRegistry, enrichCategoryMeta, setPendingBannerTransition } f
 
 export const CategoryPage = () => {
   const { categorySlug } = useParams();
-  const { topics } = useCategoryRegistry();
+  const { categories, coreTopics } = useCategoryRegistry();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState('newest');
@@ -65,8 +65,15 @@ export const CategoryPage = () => {
 
   // Phân giải tên & icon trực tiếp từ Registry đồng bộ theo slug (không bao giờ lấy nhầm từ bài viết cũ)
   const matchedTopic =
-    topics.find((t) => t.slug === categorySlug || t._id === categorySlug) ||
+    coreTopics.find((t) => t.slug === categorySlug || t._id === categorySlug) ||
+    categories.find((t) => t.slug === categorySlug || t._id === categorySlug) ||
     enrichCategoryMeta({ slug: categorySlug });
+
+  const bannerTopics = coreTopics.some((t) => t.slug === categorySlug)
+    ? coreTopics
+    : matchedTopic
+    ? [...coreTopics, matchedTopic]
+    : coreTopics;
 
   const matchedPostCategory =
     posts[0]?.category?.slug === categorySlug ? posts[0].category : null;
@@ -80,7 +87,7 @@ export const CategoryPage = () => {
     <div>
       {/* Category Header Banner với Engine Kéo Vật Lý 60fps & Dual-Card Peek */}
       <CategoryHeroBanner
-        topics={topics}
+        topics={bannerTopics}
         activeSlug={categorySlug}
         variant="category"
         swipeEnabled={true}

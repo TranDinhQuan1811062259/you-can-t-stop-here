@@ -107,10 +107,13 @@ export const CommunityResilienceTree = () => {
 
       {/* Header Khối Cây Hồi Sinh */}
       <div
+        className="tree-section-header-row"
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
           cursor: 'pointer',
         }}
         onClick={() => setIsTreeExpanded((prev) => !prev)}
@@ -256,9 +259,25 @@ export const CommunityResilienceTree = () => {
             </div>
           </div>
 
-          {/* Thanh Nút Hành Động Chăm Sóc Cây */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Thanh Nút Hành Động Chăm Sóc Cây (Tách dòng mô tả phụ xuống hàng riêng tránh đè chữ nút) */}
+          <div
+            className="tree-actions-footer"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'stretch',
+              gap: '10px',
+            }}
+          >
+            <div
+              className="tree-actions-btn-group"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                flexWrap: 'wrap',
+              }}
+            >
               {/* Nút Tưới Nước */}
               <button
                 type="button"
@@ -268,13 +287,16 @@ export const CommunityResilienceTree = () => {
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '10px',
-                  padding: '7px 14px',
+                  padding: '8px 14px',
                   fontSize: '0.8rem',
                   fontWeight: 800,
+                  lineHeight: 1.25,
                   cursor: 'pointer',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '5px',
+                  gap: '6px',
+                  flexShrink: 0,
+                  touchAction: 'manipulation',
                   boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)',
                   transition: 'transform 0.15s ease',
                 }}
@@ -294,13 +316,16 @@ export const CommunityResilienceTree = () => {
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '10px',
-                  padding: '7px 14px',
+                  padding: '8px 14px',
                   fontSize: '0.8rem',
                   fontWeight: 800,
+                  lineHeight: 1.25,
                   cursor: 'pointer',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '5px',
+                  gap: '6px',
+                  flexShrink: 0,
+                  touchAction: 'manipulation',
                   boxShadow: '0 2px 8px rgba(236, 72, 153, 0.3)',
                   transition: 'transform 0.15s ease',
                 }}
@@ -320,13 +345,16 @@ export const CommunityResilienceTree = () => {
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '10px',
-                  padding: '7px 14px',
+                  padding: '8px 14px',
                   fontSize: '0.8rem',
                   fontWeight: 800,
+                  lineHeight: 1.25,
                   cursor: 'pointer',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '5px',
+                  gap: '6px',
+                  flexShrink: 0,
+                  touchAction: 'manipulation',
                   boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
                   transition: 'transform 0.15s ease',
                 }}
@@ -338,9 +366,18 @@ export const CommunityResilienceTree = () => {
               </button>
             </div>
 
-            <span style={{ fontSize: '0.74rem', color: '#166534', fontStyle: 'italic' }}>
+            <p
+              className="tree-actions-subnote"
+              style={{
+                margin: 0,
+                fontSize: '0.78rem',
+                lineHeight: 1.45,
+                color: '#166534',
+                fontStyle: 'italic',
+              }}
+            >
               Mỗi hành động của bạn đều giúp cộng đồng tươi sáng hơn 🌿
-            </span>
+            </p>
           </div>
         </div>
       )}

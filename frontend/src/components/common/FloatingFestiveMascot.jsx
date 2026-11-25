@@ -20,10 +20,46 @@ export const FloatingFestiveMascot = ({ onOpenShowcase }) => {
     return resolveAntiCollision('mascot', raw, true);
   });
   const [isDragging, setIsDragging] = useState(false);
+  const [isCompactHero, setIsCompactHero] = useState(false);
   const dragStartRef = useRef({ mouseX: 0, mouseY: 0, btnX: 0, btnY: 0 });
   const hasMovedRef = useRef(false);
   const mascotRef = useRef(null);
   const activePointerIdRef = useRef(null);
+
+  // Tự động thu gọn khi Mascot nằm ngang vùng Hero Banner hoặc trên màn hình nhỏ
+  useEffect(() => {
+    let checkTimer = null;
+    const evaluateOverlap = () => {
+      if (typeof document === 'undefined' || typeof window === 'undefined') return;
+      const vpW = window.innerWidth || 1200;
+      const banner = document.querySelector('.category-hero-banner, .hero-banner');
+      if (!banner) {
+        setIsCompactHero(vpW <= 768);
+        return;
+      }
+      const bannerRect = banner.getBoundingClientRect();
+      const mascotTop = mascotRef.current?.getBoundingClientRect()?.top ?? btnPos.y;
+      const nearBanner = bannerRect.height > 0 && bannerRect.bottom > 64 && mascotTop <= bannerRect.bottom + 24;
+      setIsCompactHero(nearBanner || vpW <= 768);
+    };
+
+    const scheduleCheck = () => {
+      if (checkTimer) clearTimeout(checkTimer);
+      checkTimer = setTimeout(evaluateOverlap, 60);
+    };
+
+    evaluateOverlap();
+    window.addEventListener('scroll', scheduleCheck, { passive: true });
+    window.addEventListener('resize', scheduleCheck);
+    window.addEventListener('freedom_topic_switching', scheduleCheck);
+
+    return () => {
+      if (checkTimer) clearTimeout(checkTimer);
+      window.removeEventListener('scroll', scheduleCheck);
+      window.removeEventListener('resize', scheduleCheck);
+      window.removeEventListener('freedom_topic_switching', scheduleCheck);
+    };
+  }, [btnPos.y]);
 
   const fetchActiveEvent = () => {
     eventService
@@ -220,12 +256,12 @@ export const FloatingFestiveMascot = ({ onOpenShowcase }) => {
   return (
     <aside
       ref={mascotRef}
-      className={`floating-festive-mascot-widget event-${activeEvent.id} ${isHovered ? 'hovered' : ''} ${isDragging ? 'is-dragging' : ''}`}
+      className={`floating-festive-mascot-widget event-${activeEvent.id} ${isHovered ? 'hovered' : ''} ${isDragging ? 'is-dragging' : ''} ${isCompactHero ? 'is-compact-hero' : ''}`}
       style={{
         position: 'fixed',
         left: `${btnPos.x}px`,
         top: `${btnPos.y}px`,
-        width: '108px',
+        width: isCompactHero ? '80px' : '92px',
         boxSizing: 'border-box',
         right: 'auto',
         bottom: 'auto',
@@ -233,7 +269,7 @@ export const FloatingFestiveMascot = ({ onOpenShowcase }) => {
         cursor: isDragging ? 'grabbing' : 'grab',
         transition: isDragging
           ? 'none'
-          : 'left 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.2s, box-shadow 0.2s',
+          : 'left 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.2s, box-shadow 0.2s, width 0.22s ease',
         touchAction: 'none',
         userSelect: 'none',
         WebkitUserSelect: 'none',

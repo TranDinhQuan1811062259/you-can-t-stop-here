@@ -2,11 +2,11 @@ import React, { Suspense, lazy } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { MainLayout } from '../components/layout/MainLayout';
 import { RouteLoadingFallback } from '../components/common/RouteLoadingFallback';
+import { HomePage } from '../pages/HomePage';
+import { CategoryPage } from '../pages/CategoryPage';
 
-// Tối ưu Code-Splitting: Tải lười (Lazy load) các trang để giảm kích thước bundle ban đầu
-const HomePage = lazy(() => import('../pages/HomePage').then((m) => ({ default: m.HomePage })));
+// Tối ưu Code-Splitting cho các trang phụ, giữ HomePage & CategoryPage tải sẵn chống nháy Suspense khi chuyển chủ đề
 const PostDetailPage = lazy(() => import('../pages/PostDetailPage').then((m) => ({ default: m.PostDetailPage })));
-const CategoryPage = lazy(() => import('../pages/CategoryPage').then((m) => ({ default: m.CategoryPage })));
 const UserProfilePage = lazy(() => import('../pages/UserProfilePage').then((m) => ({ default: m.UserProfilePage })));
 const MusicPage = lazy(() => import('../pages/MusicPage').then((m) => ({ default: m.MusicPage })));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));

@@ -10,6 +10,17 @@ import {
   clearPendingBannerTransition,
 } from '../../utils/category-navigation';
 
+const clearWindowSelection = () => {
+  try {
+    if (typeof window !== 'undefined' && window.getSelection) {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        sel.removeAllRanges();
+      }
+    }
+  } catch (_) {}
+};
+
 const shouldSkipTargetForDrag = (target) => {
   if (!target || !(target instanceof Element)) return false;
   return Boolean(
@@ -20,7 +31,10 @@ const shouldSkipTargetForDrag = (target) => {
       target.closest('[contenteditable="true"]') ||
       target.closest('[role="slider"]') ||
       target.closest('[data-no-swipe="true"]') ||
-      target.closest('.no-swipe')
+      target.closest('.no-swipe') ||
+      target.closest('.category-banner-edge-btn') ||
+      target.closest('.spatial-rail-step') ||
+      target.closest('.spatial-dot-btn')
   );
 };
 
@@ -67,6 +81,7 @@ export const CategoryHeroBanner = ({
   const bannerRef = useRef(null);
   const rafIdRef = useRef(null);
   const commitTimerRef = useRef(null);
+  const commitSafetyTimerRef = useRef(null);
   const unlockCommitTimerRef = useRef(null);
   const springTimerRef = useRef(null);
   const enterTimerRef = useRef(null);
@@ -114,9 +129,35 @@ export const CategoryHeroBanner = ({
     }
   }
 
-  // Dọn dẹp enter animation & pending direction sau khi banner mới trượt vào ổn định
+  const clearTimersForDrag = useCallback(() => {
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+    if (springTimerRef.current) {
+      clearTimeout(springTimerRef.current);
+      springTimerRef.current = null;
+    }
+  }, []);
+
+  const resetBannerCssVars = useCallback(() => {
+    const el = bannerRef.current;
+    if (!el) return;
+    el.style.setProperty('--drag-x', '0px');
+    el.style.setProperty('--drag-progress', '0');
+    el.dataset.dragDir = 'none';
+    el.classList.remove('is-dragging', 'is-threshold-ready', 'is-committing-next', 'is-committing-prev');
+  }, []);
+
+  // Dọn dẹp enter animation, lớp commit & pending direction sau khi banner mới trượt vào ổn định
   useEffect(() => {
     clearPendingBannerTransition(activeSlug);
+    if (commitSafetyTimerRef.current) {
+      clearTimeout(commitSafetyTimerRef.current);
+      commitSafetyTimerRef.current = null;
+    }
+    resetBannerCssVars();
+
     if (unlockCommitTimerRef.current) {
       clearTimeout(unlockCommitTimerRef.current);
     }
@@ -139,27 +180,7 @@ export const CategoryHeroBanner = ({
         enterTimerRef.current = null;
       }
     };
-  }, [activeSlug, enterAnimationDir]);
-
-  const clearTimersForDrag = useCallback(() => {
-    if (rafIdRef.current) {
-      cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = null;
-    }
-    if (springTimerRef.current) {
-      clearTimeout(springTimerRef.current);
-      springTimerRef.current = null;
-    }
-  }, []);
-
-  const resetBannerCssVars = useCallback(() => {
-    const el = bannerRef.current;
-    if (!el) return;
-    el.style.setProperty('--drag-x', '0px');
-    el.style.setProperty('--drag-progress', '0');
-    el.dataset.dragDir = 'none';
-    el.classList.remove('is-dragging', 'is-threshold-ready');
-  }, []);
+  }, [activeSlug, enterAnimationDir, resetBannerCssVars]);
 
   const getDynamicThreshold = useCallback(() => {
     const width = bannerRef.current?.offsetWidth || 380;
@@ -259,16 +280,21 @@ export const CategoryHeroBanner = ({
 
       commitTimerRef.current = setTimeout(() => {
         commitTimerRef.current = null;
-        if (bannerRef.current) {
-          bannerRef.current.classList.remove('is-committing-next', 'is-committing-prev');
-        }
-        resetBannerCssVars();
         dragStateRef.current.lastDeltaX = 0;
         dragStateRef.current.hasTriggeredTick = false;
         prefetchedSlugThisGestureRef.current = null;
         wheelAccumRef.current = 0;
 
+        // Điều hướng trực tiếp trước; giữ nguyên lớp commit-exit để không nháy nội dung cũ trong 1 frame chuyển route
         performDirectNavigation(targetTopic, dir);
+
+        if (commitSafetyTimerRef.current) {
+          clearTimeout(commitSafetyTimerRef.current);
+        }
+        commitSafetyTimerRef.current = setTimeout(() => {
+          commitSafetyTimerRef.current = null;
+          resetBannerCssVars();
+        }, 420);
 
         if (unlockCommitTimerRef.current) {
           clearTimeout(unlockCommitTimerRef.current);
@@ -340,6 +366,7 @@ export const CategoryHeroBanner = ({
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       if (shouldSkipTargetForDrag(e.target)) return;
 
+      clearWindowSelection();
       clearTimersForDrag();
       bannerRef.current?.classList.remove('is-spring-back');
 
@@ -377,8 +404,9 @@ export const CategoryHeroBanner = ({
           state.pointerId = null;
           return;
         }
-        if (Math.abs(deltaX) > 10) {
+        if (Math.abs(deltaX) > 8) {
           state.isHorizontal = true;
+          clearWindowSelection();
           bannerRef.current?.classList.add('is-dragging');
           try {
             bannerRef.current?.setPointerCapture?.(e.pointerId);
@@ -544,6 +572,7 @@ export const CategoryHeroBanner = ({
     return () => {
       clearTimersForDrag();
       if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
+      if (commitSafetyTimerRef.current) clearTimeout(commitSafetyTimerRef.current);
       if (unlockCommitTimerRef.current) clearTimeout(unlockCommitTimerRef.current);
       if (enterTimerRef.current) clearTimeout(enterTimerRef.current);
       if (clickResetTimerRef.current) clearTimeout(clickResetTimerRef.current);
@@ -562,7 +591,6 @@ export const CategoryHeroBanner = ({
   return (
     <section
       ref={bannerRef}
-      data-no-swipe="true"
       data-drag-dir="none"
       className={`hero-banner category-hero-banner variant-${variant} ${
         swipeEnabled ? 'is-swipe-enabled' : ''
@@ -669,8 +697,8 @@ export const CategoryHeroBanner = ({
         {actionsContent}
         {extraContent}
 
-        {/* Thanh chỉ báo không gian các chủ đề & gợi ý kéo ngang */}
-        {swipeEnabled && topics.length > 1 && variant === 'category' && (
+        {/* Thanh chỉ báo không gian các chủ đề & dải chấm tròn đồng bộ trên cả Hero Trang Chủ và Banner Chủ Đề */}
+        {swipeEnabled && topics.length > 1 && (variant === 'home' || variant === 'category') && (
           <div className="category-spatial-rail" aria-label="Điều hướng giữa các chủ đề">
             <button
               type="button"
