@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { usePosts } from '../hooks/usePosts';
 import { useAuth } from '../context/AuthContext';
@@ -8,7 +8,6 @@ import { PostList } from '../components/blog/PostList';
 import { PostListSkeleton } from '../components/common/PostListSkeleton';
 import { Pagination } from '../components/common/Pagination';
 import { ErrorMessage } from '../components/common/ErrorMessage';
-import { CreatePostModal } from '../components/blog/CreatePostModal';
 import { CommunityMoodWall } from '../components/blog/CommunityMoodWall';
 import { StoryBar } from '../components/story/StoryBar';
 import { CreateStoryModal } from '../components/story/CreateStoryModal';
@@ -22,6 +21,47 @@ import {
   enrichCategoryMeta,
   setPendingBannerTransition,
 } from '../utils/category-navigation';
+
+const CreatePostModal = lazy(() =>
+  import('../components/blog/CreatePostModal').then((m) => ({
+    default: m.CreatePostModal || m.default,
+  }))
+);
+
+const QUICK_FEATURE_PILLS = [
+  {
+    id: 'bottle',
+    className: 'quick-pill-bottle',
+    eventName: 'freedom_open_drift_bottle',
+    icon: '🌊',
+    label: 'Chai Thư Nửa Đêm',
+    title: 'Mở Chiếc Máy Đánh Chữ Nửa Đêm & Thả Thư Trôi Sông',
+  },
+  {
+    id: 'radar',
+    className: 'quick-pill-radar',
+    eventName: 'freedom_open_mood_radar',
+    icon: '📡',
+    label: 'Radar Công Sở',
+    title: 'Mở Radar Đo Nhịp Cảm Xúc Công Sở Thời Gian Thực',
+  },
+  {
+    id: 'whisper',
+    className: 'quick-pill-whisper',
+    eventName: 'freedom_open_whisper_wall',
+    icon: '🎙️',
+    label: 'Thì Thầm 10s',
+    title: 'Mở Bức Tường Thì Thầm 10 Giây & Gửi Cái Ôm Âm Thanh',
+  },
+  {
+    id: 'wax',
+    className: 'quick-pill-wax',
+    eventName: 'freedom_open_time_capsule',
+    icon: '📜',
+    label: 'Tiệm Thư Sáp Niêm Phong',
+    title: 'Mở Tiệm Hộp Thời Gian & Đóng Dấu Sáp Niêm Phong',
+  },
+];
 
 export const HomePage = () => {
   const { isAuthenticated, openLoginModal } = useAuth();
@@ -189,112 +229,19 @@ export const HomePage = () => {
       </button>
 
       {/* Dải 4 Lối Khám Phá Nhanh */}
-      <div
-        className="hero-new-features-strip"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexWrap: 'wrap',
-          gap: '8px',
-          marginTop: '4px',
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent('freedom_open_drift_bottle'))}
-          className="hero-quick-feat-pill"
-          title="Mở Chiếc Máy Đánh Chữ Nửa Đêm & Thả Thư Trôi Sông"
-          style={{
-            background: 'rgba(56, 189, 248, 0.1)',
-            border: '1px solid rgba(56, 189, 248, 0.35)',
-            color: '#0284c7',
-            padding: '5px 12px',
-            borderRadius: '999px',
-            fontSize: '0.8rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            transition: 'all 0.2s ease',
-          }}
-        >
-          <span>🌊</span>
-          <span>Chai Thư Nửa Đêm</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent('freedom_open_mood_radar'))}
-          className="hero-quick-feat-pill"
-          title="Mở Radar Đo Nhịp Cảm Xúc Công Sở Thời Gian Thực"
-          style={{
-            background: 'rgba(16, 185, 129, 0.1)',
-            border: '1px solid rgba(16, 185, 129, 0.35)',
-            color: '#059669',
-            padding: '5px 12px',
-            borderRadius: '999px',
-            fontSize: '0.8rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            transition: 'all 0.2s ease',
-          }}
-        >
-          <span>📡</span>
-          <span>Radar Công Sở</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent('freedom_open_whisper_wall'))}
-          className="hero-quick-feat-pill"
-          title="Mở Bức Tường Thì Thầm 10 Giây & Gửi Cái Ôm Âm Thanh"
-          style={{
-            background: 'rgba(236, 72, 153, 0.1)',
-            border: '1px solid rgba(236, 72, 153, 0.35)',
-            color: '#db2777',
-            padding: '5px 12px',
-            borderRadius: '999px',
-            fontSize: '0.8rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            transition: 'all 0.2s ease',
-          }}
-        >
-          <span>🎙️</span>
-          <span>Thì Thầm 10s</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent('freedom_open_time_capsule'))}
-          className="hero-quick-feat-pill"
-          title="Mở Tiệm Hộp Thời Gian & Đóng Dấu Sáp Niêm Phong"
-          style={{
-            background: 'rgba(245, 158, 11, 0.1)',
-            border: '1px solid rgba(245, 158, 11, 0.35)',
-            color: '#d97706',
-            padding: '5px 12px',
-            borderRadius: '999px',
-            fontSize: '0.8rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            transition: 'all 0.2s ease',
-          }}
-        >
-          <span>📜</span>
-          <span>Tiệm Thư Sáp Niêm Phong</span>
-        </button>
+      <div className="hero-new-features-strip">
+        {QUICK_FEATURE_PILLS.map((pill) => (
+          <button
+            key={pill.id}
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent(pill.eventName))}
+            className={`hero-quick-feat-pill ${pill.className}`}
+            title={pill.title}
+          >
+            <span aria-hidden="true">{pill.icon}</span>
+            <span>{pill.label}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -645,12 +592,16 @@ export const HomePage = () => {
         </div>
       </section>
 
-      {/* Create Post Modal */}
-      <CreatePostModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onPostCreated={() => window.location.reload()}
-      />
+      {/* Create Post Modal (Lazy-loaded đồng bộ với Header/MainLayout) */}
+      {isCreateOpen && (
+        <Suspense fallback={null}>
+          <CreatePostModal
+            isOpen={isCreateOpen}
+            onClose={() => setIsCreateOpen(false)}
+            onPostCreated={() => window.location.reload()}
+          />
+        </Suspense>
+      )}
 
       {/* Modal Tạo / Sửa Story 24h */}
       <CreateStoryModal

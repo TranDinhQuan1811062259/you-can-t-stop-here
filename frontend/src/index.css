@@ -2317,19 +2317,10 @@ body.theme-dark .hero-rant-burn-pill:hover .rant-pill-arrow {
 /* Các phím tắt nhanh 4 tính năng mới dưới Hero */
 .hero-quick-feat-pill:hover {
   transform: translateY(-2px);
-  filter: brightness(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .hero-quick-feat-pill:active {
-  transform: translateY(0) scale(0.96);
-}
-
-body.theme-dark .hero-quick-feat-pill,
-[data-theme="dark"] .hero-quick-feat-pill {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border-color: rgba(255, 255, 255, 0.18) !important;
-  color: #f1f5f9 !important;
+  transform: translateY(0) scale(0.97);
 }
 
 @keyframes badgePulse {
@@ -25221,5 +25212,173 @@ body.theme-light .hero-banner.category-hero-banner .category-banner-edge-btn:hov
   color: #ffffff !important;
   box-shadow: 0 10px 22px rgba(13, 148, 136, 0.25) !important;
 }
+
+/* ========================================================
+   10. ADAPTIVE LIGHT/DARK QUICK-FEATURE PILLS UNDER HERO
+   ======================================================== */
+.hero-new-features-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.hero-quick-feat-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.25;
+  cursor: pointer;
+  touch-action: manipulation;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* Dark Mode (Mặc định & Adaptive Glow dịu không chói mắt) */
+.hero-quick-feat-pill.quick-pill-bottle {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #7dd3fc;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.hero-quick-feat-pill.quick-pill-bottle:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.22);
+}
+
+.hero-quick-feat-pill.quick-pill-radar {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  color: #6ee7b7;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.hero-quick-feat-pill.quick-pill-radar:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(52, 211, 153, 0.5);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.22);
+}
+
+.hero-quick-feat-pill.quick-pill-whisper {
+  background: rgba(236, 72, 153, 0.12);
+  border: 1px solid rgba(244, 114, 182, 0.32);
+  color: #f9a8d4;
+  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.hero-quick-feat-pill.quick-pill-whisper:hover {
+  background: rgba(236, 72, 153, 0.2);
+  border-color: rgba(244, 114, 182, 0.52);
+  box-shadow: 0 6px 18px rgba(236, 72, 153, 0.22);
+}
+
+.hero-quick-feat-pill.quick-pill-wax {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.32);
+  color: #fde68a;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.hero-quick-feat-pill.quick-pill-wax:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(251, 191, 36, 0.52);
+  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.22);
+}
+
+/* Chế Độ Ngày (Light Mode) — Kính mờ ấm áp, viền mảnh, tương phản sâu hài hòa với Banner ngày */
+body.theme-light .hero-quick-feat-pill.quick-pill-bottle,
+[data-theme="light"] .hero-quick-feat-pill.quick-pill-bottle,
+.mode-light .hero-quick-feat-pill.quick-pill-bottle {
+  background: rgba(240, 249, 255, 0.88);
+  border-color: rgba(14, 165, 233, 0.34);
+  color: #0369a1;
+  box-shadow: 0 3px 10px rgba(2, 132, 199, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+body.theme-light .hero-quick-feat-pill.quick-pill-bottle:hover,
+[data-theme="light"] .hero-quick-feat-pill.quick-pill-bottle:hover,
+.mode-light .hero-quick-feat-pill.quick-pill-bottle:hover {
+  background: #ffffff;
+  border-color: rgba(2, 132, 199, 0.5);
+  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.16);
+}
+
+body.theme-light .hero-quick-feat-pill.quick-pill-radar,
+[data-theme="light"] .hero-quick-feat-pill.quick-pill-radar,
+.mode-light .hero-quick-feat-pill.quick-pill-radar {
+  background: rgba(236, 253, 245, 0.9);
+  border-color: rgba(16, 185, 129, 0.34);
+  color: #047857;
+  box-shadow: 0 3px 10px rgba(5, 150, 105, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+body.theme-light .hero-quick-feat-pill.quick-pill-radar:hover,
+[data-theme="light"] .hero-quick-feat-pill.quick-pill-radar:hover,
+.mode-light .hero-quick-feat-pill.quick-pill-radar:hover {
+  background: #ffffff;
+  border-color: rgba(5, 150, 105, 0.5);
+  box-shadow: 0 6px 16px rgba(5, 150, 105, 0.16);
+}
+
+body.theme-light .hero-quick-feat-pill.quick-pill-whisper,
+[data-theme="light"] .hero-quick-feat-pill.quick-pill-whisper,
+.mode-light .hero-quick-feat-pill.quick-pill-whisper {
+  background: rgba(253, 242, 248, 0.9);
+  border-color: rgba(236, 72, 153, 0.32);
+  color: #be185d;
+  box-shadow: 0 3px 10px rgba(219, 39, 119, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+body.theme-light .hero-quick-feat-pill.quick-pill-whisper:hover,
+[data-theme="light"] .hero-quick-feat-pill.quick-pill-whisper:hover,
+.mode-light .hero-quick-feat-pill.quick-pill-whisper:hover {
+  background: #ffffff;
+  border-color: rgba(219, 39, 119, 0.48);
+  box-shadow: 0 6px 16px rgba(219, 39, 119, 0.15);
+}
+
+body.theme-light .hero-quick-feat-pill.quick-pill-wax,
+[data-theme="light"] .hero-quick-feat-pill.quick-pill-wax,
+.mode-light .hero-quick-feat-pill.quick-pill-wax {
+  background: rgba(255, 251, 235, 0.92);
+  border-color: rgba(245, 158, 11, 0.36);
+  color: #b45309;
+  box-shadow: 0 3px 10px rgba(217, 119, 6, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.94);
+}
+
+body.theme-light .hero-quick-feat-pill.quick-pill-wax:hover,
+[data-theme="light"] .hero-quick-feat-pill.quick-pill-wax:hover,
+.mode-light .hero-quick-feat-pill.quick-pill-wax:hover {
+  background: #ffffff;
+  border-color: rgba(217, 119, 6, 0.5);
+  box-shadow: 0 6px 16px rgba(217, 119, 6, 0.16);
+}
+
+@media (max-width: 480px) {
+  .hero-new-features-strip {
+    gap: 8px;
+    padding: 0 4px;
+  }
+
+  .hero-quick-feat-pill {
+    min-height: 36px;
+    padding: 6px 12px;
+    font-size: 0.77rem;
+  }
+}
+
 
 
