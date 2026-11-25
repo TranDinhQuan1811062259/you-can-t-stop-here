@@ -78,6 +78,25 @@ export const CozyWorkCafeModal = ({ isOpen, onClose }) => {
   const catNodeRef = useRef(null);
   const timerIntervalRef = useRef(null);
 
+  const stopAllAmbientNodes = () => {
+    if (rainNodeRef.current) {
+      try { rainNodeRef.current.stop(); } catch (_) {}
+      rainNodeRef.current = null;
+    }
+    if (fireplaceNodeRef.current) {
+      try { fireplaceNodeRef.current.stop(); } catch (_) {}
+      fireplaceNodeRef.current = null;
+    }
+    if (cafeNodeRef.current) {
+      try { cafeNodeRef.current.stop(); } catch (_) {}
+      cafeNodeRef.current = null;
+    }
+    if (catNodeRef.current) {
+      try { catNodeRef.current.stop(); } catch (_) {}
+      catNodeRef.current = null;
+    }
+  };
+
   // Xử lý bật/tắt toàn bộ âm thanh môi trường
   useEffect(() => {
     if (isPlayingAmbient && isOpen) {
@@ -148,25 +167,6 @@ export const CozyWorkCafeModal = ({ isOpen, onClose }) => {
           catNodeRef.current.setVolume(numVal);
         }
       }
-    }
-  };
-
-  const stopAllAmbientNodes = () => {
-    if (rainNodeRef.current) {
-      try { rainNodeRef.current.stop(); } catch (_) {}
-      rainNodeRef.current = null;
-    }
-    if (fireplaceNodeRef.current) {
-      try { fireplaceNodeRef.current.stop(); } catch (_) {}
-      fireplaceNodeRef.current = null;
-    }
-    if (cafeNodeRef.current) {
-      try { cafeNodeRef.current.stop(); } catch (_) {}
-      cafeNodeRef.current = null;
-    }
-    if (catNodeRef.current) {
-      try { catNodeRef.current.stop(); } catch (_) {}
-      catNodeRef.current = null;
     }
   };
 

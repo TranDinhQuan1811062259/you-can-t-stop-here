@@ -1728,6 +1728,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
               window.dispatchEvent(new Event('freedom_offline_queue_updated'));
             } catch (_) {}
             setHasRestoredDraft(false);
+            window.dispatchEvent(new Event('post_updated'));
             if (onPostCreated) {
               onPostCreated(submitEffect.createdData);
             }

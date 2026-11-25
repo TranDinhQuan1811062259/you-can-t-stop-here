@@ -57,6 +57,39 @@ export const StoryViewerModal = ({ isOpen, onClose, initialIndex = 0, stories = 
 
   const currentStory = stories[currentIndex] || null;
 
+  const handleModalClose = () => {
+    stopStoryMusic();
+    onClose();
+  };
+
+  const handleNext = () => {
+    playClickSound();
+    if (currentIndex < stories.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
+      setProgress(0);
+    } else {
+      handleModalClose();
+    }
+  };
+
+  const handlePrev = () => {
+    playClickSound();
+    if (currentIndex > 0) {
+      setCurrentIndex((prev) => prev - 1);
+      setProgress(0);
+    }
+  };
+
+  const togglePause = () => {
+    playClickSound();
+    setIsPaused((prev) => !prev);
+  };
+
+  const toggleMute = () => {
+    playClickSound();
+    setIsMuted((prev) => !prev);
+  };
+
   // Xử lý đếm tiến trình tự động chuyển story
   useEffect(() => {
     if (!isOpen || !currentStory || isPaused) return;
@@ -157,39 +190,6 @@ export const StoryViewerModal = ({ isOpen, onClose, initialIndex = 0, stories = 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, currentIndex, isPaused, stories.length]);
-
-  const handleNext = () => {
-    playClickSound();
-    if (currentIndex < stories.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
-      setProgress(0);
-    } else {
-      handleModalClose();
-    }
-  };
-
-  const handlePrev = () => {
-    playClickSound();
-    if (currentIndex > 0) {
-      setCurrentIndex((prev) => prev - 1);
-      setProgress(0);
-    }
-  };
-
-  const togglePause = () => {
-    playClickSound();
-    setIsPaused((prev) => !prev);
-  };
-
-  const toggleMute = () => {
-    playClickSound();
-    setIsMuted((prev) => !prev);
-  };
-
-  const handleModalClose = () => {
-    stopStoryMusic();
-    onClose();
-  };
 
   const handleDeleteStory = async () => {
     if (!currentStory) return;

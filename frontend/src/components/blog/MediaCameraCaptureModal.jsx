@@ -23,6 +23,16 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
   const timerIntervalRef = useRef(null);
   const fallbackInputRef = useRef(null);
 
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+      setCameraStream(null);
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
+
   // Khởi động Camera / Webcam khi mở Modal
   const startCamera = async (mode = facingMode) => {
     stopCamera();
@@ -58,16 +68,6 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
         msg = 'Không tìm thấy thiết bị Camera hoặc Webcam trên máy tính/điện thoại của bạn.';
       }
       setCameraError(msg);
-    }
-  };
-
-  const stopCamera = () => {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach((track) => track.stop());
-      setCameraStream(null);
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
     }
   };
 
@@ -148,6 +148,19 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
   // ==========================================
   // XỬ LÝ QUAY VIDEO (RECORD VIDEO)
   // ==========================================
+  const handleStopRecording = () => {
+    playClickSound();
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
   const handleStartRecording = () => {
     playClickSound();
     if (!cameraStream) return;
@@ -196,19 +209,6 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
       }, 1000);
     } catch (err) {
       alert('Không thể bắt đầu quay video: ' + err.message);
-    }
-  };
-
-  const handleStopRecording = () => {
-    playClickSound();
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
     }
   };
 

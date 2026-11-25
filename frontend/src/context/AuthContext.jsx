@@ -250,6 +250,45 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
+  /**
+   * Đăng xuất an toàn và triệt để, đồng thời thu hồi phiên Refresh Token tại máy chủ
+   */
+  const logout = async (callApi = true) => {
+    const activeRefreshToken =
+      localStorage.getItem('refreshToken') || localStorage.getItem('freedom_refresh_token');
+
+    if (callApi && activeRefreshToken) {
+      try {
+        await authService.logout({ refreshToken: activeRefreshToken });
+      } catch (_) {}
+    }
+
+    setUser(null);
+    setToken(null);
+    syncAuthStorage(null, null, null);
+    try {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('freedom_token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('freedom_refresh_token');
+      localStorage.removeItem('freedom_persisted_profile');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
+      sessionStorage.removeItem('freedom_otp_resend_until');
+      // Chống gợi ý Google One Tap bật lên ngay khi vừa chủ động đăng xuất
+      sessionStorage.setItem('google_onetap_dismissed', 'true');
+    } catch (_) {}
+    // 🛡️ PHÁT TÍN HIỆU ĐỒNG BỘ ĐĂNG XUẤT TỚI TẤT CẢ CÁC TAB / CỬA SỔ
+    authBroadcastChannel?.postMessage({ type: 'LOGOUT', timestamp: Date.now() });
+    try {
+      localStorage.setItem('freedom_logout_signal', String(Date.now()));
+    } catch (_) {}
+
+    window.dispatchEvent(new Event('profile_updated'));
+    window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
+  };
+
   // Chỉ xác thực token 1 LẦN DUY NHẤT lúc ứng dụng khởi động (Initial Mount)
   // TUYỆT ĐỐI KHÔNG gọi lại và xóa session của user mỗi khi hàm login vừa chạy!
   const hasInitializedAuthRef = useRef(false);
@@ -536,45 +575,6 @@ export const AuthProvider = ({ children }) => {
     }
     window.dispatchEvent(new Event('profile_updated'));
     window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: updatedUser }));
-  };
-
-  /**
-   * Đăng xuất an toàn và triệt để, đồng thời thu hồi phiên Refresh Token tại máy chủ
-   */
-  const logout = async (callApi = true) => {
-    const activeRefreshToken =
-      localStorage.getItem('refreshToken') || localStorage.getItem('freedom_refresh_token');
-
-    if (callApi && activeRefreshToken) {
-      try {
-        await authService.logout({ refreshToken: activeRefreshToken });
-      } catch (_) {}
-    }
-
-    setUser(null);
-    setToken(null);
-    syncAuthStorage(null, null, null);
-    try {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      localStorage.removeItem('freedom_token');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('freedom_refresh_token');
-      localStorage.removeItem('freedom_persisted_profile');
-      sessionStorage.removeItem('token');
-      sessionStorage.removeItem('user');
-      sessionStorage.removeItem('freedom_otp_resend_until');
-      // Chống gợi ý Google One Tap bật lên ngay khi vừa chủ động đăng xuất
-      sessionStorage.setItem('google_onetap_dismissed', 'true');
-    } catch (_) {}
-    // 🛡️ PHÁT TÍN HIỆU ĐỒNG BỘ ĐĂNG XUẤT TỚI TẤT CẢ CÁC TAB / CỬA SỔ
-    authBroadcastChannel?.postMessage({ type: 'LOGOUT', timestamp: Date.now() });
-    try {
-      localStorage.setItem('freedom_logout_signal', String(Date.now()));
-    } catch (_) {}
-
-    window.dispatchEvent(new Event('profile_updated'));
-    window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
   };
 
   /**

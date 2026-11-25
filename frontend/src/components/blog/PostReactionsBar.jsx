@@ -136,6 +136,13 @@ export const PostReactionsBar = ({ post, onPostUpdated }) => {
     }, 400);
   };
 
+  const showAlert = (msg) => {
+    setAlertMsg(msg);
+    setTimeout(() => {
+      setAlertMsg('');
+    }, 4000);
+  };
+
   // Xử lý click chọn cảm xúc
   const handleSelectReaction = async (reactionType) => {
     if (!user) {
@@ -206,13 +213,6 @@ export const PostReactionsBar = ({ post, onPostUpdated }) => {
     } catch (err) {
       showAlert('Không thể thay đổi cài đặt ẩn/hiện lúc này.');
     }
-  };
-
-  const showAlert = (msg) => {
-    setAlertMsg(msg);
-    setTimeout(() => {
-      setAlertMsg('');
-    }, 4000);
   };
 
   // Lọc danh sách người dùng bày tỏ cảm xúc trong popup

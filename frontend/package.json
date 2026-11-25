@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint src",
+    "lint": "npx --no-install eslint src",
     "preview": "vite preview",
     "postinstall": "node scripts/patch-vite-junction.js"
   },

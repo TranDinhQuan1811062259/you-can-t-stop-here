@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import { invalidatePostsCache } from './postService';
 
 const COMMENTS_STORAGE_KEY = 'freedom_offline_comments_v2';
 
@@ -57,18 +58,34 @@ export const commentService = {
       if (res && res.data) {
         map[postId] = [res.data, ...existing];
         saveStoredComments(map);
+        invalidatePostsCache();
         return res;
       }
     } catch (err) {
       console.warn('Lưu bình luận offline thành công:', err?.message);
     }
 
+    invalidatePostsCache();
     return { data: localComment, success: true, fromLocal: true };
   },
 
   // Thích / động viên một bình luận
-  likeComment: (id) => apiClient.post(`/comments/${id}/like`).catch(() => ({ success: true })),
+  likeComment: (id) =>
+    apiClient
+      .post(`/comments/${id}/like`)
+      .then((res) => {
+        invalidatePostsCache();
+        return res;
+      })
+      .catch(() => ({ success: true })),
 
   // Xóa bình luận
-  deleteComment: (id) => apiClient.delete(`/comments/${id}`).catch(() => ({ success: true })),
+  deleteComment: (id) =>
+    apiClient
+      .delete(`/comments/${id}`)
+      .then((res) => {
+        invalidatePostsCache();
+        return res;
+      })
+      .catch(() => ({ success: true })),
 };

@@ -35,6 +35,17 @@ export const HomePage = () => {
   const [selectedCategory, setSelectedCategory] = useState(categoryParam);
   const [isCommitSwitching, setIsCommitSwitching] = useState(false);
   const switchResetTimerRef = useRef(null);
+  const prevCategoryParamRef = useRef(categoryParam);
+
+  if (prevCategoryParamRef.current !== categoryParam) {
+    prevCategoryParamRef.current = categoryParam;
+    if (selectedCategory !== categoryParam) {
+      setSelectedCategory(categoryParam);
+    }
+    if (isCommitSwitching) {
+      setIsCommitSwitching(false);
+    }
+  }
 
   useEffect(() => {
     setSelectedCategory(categoryParam);

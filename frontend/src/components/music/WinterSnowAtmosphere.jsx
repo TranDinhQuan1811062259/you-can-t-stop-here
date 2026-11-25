@@ -61,13 +61,6 @@ export const WinterSnowAtmosphere = ({ density = 35, speed = 0.6, enabled = true
 
     // Vòng lặp vẽ tuyết
     let isTabVisible = !document.hidden;
-    const handleVisibilityChange = () => {
-      isTabVisible = !document.hidden;
-      if (isTabVisible && !animationFrameId) {
-        animationFrameId = requestAnimationFrame(render);
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     const render = () => {
       if (!isTabVisible) {
@@ -119,6 +112,14 @@ export const WinterSnowAtmosphere = ({ density = 35, speed = 0.6, enabled = true
 
       animationFrameId = requestAnimationFrame(render);
     };
+
+    const handleVisibilityChange = () => {
+      isTabVisible = !document.hidden;
+      if (isTabVisible && !animationFrameId) {
+        animationFrameId = requestAnimationFrame(render);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     animationFrameId = requestAnimationFrame(render);
 

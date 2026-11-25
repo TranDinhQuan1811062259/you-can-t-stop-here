@@ -55,18 +55,6 @@ export const isSoundEnabled = () => {
   return localStorage.getItem('freedom_ui_sound') !== 'false';
 };
 
-// Bật / Tắt âm thanh hiệu ứng
-export const toggleSound = (enabled) => {
-  if (typeof window === 'undefined') return true;
-  const nextState = enabled !== undefined ? Boolean(enabled) : !isSoundEnabled();
-  localStorage.setItem('freedom_ui_sound', nextState ? 'true' : 'false');
-  window.dispatchEvent(new CustomEvent('freedom_sound_toggled', { detail: { enabled: nextState } }));
-  if (nextState) {
-    playClickSound();
-  }
-  return nextState;
-};
-
 /**
  * Phát âm thanh "clik-clak" cơ học nhẹ nhàng khi bấm phím/chuột
  */
@@ -121,6 +109,18 @@ export const playClickSound = () => {
   } catch (e) {
     // Không làm gián đoạn UI nếu trình duyệt giới hạn audio
   }
+};
+
+// Bật / Tắt âm thanh hiệu ứng
+export const toggleSound = (enabled) => {
+  if (typeof window === 'undefined') return true;
+  const nextState = enabled !== undefined ? Boolean(enabled) : !isSoundEnabled();
+  localStorage.setItem('freedom_ui_sound', nextState ? 'true' : 'false');
+  window.dispatchEvent(new CustomEvent('freedom_sound_toggled', { detail: { enabled: nextState } }));
+  if (nextState) {
+    playClickSound();
+  }
+  return nextState;
 };
 
 let lastHoverTime = 0;

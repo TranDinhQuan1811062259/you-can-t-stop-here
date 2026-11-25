@@ -40,6 +40,70 @@ export const CreateStoryModal = ({ isOpen, onClose, storyToEdit = null }) => {
 
   const isEditing = Boolean(storyToEdit);
 
+  const saveHistory = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    try {
+      historyRef.current.push(canvas.toDataURL());
+      if (historyRef.current.length > 15) historyRef.current.shift();
+    } catch (e) {}
+  };
+
+  const handleClearCanvas = () => {
+    playClickSound();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    historyRef.current = [];
+    saveHistory();
+    setHasDrawn(false);
+  };
+
+  const handleUndo = () => {
+    playClickSound();
+    if (historyRef.current.length <= 1) {
+      handleClearCanvas();
+      return;
+    }
+    historyRef.current.pop();
+    const prevData = historyRef.current[historyRef.current.length - 1];
+    const canvas = canvasRef.current;
+    if (!canvas || !prevData) return;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+    };
+    img.src = prevData;
+  };
+
+  // Khởi tạo Canvas
+  const initCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width || 320;
+    canvas.height = rect.height || 460;
+    const ctx = canvas.getContext('2d');
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (storyToEdit?.drawingData) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setHasDrawn(true);
+        saveHistory();
+      };
+      img.src = storyToEdit.drawingData;
+    } else {
+      saveHistory();
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       if (storyToEdit) {
@@ -75,70 +139,6 @@ export const CreateStoryModal = ({ isOpen, onClose, storyToEdit = null }) => {
       stopStoryMusic();
     };
   }, [isOpen, storyToEdit]);
-
-  // Khởi tạo Canvas
-  const initCanvas = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width || 320;
-    canvas.height = rect.height || 460;
-    const ctx = canvas.getContext('2d');
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (storyToEdit?.drawingData) {
-      const img = new Image();
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        setHasDrawn(true);
-        saveHistory();
-      };
-      img.src = storyToEdit.drawingData;
-    } else {
-      saveHistory();
-    }
-  };
-
-  const saveHistory = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    try {
-      historyRef.current.push(canvas.toDataURL());
-      if (historyRef.current.length > 15) historyRef.current.shift();
-    } catch (e) {}
-  };
-
-  const handleUndo = () => {
-    playClickSound();
-    if (historyRef.current.length <= 1) {
-      handleClearCanvas();
-      return;
-    }
-    historyRef.current.pop();
-    const prevData = historyRef.current[historyRef.current.length - 1];
-    const canvas = canvasRef.current;
-    if (!canvas || !prevData) return;
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    img.onload = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
-    };
-    img.src = prevData;
-  };
-
-  const handleClearCanvas = () => {
-    playClickSound();
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    historyRef.current = [];
-    saveHistory();
-    setHasDrawn(false);
-  };
 
   // Các sự kiện vẽ mượt mà hỗ trợ chuột & cảm ứng
   const startDrawing = (e) => {

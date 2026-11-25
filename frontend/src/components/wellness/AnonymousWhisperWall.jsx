@@ -55,6 +55,15 @@ export const AnonymousWhisperWall = ({ isOpen, onClose }) => {
   }, [whispers]);
 
   // Khởi động / Dừng tiếng mưa nền
+  const stopRainSound = () => {
+    if (rainAmbientNodeRef.current) {
+      try {
+        rainAmbientNodeRef.current.stop();
+      } catch (_) {}
+      rainAmbientNodeRef.current = null;
+    }
+  };
+
   const startRainSound = () => {
     if (!isRainEnabled) return;
     stopRainSound();
@@ -65,21 +74,23 @@ export const AnonymousWhisperWall = ({ isOpen, onClose }) => {
     }
   };
 
-  const stopRainSound = () => {
-    if (rainAmbientNodeRef.current) {
-      try {
-        rainAmbientNodeRef.current.stop();
-      } catch (_) {}
-      rainAmbientNodeRef.current = null;
-    }
-  };
-
   // Cập nhật âm lượng tiếng mưa khi thay đổi slider
   const handleRainVolumeChange = (newVol) => {
     setRainVolume(newVol);
     if (rainAmbientNodeRef.current) {
       rainAmbientNodeRef.current.setVolume(newVol);
     }
+  };
+
+  // Dừng thu âm
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (_) {}
+    }
+    clearInterval(recordTimerRef.current);
+    setIsRecording(false);
   };
 
   // Dừng phát mọi giọng nói & âm thanh
@@ -114,6 +125,52 @@ export const AnonymousWhisperWall = ({ isOpen, onClose }) => {
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  // Fallback đọc bằng Web Speech API
+  const playWebSpeechFallback = (text) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      stopAllPlayback();
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'vi-VN';
+    utterance.rate = 0.82; // Chậm rãi, thì thầm
+    utterance.pitch = 0.95;
+    utterance.onend = () => {
+      stopAllPlayback();
+    };
+    utterance.onerror = () => {
+      stopAllPlayback();
+    };
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Gọi A.I đọc thì thầm (Backend Edge TTS hoặc Fallback Web Speech Synthesis)
+  const playWithVoiceAI = (rawText) => {
+    const cleanText = (rawText || '').replace(/^["“]|["”]$/g, '').trim();
+    if (!cleanText) {
+      stopAllPlayback();
+      return;
+    }
+
+    if (playbackAudioRef.current) {
+      // Gọi TTS backend với giọng nữ trầm ấm, nhẹ nhàng thì thầm
+      const ttsUrl = `/api/tts?text=${encodeURIComponent(cleanText)}&lang=vi&gender=female&mood=melancholic&speed=0.85`;
+      playbackAudioRef.current.src = ttsUrl;
+      playbackAudioRef.current.volume = 1.0;
+
+      const playPromise = playbackAudioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Fallback sang Web Speech tiếng Việt nếu server chậm/offline
+          playWebSpeechFallback(cleanText);
+        });
+      }
+    } else {
+      playWebSpeechFallback(cleanText);
+    }
+  };
 
   // Xử lý bật / tạm dừng phát một lời thì thầm (Voice Hug hoặc Đọc bằng A.I)
   const handleTogglePlayWhisper = (w, e) => {
@@ -156,52 +213,6 @@ export const AnonymousWhisperWall = ({ isOpen, onClose }) => {
     playWithVoiceAI(w.text);
   };
 
-  // Gọi A.I đọc thì thầm (Backend Edge TTS hoặc Fallback Web Speech Synthesis)
-  const playWithVoiceAI = (rawText) => {
-    const cleanText = (rawText || '').replace(/^["“]|["”]$/g, '').trim();
-    if (!cleanText) {
-      stopAllPlayback();
-      return;
-    }
-
-    if (playbackAudioRef.current) {
-      // Gọi TTS backend với giọng nữ trầm ấm, nhẹ nhàng thì thầm
-      const ttsUrl = `/api/tts?text=${encodeURIComponent(cleanText)}&lang=vi&gender=female&mood=melancholic&speed=0.85`;
-      playbackAudioRef.current.src = ttsUrl;
-      playbackAudioRef.current.volume = 1.0;
-
-      const playPromise = playbackAudioRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // Fallback sang Web Speech tiếng Việt nếu server chậm/offline
-          playWebSpeechFallback(cleanText);
-        });
-      }
-    } else {
-      playWebSpeechFallback(cleanText);
-    }
-  };
-
-  // Fallback đọc bằng Web Speech API
-  const playWebSpeechFallback = (text) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
-      stopAllPlayback();
-      return;
-    }
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'vi-VN';
-    utterance.rate = 0.82; // Chậm rãi, thì thầm
-    utterance.pitch = 0.95;
-    utterance.onend = () => {
-      stopAllPlayback();
-    };
-    utterance.onerror = () => {
-      stopAllPlayback();
-    };
-    window.speechSynthesis.speak(utterance);
-  };
-
   const handleAudioEnded = () => {
     stopAllPlayback();
   };
@@ -230,17 +241,6 @@ export const AnonymousWhisperWall = ({ isOpen, onClose }) => {
     if (activeWhisper && activeWhisper.id === wId) {
       setActiveWhisper((prev) => ({ ...prev, hearts: prev.hearts + 1 }));
     }
-  };
-
-  // Dừng thu âm
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      try {
-        mediaRecorderRef.current.stop();
-      } catch (_) {}
-    }
-    clearInterval(recordTimerRef.current);
-    setIsRecording(false);
   };
 
   // Bắt đầu thu âm giọng nói 10 giây (Voice Hug)

@@ -394,28 +394,6 @@ export const RantAndBurnModal = ({ isOpen, onClose, onOpenCafe }) => {
     });
   };
 
-  // Bắt đầu châm lửa thiêu rụi
-  const handleStartBurn = () => {
-    if (!rantText.trim()) return;
-    playWarmthSound();
-    fireSynth.start();
-    setBurnStage('burning');
-    setRumble(true);
-
-    // Kích hoạt hạt than bay Canvas
-    initParticles();
-
-    // Rung giật màn hình nhẹ nhàng trong 1.5s
-    setTimeout(() => setRumble(false), 1500);
-
-    // Sau 3.8s: Đốt xong hoàn toàn, biến thành tro tàn và nảy mầm cây
-    setTimeout(() => {
-      fireSynth.stop();
-      setBurnStage('ashes');
-      setRantText(''); // Xóa sổ hoàn toàn dữ liệu trên RAM
-    }, 3800);
-  };
-
   // Khởi tạo Canvas hạt than hồng & tàn tro
   const initParticles = () => {
     const canvas = canvasRef.current;
@@ -489,6 +467,28 @@ export const RantAndBurnModal = ({ isOpen, onClose, onOpenCafe }) => {
     };
 
     render();
+  };
+
+  // Bắt đầu châm lửa thiêu rụi
+  const handleStartBurn = () => {
+    if (!rantText.trim()) return;
+    playWarmthSound();
+    fireSynth.start();
+    setBurnStage('burning');
+    setRumble(true);
+
+    // Kích hoạt hạt than bay Canvas
+    initParticles();
+
+    // Rung giật màn hình nhẹ nhàng trong 1.5s
+    setTimeout(() => setRumble(false), 1500);
+
+    // Sau 3.8s: Đốt xong hoàn toàn, biến thành tro tàn và nảy mầm cây
+    setTimeout(() => {
+      fireSynth.stop();
+      setBurnStage('ashes');
+      setRantText(''); // Xóa sổ hoàn toàn dữ liệu trên RAM
+    }, 3800);
   };
 
   const handleResetForNext = () => {

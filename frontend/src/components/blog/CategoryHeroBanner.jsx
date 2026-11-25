@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { playClickSound } from '../../utils/soundEffects';
 import { triggerThresholdTick } from '../../utils/haptics';
+import { prefetchPosts } from '../../services/postService';
 import {
   getAdjacentTopics,
   peekPendingBannerTransition,
@@ -77,6 +78,7 @@ export const CategoryHeroBanner = ({
   const wasDraggingRef = useRef(false);
   const wheelAccumRef = useRef(0);
   const wheelCooldownRef = useRef(false);
+  const prefetchedSlugThisGestureRef = useRef(null);
 
   const dragStateRef = useRef({
     active: false,
@@ -201,6 +203,7 @@ export const CategoryHeroBanner = ({
 
     dragStateRef.current.lastDeltaX = 0;
     dragStateRef.current.hasTriggeredTick = false;
+    prefetchedSlugThisGestureRef.current = null;
     wheelAccumRef.current = 0;
 
     springTimerRef.current = setTimeout(() => {
@@ -262,6 +265,7 @@ export const CategoryHeroBanner = ({
         resetBannerCssVars();
         dragStateRef.current.lastDeltaX = 0;
         dragStateRef.current.hasTriggeredTick = false;
+        prefetchedSlugThisGestureRef.current = null;
         wheelAccumRef.current = 0;
 
         performDirectNavigation(targetTopic, dir);
@@ -340,6 +344,7 @@ export const CategoryHeroBanner = ({
       bannerRef.current?.classList.remove('is-spring-back');
 
       wasDraggingRef.current = false;
+      prefetchedSlugThisGestureRef.current = null;
       dragStateRef.current = {
         active: true,
         pointerId: e.pointerId,
@@ -391,6 +396,18 @@ export const CategoryHeroBanner = ({
 
       state.lastDeltaX = effectiveX;
 
+      // Predictive Warm-Cache: khi người dùng kéo đạt >= 50% ngưỡng chuyển chủ đề, âm thầm nạp trước trang 1
+      if (hasTarget) {
+        const dynamicThreshold = getDynamicThreshold();
+        if (Math.abs(effectiveX) >= dynamicThreshold * 0.5) {
+          const targetSlug = targetTopic.slug || '';
+          if (prefetchedSlugThisGestureRef.current !== targetSlug) {
+            prefetchedSlugThisGestureRef.current = targetSlug;
+            prefetchPosts({ category: targetSlug, page: 1, limit: 6 });
+          }
+        }
+      }
+
       if (!rafIdRef.current) {
         rafIdRef.current = requestAnimationFrame(() => {
           rafIdRef.current = null;
@@ -431,6 +448,15 @@ export const CategoryHeroBanner = ({
 
       wheelAccumRef.current = clampedX;
       const threshold = getDynamicThreshold();
+
+      // Predictive Warm-Cache cho cử chỉ vuốt trackpad ngang >= 50% ngưỡng
+      if (hasTarget && Math.abs(clampedX) >= threshold * 0.5) {
+        const targetSlug = targetTopic.slug || '';
+        if (prefetchedSlugThisGestureRef.current !== targetSlug) {
+          prefetchedSlugThisGestureRef.current = targetSlug;
+          prefetchPosts({ category: targetSlug, page: 1, limit: 6 });
+        }
+      }
 
       if (!rafIdRef.current) {
         rafIdRef.current = requestAnimationFrame(() => {

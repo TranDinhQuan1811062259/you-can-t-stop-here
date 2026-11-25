@@ -35,6 +35,15 @@ export const getGuestCapsuleId = () => {
   }
 };
 
+// Lưu danh sách hộp thời gian xuống bộ nhớ cục bộ
+export const saveLocalCapsules = (capsules) => {
+  try {
+    localStorage.setItem(LOCAL_CAPSULES_KEY, JSON.stringify(capsules || []));
+  } catch (e) {
+    console.warn('Lỗi lưu local capsules:', e);
+  }
+};
+
 // Đọc danh sách hộp thời gian từ bộ nhớ cục bộ trình duyệt
 export const getLocalCapsules = () => {
   try {
@@ -52,15 +61,6 @@ export const getLocalCapsules = () => {
   const initial = [DEFAULT_WELCOME_CAPSULE];
   saveLocalCapsules(initial);
   return initial;
-};
-
-// Lưu danh sách hộp thời gian xuống bộ nhớ cục bộ
-export const saveLocalCapsules = (capsules) => {
-  try {
-    localStorage.setItem(LOCAL_CAPSULES_KEY, JSON.stringify(capsules || []));
-  } catch (e) {
-    console.warn('Lỗi lưu local capsules:', e);
-  }
 };
 
 export const timeCapsuleService = {

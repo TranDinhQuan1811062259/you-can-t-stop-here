@@ -138,6 +138,22 @@ export const FloatingAiAudioPlayer = () => {
     });
   };
 
+  // Toggle Play / Pause
+  const handleTogglePlay = () => {
+    playClickSound();
+    if (playbackState === 'playing') {
+      aiVoicePlayer.pause();
+      setPlaybackState('paused');
+      broadcastAudioState(currentPost?._id || currentPost?.slug, 'paused');
+    } else if (playbackState === 'paused') {
+      aiVoicePlayer.resume(detectedMood);
+      setPlaybackState('playing');
+      broadcastAudioState(currentPost?._id || currentPost?.slug, 'playing');
+    } else if (currentPost) {
+      startPlayingPost(currentPost, selectedMood);
+    }
+  };
+
   // Lắng nghe sự kiện kích hoạt đọc từ PostCard hoặc các trang con
   useEffect(() => {
     aiVoicePlayer.initVoices();
@@ -161,22 +177,6 @@ export const FloatingAiAudioPlayer = () => {
       window.removeEventListener('freedom_play_ai_post', handlePlayRequest);
     };
   }, [currentPost, selectedMood, speed, activeVoiceProfile]);
-
-  // Toggle Play / Pause
-  const handleTogglePlay = () => {
-    playClickSound();
-    if (playbackState === 'playing') {
-      aiVoicePlayer.pause();
-      setPlaybackState('paused');
-      broadcastAudioState(currentPost?._id || currentPost?.slug, 'paused');
-    } else if (playbackState === 'paused') {
-      aiVoicePlayer.resume(detectedMood);
-      setPlaybackState('playing');
-      broadcastAudioState(currentPost?._id || currentPost?.slug, 'playing');
-    } else if (currentPost) {
-      startPlayingPost(currentPost, selectedMood);
-    }
-  };
 
   // Dừng phát và đóng thanh phát
   const handleClose = () => {

@@ -37,19 +37,6 @@ export const FAB_SIZES = {
   pet: { width: 104, height: 76 }, // 70px thú cưng + 6px gap + 28px nút bánh răng/xương + viền/đổ bóng
 };
 
-/**
- * Lấy kích thước tương thích linh hoạt theo kích thước màn hình
- * (Trên mobile 320px–640px, nút Viết bài tự co về dạng tròn 48x48px để không che khuất bài viết)
- */
-export const getFabDimensions = (type) => {
-  if (typeof window === 'undefined') return FAB_SIZES[type] || { width: 58, height: 58 };
-  const { width: vpWidth } = getViewport();
-  if (type === 'write' && vpWidth <= 640) {
-    return { width: 48, height: 48 };
-  }
-  return FAB_SIZES[type] || { width: 58, height: 58 };
-};
-
 export const MARGIN_LEFT = 24;
 export const MARGIN_RIGHT = 32; // Đồng nhất thụt lề phải an toàn 32px, chống cấn thanh cuộn và mép màn hình
 export const MARGIN_TOP = 20;
@@ -72,6 +59,19 @@ export const getViewport = () => {
   return { width, height };
 };
 
+/**
+ * Lấy kích thước tương thích linh hoạt theo kích thước màn hình
+ * (Trên mobile 320px–640px, nút Viết bài tự co về dạng tròn 48x48px để không che khuất bài viết)
+ */
+export const getFabDimensions = (type) => {
+  if (typeof window === 'undefined') return FAB_SIZES[type] || { width: 58, height: 58 };
+  const { width: vpWidth } = getViewport();
+  if (type === 'write' && vpWidth <= 640) {
+    return { width: 48, height: 48 };
+  }
+  return FAB_SIZES[type] || { width: 58, height: 58 };
+};
+
 export const getFabKey = (type) => {
   if (type === 'chat') return 'freedom_chat_btn_pos';
   if (type === 'mascot') return 'freedom_mascot_btn_pos';
@@ -80,20 +80,6 @@ export const getFabKey = (type) => {
   if (type === 'radio') return 'freedom_radio_btn_pos';
   if (type === 'pet') return 'freedom_desk_pet_pos';
   return 'freedom_write_btn_pos';
-};
-
-/**
- * Lấy toạ độ và kích thước của Widget Linh Vật Sự Kiện Lễ Hội (FloatingFestiveMascot)
- */
-export const getMascotBox = () => {
-  if (typeof window === 'undefined') return null;
-  const pos = getFabPos('mascot');
-  return {
-    x: pos.x,
-    y: pos.y,
-    width: FAB_SIZES.mascot.width,
-    height: FAB_SIZES.mascot.height,
-  };
 };
 
 /**
@@ -248,6 +234,20 @@ export const getFabPos = (type) => {
   }
 
   return currentPos;
+};
+
+/**
+ * Lấy toạ độ và kích thước của Widget Linh Vật Sự Kiện Lễ Hội (FloatingFestiveMascot)
+ */
+export const getMascotBox = () => {
+  if (typeof window === 'undefined') return null;
+  const pos = getFabPos('mascot');
+  return {
+    x: pos.x,
+    y: pos.y,
+    width: FAB_SIZES.mascot.width,
+    height: FAB_SIZES.mascot.height,
+  };
 };
 
 /**

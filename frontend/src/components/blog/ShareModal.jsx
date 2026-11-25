@@ -21,6 +21,17 @@ export const ShareModal = ({ isOpen, onClose, post, onShareSuccess }) => {
   const postUrl = `${window.location.origin}/post/${post.slug}`;
   const shareTitle = `${post.title} | You Can't Stop Here`;
 
+  const notifyServerShared = async () => {
+    try {
+      const res = await postService.sharePost(post._id || post.slug);
+      if (res?.data?.sharesCount && onShareSuccess) {
+        onShareSuccess(res.data.sharesCount);
+      }
+    } catch (err) {
+      console.warn('Lỗi ghi nhận lượt chia sẻ:', err);
+    }
+  };
+
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(postUrl);
@@ -38,17 +49,6 @@ export const ShareModal = ({ isOpen, onClose, post, onShareSuccess }) => {
       setCopied(true);
       notifyServerShared();
       setTimeout(() => setCopied(false), 3000);
-    }
-  };
-
-  const notifyServerShared = async () => {
-    try {
-      const res = await postService.sharePost(post._id || post.slug);
-      if (res?.data?.sharesCount && onShareSuccess) {
-        onShareSuccess(res.data.sharesCount);
-      }
-    } catch (err) {
-      console.warn('Lỗi ghi nhận lượt chia sẻ:', err);
     }
   };
 

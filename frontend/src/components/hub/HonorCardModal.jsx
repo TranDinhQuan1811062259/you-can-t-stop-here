@@ -122,38 +122,6 @@ export const HonorCardModal = ({ isOpen, onClose, streakCount = 0 }) => {
     const avatarCenterY = 185;
     const avatarRadius = 48;
 
-    const drawFallbackAvatar = () => {
-      // Vòng tròn Avatar gradient
-      const avGrad = ctx.createLinearGradient(
-        avatarCenterX - avatarRadius,
-        avatarCenterY - avatarRadius,
-        avatarCenterX + avatarRadius,
-        avatarCenterY + avatarRadius
-      );
-      avGrad.addColorStop(0, '#0284c7');
-      avGrad.addColorStop(1, '#38bdf8');
-      ctx.beginPath();
-      ctx.arc(avatarCenterX, avatarCenterY, avatarRadius, 0, Math.PI * 2);
-      ctx.fillStyle = avGrad;
-      ctx.fill();
-
-      // Viền vàng kim
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      // Ký tự đầu của tên
-      const initial = (user?.name || 'U').charAt(0).toUpperCase();
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 36px "Plus Jakarta Sans", sans-serif';
-      ctx.letterSpacing = '0px';
-      ctx.fillText(initial, avatarCenterX, avatarCenterY);
-
-      continueDrawingCardDetails();
-    };
-
     const continueDrawingCardDetails = () => {
       ctx.textBaseline = 'alphabetic'; // reset
 
@@ -231,6 +199,38 @@ export const HonorCardModal = ({ isOpen, onClose, streakCount = 0 }) => {
       } finally {
         setIsGenerating(false);
       }
+    };
+
+    const drawFallbackAvatar = () => {
+      // Vòng tròn Avatar gradient
+      const avGrad = ctx.createLinearGradient(
+        avatarCenterX - avatarRadius,
+        avatarCenterY - avatarRadius,
+        avatarCenterX + avatarRadius,
+        avatarCenterY + avatarRadius
+      );
+      avGrad.addColorStop(0, '#0284c7');
+      avGrad.addColorStop(1, '#38bdf8');
+      ctx.beginPath();
+      ctx.arc(avatarCenterX, avatarCenterY, avatarRadius, 0, Math.PI * 2);
+      ctx.fillStyle = avGrad;
+      ctx.fill();
+
+      // Viền vàng kim
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Ký tự đầu của tên
+      const initial = (user?.name || 'U').charAt(0).toUpperCase();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 36px "Plus Jakarta Sans", sans-serif';
+      ctx.letterSpacing = '0px';
+      ctx.fillText(initial, avatarCenterX, avatarCenterY);
+
+      continueDrawingCardDetails();
     };
 
     // Kiểm tra có avatar không

@@ -119,6 +119,13 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
   const currentHour = now.getHours();
   const isClockOutTime = currentHour >= 17 && currentHour <= 21;
 
+  const stopBreathing = () => {
+    if (breathTimerRef.current) clearInterval(breathTimerRef.current);
+    setIsBreathingActive(false);
+    setBreathPhase('ready');
+    setBreathSeconds(4);
+  };
+
   useEffect(() => {
     if (!isOpen || activeTab !== 'smash') {
       sendRageYtCommand('pauseVideo');
@@ -266,21 +273,6 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
   // =========================================================================
   // XỬ LÝ BÀI TẬP THỞ 4-7-8 (BOX BREATHING)
   // =========================================================================
-  const startBreathing = () => {
-    playClickSound();
-    playSingingBowlSound();
-    setIsBreathingActive(true);
-    setBreathCycles(0);
-    runPhase('inhale', 4);
-  };
-
-  const stopBreathing = () => {
-    if (breathTimerRef.current) clearInterval(breathTimerRef.current);
-    setIsBreathingActive(false);
-    setBreathPhase('ready');
-    setBreathSeconds(4);
-  };
-
   const runPhase = (phase, seconds) => {
     setBreathPhase(phase);
     setBreathSeconds(seconds);
@@ -308,6 +300,14 @@ export const StressReliefModal = ({ isOpen, onClose }) => {
         }
       }
     }, 1000);
+  };
+
+  const startBreathing = () => {
+    playClickSound();
+    playSingingBowlSound();
+    setIsBreathingActive(true);
+    setBreathCycles(0);
+    runPhase('inhale', 4);
   };
 
   useEffect(() => {

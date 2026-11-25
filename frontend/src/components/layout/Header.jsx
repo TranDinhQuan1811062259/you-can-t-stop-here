@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { Link, NavLink, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { postService, getCachedPosts, removeVietnameseTones } from '../../services/postService';
+import { postService, getCachedPosts, prefetchPosts, removeVietnameseTones } from '../../services/postService';
 import { eventService } from '../../services/eventService';
 import { isSoundEnabled, toggleSound, playClickSound, playFestiveEventSound } from '../../utils/soundEffects';
 import { getActiveSeason, setActiveSeason, SEASONS } from '../../utils/seasonUtils';
@@ -204,6 +204,20 @@ export const Header = () => {
   const { topics: headerTopics } = useCategoryRegistry();
   const categoryPillsTrackRef = useRef(null);
   const pillRefs = useRef({});
+  const hoverPrefetchTimerRef = useRef(null);
+
+  const cancelScheduledTopicPrefetch = () => {
+    if (hoverPrefetchTimerRef.current) {
+      clearTimeout(hoverPrefetchTimerRef.current);
+      hoverPrefetchTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      cancelScheduledTopicPrefetch();
+    };
+  }, []);
 
   const activeTopicSlug = location.pathname.startsWith('/category/')
     ? decodeURIComponent(location.pathname.replace(/^\/category\//, '').split('/')[0] || '')
@@ -212,6 +226,20 @@ export const Header = () => {
     : location.pathname === '/' && !searchParams.get('tag') && !searchParams.get('q')
     ? ''
     : null;
+
+  const scheduleTopicPrefetch = (slug, immediate = false) => {
+    cancelScheduledTopicPrefetch();
+    if (activeTopicSlug !== null && activeTopicSlug === slug) return;
+    const normalizedSlug = slug || '';
+    if (immediate) {
+      prefetchPosts({ category: normalizedSlug, page: 1, limit: 6 });
+      return;
+    }
+    hoverPrefetchTimerRef.current = setTimeout(() => {
+      hoverPrefetchTimerRef.current = null;
+      prefetchPosts({ category: normalizedSlug, page: 1, limit: 6 });
+    }, 120);
+  };
 
   // Tự động cuộn mượt thanh danh mục trên Header để pill chủ đề đang chọn luôn nằm giữa tầm nhìn
   useEffect(() => {
@@ -1600,7 +1628,11 @@ export const Header = () => {
                       transitionDirection: direction,
                       targetSlug: topic.slug,
                     }}
+                    onMouseEnter={() => scheduleTopicPrefetch(topic.slug, false)}
+                    onMouseLeave={cancelScheduledTopicPrefetch}
+                    onFocus={() => scheduleTopicPrefetch(topic.slug, true)}
                     onClick={() => {
+                      cancelScheduledTopicPrefetch();
                       playClickSound();
                       if (!isActive) {
                         setPendingBannerTransition(direction, topic.slug);

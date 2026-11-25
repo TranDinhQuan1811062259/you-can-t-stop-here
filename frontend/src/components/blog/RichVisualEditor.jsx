@@ -75,30 +75,6 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
     }
   }, [value]);
 
-  // ===============================================
-  // LỌC KÝ TỰ RÁC KHI PASTE TỪ PDF / WORD
-  // ===============================================
-  const handlePaste = (e) => {
-    e.preventDefault();
-
-    // Ưu tiên lấy văn bản thuần túy để lọc sạch ký tự rác từ PDF
-    const rawText = e.clipboardData.getData('text/plain');
-    const rawHtml = e.clipboardData.getData('text/html');
-
-    // Nếu có HTML sạch từ web (không phải PDF), dùng HTML
-    if (rawHtml && !rawText.includes('Ξ') && !rawText.includes('≡') && !rawText.includes('Ô') && rawText.length < rawHtml.length * 2) {
-      // Làm sạch HTML trước khi chèn: giữ định dạng cơ bản, bỏ tag nguy hiểm
-      const cleanedHtml = sanitizeHtmlForPaste(rawHtml);
-      document.execCommand('insertHTML', false, cleanedHtml);
-    } else {
-      // PDF/Word: chỉ lấy text thuần và làm sạch ký tự lạ
-      const cleanText = sanitizePdfText(rawText);
-      document.execCommand('insertText', false, cleanText);
-    }
-
-    handleInput();
-  };
-
   // Làm sạch văn bản từ PDF (loại bỏ ký tự điều khiển, ký tự mã hóa lạ)
   const sanitizePdfText = (text) => {
     if (!text) return '';
@@ -149,6 +125,30 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
         onChange(html);
       }
     }
+  };
+
+  // ===============================================
+  // LỌC KÝ TỰ RÁC KHI PASTE TỪ PDF / WORD
+  // ===============================================
+  const handlePaste = (e) => {
+    e.preventDefault();
+
+    // Ưu tiên lấy văn bản thuần túy để lọc sạch ký tự rác từ PDF
+    const rawText = e.clipboardData.getData('text/plain');
+    const rawHtml = e.clipboardData.getData('text/html');
+
+    // Nếu có HTML sạch từ web (không phải PDF), dùng HTML
+    if (rawHtml && !rawText.includes('Ξ') && !rawText.includes('≡') && !rawText.includes('Ô') && rawText.length < rawHtml.length * 2) {
+      // Làm sạch HTML trước khi chèn: giữ định dạng cơ bản, bỏ tag nguy hiểm
+      const cleanedHtml = sanitizeHtmlForPaste(rawHtml);
+      document.execCommand('insertHTML', false, cleanedHtml);
+    } else {
+      // PDF/Word: chỉ lấy text thuần và làm sạch ký tự lạ
+      const cleanText = sanitizePdfText(rawText);
+      document.execCommand('insertText', false, cleanText);
+    }
+
+    handleInput();
   };
 
   // Thực thi lệnh định dạng nội dung chuẩn của trình duyệt (Tự động hỗ trợ Ctrl+Z / Ctrl+Y)
@@ -267,6 +267,26 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
   // ===============================================
   // HỆ THỐNG GỢI Ý # (HASHTAG) VÀ @ (MENTION BẠN BÈ)
   // ===============================================
+  const calculatePopoverPosition = (range) => {
+    try {
+      const rect = range.getBoundingClientRect();
+      const containerRect = containerRef.current?.getBoundingClientRect();
+
+      if (containerRect) {
+        let left = rect.left - containerRect.left;
+        let top = rect.bottom - containerRect.top + 8;
+
+        // Tránh popover bị tràn ra mép container
+        if (left + 260 > containerRect.width) {
+          left = Math.max(10, containerRect.width - 270);
+        }
+        setSuggestionCoords({ top, left: Math.max(10, left) });
+      }
+    } catch (e) {
+      setSuggestionCoords({ top: 120, left: 20 });
+    }
+  };
+
   const checkAutoSuggest = (e) => {
     // Không làm gián đoạn khi người dùng đang bấm phím điều hướng trong popover
     if (e && (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Enter' || e.key === 'Tab' || e.key === 'Escape')) {
@@ -316,26 +336,6 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
     }
 
     setSuggestionMode(null);
-  };
-
-  const calculatePopoverPosition = (range) => {
-    try {
-      const rect = range.getBoundingClientRect();
-      const containerRect = containerRef.current?.getBoundingClientRect();
-
-      if (containerRect) {
-        let left = rect.left - containerRect.left;
-        let top = rect.bottom - containerRect.top + 8;
-
-        // Tránh popover bị tràn ra mép container
-        if (left + 260 > containerRect.width) {
-          left = Math.max(10, containerRect.width - 270);
-        }
-        setSuggestionCoords({ top, left: Math.max(10, left) });
-      }
-    } catch (e) {
-      setSuggestionCoords({ top: 120, left: 20 });
-    }
   };
 
   // Chèn hashtag được chọn (tự động phân biệt thay thế từ gõ dở hoặc chèn mới tại con trỏ)

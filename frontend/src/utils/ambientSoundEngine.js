@@ -714,6 +714,45 @@ const createFestiveSoundscape = (ctx, outputNode) => {
 // 3. ĐIỀU KHIỂN & BẬT / TẮT DUY TRÌ & HÒA ÂM (COMBINED SOUNDSCAPE)
 // =========================================================================
 
+let isMasterMuted = false;
+let savedMasterGain = 0.7;
+
+export const getAmbientState = () => {
+  return {
+    isWeatherSoundActive,
+    isEventSoundActive,
+    isCombined: isWeatherSoundActive && isEventSoundActive,
+    isMusicDucking,
+    isMasterMuted,
+    currentSeasonId,
+    currentMelodicSeasonId,
+    currentEventId,
+  };
+};
+
+const notifyStateChange = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('freedom_ambient_sound_changed', { detail: getAmbientState() }));
+  }
+};
+
+export const stopWeatherAmbient = () => {
+  if (activeWeatherSources && activeWeatherSources.length > 0) {
+    activeWeatherSources.forEach((src) => {
+      try {
+        if (typeof src.stop === 'function') src.stop();
+        if (typeof src.disconnect === 'function') src.disconnect();
+      } catch (e) {}
+    });
+    activeWeatherSources = [];
+  }
+  if (weatherMasterGain && audioCtx) {
+    weatherMasterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+  }
+  isWeatherSoundActive = false;
+  notifyStateChange();
+};
+
 export const startWeatherAmbient = (seasonId = 'winter') => {
   initAudioGraph();
   const ctx = getAudioContext();
@@ -740,23 +779,6 @@ export const startWeatherAmbient = (seasonId = 'winter') => {
     activeWeatherSources = createWinterSoundscape(ctx, weatherMasterGain);
   }
 
-  notifyStateChange();
-};
-
-export const stopWeatherAmbient = () => {
-  if (activeWeatherSources && activeWeatherSources.length > 0) {
-    activeWeatherSources.forEach((src) => {
-      try {
-        if (typeof src.stop === 'function') src.stop();
-        if (typeof src.disconnect === 'function') src.disconnect();
-      } catch (e) {}
-    });
-    activeWeatherSources = [];
-  }
-  if (weatherMasterGain && audioCtx) {
-    weatherMasterGain.gain.setValueAtTime(0, audioCtx.currentTime);
-  }
-  isWeatherSoundActive = false;
   notifyStateChange();
 };
 
@@ -905,9 +927,6 @@ export const resumeAmbientAudioContext = async () => {
   return ctx;
 };
 
-let isMasterMuted = false;
-let savedMasterGain = 0.7;
-
 /**
  * Bật/tắt Mute toàn cục cho đồ thị âm thanh Web Audio API môi trường
  */
@@ -928,19 +947,6 @@ export const setMasterMute = (muted) => {
   notifyStateChange();
 };
 
-export const getAmbientState = () => {
-  return {
-    isWeatherSoundActive,
-    isEventSoundActive,
-    isCombined: isWeatherSoundActive && isEventSoundActive,
-    isMusicDucking,
-    isMasterMuted,
-    currentSeasonId,
-    currentMelodicSeasonId,
-    currentEventId,
-  };
-};
-
 // Đảm bảo AudioContext tự động phục hồi khi tab chuyển từ ẩn sang hiện
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
@@ -949,9 +955,3 @@ if (typeof document !== 'undefined') {
     }
   });
 }
-
-const notifyStateChange = () => {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('freedom_ambient_sound_changed', { detail: getAmbientState() }));
-  }
-};

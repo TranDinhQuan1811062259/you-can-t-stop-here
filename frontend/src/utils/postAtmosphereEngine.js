@@ -542,6 +542,47 @@ const createHealingSoundscape = (ctx, outNode) => {
 // QUẢN LÝ PHÁT / TẠM DỪNG / VOLUME / AUDIO DUCKING
 // =========================================================================
 
+const notifyAtmosphereState = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('freedom_post_atmosphere_state_change', {
+        detail: {
+          isPlaying: isPostSoundActive,
+          theme: currentThemePlaying,
+          volume: userVolume,
+        },
+      })
+    );
+  }
+};
+
+export const stopPostAtmosphere = (notify = true) => {
+  if (currentAtmosphereSources && currentAtmosphereSources.length > 0) {
+    currentAtmosphereSources.forEach((src) => {
+      try {
+        if (typeof src.stop === 'function') src.stop();
+        if (typeof src.disconnect === 'function') src.disconnect();
+      } catch (e) {}
+    });
+    currentAtmosphereSources = [];
+  }
+
+  if (postMasterGain && postAudioCtx) {
+    try {
+      postMasterGain.gain.setValueAtTime(0, postAudioCtx.currentTime);
+      postMasterGain.disconnect();
+    } catch (e) {}
+    postMasterGain = null;
+  }
+
+  isPostSoundActive = false;
+  currentThemePlaying = null;
+
+  if (notify) {
+    notifyAtmosphereState();
+  }
+};
+
 export const startPostAtmosphere = (themeId, targetVolume = 0.5) => {
   if (!themeId || themeId === 'default') {
     stopPostAtmosphere();
@@ -588,33 +629,6 @@ export const startPostAtmosphere = (themeId, targetVolume = 0.5) => {
   notifyAtmosphereState();
 };
 
-export const stopPostAtmosphere = (notify = true) => {
-  if (currentAtmosphereSources && currentAtmosphereSources.length > 0) {
-    currentAtmosphereSources.forEach((src) => {
-      try {
-        if (typeof src.stop === 'function') src.stop();
-        if (typeof src.disconnect === 'function') src.disconnect();
-      } catch (e) {}
-    });
-    currentAtmosphereSources = [];
-  }
-
-  if (postMasterGain && postAudioCtx) {
-    try {
-      postMasterGain.gain.setValueAtTime(0, postAudioCtx.currentTime);
-      postMasterGain.disconnect();
-    } catch (e) {}
-    postMasterGain = null;
-  }
-
-  isPostSoundActive = false;
-  currentThemePlaying = null;
-
-  if (notify) {
-    notifyAtmosphereState();
-  }
-};
-
 export const setPostAtmosphereVolume = (vol) => {
   userVolume = Math.max(0, Math.min(1, vol));
   if (postMasterGain && postAudioCtx) {
@@ -644,17 +658,3 @@ if (typeof window !== 'undefined') {
     }
   });
 }
-
-const notifyAtmosphereState = () => {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent('freedom_post_atmosphere_state_change', {
-        detail: {
-          isPlaying: isPostSoundActive,
-          theme: currentThemePlaying,
-          volume: userVolume,
-        },
-      })
-    );
-  }
-};

@@ -28,6 +28,9 @@ export const CategoryPage = () => {
     if (currentPage !== 1) {
       setCurrentPage(1);
     }
+    if (isCommitSwitching) {
+      setIsCommitSwitching(false);
+    }
   }
 
   useEffect(() => {

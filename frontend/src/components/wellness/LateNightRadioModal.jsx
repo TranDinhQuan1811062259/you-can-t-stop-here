@@ -920,36 +920,6 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleToggleVoiceGender = (newGender) => {
-    playClickSound();
-    voiceGenderRef.current = newGender;
-    setVoiceGender(newGender);
-    try {
-      localStorage.setItem('freedom_radio_voice_gender', newGender);
-    } catch (_) {}
-    stopSpeaking();
-    if (isVoiceEnabled) {
-      speakTimerRef.current = setTimeout(() => {
-        speakCurrentThought(null, newGender, voiceRegionRef.current);
-      }, 50);
-    }
-  };
-
-  const handleToggleVoiceRegion = (newRegion) => {
-    playClickSound();
-    voiceRegionRef.current = newRegion;
-    setVoiceRegion(newRegion);
-    try {
-      localStorage.setItem('freedom_radio_voice_region', newRegion);
-    } catch (_) {}
-    stopSpeaking();
-    if (isVoiceEnabled) {
-      speakTimerRef.current = setTimeout(() => {
-        speakCurrentThought(null, voiceGenderRef.current, newRegion);
-      }, 50);
-    }
-  };
-
   // =========================================================================
   // VOICE ĐỌC LỜI NHẮN ĐỘNG VIÊN CHUẨN TIẾNG VIỆT 100% (TTS WITH AUDIO DUCKING)
   // =========================================================================
@@ -1095,6 +1065,36 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
       if (speechSessionIdRef.current === currentSessionId) {
         playBrowserSpeechFallback(cleanText);
       }
+    }
+  };
+
+  const handleToggleVoiceGender = (newGender) => {
+    playClickSound();
+    voiceGenderRef.current = newGender;
+    setVoiceGender(newGender);
+    try {
+      localStorage.setItem('freedom_radio_voice_gender', newGender);
+    } catch (_) {}
+    stopSpeaking();
+    if (isVoiceEnabled) {
+      speakTimerRef.current = setTimeout(() => {
+        speakCurrentThought(null, newGender, voiceRegionRef.current);
+      }, 50);
+    }
+  };
+
+  const handleToggleVoiceRegion = (newRegion) => {
+    playClickSound();
+    voiceRegionRef.current = newRegion;
+    setVoiceRegion(newRegion);
+    try {
+      localStorage.setItem('freedom_radio_voice_region', newRegion);
+    } catch (_) {}
+    stopSpeaking();
+    if (isVoiceEnabled) {
+      speakTimerRef.current = setTimeout(() => {
+        speakCurrentThought(null, voiceGenderRef.current, newRegion);
+      }, 50);
     }
   };
 
