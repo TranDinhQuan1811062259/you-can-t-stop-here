@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { categoryService } from '../../services/categoryService';
 
 export const CategoryFilter = ({
@@ -13,6 +13,34 @@ export const CategoryFilter = ({
   const [newCatDesc, setNewCatDesc] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const barRef = useRef(null);
+  const pillRefs = useRef({});
+
+  // Tự động cuộn mượt pill chủ đề đang chọn vào giữa thanh danh mục
+  useEffect(() => {
+    const key = activeCategory || '';
+    const activeEl = pillRefs.current[key];
+    if (!activeEl) return;
+
+    const rafId = requestAnimationFrame(() => {
+      try {
+        activeEl.scrollIntoView({
+          behavior: 'smooth',
+          inline: 'center',
+          block: 'nearest',
+        });
+      } catch (_) {
+        const container = barRef.current;
+        if (container) {
+          const targetLeft =
+            activeEl.offsetLeft - container.clientWidth / 2 + activeEl.offsetWidth / 2;
+          container.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
+        }
+      }
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [activeCategory, categories.length]);
 
   // Hàm suy đoán icon Font Awesome & tông màu pastel dịu nhẹ
   const getCatMeta = (cat) => {
@@ -75,6 +103,7 @@ export const CategoryFilter = ({
   return (
     <div className="category-filter-wrapper" style={{ marginBottom: '24px' }}>
       <div
+        ref={barRef}
         className="category-filter-bar"
         style={{
           display: 'flex',
@@ -88,6 +117,10 @@ export const CategoryFilter = ({
       >
         {/* Nút xem Tất cả */}
         <button
+          ref={(el) => {
+            if (el) pillRefs.current[''] = el;
+            else delete pillRefs.current[''];
+          }}
           className={`cat-btn ${activeCategory === '' ? 'active' : ''}`}
           onClick={() => onSelectCategory('')}
           style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
@@ -100,11 +133,15 @@ export const CategoryFilter = ({
 
         {/* Danh sách thể loại */}
         {categories.map((cat) => {
-          const isActive = activeCategory === cat.slug;
+          const isActive = activeCategory === cat.slug || activeCategory === cat._id;
           const meta = getCatMeta(cat);
           return (
             <button
               key={cat._id || cat.slug}
+              ref={(el) => {
+                if (el) pillRefs.current[cat.slug] = el;
+                else delete pillRefs.current[cat.slug];
+              }}
               className={`cat-btn ${isActive ? 'active' : ''}`}
               onClick={() => onSelectCategory(cat.slug)}
               title={cat.description || cat.name}

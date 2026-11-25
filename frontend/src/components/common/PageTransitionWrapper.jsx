@@ -1,25 +1,68 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { playClickSound } from '../../utils/soundEffects';
+import { triggerThresholdTick } from '../../utils/haptics';
 import { getActiveSeason } from '../../utils/seasonUtils';
 import { eventService } from '../../services/eventService';
 import { PageTransitionAtmosphereOverlay } from './PageTransitionAtmosphereOverlay';
+import {
+  HOME_TOPIC,
+  CORE_CATEGORIES_FALLBACK,
+  useCategoryRegistry,
+  getAdjacentTopics,
+  setPendingBannerTransition,
+  peekPendingBannerTransition,
+} from '../../utils/category-navigation';
 
+// Giữ export DASHBOARD_ROUTES để tương thích ngược tuyệt đối (Quy tắc 2 GEMINI.md)
 export const DASHBOARD_ROUTES = [
-  { path: '/', label: 'Trang Chủ', icon: '🏠' },
-  { path: '/category/ap-luc-kiet-suc-burnout', label: 'Burnout & Kiệt Sức', icon: '🔥' },
-  { path: '/category/khung-hoang-nghe-nghiep-career-crisis', label: 'Khủng Hoảng', icon: '⚡' },
-  { path: '/category/chuyen-nganh-bat-dau-lai-restart', label: 'Bắt Đầu Lại', icon: '🌱' },
-  { path: '/category/nhung-tia-sang-dong-luc-small-wins', label: 'Small Wins', icon: '✨' },
+  HOME_TOPIC,
+  ...CORE_CATEGORIES_FALLBACK.slice(0, 4).map((c) => ({
+    path: `/category/${c.slug}`,
+    label: c.shortLabel || c.name,
+    icon: c.icon,
+    slug: c.slug,
+  })),
 ];
+
+const isTopicPath = (pathname = '') =>
+  pathname === '/' || pathname.startsWith('/category/');
+
+const extractSlugFromPath = (pathname = '') => {
+  if (pathname === '/') return '';
+  if (pathname.startsWith('/category/')) {
+    return decodeURIComponent(pathname.replace(/^\/category\//, '').split('/')[0] || '');
+  }
+  return null;
+};
 
 export const PageTransitionWrapper = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { topics } = useCategoryRegistry();
 
-  const [transitionDirection, setTransitionDirection] = useState('forward'); // 'forward' | 'backward'
+  const [transitionDirection, setTransitionDirection] = useState('forward');
   const [isTransitioning, setIsTransitioning] = useState(false);
+
   const prevPathRef = useRef(location.pathname);
+  const transitionTimerRef = useRef(null);
+  const springBackTimerRef = useRef(null);
+  const rafRef = useRef(null);
+  const isCommittingRef = useRef(false);
+  const unlockCommitTimerRef = useRef(null);
+  const hasTriggeredTickRef = useRef(false);
+
+  const containerRef = useRef(null);
+  const contentBoxRef = useRef(null);
+  const indicatorRef = useRef(null);
+
+  const dragStartRef = useRef({
+    x: 0,
+    y: 0,
+    pointerId: null,
+    isHorizontalSwipe: false,
+  });
+  const pendingOffsetRef = useRef(0);
 
   // Mùa hiện tại & Sự kiện lễ hội hiện tại để phát hiệu ứng chuyển trang
   const [activeSeason, setActiveSeasonState] = useState(() => getActiveSeason());
@@ -54,34 +97,49 @@ export const PageTransitionWrapper = ({ children }) => {
     };
   }, []);
 
-  // Tìm index của dashboard hiện tại
-  const currentDashIndex = DASHBOARD_ROUTES.findIndex((r) => r.path === location.pathname);
+  const currentSlug = extractSlugFromPath(location.pathname);
+  const { currentIndex, prevTopic, nextTopic } =
+    currentSlug !== null
+      ? getAdjacentTopics(topics, currentSlug)
+      : { currentIndex: -1, prevTopic: null, nextTopic: null };
 
-  // Xử lý xác định hướng trượt khi đổi Route (qua phải -> trượt từ phải vào; qua trái -> trượt từ trái vào)
-  useEffect(() => {
-    const prevPath = prevPathRef.current;
-    const currentPath = location.pathname;
+  // Tính hướng trượt đồng bộ khi route thay đổi
+  if (prevPathRef.current !== location.pathname) {
+    const prevSlug = extractSlugFromPath(prevPathRef.current);
+    const pendingDir = currentSlug !== null ? peekPendingBannerTransition(currentSlug) : null;
+    const stateDir = location.state?.transitionDirection;
+    let nextDir = transitionDirection;
 
-    if (prevPath !== currentPath) {
-      const prevIdx = DASHBOARD_ROUTES.findIndex((r) => r.path === prevPath);
-      const currIdx = DASHBOARD_ROUTES.findIndex((r) => r.path === currentPath);
-
-      if (currIdx !== -1 && prevIdx !== -1) {
-        // Chuyển giữa các Dashboard: Qua tab bên phải -> màn hình mới trượt vào từ phải sang trái
-        setTransitionDirection(currIdx > prevIdx ? 'forward' : 'backward');
-      } else if (currIdx !== -1 && prevIdx === -1) {
-        setTransitionDirection('backward'); // Từ chi tiết bài viết quay về danh mục
-      } else {
-        setTransitionDirection('forward'); // Vào trang chi tiết bài viết
+    if (pendingDir) {
+      nextDir = pendingDir === 'next' ? 'forward' : 'backward';
+    } else if (stateDir === 'next' || stateDir === 'prev') {
+      nextDir = stateDir === 'next' ? 'forward' : 'backward';
+    } else if (prevSlug !== null && currentSlug !== null) {
+      const prevIdx = topics.findIndex((t) => t.slug === prevSlug);
+      const currIdx = topics.findIndex((t) => t.slug === currentSlug);
+      if (prevIdx !== -1 && currIdx !== -1 && prevIdx !== currIdx) {
+        nextDir = currIdx > prevIdx ? 'forward' : 'backward';
       }
+    } else if (currentSlug !== null && prevSlug === null) {
+      nextDir = 'backward';
+    } else {
+      nextDir = 'forward';
+    }
 
+    if (nextDir !== transitionDirection) {
+      setTransitionDirection(nextDir);
+    }
+  }
+
+  useEffect(() => {
+    if (prevPathRef.current !== location.pathname) {
+      prevPathRef.current = location.pathname;
       setIsTransitioning(true);
-      const timer = setTimeout(() => {
+      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+      transitionTimerRef.current = setTimeout(() => {
         setIsTransitioning(false);
-      }, 1600); // 1.6s chuyển trang dịu mắt, chuyển động thư thái, không bị vèo qua quá nhanh
-
-      prevPathRef.current = currentPath;
-      return () => clearTimeout(timer);
+        transitionTimerRef.current = null;
+      }, 1500);
     }
   }, [location.pathname]);
 
@@ -91,297 +149,318 @@ export const PageTransitionWrapper = ({ children }) => {
       const { direction } = e.detail || {};
       setTransitionDirection(direction === 'next' ? 'forward' : 'backward');
       setIsTransitioning(true);
-      setTimeout(() => setIsTransitioning(false), 1600);
+      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+      transitionTimerRef.current = setTimeout(() => {
+        setIsTransitioning(false);
+        transitionTimerRef.current = null;
+      }, 1500);
     };
 
     window.addEventListener('freedom_pagination_change', handlePaginationChange);
     return () => window.removeEventListener('freedom_pagination_change', handlePaginationChange);
   }, []);
 
-  // =========================================================================
-  // GESTURES: BẤM CHUỘT HOẶC CHẠM TAY VUỐT MÀN HÌNH ĐỂ TRƯỢT GIAO DIỆN 1:1
-  // =========================================================================
-
-  // Trạng thái kéo và nảy mềm
-  const [dragOffset, setDragOffset] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isSpringingBack, setIsSpringingBack] = useState(false);
-  const dragStartRef = useRef({ x: 0, y: 0, time: 0, pointerId: null, isHorizontalSwipe: false });
-  const rafRef = useRef(null);
-  const pendingOffsetRef = useRef(0);
-  const springBackTimerRef = useRef(null);
-
-  useEffect(() => {
-    return () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      if (springBackTimerRef.current) {
-        clearTimeout(springBackTimerRef.current);
-        springBackTimerRef.current = null;
-      }
-    };
-  }, []);
-
-  // Lắng nghe resize / orientation / blur để lập tức giải phóng kéo nếu đổi kích cỡ cửa sổ hoặc đổi tab
-  useEffect(() => {
-    const handleWindowReset = () => {
-      if (isDragging) {
-        if (rafRef.current) {
-          cancelAnimationFrame(rafRef.current);
-          rafRef.current = null;
-        }
-        setIsDragging(false);
-        setIsSpringingBack(false);
-        setDragOffset(0);
-        pendingOffsetRef.current = 0;
-        dragStartRef.current.pointerId = null;
-        dragStartRef.current.isHorizontalSwipe = false;
-      }
-    };
-    window.addEventListener('resize', handleWindowReset);
-    window.addEventListener('orientationchange', handleWindowReset);
-    window.addEventListener('blur', handleWindowReset);
-    return () => {
-      window.removeEventListener('resize', handleWindowReset);
-      window.removeEventListener('orientationchange', handleWindowReset);
-      window.removeEventListener('blur', handleWindowReset);
-    };
-  }, [isDragging]);
-
-  const shouldIgnoreGesture = (target) => {
-    if (!target || !(target instanceof Element)) return false;
-    return Boolean(
-      target.closest('.no-swipe') ||
-      target.closest('button') ||
-      target.closest('a') ||
-      target.closest('input') ||
-      target.closest('textarea') ||
-      target.closest('select') ||
-      target.closest('[role="slider"]') ||
-      target.closest('[role="button"]') ||
-      target.closest('input[type="range"]') ||
-      target.closest('.efforts-card-container') ||
-      target.closest('.efforts-progress-wrap') ||
-      target.closest('.efforts-seekbar-container') ||
-      target.closest('.efforts-volume-suite') ||
-      target.closest('.efforts-volume-slider-wrapper') ||
-      target.closest('.audio-player-wrap') ||
-      target.closest('.custom-audio-player') ||
-      target.closest('.header-audio-visualizer') ||
-      target.closest('.ambient-sound-drawer') ||
-      target.closest('.floating-btn') ||
-      target.closest('.dr-write-post-btn') ||
-      target.closest('.back-to-top-btn') ||
-      target.closest('.modal-backdrop') ||
-      target.closest('.modal-box') ||
-      target.closest('.interactive-canvas') ||
-      target.closest('.rich-visual-editor') ||
-      target.closest('[data-no-swipe="true"]')
-    );
-  };
-
-  const handlePointerDown = (e) => {
-    // Chỉ xử lý chuột trái hoặc chạm tay
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    if (shouldIgnoreGesture(e.target)) return;
-    if (currentDashIndex === -1) return;
-
-    setIsSpringingBack(false);
-    if (springBackTimerRef.current) {
-      clearTimeout(springBackTimerRef.current);
-      springBackTimerRef.current = null;
-    }
-
-    dragStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      time: Date.now(),
-      pointerId: e.pointerId,
-      isHorizontalSwipe: false,
-    };
-    pendingOffsetRef.current = 0;
-  };
-
-  const handlePointerMove = (e) => {
-    if (dragStartRef.current.pointerId !== e.pointerId) return;
-
-    const deltaX = e.clientX - dragStartRef.current.x;
-    const deltaY = e.clientY - dragStartRef.current.y;
-
-    // Nếu người dùng đang cuộn dọc tự nhiên, hủy ngay nhận diện vuốt ngang
-    if (!dragStartRef.current.isHorizontalSwipe) {
-      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 8) {
-        dragStartRef.current.pointerId = null;
-        if (isDragging) {
-          setIsDragging(false);
-          setDragOffset(0);
-        }
-        return;
-      }
-      if (Math.abs(deltaX) > 12) {
-        dragStartRef.current.isHorizontalSwipe = true;
-        setIsDragging(true);
-        try {
-          e.currentTarget.setPointerCapture?.(e.pointerId);
-        } catch {
-          // Bỏ qua nếu browser không hỗ trợ capture
-        }
-      } else {
-        return;
-      }
-    }
-
-    // Điện trở đàn hồi mượt mà khi kéo kịch biên (ở tab đầu hoặc tab cuối)
-    let effective = deltaX;
-    if ((deltaX > 0 && currentDashIndex === 0) || (deltaX < 0 && currentDashIndex === DASHBOARD_ROUTES.length - 1)) {
-      effective = deltaX * 0.22;
-    }
-
-    pendingOffsetRef.current = effective;
-    if (!rafRef.current) {
-      rafRef.current = requestAnimationFrame(() => {
-        setDragOffset(pendingOffsetRef.current);
-        rafRef.current = null;
-      });
-    }
-  };
-
-  const handlePointerUpOrCancel = (e) => {
-    if (dragStartRef.current.pointerId !== null && e.pointerId !== undefined && dragStartRef.current.pointerId !== e.pointerId) {
-      return;
-    }
-
-    try {
-      if (e.currentTarget?.hasPointerCapture?.(e.pointerId)) {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      }
-    } catch {
-      // ignore
-    }
-
-    dragStartRef.current.pointerId = null;
-    dragStartRef.current.isHorizontalSwipe = false;
-
+  const clearDragVisuals = useCallback(() => {
     if (rafRef.current) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
+    pendingOffsetRef.current = 0;
+    hasTriggeredTickRef.current = false;
 
-    const currentOffset = pendingOffsetRef.current;
-    const threshold = 60; // Ngưỡng 60px kích hoạt chuyển trang
+    const container = containerRef.current;
+    const box = contentBoxRef.current;
+    const indicator = indicatorRef.current;
 
-    if (currentOffset < -threshold && currentDashIndex < DASHBOARD_ROUTES.length - 1) {
-      // Vuốt sang TRÁI -> Chuyển sang Dashboard kế tiếp
-      playClickSound();
-      const nextRoute = DASHBOARD_ROUTES[currentDashIndex + 1];
-      navigate(nextRoute.path);
-      setIsDragging(false);
-      setDragOffset(0);
-      pendingOffsetRef.current = 0;
-    } else if (currentOffset > threshold && currentDashIndex > 0) {
-      // Vuốt sang PHẢI -> Chuyển sang Dashboard trước đó
-      playClickSound();
-      const prevRoute = DASHBOARD_ROUTES[currentDashIndex - 1];
-      navigate(prevRoute.path);
-      setIsDragging(false);
-      setDragOffset(0);
-      pendingOffsetRef.current = 0;
-    } else {
-      // Chưa đạt ngưỡng hoặc ở kịch biên -> Nảy mềm (spring back) về 0px
-      if (Math.abs(currentOffset) > 0) {
-        setIsSpringingBack(true);
-        setDragOffset(0);
-        pendingOffsetRef.current = 0;
-        if (springBackTimerRef.current) clearTimeout(springBackTimerRef.current);
-        springBackTimerRef.current = setTimeout(() => {
-          setIsDragging(false);
-          setIsSpringingBack(false);
-          springBackTimerRef.current = null;
-        }, 320);
-      } else {
-        setIsDragging(false);
-      }
+    if (container) {
+      container.classList.remove('is-page-dragging');
     }
+    if (box) {
+      box.classList.remove('is-page-dragging', 'is-page-springing');
+      box.style.setProperty('--page-drag-x', '0px');
+    }
+    if (indicator) {
+      indicator.style.opacity = '0';
+      indicator.dataset.active = 'false';
+      indicator.classList.remove('is-ready');
+    }
+  }, []);
+
+  const springBackPage = useCallback(() => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    pendingOffsetRef.current = 0;
+    hasTriggeredTickRef.current = false;
+
+    const container = containerRef.current;
+    const box = contentBoxRef.current;
+    const indicator = indicatorRef.current;
+
+    container?.classList.remove('is-page-dragging');
+    if (box) {
+      box.classList.remove('is-page-dragging');
+      box.classList.add('is-page-springing');
+      box.style.setProperty('--page-drag-x', '0px');
+    }
+    if (indicator) {
+      indicator.style.opacity = '0';
+      indicator.dataset.active = 'false';
+      indicator.classList.remove('is-ready');
+    }
+
+    if (springBackTimerRef.current) clearTimeout(springBackTimerRef.current);
+    springBackTimerRef.current = setTimeout(() => {
+      contentBoxRef.current?.classList.remove('is-page-springing');
+      springBackTimerRef.current = null;
+    }, 340);
+  }, []);
+
+  // Dọn dẹp toàn bộ timers & RAF khi unmount (Quy tắc 3 GEMINI.md)
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+      if (springBackTimerRef.current) clearTimeout(springBackTimerRef.current);
+      if (unlockCommitTimerRef.current) clearTimeout(unlockCommitTimerRef.current);
+    };
+  }, []);
+
+  const shouldIgnoreGesture = (target) => {
+    if (!target || !(target instanceof Element)) return false;
+    return Boolean(
+      target.closest('.category-hero-banner') ||
+        target.closest('.category-filter-bar') ||
+        target.closest('.header-category-pills-track') ||
+        target.closest('.story-bar-wrapper') ||
+        target.closest('.no-swipe') ||
+        target.closest('button') ||
+        target.closest('a') ||
+        target.closest('input') ||
+        target.closest('textarea') ||
+        target.closest('select') ||
+        target.closest('[role="slider"]') ||
+        target.closest('[role="button"]') ||
+        target.closest('input[type="range"]') ||
+        target.closest('.efforts-card-container') ||
+        target.closest('.efforts-progress-wrap') ||
+        target.closest('.efforts-seekbar-container') ||
+        target.closest('.efforts-volume-suite') ||
+        target.closest('.efforts-volume-slider-wrapper') ||
+        target.closest('.audio-player-wrap') ||
+        target.closest('.custom-audio-player') ||
+        target.closest('.header-audio-visualizer') ||
+        target.closest('.ambient-sound-drawer') ||
+        target.closest('.floating-btn') ||
+        target.closest('.dr-write-post-btn') ||
+        target.closest('.back-to-top-btn') ||
+        target.closest('.modal-backdrop') ||
+        target.closest('.modal-box') ||
+        target.closest('.interactive-canvas') ||
+        target.closest('.rich-visual-editor') ||
+        target.closest('[data-no-swipe="true"]')
+    );
   };
 
-  // Global pointerup/cancel listener phòng ngừa trường hợp con trỏ nhả bên ngoài container
-  useEffect(() => {
-    if (!isDragging) return;
-    const handleGlobalPointerUp = (e) => {
-      handlePointerUpOrCancel(e);
-    };
-    window.addEventListener('pointerup', handleGlobalPointerUp);
-    window.addEventListener('pointercancel', handleGlobalPointerUp);
-    return () => {
-      window.removeEventListener('pointerup', handleGlobalPointerUp);
-      window.removeEventListener('pointercancel', handleGlobalPointerUp);
-    };
-  }, [isDragging]);
+  const handlePointerDown = useCallback(
+    (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if (shouldIgnoreGesture(e.target)) return;
+      if (currentIndex === -1 || isCommittingRef.current) return;
 
-  const targetNext = currentDashIndex < DASHBOARD_ROUTES.length - 1 ? DASHBOARD_ROUTES[currentDashIndex + 1] : null;
-  const targetPrev = currentDashIndex > 0 ? DASHBOARD_ROUTES[currentDashIndex - 1] : null;
+      if (springBackTimerRef.current) {
+        clearTimeout(springBackTimerRef.current);
+        springBackTimerRef.current = null;
+      }
+      contentBoxRef.current?.classList.remove('is-page-springing');
+
+      dragStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        pointerId: e.pointerId,
+        isHorizontalSwipe: false,
+      };
+      pendingOffsetRef.current = 0;
+      hasTriggeredTickRef.current = false;
+    },
+    [currentIndex]
+  );
+
+  const handlePointerMove = useCallback(
+    (e) => {
+      const state = dragStartRef.current;
+      if (state.pointerId !== e.pointerId || isCommittingRef.current) return;
+
+      const deltaX = e.clientX - state.x;
+      const deltaY = e.clientY - state.y;
+
+      if (!state.isHorizontalSwipe) {
+        if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 8) {
+          state.pointerId = null;
+          return;
+        }
+        if (Math.abs(deltaX) > 14) {
+          state.isHorizontalSwipe = true;
+          containerRef.current?.classList.add('is-page-dragging');
+          contentBoxRef.current?.classList.add('is-page-dragging');
+          try {
+            e.currentTarget.setPointerCapture?.(e.pointerId);
+          } catch (_) {}
+        } else {
+          return;
+        }
+      }
+
+      const targetTopic = deltaX < 0 ? nextTopic : prevTopic;
+      const effective = targetTopic ? deltaX * 0.65 : deltaX * 0.2;
+      pendingOffsetRef.current = effective;
+
+      if (!rafRef.current) {
+        rafRef.current = requestAnimationFrame(() => {
+          rafRef.current = null;
+          const offset = pendingOffsetRef.current;
+          const threshold = 72;
+          const box = contentBoxRef.current;
+          const indicator = indicatorRef.current;
+
+          if (box) {
+            box.style.setProperty('--page-drag-x', `${offset.toFixed(1)}px`);
+          }
+
+          if (indicator) {
+            const absX = Math.abs(offset);
+            const curTarget = offset < 0 ? nextTopic : prevTopic;
+            if (absX > 24) {
+              indicator.dataset.active = 'true';
+              indicator.dataset.side = offset < 0 ? 'right' : 'left';
+              indicator.style.opacity = String(Math.min(1, (absX - 20) / 55));
+              if (curTarget && absX >= threshold) {
+                if (!hasTriggeredTickRef.current) {
+                  hasTriggeredTickRef.current = true;
+                  triggerThresholdTick();
+                }
+                indicator.classList.add('is-ready');
+              } else {
+                hasTriggeredTickRef.current = false;
+                indicator.classList.remove('is-ready');
+              }
+            } else {
+              indicator.style.opacity = '0';
+              indicator.dataset.active = 'false';
+            }
+          }
+        });
+      }
+    },
+    [nextTopic, prevTopic]
+  );
+
+  const handlePointerUpOrCancel = useCallback(
+    (e) => {
+      const state = dragStartRef.current;
+      if (state.pointerId !== null && e?.pointerId !== undefined && state.pointerId !== e.pointerId) {
+        return;
+      }
+
+      try {
+        if (e?.pointerId !== undefined && containerRef.current?.hasPointerCapture?.(e.pointerId)) {
+          containerRef.current.releasePointerCapture(e.pointerId);
+        }
+      } catch (_) {}
+
+      const wasHorizontal = state.isHorizontalSwipe;
+      const currentOffset = pendingOffsetRef.current;
+
+      state.pointerId = null;
+      state.isHorizontalSwipe = false;
+
+      if (!wasHorizontal) return;
+
+      const threshold = 72;
+
+      if (currentOffset <= -threshold && nextTopic && !isCommittingRef.current) {
+        isCommittingRef.current = true;
+        playClickSound();
+        clearDragVisuals();
+        setPendingBannerTransition('next', nextTopic.slug);
+        navigate(nextTopic.path, {
+          state: { transitionDirection: 'next', targetSlug: nextTopic.slug },
+        });
+        if (unlockCommitTimerRef.current) clearTimeout(unlockCommitTimerRef.current);
+        unlockCommitTimerRef.current = setTimeout(() => {
+          isCommittingRef.current = false;
+          unlockCommitTimerRef.current = null;
+        }, 300);
+      } else if (currentOffset >= threshold && prevTopic && !isCommittingRef.current) {
+        isCommittingRef.current = true;
+        playClickSound();
+        clearDragVisuals();
+        setPendingBannerTransition('prev', prevTopic.slug);
+        navigate(prevTopic.path, {
+          state: { transitionDirection: 'prev', targetSlug: prevTopic.slug },
+        });
+        if (unlockCommitTimerRef.current) clearTimeout(unlockCommitTimerRef.current);
+        unlockCommitTimerRef.current = setTimeout(() => {
+          isCommittingRef.current = false;
+          unlockCommitTimerRef.current = null;
+        }, 300);
+      } else {
+        springBackPage();
+      }
+    },
+    [clearDragVisuals, navigate, nextTopic, prevTopic, springBackPage]
+  );
+
+  // Bảo hiểm toàn cục giải phóng khi resize/blur/orientationchange
+  useEffect(() => {
+    const handleReset = () => {
+      if (dragStartRef.current.pointerId !== null) {
+        dragStartRef.current.pointerId = null;
+        dragStartRef.current.isHorizontalSwipe = false;
+        springBackPage();
+      }
+    };
+
+    window.addEventListener('pointerup', handlePointerUpOrCancel);
+    window.addEventListener('pointercancel', handlePointerUpOrCancel);
+    window.addEventListener('resize', handleReset);
+    window.addEventListener('orientationchange', handleReset);
+    window.addEventListener('blur', handleReset);
+    return () => {
+      window.removeEventListener('pointerup', handlePointerUpOrCancel);
+      window.removeEventListener('pointercancel', handlePointerUpOrCancel);
+      window.removeEventListener('resize', handleReset);
+      window.removeEventListener('orientationchange', handleReset);
+      window.removeEventListener('blur', handleReset);
+    };
+  }, [handlePointerUpOrCancel, springBackPage]);
+
+  // Giữ nguyên vỏ trang giữa / và /category/* để Banner tự chạy slide-in 0-flicker, chỉ remount key khi sang trang khác hẳn
+  const contentBoxKey = isTopicPath(location.pathname) ? '__topic_shell__' : location.pathname;
 
   return (
     <div
+      ref={containerRef}
       className="page-gesture-container"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUpOrCancel}
       onPointerCancel={handlePointerUpOrCancel}
-      style={{
-        position: 'relative',
-        width: '100%',
-        minHeight: '100%',
-        overflowX: 'clip',
-        touchAction: 'pan-y',
-        userSelect: isDragging ? 'none' : 'auto',
-        cursor: isDragging ? 'grabbing' : 'auto',
-      }}
     >
-      {/* Chỉ báo Kéo vuốt chuyển Dashboard nổi trên màn hình cảm ứng */}
-      {isDragging && Math.abs(dragOffset) > 25 && (
-        <div
-          className="drag-dashboard-indicator"
-          style={{
-            position: 'fixed',
-            top: '46%',
-            left: dragOffset < 0 ? 'auto' : '20px',
-            right: dragOffset < 0 ? '20px' : 'auto',
-            transform: 'translateY(-50%)',
-            zIndex: 9999,
-            background: 'rgba(15, 23, 42, 0.92)',
-            backdropFilter: 'blur(12px)',
-            color: '#f8fafc',
-            padding: '12px 22px',
-            borderRadius: '999px',
-            border: '1.5px solid rgba(56, 189, 248, 0.5)',
-            boxShadow: '0 14px 35px rgba(0, 0, 0, 0.45)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            fontSize: '0.88rem',
-            fontWeight: 800,
-            pointerEvents: 'none',
-            animation: 'pulseIndicator 0.5s infinite alternate',
-          }}
-        >
-          {dragOffset < 0 ? (
-            <>
-              <span>{targetNext ? `Vuốt sang: ${targetNext.label} ${targetNext.icon}` : 'Đã ở tab cuối cùng'}</span>
-              <span style={{ fontSize: '1.3rem' }}>&rarr;</span>
-            </>
-          ) : (
-            <>
-              <span style={{ fontSize: '1.3rem' }}>&larr;</span>
-              <span>{targetPrev ? `Vuốt sang: ${targetPrev.label} ${targetPrev.icon}` : 'Đã ở tab đầu tiên'}</span>
-            </>
-          )}
-        </div>
-      )}
+      {/* Chỉ báo kéo vuốt ngoài vùng Banner (cập nhật 100% qua ref/CSS, 0 re-render) */}
+      <div ref={indicatorRef} className="drag-dashboard-indicator" data-active="false" aria-hidden="true">
+        <span className="drag-ind-arrow-left">&larr;</span>
+        <span className="drag-ind-label-left">
+          {prevTopic ? `${prevTopic.icon} ${prevTopic.shortLabel || prevTopic.name}` : 'Đầu danh sách'}
+        </span>
+        <span className="drag-ind-label-right">
+          {nextTopic ? `${nextTopic.shortLabel || nextTopic.name} ${nextTopic.icon}` : 'Cuối danh sách'}
+        </span>
+        <span className="drag-ind-arrow-right">&rarr;</span>
+      </div>
 
-      {/* Hiệu ứng hình ảnh & âm thanh đặc trưng chuyển trang theo mùa & sự kiện lễ hội */}
+      {/* Hiệu ứng hình ảnh & âm thanh chuyển trang theo mùa & sự kiện lễ hội */}
       <PageTransitionAtmosphereOverlay
         isTransitioning={isTransitioning}
         direction={transitionDirection}
@@ -389,21 +468,16 @@ export const PageTransitionWrapper = ({ children }) => {
         activeEvent={activeFestiveEvent}
       />
 
-      {/* Vùng chứa nội dung trang với hiệu ứng trượt màn hình cảm ứng 1:1 siêu mượt */}
       <div
-        key={location.pathname}
+        ref={contentBoxRef}
+        key={contentBoxKey}
         className={`page-transition-content-box ${
-          transitionDirection === 'forward' ? 'anim-direction-forward' : 'anim-direction-backward'
-        } ${isTransitioning ? 'is-animating' : ''}`}
-        style={{
-          transform: isDragging || isSpringingBack ? `translate3d(${dragOffset}px, 0, 0)` : undefined,
-          transition: isSpringingBack
-            ? 'transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)'
-            : isDragging
-            ? 'none'
-            : undefined,
-          willChange: isDragging || isSpringingBack ? 'transform' : 'auto',
-        }}
+          !isTopicPath(location.pathname)
+            ? `${transitionDirection === 'forward' ? 'anim-direction-forward' : 'anim-direction-backward'} ${
+                isTransitioning ? 'is-animating' : ''
+              }`
+            : ''
+        }`}
       >
         {children}
       </div>

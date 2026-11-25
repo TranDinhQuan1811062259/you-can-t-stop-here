@@ -12,6 +12,10 @@ import { NotificationDropdown } from './NotificationDropdown';
 import { HeaderAudioVisualizer } from '../common/HeaderAudioVisualizer';
 import { useMusic } from '../../context/MusicContext';
 import { usePersonalHub } from '../../context/PersonalHubContext';
+import {
+  useCategoryRegistry,
+  setPendingBannerTransition,
+} from '../../utils/category-navigation';
 
 // =============================================================================
 // TỐI ƯU CODE-SPLITTING: LAZY LOAD CÁC MODAL LỚN ĐỂ GIẢM KÍCH THƯỚC BUNDLE CHÍNH
@@ -197,6 +201,44 @@ export const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { topics: headerTopics } = useCategoryRegistry();
+  const categoryPillsTrackRef = useRef(null);
+  const pillRefs = useRef({});
+
+  const activeTopicSlug = location.pathname.startsWith('/category/')
+    ? decodeURIComponent(location.pathname.replace(/^\/category\//, '').split('/')[0] || '')
+    : location.pathname === '/' && searchParams.get('category')
+    ? searchParams.get('category')
+    : location.pathname === '/' && !searchParams.get('tag') && !searchParams.get('q')
+    ? ''
+    : null;
+
+  // Tự động cuộn mượt thanh danh mục trên Header để pill chủ đề đang chọn luôn nằm giữa tầm nhìn
+  useEffect(() => {
+    if (activeTopicSlug === null) return;
+    const activeEl = pillRefs.current[activeTopicSlug];
+    if (!activeEl) return;
+
+    const rafId = requestAnimationFrame(() => {
+      try {
+        activeEl.scrollIntoView({
+          behavior: 'smooth',
+          inline: 'center',
+          block: 'nearest',
+        });
+      } catch (_) {
+        const container = categoryPillsTrackRef.current;
+        if (container) {
+          const targetLeft =
+            activeEl.offsetLeft - container.clientWidth / 2 + activeEl.offsetWidth / 2;
+          container.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
+        }
+      }
+    });
+
+    return () => cancelAnimationFrame(rafId);
+  }, [activeTopicSlug, headerTopics.length]);
+
   const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') || '');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [liveResults, setLiveResults] = useState([]);
@@ -1518,70 +1560,85 @@ export const Header = () => {
         </div>
 
         {/* ========================================================
-            HÀNG 2: DEDICATED DASHBOARD NAVIGATION BAR (THANH DASHBOARD 3D RIÊNG)
-            4 Dashboard chính + Trạm xả stress với hiệu ứng bóng mờ & 3D nổi khối
+            HÀNG 2: DEDICATED DASHBOARD NAVIGATION BAR (THANH CHỦ ĐỀ & TIỆN ÍCH 3D)
+            - Đồng bộ 100% danh sách chủ đề với Banner Swipe & Pages
+            - Tự động cuộn mượt pill đang chọn vào giữa tầm nhìn (Desktop & Mobile)
            ======================================================== */}
         <nav className="header-dashboard-bar" aria-label="Dashboard Navigation">
           <div className="dashboard-bar-container">
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) => `dashboard-3d-item tab-home ${isActive ? 'active' : ''}`}
-              title="Dashboard: Trang Chủ Tổng Hợp"
+            <div
+              ref={categoryPillsTrackRef}
+              className="header-category-pills-track"
+              role="navigation"
+              aria-label="Chuyển đổi nhanh chủ đề tâm sự"
             >
-              <span className="healing-icon-pill healing-icon-sage" style={{ width: '28px', height: '28px', fontSize: '0.82rem' }}>
-                <i className="fa-solid fa-house"></i>
-              </span>
-              <span className="item-label">Trang Chủ</span>
-            </NavLink>
+              {headerTopics.map((topic, idx) => {
+                const isActive = activeTopicSlug !== null && activeTopicSlug === topic.slug;
+                const currentIdx =
+                  activeTopicSlug !== null
+                    ? headerTopics.findIndex((t) => t.slug === activeTopicSlug)
+                    : -1;
+                const direction =
+                  currentIdx !== -1 && idx !== currentIdx
+                    ? idx > currentIdx
+                      ? 'next'
+                      : 'prev'
+                    : 'next';
 
-            <NavLink
-              to="/category/ap-luc-kiet-suc-burnout"
-              className={({ isActive }) => `dashboard-3d-item tab-burnout ${isActive ? 'active' : ''}`}
-              title="Dashboard: Áp Lực & Kiệt Sức (Burnout)"
-            >
-              <span className="healing-icon-pill healing-icon-rose" style={{ width: '28px', height: '28px', fontSize: '0.82rem' }}>
-                <i className="fa-solid fa-heart-pulse"></i>
-              </span>
-              <span className="item-label">Burnout</span>
-            </NavLink>
+                return (
+                  <Link
+                    key={topic.slug || '__home__'}
+                    ref={(el) => {
+                      if (el) {
+                        pillRefs.current[topic.slug] = el;
+                      } else {
+                        delete pillRefs.current[topic.slug];
+                      }
+                    }}
+                    to={topic.path}
+                    state={{
+                      transitionDirection: direction,
+                      targetSlug: topic.slug,
+                    }}
+                    onClick={() => {
+                      playClickSound();
+                      if (!isActive) {
+                        setPendingBannerTransition(direction, topic.slug);
+                      }
+                    }}
+                    className={`dashboard-3d-item ${topic.tabClass || 'tab-restart'} ${
+                      isActive ? 'active' : ''
+                    }`}
+                    title={topic.description ? `${topic.name}: ${topic.description}` : topic.name}
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    <span
+                      className={`healing-icon-pill ${topic.colorClass || 'healing-icon-sage'}`}
+                      style={{ width: '26px', height: '26px', fontSize: '0.8rem' }}
+                    >
+                      <i className={topic.faIcon || 'fa-solid fa-bookmark'}></i>
+                    </span>
+                    <span className="item-label">{topic.shortLabel || topic.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
 
-            <NavLink
-              to="/category/chuyen-nganh-bat-dau-lai-restart"
-              className={({ isActive }) => `dashboard-3d-item tab-restart ${isActive ? 'active' : ''}`}
-              title="Dashboard: Chuyển Ngành & Bắt Đầu Lại (Restart)"
-            >
-              <span className="healing-icon-pill healing-icon-sage" style={{ width: '28px', height: '28px', fontSize: '0.82rem' }}>
-                <i className="fa-solid fa-seedling"></i>
-              </span>
-              <span className="item-label">Bắt Đầu Lại</span>
-            </NavLink>
+            <div className="header-dashboard-tools">
+              {/* Tab Không Gian Nhạc & Playlist Đa Mùa */}
+              <NavLink
+                to="/music"
+                className={({ isActive }) => `dashboard-3d-item tab-music ${isActive ? 'active' : ''}`}
+                title="Dashboard: Không Gian Nhạc & Playlist Mùa Đông (Winter Chill)"
+              >
+                <span className="healing-icon-pill healing-icon-cyan" style={{ width: '28px', height: '28px', fontSize: '0.82rem', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>
+                  <i className="fa-solid fa-compact-disc"></i>
+                </span>
+                <span className="item-label">Góc Nhạc</span>
+              </NavLink>
 
-            <NavLink
-              to="/category/nhung-tia-sang-dong-luc-small-wins"
-              className={({ isActive }) => `dashboard-3d-item tab-wins ${isActive ? 'active' : ''}`}
-              title="Dashboard: Những Tia Sáng & Động Lực (Small Wins)"
-            >
-              <span className="healing-icon-pill healing-icon-amber" style={{ width: '28px', height: '28px', fontSize: '0.82rem' }}>
-                <i className="fa-solid fa-sun"></i>
-              </span>
-              <span className="item-label">Small Wins</span>
-            </NavLink>
-
-            {/* Tab Không Gian Nhạc & Playlist Đa Mùa */}
-            <NavLink
-              to="/music"
-              className={({ isActive }) => `dashboard-3d-item tab-music ${isActive ? 'active' : ''}`}
-              title="Dashboard: Không Gian Nhạc & Playlist Mùa Đông (Winter Chill)"
-            >
-              <span className="healing-icon-pill healing-icon-cyan" style={{ width: '28px', height: '28px', fontSize: '0.82rem', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>
-                <i className="fa-solid fa-compact-disc"></i>
-              </span>
-              <span className="item-label">Góc Nhạc</span>
-            </NavLink>
-
-            {/* Cụm Trạm Chữa Lành Dropdown - Gom gọn 12 công cụ xả áp lực & chăm sóc tâm lý */}
-            <div className="header-wellness-dropdown-wrapper" ref={wellnessDropdownRef}>
+              {/* Cụm Trạm Chữa Lành Dropdown - Gom gọn 17 công cụ xả áp lực & chăm sóc tâm lý */}
+              <div className="header-wellness-dropdown-wrapper" ref={wellnessDropdownRef}>
               <button
                 type="button"
                 className={`dashboard-3d-item tab-wellness-hub ${isWellnessDropdownOpen || isWellnessOpen || isTimeCapsuleOpen || isRadioOpen || isGratitudeJarOpen || isStickyWallOpen || isEmergencyCalmOpen || isCozyCafeOpen || isMoodPixelOpen || isRantAndBurnOpen || isDriftBottleOpen || isMoodRadarOpen || isWhisperWallOpen || isMentalFirstAidOpen || isTeaLoungeOpen || isDeclutterOpen || isMoodWeatherOpen || isFocusCocoonOpen ? 'active' : ''}`}
@@ -1972,6 +2029,7 @@ export const Header = () => {
                   </div>
                 );
               })()}
+            </div>
             </div>
           </div>
         </nav>

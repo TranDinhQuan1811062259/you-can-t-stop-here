@@ -1,18 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { usePosts } from '../hooks/usePosts';
 import { PostList } from '../components/blog/PostList';
+import { PostListSkeleton } from '../components/common/PostListSkeleton';
 import { Pagination } from '../components/common/Pagination';
-import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { IdleWeatherText } from '../components/common/IdleWeatherText';
 import { GivingSomeEffortsSection } from '../components/wellness/GivingSomeEffortsSection';
+import { CategoryHeroBanner } from '../components/blog/CategoryHeroBanner';
+import { useCategoryRegistry, enrichCategoryMeta, setPendingBannerTransition } from '../utils/category-navigation';
 
 export const CategoryPage = () => {
   const { categorySlug } = useParams();
+  const { topics } = useCategoryRegistry();
+
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState('newest');
   const [visibilityFilter, setVisibilityFilter] = useState('all');
+  const [isCommitSwitching, setIsCommitSwitching] = useState(false);
+
+  const prevSlugRef = useRef(categorySlug);
+  const switchResetTimerRef = useRef(null);
+
+  // Đồng bộ reset trang về 1 ngay lập tức khi categorySlug thay đổi (không giữ số trang của chủ đề cũ)
+  if (prevSlugRef.current !== categorySlug) {
+    prevSlugRef.current = categorySlug;
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }
+
+  useEffect(() => {
+    setIsCommitSwitching(false);
+    if (switchResetTimerRef.current) {
+      clearTimeout(switchResetTimerRef.current);
+      switchResetTimerRef.current = null;
+    }
+  }, [categorySlug]);
+
+  useEffect(() => {
+    return () => {
+      if (switchResetTimerRef.current) {
+        clearTimeout(switchResetTimerRef.current);
+        switchResetTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const { posts, pagination, loading, error } = usePosts({
     category: categorySlug,
@@ -27,38 +60,57 @@ export const CategoryPage = () => {
     window.scrollTo({ top: 150, behavior: 'smooth' });
   };
 
-  const categoryDisplayName = posts[0]?.category?.name || categorySlug.replace(/-/g, ' ');
-  const categoryIcon = posts[0]?.category?.icon || (() => {
-    const lower = (categoryDisplayName || '').toLowerCase();
-    if (lower.includes('thế giới') || lower.includes('quốc tế') || lower.includes('global')) return '🌍';
-    if (lower.includes('chiến sự') || lower.includes('chiến tranh') || lower.includes('hòa bình') || lower.includes('xung đột')) return '🕊️';
-    if (lower.includes('xã hội') || lower.includes('thời cuộc') || lower.includes('society')) return '🌐';
-    if (lower.includes('kiệt sức') || lower.includes('burnout') || lower.includes('áp lực')) return '😫';
-    if (lower.includes('khủng hoảng') || lower.includes('career')) return '🧭';
-    if (lower.includes('chuyển ngành') || lower.includes('restart')) return '🌱';
-    if (lower.includes('động lực') || lower.includes('small wins') || lower.includes('tia sáng')) return '✨';
-    if (lower.includes('tâm sự') || lower.includes('life')) return '☕';
-    return '🏷️';
-  })();
+  // Phân giải tên & icon trực tiếp từ Registry đồng bộ theo slug (không bao giờ lấy nhầm từ bài viết cũ)
+  const matchedTopic =
+    topics.find((t) => t.slug === categorySlug || t._id === categorySlug) ||
+    enrichCategoryMeta({ slug: categorySlug });
+
+  const matchedPostCategory =
+    posts[0]?.category?.slug === categorySlug ? posts[0].category : null;
+
+  const categoryDisplayName =
+    matchedPostCategory?.name || matchedTopic?.name || categorySlug.replace(/-/g, ' ');
+  const categoryIcon = matchedPostCategory?.icon || matchedTopic?.icon || '🏷️';
+  const categoryDescription = matchedTopic?.description || '';
 
   return (
     <div>
-      {/* Category Header Banner chuẩn 3 tầng xuống dòng */}
-      <section className="hero-banner" style={{ padding: '48px 0' }}>
-        <div className="container hero-banner-container">
-          <div className="hero-tag-pill-wrap">
-            <span className="hero-tag-pill">{categoryIcon} Chủ đề tâm sự</span>
-          </div>
-          <h1 className="hero-title" style={{ textTransform: 'capitalize' }}>
-            <IdleWeatherText>{categoryDisplayName}</IdleWeatherText>
-          </h1>
-          <div style={{ marginTop: '16px' }}>
-            <Link to="/" className="hero-back-link">
+      {/* Category Header Banner với Engine Kéo Vật Lý 60fps & Dual-Card Peek */}
+      <CategoryHeroBanner
+        topics={topics}
+        activeSlug={categorySlug}
+        variant="category"
+        swipeEnabled={true}
+        paddingStyle={{ padding: '44px 0 40px' }}
+        onTransitionCommitStart={() => {
+          setIsCommitSwitching(true);
+          if (switchResetTimerRef.current) clearTimeout(switchResetTimerRef.current);
+          switchResetTimerRef.current = setTimeout(() => {
+            setIsCommitSwitching(false);
+            switchResetTimerRef.current = null;
+          }, 900);
+        }}
+        badgeContent={
+          <span className="hero-tag-pill">
+            <span>{categoryIcon}</span>
+            <span>Chủ đề tâm sự</span>
+          </span>
+        }
+        titleContent={<IdleWeatherText>{categoryDisplayName}</IdleWeatherText>}
+        subtitle={categoryDescription}
+        actionsContent={
+          <div style={{ marginTop: '12px' }}>
+            <Link
+              to="/"
+              state={{ transitionDirection: 'prev', targetSlug: '' }}
+              onClick={() => setPendingBannerTransition('prev', '')}
+              className="hero-back-link"
+            >
               &larr; Xem tất cả các câu chuyện khác
             </Link>
           </div>
-        </div>
-      </section>
+        }
+      />
 
       {/* Main Content */}
       <section className="container" style={{ padding: '30px 20px' }}>
@@ -123,10 +175,12 @@ export const CategoryPage = () => {
           </div>
         </div>
 
-        {error && posts.length === 0 && <ErrorMessage message={error} />}
+        {error && !loading && !isCommitSwitching && posts.length === 0 && (
+          <ErrorMessage message={error} />
+        )}
 
-        {loading ? (
-          <LoadingSpinner message="Đang tải các bài viết trong chủ đề này..." />
+        {loading || isCommitSwitching ? (
+          <PostListSkeleton count={6} label="Đang tải các bài viết trong chủ đề này..." />
         ) : (
           <>
             <PostList posts={posts} />

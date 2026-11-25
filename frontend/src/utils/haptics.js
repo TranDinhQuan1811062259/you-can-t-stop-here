@@ -42,4 +42,21 @@ export const triggerToneHaptic = (toneKey) => {
   } catch (_) {}
 };
 
+/**
+ * Nhịp rung siêu nhẹ đúng khoảnh khắc lực kéo vượt ngưỡng kích hoạt chuyển trang (Threshold Tick)
+ */
+export const triggerThresholdTick = () => {
+  try {
+    if (
+      typeof window !== 'undefined' &&
+      typeof navigator !== 'undefined' &&
+      typeof navigator.vibrate === 'function'
+    ) {
+      navigator.vibrate(10);
+    }
+  } catch (_) {
+    // Bỏ qua an toàn trên thiết bị/trình duyệt không hỗ trợ Vibration API
+  }
+};
+
 export default triggerHaptic;
