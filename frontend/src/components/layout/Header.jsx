@@ -1652,6 +1652,8 @@ export const Header = () => {
               })}
             </div>
 
+            <span className="header-nav-divider" aria-hidden="true" />
+
             <div className="header-dashboard-tools">
               {/* Tab Không Gian Nhạc & Playlist Đa Mùa */}
               <NavLink

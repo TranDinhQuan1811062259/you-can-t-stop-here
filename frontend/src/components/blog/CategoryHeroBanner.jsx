@@ -10,6 +10,24 @@ import {
   clearPendingBannerTransition,
 } from '../../utils/category-navigation';
 
+const resolveBannerTopicTheme = (variant = 'category', activeSlug = '') => {
+  if (variant === 'home' || !activeSlug) return 'home';
+  const normalized = String(activeSlug).toLowerCase();
+  if (normalized.includes('burnout') || normalized.includes('kiet-suc') || normalized.includes('ap-luc')) {
+    return 'burnout';
+  }
+  if (normalized.includes('khung-hoang') || normalized.includes('crisis')) {
+    return 'crisis';
+  }
+  if (normalized.includes('restart') || normalized.includes('bat-dau') || normalized.includes('chuyen-nganh')) {
+    return 'restart';
+  }
+  if (normalized.includes('small-wins') || normalized.includes('dong-luc') || normalized.includes('tia-sang')) {
+    return 'wins';
+  }
+  return 'home';
+};
+
 const clearWindowSelection = () => {
   try {
     if (typeof window !== 'undefined' && window.getSelection) {
@@ -581,6 +599,8 @@ export const CategoryHeroBanner = ({
     };
   }, [clearTimersForDrag]);
 
+  const topicTheme = resolveBannerTopicTheme(variant, activeSlug);
+
   const enterClass =
     enterAnimationDir === 'next'
       ? 'banner-enter-from-right'
@@ -592,7 +612,8 @@ export const CategoryHeroBanner = ({
     <section
       ref={bannerRef}
       data-drag-dir="none"
-      className={`hero-banner category-hero-banner variant-${variant} ${
+      data-topic-theme={topicTheme}
+      className={`hero-banner category-hero-banner variant-${variant} topic-${topicTheme} ${
         swipeEnabled ? 'is-swipe-enabled' : ''
       }`}
       style={paddingStyle}

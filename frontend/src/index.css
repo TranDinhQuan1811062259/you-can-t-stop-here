@@ -24853,3 +24853,373 @@ body.theme-light .season-autumn .hero-banner .hero-title .hero-title-accent {
   }
 }
 
+/* ========================================================
+   9. CENTERED HEADER ROW 2 NAV & LIGHT MODE ATMOSPHERIC BANNERS
+   ======================================================== */
+
+/* 9.1 Khép khoảng trống hàng 2 Header & căn giữa liền mạch trên Desktop, cuộn ngang mượt trên Mobile */
+.site-header .header-dashboard-bar .dashboard-bar-container {
+  justify-content: center !important;
+  gap: 12px !important;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.site-header .header-category-pills-track {
+  flex: 0 1 auto !important;
+  gap: 10px !important;
+  padding: 4px 2px !important;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+}
+
+.site-header .header-nav-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(148, 163, 184, 0.28);
+  border-radius: 999px;
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+
+body.theme-light .site-header .header-nav-divider,
+[data-theme="light"] .site-header .header-nav-divider,
+.mode-light .site-header .header-nav-divider {
+  background: rgba(15, 23, 42, 0.14);
+}
+
+.site-header .header-dashboard-tools {
+  gap: 10px !important;
+  flex-shrink: 0 !important;
+}
+
+@media (max-width: 960px) {
+  .site-header .header-dashboard-bar {
+    justify-content: flex-start !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 6px 8px 8px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .site-header .header-dashboard-bar .dashboard-bar-container {
+    justify-content: flex-start !important;
+    width: max-content !important;
+    min-width: 100% !important;
+    gap: 8px !important;
+    padding: 2px 6px !important;
+  }
+
+  .site-header .header-category-pills-track {
+    flex: 0 0 auto !important;
+    overflow: visible !important;
+    gap: 8px !important;
+    padding: 0 !important;
+  }
+
+  .site-header .header-dashboard-tools {
+    gap: 8px !important;
+  }
+
+  .site-header .header-nav-divider {
+    height: 18px;
+    margin: 0 2px;
+  }
+}
+
+/* 9.2 Diện mạo Banner Chế Độ Ngày (Light Mode) có chiều sâu & sắc thái từng chủ đề
+   (Giữ nguyên 100% Chế Độ Đêm Dark Mode) */
+body.theme-light .hero-banner.category-hero-banner,
+[data-theme="light"] .hero-banner.category-hero-banner,
+.mode-light .hero-banner.category-hero-banner {
+  background:
+    radial-gradient(ellipse 68% 58% at 18% 15%, rgba(20, 184, 166, 0.13) 0%, transparent 64%),
+    radial-gradient(ellipse 60% 54% at 84% 85%, rgba(251, 191, 36, 0.11) 0%, transparent 64%),
+    linear-gradient(155deg, #fffdf9 0%, #f3fbf8 52%, #eafaf3 100%) !important;
+  border-top: 1px solid rgba(15, 23, 42, 0.05) !important;
+  border-bottom: 1px solid rgba(13, 148, 136, 0.16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 12px 30px -12px rgba(13, 148, 136, 0.11) !important;
+}
+
+/* Chủ đề Trang Chủ - Kem ngà & Xanh ngọc dịu */
+body.theme-light .hero-banner.category-hero-banner.topic-home,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-home,
+.mode-light .hero-banner.category-hero-banner.topic-home {
+  background:
+    radial-gradient(ellipse 68% 60% at 18% 14%, rgba(20, 184, 166, 0.14) 0%, transparent 65%),
+    radial-gradient(ellipse 58% 54% at 84% 84%, rgba(251, 191, 36, 0.12) 0%, transparent 65%),
+    linear-gradient(155deg, #fffdf8 0%, #f4fbf8 52%, #ecfdf5 100%) !important;
+  border-bottom-color: rgba(13, 148, 136, 0.16) !important;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-home .hero-tag-pill,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-home .hero-tag-pill,
+.mode-light .hero-banner.category-hero-banner.topic-home .hero-tag-pill {
+  background: rgba(255, 255, 255, 0.86) !important;
+  color: #0f766e !important;
+  border: 1px solid rgba(13, 148, 136, 0.26) !important;
+  box-shadow: 0 2px 10px rgba(13, 148, 136, 0.08);
+}
+
+/* Chủ đề Burnout - Hồng đào / San hô ấm dịu */
+body.theme-light .hero-banner.category-hero-banner.topic-burnout,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-burnout,
+.mode-light .hero-banner.category-hero-banner.topic-burnout {
+  background:
+    radial-gradient(ellipse 64% 58% at 20% 18%, rgba(251, 113, 133, 0.2) 0%, transparent 64%),
+    radial-gradient(ellipse 58% 54% at 84% 82%, rgba(253, 186, 116, 0.15) 0%, transparent 64%),
+    linear-gradient(155deg, #fff5f5 0%, #ffeded 52%, #ffe8e8 100%) !important;
+  border-bottom: 1px solid rgba(225, 29, 72, 0.16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 12px 30px -12px rgba(225, 29, 72, 0.12) !important;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-burnout .hero-title,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-burnout .hero-title,
+.mode-light .hero-banner.category-hero-banner.topic-burnout .hero-title {
+  color: #881337 !important;
+  -webkit-text-fill-color: #881337 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9) !important;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-burnout .hero-subtitle,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-burnout .hero-subtitle,
+.mode-light .hero-banner.category-hero-banner.topic-burnout .hero-subtitle {
+  color: #6b2737 !important;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-burnout .hero-tag-pill,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-burnout .hero-tag-pill,
+.mode-light .hero-banner.category-hero-banner.topic-burnout .hero-tag-pill {
+  background: rgba(255, 255, 255, 0.88) !important;
+  color: #be123c !important;
+  border: 1px solid rgba(244, 63, 94, 0.28) !important;
+  box-shadow: 0 2px 10px rgba(225, 29, 72, 0.08);
+}
+
+/* Chủ đề Khủng Hoảng Nghề Nghiệp - Hổ phách / Kem nắng ấm */
+body.theme-light .hero-banner.category-hero-banner.topic-crisis,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-crisis,
+.mode-light .hero-banner.category-hero-banner.topic-crisis {
+  background:
+    radial-gradient(ellipse 64% 58% at 18% 18%, rgba(245, 158, 11, 0.2) 0%, transparent 64%),
+    radial-gradient(ellipse 58% 54% at 84% 82%, rgba(251, 146, 60, 0.14) 0%, transparent 64%),
+    linear-gradient(155deg, #fff9f0 0%, #fff4e3 52%, #ffefd6 100%) !important;
+  border-bottom: 1px solid rgba(217, 119, 6, 0.18) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 12px 30px -12px rgba(217, 119, 6, 0.13) !important;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-crisis .hero-title,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-crisis .hero-title,
+.mode-light .hero-banner.category-hero-banner.topic-crisis .hero-title {
+  color: #78350f !important;
+  -webkit-text-fill-color: #78350f !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9) !important;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-crisis .hero-subtitle,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-crisis .hero-subtitle,
+.mode-light .hero-banner.category-hero-banner.topic-crisis .hero-subtitle {
+  color: #6b4423 !important;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-crisis .hero-tag-pill,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-crisis .hero-tag-pill,
+.mode-light .hero-banner.category-hero-banner.topic-crisis .hero-tag-pill {
+  background: rgba(255, 255, 255, 0.88) !important;
+  color: #b45309 !important;
+  border: 1px solid rgba(245, 158, 11, 0.32) !important;
+  box-shadow: 0 2px 10px rgba(217, 119, 6, 0.08);
+}
+
+/* Chủ đề Bắt Đầu Lại (Restart) - Xanh bạc hà / Ngọc lục bảo dịu */
+body.theme-light .hero-banner.category-hero-banner.topic-restart,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-restart,
+.mode-light .hero-banner.category-hero-banner.topic-restart {
+  background:
+    radial-gradient(ellipse 64% 58% at 20% 18%, rgba(16, 185, 129, 0.18) 0%, transparent 64%),
+    radial-gradient(ellipse 58% 54% at 84% 84%, rgba(56, 189, 248, 0.12) 0%, transparent 64%),
+    linear-gradient(155deg, #f0fdf9 0%, #e6fcf0 52%, #dcfce7 100%) !important;
+  border-bottom: 1px solid rgba(5, 150, 105, 0.18) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 12px 30px -12px rgba(5, 150, 105, 0.12) !important;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-restart .hero-title,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-restart .hero-title,
+.mode-light .hero-banner.category-hero-banner.topic-restart .hero-title {
+  color: #064e3b !important;
+  -webkit-text-fill-color: #064e3b !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9) !important;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-restart .hero-subtitle,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-restart .hero-subtitle,
+.mode-light .hero-banner.category-hero-banner.topic-restart .hero-subtitle {
+  color: #115e59 !important;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-restart .hero-tag-pill,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-restart .hero-tag-pill,
+.mode-light .hero-banner.category-hero-banner.topic-restart .hero-tag-pill {
+  background: rgba(255, 255, 255, 0.88) !important;
+  color: #047857 !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  box-shadow: 0 2px 10px rgba(5, 150, 105, 0.08);
+}
+
+/* Chủ đề Small Wins - Vàng mật ong ấm áp */
+body.theme-light .hero-banner.category-hero-banner.topic-wins,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-wins,
+.mode-light .hero-banner.category-hero-banner.topic-wins {
+  background:
+    radial-gradient(ellipse 64% 58% at 18% 18%, rgba(250, 204, 21, 0.22) 0%, transparent 64%),
+    radial-gradient(ellipse 58% 54% at 84% 82%, rgba(245, 158, 11, 0.14) 0%, transparent 64%),
+    linear-gradient(155deg, #fefce8 0%, #fef7d6 52%, #fef3c7 100%) !important;
+  border-bottom: 1px solid rgba(202, 138, 4, 0.2) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.94),
+    0 12px 30px -12px rgba(202, 138, 4, 0.13) !important;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-wins .hero-title,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-wins .hero-title,
+.mode-light .hero-banner.category-hero-banner.topic-wins .hero-title {
+  color: #713f12 !important;
+  -webkit-text-fill-color: #713f12 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.92) !important;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-wins .hero-subtitle,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-wins .hero-subtitle,
+.mode-light .hero-banner.category-hero-banner.topic-wins .hero-subtitle {
+  color: #5c4218 !important;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-wins .hero-tag-pill,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-wins .hero-tag-pill,
+.mode-light .hero-banner.category-hero-banner.topic-wins .hero-tag-pill {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #a16207 !important;
+  border: 1px solid rgba(234, 179, 8, 0.34) !important;
+  box-shadow: 0 2px 10px rgba(202, 138, 4, 0.08);
+}
+
+/* Sắc nét Subtitle, Secondary CTA & Controls kính mờ trên Chế Độ Ngày */
+body.theme-light .hero-banner.category-hero-banner .hero-subtitle,
+[data-theme="light"] .hero-banner.category-hero-banner .hero-subtitle,
+.mode-light .hero-banner.category-hero-banner .hero-subtitle {
+  color: #334155 !important;
+  font-weight: 500;
+}
+
+body.theme-light .hero-banner.category-hero-banner .hero-btn-secondary,
+[data-theme="light"] .hero-banner.category-hero-banner .hero-btn-secondary,
+.mode-light .hero-banner.category-hero-banner .hero-btn-secondary {
+  background: rgba(255, 255, 255, 0.82) !important;
+  color: #0f766e !important;
+  border: 1px solid rgba(13, 148, 136, 0.26) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+body.theme-light .hero-banner.category-hero-banner .hero-btn-secondary:hover,
+[data-theme="light"] .hero-banner.category-hero-banner .hero-btn-secondary:hover,
+.mode-light .hero-banner.category-hero-banner .hero-btn-secondary:hover {
+  background: #ffffff !important;
+  border-color: #0d9488 !important;
+  transform: translateY(-2px);
+}
+
+body.theme-light .hero-banner.category-hero-banner .category-spatial-rail,
+[data-theme="light"] .hero-banner.category-hero-banner .category-spatial-rail,
+.mode-light .hero-banner.category-hero-banner .category-spatial-rail {
+  background: rgba(255, 255, 255, 0.72) !important;
+  border: 1px solid rgba(15, 23, 42, 0.09) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow:
+    0 6px 20px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94);
+}
+
+body.theme-light .hero-banner.category-hero-banner .spatial-rail-step,
+[data-theme="light"] .hero-banner.category-hero-banner .spatial-rail-step,
+.mode-light .hero-banner.category-hero-banner .spatial-rail-step {
+  color: #334155 !important;
+  font-weight: 700;
+}
+
+body.theme-light .hero-banner.category-hero-banner .spatial-rail-step:hover:not(:disabled),
+[data-theme="light"] .hero-banner.category-hero-banner .spatial-rail-step:hover:not(:disabled),
+.mode-light .hero-banner.category-hero-banner .spatial-rail-step:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.06) !important;
+  color: #0f766e !important;
+}
+
+body.theme-light .hero-banner.category-hero-banner .spatial-dot-btn,
+[data-theme="light"] .hero-banner.category-hero-banner .spatial-dot-btn,
+.mode-light .hero-banner.category-hero-banner .spatial-dot-btn {
+  background: rgba(100, 116, 139, 0.34);
+}
+
+body.theme-light .hero-banner.category-hero-banner .spatial-dot-btn.active,
+[data-theme="light"] .hero-banner.category-hero-banner .spatial-dot-btn.active,
+.mode-light .hero-banner.category-hero-banner .spatial-dot-btn.active {
+  background: #0d9488;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-burnout .spatial-dot-btn.active,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-burnout .spatial-dot-btn.active,
+.mode-light .hero-banner.category-hero-banner.topic-burnout .spatial-dot-btn.active {
+  background: #e11d48;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-crisis .spatial-dot-btn.active,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-crisis .spatial-dot-btn.active,
+.mode-light .hero-banner.category-hero-banner.topic-crisis .spatial-dot-btn.active {
+  background: #d97706;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-restart .spatial-dot-btn.active,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-restart .spatial-dot-btn.active,
+.mode-light .hero-banner.category-hero-banner.topic-restart .spatial-dot-btn.active {
+  background: #059669;
+}
+
+body.theme-light .hero-banner.category-hero-banner.topic-wins .spatial-dot-btn.active,
+[data-theme="light"] .hero-banner.category-hero-banner.topic-wins .spatial-dot-btn.active,
+.mode-light .hero-banner.category-hero-banner.topic-wins .spatial-dot-btn.active {
+  background: #ca8a04;
+}
+
+body.theme-light .hero-banner.category-hero-banner .category-banner-edge-btn,
+[data-theme="light"] .hero-banner.category-hero-banner .category-banner-edge-btn,
+.mode-light .hero-banner.category-hero-banner .category-banner-edge-btn {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  color: #1e293b !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow:
+    0 6px 18px rgba(15, 23, 42, 0.09),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96) !important;
+}
+
+body.theme-light .hero-banner.category-hero-banner .category-banner-edge-btn:hover,
+[data-theme="light"] .hero-banner.category-hero-banner .category-banner-edge-btn:hover,
+.mode-light .hero-banner.category-hero-banner .category-banner-edge-btn:hover {
+  background: #0d9488 !important;
+  border-color: #0d9488 !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 22px rgba(13, 148, 136, 0.25) !important;
+}
+
+
