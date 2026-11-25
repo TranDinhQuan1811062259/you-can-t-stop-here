@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { authService } from '../services/authService';
+import { authService, getWarmCachedUserProfile, invalidateUserProfileCache } from '../services/authService';
 import { notificationService } from '../services/notificationService';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
@@ -68,8 +68,9 @@ export const UserProfilePage = () => {
   const { user: currentUser, openProfileModal, setIsProfileModalOpen, setIsAuthModalOpen } = useAuth();
   const { friendsList, handleAddFriend, handleRemoveFriend, openChatWithUser } = useChat();
 
-  const [profileData, setProfileData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const warmHit = getWarmCachedUserProfile(userId);
+  const [profileData, setProfileData] = useState(() => warmHit?.data || null);
+  const [loading, setLoading] = useState(() => !warmHit?.data);
   const [error, setError] = useState(null);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
   const [profilePostsPage, setProfilePostsPage] = useState(1);
@@ -77,11 +78,29 @@ export const UserProfilePage = () => {
   const [mutualBondData, setMutualBondData] = useState(null);
   const [isMemoriesDrawerOpen, setIsMemoriesDrawerOpen] = useState(false);
 
-  const fetchProfile = async () => {
+  const fetchProfile = async (options = {}) => {
+    const force = Boolean(options?.force);
     try {
+      if (!force) {
+        const warmEntry = getWarmCachedUserProfile(userId);
+        if (warmEntry?.data) {
+          setProfileData(warmEntry.data);
+          setLoading(false);
+          setError(null);
+          // Tải điểm gắn kết 2 chiều (Mutual Bond) nếu đã đăng nhập và đang xem profile người khác
+          if (currentUser && userId && String(currentUser._id) !== String(userId)) {
+            try {
+              const bondRes = await apiClient.get(`/user/bonds/${userId}`);
+              setMutualBondData(bondRes?.data?.data || null);
+            } catch (_) {}
+          }
+          return;
+        }
+      }
+
       setLoading(true);
       setError(null);
-      const res = await authService.getUserProfile(userId);
+      const res = await authService.getUserProfile(userId, { force });
       setProfileData(res.data);
 
       // Tải điểm gắn kết 2 chiều (Mutual Bond) nếu đã đăng nhập và đang xem profile người khác
@@ -99,16 +118,29 @@ export const UserProfilePage = () => {
   };
 
   useEffect(() => {
+    const warmEntry = getWarmCachedUserProfile(userId);
+    if (warmEntry?.data) {
+      setProfileData(warmEntry.data);
+      setLoading(false);
+      setError(null);
+    } else {
+      setLoading(true);
+      setError(null);
+    }
     fetchProfile();
   }, [userId]);
 
-  // Lắng nghe sự kiện cập nhật profile để tự làm mới
+  // Lắng nghe sự kiện cập nhật profile & đổi phiên đăng nhập để tự làm mới
   useEffect(() => {
     const handleProfileUpdate = () => {
-      fetchProfile();
+      fetchProfile({ force: true });
     };
     window.addEventListener('profile_updated', handleProfileUpdate);
-    return () => window.removeEventListener('profile_updated', handleProfileUpdate);
+    window.addEventListener('freedom_auth_changed', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('profile_updated', handleProfileUpdate);
+      window.removeEventListener('freedom_auth_changed', handleProfileUpdate);
+    };
   }, [userId]);
 
   if (loading) return <LoadingSpinner message="Đang tải trang cá nhân..." />;
@@ -186,11 +218,13 @@ export const UserProfilePage = () => {
       if (isFriend) {
         if (window.confirm(`Bạn có chắc chắn muốn hủy kết bạn với ${user.name}?`)) {
           await handleRemoveFriend(user._id || user.id);
-          await fetchProfile();
+          invalidateUserProfileCache();
+          await fetchProfile({ force: true });
         }
       } else {
         await handleAddFriend(user._id || user.id);
-        await fetchProfile();
+        invalidateUserProfileCache();
+        await fetchProfile({ force: true });
       }
     } catch (err) {
       alert(err.message || 'Thao tác kết bạn thất bại. Vui lòng thử lại!');

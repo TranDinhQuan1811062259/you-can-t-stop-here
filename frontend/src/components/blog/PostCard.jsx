@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { formatDate } from '../../utils/formatDate';
 import { postService, prefetchPostBySlug } from '../../services/postService';
+import { prefetchUserProfile } from '../../services/authService';
 import { playClickSound } from '../../utils/soundEffects';
 import { ATMOSPHERE_THEMES } from '../../utils/postAtmosphereEngine';
 import { SharePostModal } from './SharePostModal';
@@ -40,6 +41,7 @@ export const PostCard = ({ post }) => {
 
   // Predictive Post Detail Warm-Cache: Nạp trước bài viết âm thầm khi hover 120ms hoặc focus
   const hoverPrefetchTimerRef = useRef(null);
+  const hoverAuthorPrefetchTimerRef = useRef(null);
 
   const cancelPostPrefetch = () => {
     if (hoverPrefetchTimerRef.current) {
@@ -61,9 +63,31 @@ export const PostCard = ({ post }) => {
     }, 120);
   };
 
+  const cancelAuthorPrefetch = () => {
+    if (hoverAuthorPrefetchTimerRef.current) {
+      clearTimeout(hoverAuthorPrefetchTimerRef.current);
+      hoverAuthorPrefetchTimerRef.current = null;
+    }
+  };
+
+  const scheduleAuthorPrefetch = (immediate = false) => {
+    cancelAuthorPrefetch();
+    const authorTarget = post.user?._id || post.user || post.author || post.user?.name;
+    if (!authorTarget) return;
+    if (immediate) {
+      prefetchUserProfile(authorTarget);
+      return;
+    }
+    hoverAuthorPrefetchTimerRef.current = setTimeout(() => {
+      hoverAuthorPrefetchTimerRef.current = null;
+      prefetchUserProfile(authorTarget);
+    }, 120);
+  };
+
   useEffect(() => {
     return () => {
       cancelPostPrefetch();
+      cancelAuthorPrefetch();
     };
   }, []);
 
@@ -471,6 +495,9 @@ export const PostCard = ({ post }) => {
           to={`/profile/${post.user?._id || post.user || encodeURIComponent(authorName)}`}
           className="card-author-row card-author-link"
           title={`Xem trang cá nhân của ${authorName}`}
+          onMouseEnter={() => scheduleAuthorPrefetch(false)}
+          onMouseLeave={cancelAuthorPrefetch}
+          onFocus={() => scheduleAuthorPrefetch(true)}
         >
           <img src={authorAvatar} alt={authorName} className={`card-author-avatar frame-${authorFrame}`} />
           <div className="card-author-info">

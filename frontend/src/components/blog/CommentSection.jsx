@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
 import { commentService } from '../../services/commentService';
+import { prefetchUserProfile } from '../../services/authService';
 import { formatDate } from '../../utils/formatDate';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { maskSensitiveText } from '../../utils/sensitiveFilter';
@@ -58,6 +59,38 @@ export const CommentSection = ({
   const [showGifPicker, setShowGifPicker] = useState(false);
   const commentGifInputRef = useRef(null);
   const gifPickerRef = useRef(null);
+
+  // ⚡ Warm-Cache prefetch hồ sơ người bình luận (Debounce 120ms chống spam mobile)
+  const hoverProfileTimerRef = useRef(null);
+
+  const cancelProfilePrefetch = () => {
+    if (hoverProfileTimerRef.current) {
+      clearTimeout(hoverProfileTimerRef.current);
+      hoverProfileTimerRef.current = null;
+    }
+  };
+
+  const scheduleProfilePrefetch = (targetUser, immediate = false) => {
+    cancelProfilePrefetch();
+    const targetId = targetUser?._id || targetUser?.name;
+    if (!targetId) return;
+
+    if (immediate) {
+      prefetchUserProfile(targetId);
+      return;
+    }
+
+    hoverProfileTimerRef.current = setTimeout(() => {
+      prefetchUserProfile(targetId);
+      hoverProfileTimerRef.current = null;
+    }, 120);
+  };
+
+  useEffect(() => {
+    return () => {
+      cancelProfilePrefetch();
+    };
+  }, []);
 
   // Đóng bảng chọn GIF khi click ra ngoài
   useEffect(() => {
@@ -466,6 +499,9 @@ export const CommentSection = ({
                   <Link
                     to={`/profile/${c.user?._id || encodeURIComponent(c.user?.name || 'user')}`}
                     title={`Xem trang cá nhân của ${c.user?.name || 'người dùng'}`}
+                    onMouseEnter={() => scheduleProfilePrefetch(c.user, false)}
+                    onMouseLeave={cancelProfilePrefetch}
+                    onFocus={() => scheduleProfilePrefetch(c.user, true)}
                   >
                     <img
                       src={getSafeAvatar(c.user?.avatar)}
@@ -480,6 +516,9 @@ export const CommentSection = ({
                           to={`/profile/${c.user?._id || encodeURIComponent(c.user?.name || 'user')}`}
                           style={{ textDecoration: 'none' }}
                           title={`Xem trang cá nhân của ${c.user?.name || 'người dùng'}`}
+                          onMouseEnter={() => scheduleProfilePrefetch(c.user, false)}
+                          onMouseLeave={cancelProfilePrefetch}
+                          onFocus={() => scheduleProfilePrefetch(c.user, true)}
                         >
                           <span className="comment-user-name">
                             {c.user?.name || 'Thành viên'}

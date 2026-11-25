@@ -24,6 +24,7 @@ import { playClickSound } from '../utils/soundEffects';
 import { getHighestBadge } from '../utils/badgeHelper';
 import { ReadingProgressBar } from '../components/blog/ReadingProgressBar';
 import { calculateReadingTime } from '../utils/readingTime';
+import { prefetchUserProfile } from '../services/authService';
 
 export const PostDetailPage = () => {
   const { slug } = useParams();
@@ -52,6 +53,38 @@ export const PostDetailPage = () => {
   // 📋 Phản hồi sao chép liên kết nhanh (kèm ref dọn dẹp timer chống rò rỉ)
   const [copyToast, setCopyToast] = useState(false);
   const copyToastTimeoutRef = useRef(null);
+
+  // ⚡ Warm-Cache prefetch hồ sơ tác giả bài viết (Debounce 120ms chống spam mobile)
+  const hoverAuthorProfileTimerRef = useRef(null);
+
+  const cancelAuthorProfilePrefetch = useCallback(() => {
+    if (hoverAuthorProfileTimerRef.current) {
+      clearTimeout(hoverAuthorProfileTimerRef.current);
+      hoverAuthorProfileTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleAuthorProfilePrefetch = useCallback((immediate = false) => {
+    cancelAuthorProfilePrefetch();
+    const targetId = post?.user?._id || post?.user || post?.user?.name;
+    if (!targetId) return;
+
+    if (immediate) {
+      prefetchUserProfile(targetId);
+      return;
+    }
+
+    hoverAuthorProfileTimerRef.current = setTimeout(() => {
+      prefetchUserProfile(targetId);
+      hoverAuthorProfileTimerRef.current = null;
+    }, 120);
+  }, [cancelAuthorProfilePrefetch, post]);
+
+  useEffect(() => {
+    return () => {
+      cancelAuthorProfilePrefetch();
+    };
+  }, [cancelAuthorProfilePrefetch]);
 
   useEffect(() => {
     return () => {
@@ -801,6 +834,9 @@ export const PostDetailPage = () => {
                     to={authorProfileUrl}
                     className="post-author-avatar-link"
                     title={`Xem trang cá nhân của ${authorName}`}
+                    onMouseEnter={() => scheduleAuthorProfilePrefetch(false)}
+                    onMouseLeave={cancelAuthorProfilePrefetch}
+                    onFocus={() => scheduleAuthorProfilePrefetch(true)}
                   >
                     <img
                       src={authorAvatar}
@@ -810,7 +846,14 @@ export const PostDetailPage = () => {
                   </Link>
                   <div className="post-author-details">
                     <div className="post-author-name-row">
-                      <Link to={authorProfileUrl} className="post-author-name-link" title={`Xem trang cá nhân của ${authorName}`}>
+                      <Link
+                        to={authorProfileUrl}
+                        className="post-author-name-link"
+                        title={`Xem trang cá nhân của ${authorName}`}
+                        onMouseEnter={() => scheduleAuthorProfilePrefetch(false)}
+                        onMouseLeave={cancelAuthorProfilePrefetch}
+                        onFocus={() => scheduleAuthorProfilePrefetch(true)}
+                      >
                         <h4
                           className="post-author-name"
                           style={{
@@ -1352,6 +1395,9 @@ export const PostDetailPage = () => {
                 to={authorProfileUrl}
                 style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px', textDecoration: 'none' }}
                 title={`Bấm để xem trang cá nhân của ${authorName}`}
+                onMouseEnter={() => scheduleAuthorProfilePrefetch(false)}
+                onMouseLeave={cancelAuthorProfilePrefetch}
+                onFocus={() => scheduleAuthorProfilePrefetch(true)}
               >
                 <img
                   src={authorAvatar}
@@ -1379,6 +1425,9 @@ export const PostDetailPage = () => {
                   color: 'var(--primary-color)',
                   textDecoration: 'none',
                 }}
+                onMouseEnter={() => scheduleAuthorProfilePrefetch(false)}
+                onMouseLeave={cancelAuthorProfilePrefetch}
+                onFocus={() => scheduleAuthorProfilePrefetch(true)}
               >
                 👤 Xem trang cá nhân & bài viết &rarr;
               </Link>

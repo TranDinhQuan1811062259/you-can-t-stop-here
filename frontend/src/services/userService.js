@@ -1,4 +1,9 @@
 import apiClient from './apiClient';
+import {
+  invalidateUserProfileCache,
+  getWarmCachedUserProfile,
+  prefetchUserProfile,
+} from './authService';
 
 /**
  * Service giao tiếp với các API cá nhân hóa, điểm danh giữ lửa & tương tác âm nhạc
@@ -26,7 +31,17 @@ export const userService = {
   deleteNote: (noteId) => apiClient.delete(`/user/notes/${noteId}`),
 
   // Cập nhật tên hiển thị, bio
-  updateProfile: (profileData) => apiClient.patch('/user/profile', profileData),
+  updateProfile: (profileData) =>
+    apiClient.patch('/user/profile', profileData).then((res) => {
+      invalidateUserProfileCache();
+      return res;
+    }),
+};
+
+export {
+  invalidateUserProfileCache,
+  getWarmCachedUserProfile,
+  prefetchUserProfile,
 };
 
 export default userService;
