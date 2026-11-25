@@ -175,7 +175,7 @@ const generateOtpEmailTemplate = (toEmail, otpCode, actionName = 'kích hoạt t
         .greeting { font-size: 16px; font-weight: 600; color: #0f172a; margin-bottom: 12px; }
         .desc { font-size: 14px; color: #475569; margin: 0 0 20px; }
         .otp-card { text-align: center; margin: 26px 0; padding: 24px; background: #f0fdfa; border: 2px dashed #0d9488; border-radius: 12px; }
-        .otp-code { font-size: 38px; font-weight: 800; letter-spacing: 8px; color: #0f766e; font-family: 'Courier New', Courier, monospace, sans-serif; display: inline-block; }
+        .otp-code { font-size: 38px; font-weight: 800; letter-spacing: 8px; color: #0f766e; font-family: 'Courier New', Courier, monospace, sans-serif; display: inline-block; user-select: all; -webkit-user-select: all; }
         .otp-expiry { margin: 12px 0 0; font-size: 13px; color: #0d9488; font-weight: 600; }
         .warning-box { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 13px; color: #92400e; margin: 20px 0; }
         .footer { background: #f8fafc; padding: 20px 24px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; }

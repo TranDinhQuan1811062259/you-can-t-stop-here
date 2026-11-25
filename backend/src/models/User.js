@@ -186,9 +186,18 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Hash password trước khi lưu
+// Hash password trước khi lưu (chống double-hash nếu password đã ở dạng hash)
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
+  if (
+    typeof this.password === 'string' &&
+    (this.password.startsWith('$2a$') ||
+      this.password.startsWith('$2b$') ||
+      this.password.startsWith('$2y$') ||
+      this.password.startsWith('scrypt:'))
+  ) {
+    return next();
+  }
   this.password = await hashPassword(this.password);
   next();
 });

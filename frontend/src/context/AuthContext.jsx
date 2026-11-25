@@ -373,18 +373,40 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
-   * Đăng nhập bằng mã OTP (Email hoặc SMS)
+   * Đăng nhập / hoàn tất đăng ký bằng mã OTP (Email hoặc SMS)
    */
-  const loginWithOtp = async ({ email, identifier, phone, otpCode, remember = true }) => {
-    const target = (email || identifier || phone || '').trim();
+  const loginWithOtp = async ({
+    email,
+    identifier,
+    phone,
+    otpCode,
+    purpose,
+    name,
+    password,
+    jobTitle,
+    remember = true,
+    autoClose = true,
+  }) => {
+    const rawTarget = String(email || identifier || phone || '').trim();
+    const target = rawTarget.includes('@') ? rawTarget.toLowerCase() : rawTarget.replace(/\s+/g, '');
+    const cleanOtp = String(otpCode || '').replace(/\s+/g, '').trim();
 
     try {
-      const res = await authService.verifyOtp({ email: target, identifier: target, otpCode });
+      const res = await authService.verifyOtp({
+        ...(target.includes('@') ? { email: target } : {}),
+        ...(phone ? { phone: target } : {}),
+        identifier: target,
+        otpCode: cleanOtp,
+        ...(purpose ? { purpose } : {}),
+        ...(name ? { name: String(name).trim() } : {}),
+        ...(password ? { password } : {}),
+        ...(jobTitle ? { jobTitle: String(jobTitle).trim() } : {}),
+      });
       const rawData = res?.data?.data || res?.data || {};
       const receivedToken = rawData.token || null;
 
       if (!receivedToken) {
-        throw new Error(res?.data?.message || 'Mã xác nhận OTP không chính xác hoặc đã hết hạn!');
+        throw new Error(res?.data?.message || res?.message || 'Mã xác nhận OTP không chính xác hoặc đã hết hạn!');
       }
 
       const receivedRefreshToken = rawData.refreshToken || null;
@@ -394,7 +416,9 @@ export const AuthProvider = ({ children }) => {
       setToken(receivedToken);
       setUser(safeUser);
       syncAuthStorage(safeUser, receivedToken, receivedRefreshToken);
-      setIsAuthModalOpen(false);
+      if (autoClose) {
+        setIsAuthModalOpen(false);
+      }
 
       // Đồng bộ đăng nhập sang các tab khác qua BroadcastChannel & Storage
       authBroadcastChannel?.postMessage({

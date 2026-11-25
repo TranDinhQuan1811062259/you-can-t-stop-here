@@ -1,11 +1,13 @@
+import crypto from 'crypto';
 import User from '../models/User.js';
+import OtpToken from '../models/OtpToken.js';
 import Post from '../models/Post.js';
 import Category from '../models/Category.js';
 import AdminAuditLog from '../models/AdminAuditLog.js';
 import { extractTelemetry } from '../utils/telemetryHelper.js';
 import { sendAdminSecurityAlertEmail } from '../services/emailService.js';
 import { OAuth2Client } from 'google-auth-library';
-import { isDbConnected } from '../config/db.js';
+import { isDbConnected, checkDbReady } from '../config/db.js';
 import {
   signToken,
   signAccessToken,
@@ -23,6 +25,9 @@ import {
   saveStore,
   findUserInStore,
   saveUserToStore,
+  saveOtpRecordToStore,
+  getOtpRecordFromStore,
+  deleteOtpRecordFromStore,
   defaultStoreUsers,
 } from '../utils/persistentStore.js';
 
@@ -42,6 +47,92 @@ const otpStoreCleanupInterval = setInterval(() => {
 if (otpStoreCleanupInterval.unref) {
   otpStoreCleanupInterval.unref();
 }
+
+const normalizeOtpTarget = (rawTarget) => {
+  const trimmed = String(rawTarget || '').trim();
+  const isEmail = trimmed.includes('@');
+  const cleanTarget = isEmail ? trimmed.toLowerCase() : trimmed.replace(/\s+/g, '');
+  return { isEmail, cleanTarget };
+};
+
+const normalizeOtpCode = (rawOtp) => String(rawOtp || '').replace(/\s+/g, '').trim();
+
+/**
+ * Lưu thử thách OTP đồng bộ vào RAM (otpStore), ổ cứng dự phòng và MongoDB (OtpToken)
+ * để đảm bảo không bị mất mã khi restart server hoặc chạy đa tiến trình serverless.
+ */
+const persistOtpChallenge = async ({
+  cleanTarget,
+  isEmail,
+  otpCode,
+  expiresAt,
+  purpose = 'login',
+  name = '',
+  passwordHash = '',
+  jobTitle = '',
+}) => {
+  const cleanCode = normalizeOtpCode(otpCode);
+  const cleanPurpose = String(purpose || 'login').toLowerCase().trim();
+  const record = {
+    code: cleanCode,
+    expiresAt: Number(expiresAt),
+    type: isEmail ? 'email' : 'phone',
+    purpose: cleanPurpose,
+    attempts: 0,
+    name: String(name || '').trim(),
+    passwordHash: passwordHash || '',
+    jobTitle: String(jobTitle || '').trim(),
+  };
+
+  otpStore.set(cleanTarget, record);
+  saveOtpRecordToStore(cleanTarget, record);
+
+  if (checkDbReady()) {
+    try {
+      await OtpToken.findOneAndUpdate(
+        { target: cleanTarget },
+        {
+          $set: {
+            target: cleanTarget,
+            code: cleanCode,
+            type: record.type,
+            purpose: cleanPurpose,
+            attempts: 0,
+            expiresAt: new Date(expiresAt),
+            pendingName: record.name,
+            pendingPasswordHash: record.passwordHash,
+            pendingJobTitle: record.jobTitle,
+          },
+        },
+        { upsert: true, new: true }
+      );
+    } catch (otpDbErr) {
+      console.warn('[AUTH] Cảnh báo lưu OtpToken vào MongoDB:', otpDbErr.message);
+    }
+  }
+
+  return record;
+};
+
+/**
+ * Xóa toàn bộ dấu vết OTP sau khi xác thực thành công hoặc quá số lần thử sai
+ */
+const clearOtpChallenge = async (cleanTarget, isEmail = true) => {
+  otpStore.delete(cleanTarget);
+  deleteOtpRecordFromStore(cleanTarget);
+
+  if (checkDbReady()) {
+    try {
+      await OtpToken.deleteOne({ target: cleanTarget });
+      if (isEmail) {
+        await User.updateOne(
+          { email: cleanTarget },
+          { $set: { otpCode: null, otpExpires: null, otpAttempts: 0 } }
+        );
+      }
+    } catch (_) {}
+  }
+};
 
 // Danh sách tài khoản sẵn có (Đồng bộ trực tiếp từ ổ cứng db_store.json)
 const store = loadStore();
@@ -67,12 +158,13 @@ export const register = async (req, res) => {
     const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
     const hashedPassword = await hashPassword(password);
 
-    // Lưu cache OTP trong bộ nhớ (CHỈ lưu mật khẩu đã băm an toàn, KHÔNG lưu plain-text)
-    otpStore.set(cleanEmail, {
-      code: otpCode,
+    // Lưu đồng bộ vào RAM, ổ cứng dự phòng & MongoDB OtpToken
+    await persistOtpChallenge({
+      cleanTarget: cleanEmail,
+      isEmail: true,
+      otpCode,
       expiresAt: otpExpires.getTime(),
-      type: 'email',
-      attempts: 0,
+      purpose: 'register',
       name: name.trim(),
       passwordHash: hashedPassword,
       jobTitle: jobTitle ? jobTitle.trim() : 'Thành viên cộng đồng',
@@ -80,11 +172,12 @@ export const register = async (req, res) => {
 
     let registeredUser = null;
 
-    if (isDbConnected) {
+    if (checkDbReady()) {
       const existingUser = await User.findOne({ email: cleanEmail });
 
       // Nếu tài khoản đã tồn tại và ĐÃ XÁC THỰC OTP thành công
       if (existingUser && existingUser.isVerified) {
+        await clearOtpChallenge(cleanEmail, true);
         return sendError(res, {
           message: 'Email này đã được sử dụng và kích hoạt. Vui lòng đăng nhập!',
           status: 400,
@@ -422,7 +515,7 @@ export const socialLogin = async (req, res) => {
     }
 
     // 🛡️ BẢO MẬT GOOGLE: Bắt buộc xác thực mã OTP gửi về Email chính chủ
-    const submittedOtp = req.body.otpCode ? String(req.body.otpCode).trim() : '';
+    const submittedOtp = normalizeOtpCode(req.body.otpCode);
     const requiresOtpCheck = cleanProvider === 'google' || assignedRole === 'admin';
 
     if (requiresOtpCheck) {
@@ -431,9 +524,15 @@ export const socialLogin = async (req, res) => {
         // Chưa có mã OTP -> Sinh mã OTP 6 số và gửi qua Gmail chính chủ
         const generatedCode = generateOtp();
         const expiresAt = Date.now() + 5 * 60 * 1000;
-        otpStore.set(cleanEmail, { code: generatedCode, expiresAt, type: 'email', attempts: 0 });
+        await persistOtpChallenge({
+          cleanTarget: cleanEmail,
+          isEmail: true,
+          otpCode: generatedCode,
+          expiresAt,
+          purpose: 'login',
+        });
 
-        if (isDbConnected) {
+        if (checkDbReady()) {
           try {
             const dbU = await User.findOne({ email: cleanEmail });
             if (dbU) {
@@ -471,26 +570,35 @@ export const socialLogin = async (req, res) => {
         });
       }
 
-      // Đã có mã OTP -> Xác thực với cache bộ nhớ & MongoDB
-      const cachedOtp = otpStore.get(cleanEmail);
+      // Đã có mã OTP -> Xác thực với cache bộ nhớ, OtpToken & MongoDB
+      const cachedOtp = otpStore.get(cleanEmail) || getOtpRecordFromStore(cleanEmail);
+      let dbOtpDoc = null;
+      if (!cachedOtp && checkDbReady()) {
+        try {
+          dbOtpDoc = await OtpToken.findOne({ target: cleanEmail });
+        } catch (_) {}
+      }
       let isValidOtp = false;
 
-      if (cachedOtp && String(cachedOtp.code).trim() === submittedOtp) {
-        if (Date.now() <= cachedOtp.expiresAt) {
+      if (cachedOtp && normalizeOtpCode(cachedOtp.code) === submittedOtp) {
+        if (Date.now() <= Number(cachedOtp.expiresAt)) {
           isValidOtp = true;
-          otpStore.delete(cleanEmail);
+          await clearOtpChallenge(cleanEmail, true);
+        }
+      } else if (dbOtpDoc && normalizeOtpCode(dbOtpDoc.code) === submittedOtp) {
+        if (dbOtpDoc.expiresAt && new Date(dbOtpDoc.expiresAt).getTime() >= Date.now()) {
+          isValidOtp = true;
+          await clearOtpChallenge(cleanEmail, true);
         }
       }
 
-      if (!isValidOtp && isDbConnected) {
+      if (!isValidOtp && checkDbReady()) {
         try {
           const dbU = await User.findOne({ email: cleanEmail });
-          if (dbU && dbU.otpCode && String(dbU.otpCode).trim() === submittedOtp) {
+          if (dbU && dbU.otpCode && normalizeOtpCode(dbU.otpCode) === submittedOtp) {
             if (dbU.otpExpires && new Date(dbU.otpExpires).getTime() >= Date.now()) {
               isValidOtp = true;
-              dbU.otpCode = undefined;
-              dbU.otpExpires = undefined;
-              await dbU.save();
+              await clearOtpChallenge(cleanEmail, true);
             }
           }
         } catch (_) {}
@@ -1335,18 +1443,19 @@ export const sendLoginOtp = async (req, res) => {
       return sendError(res, { message: 'Vui lòng cung cấp địa chỉ Email hoặc Số điện thoại hợp lệ', status: 400 });
     }
 
-    const isEmail = targetInput.includes('@');
-    const cleanTarget = isEmail ? targetInput.toLowerCase() : targetInput.replace(/\s+/g, '');
+    const { isEmail, cleanTarget } = normalizeOtpTarget(targetInput);
+    const cleanPurpose = String(purpose || 'login').toLowerCase().trim();
     const otpCode = generateOtp();
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 phút
     const rawPass = req.body.password ? String(req.body.password) : '';
     const hashedPassword = rawPass ? await hashPassword(rawPass) : '';
 
-    otpStore.set(cleanTarget, {
-      code: otpCode,
+    await persistOtpChallenge({
+      cleanTarget,
+      isEmail,
+      otpCode,
       expiresAt,
-      type: isEmail ? 'email' : 'phone',
-      attempts: 0,
+      purpose: cleanPurpose,
       name: req.body.name ? String(req.body.name).trim() : '',
       passwordHash: hashedPassword,
       jobTitle: req.body.jobTitle ? String(req.body.jobTitle).trim() : '',
@@ -1356,13 +1465,18 @@ export const sendLoginOtp = async (req, res) => {
 
     if (isEmail) {
       // Cập nhật mã OTP vào MongoDB Atlas nếu tài khoản đã tồn tại
-      if (isDbConnected) {
+      if (checkDbReady()) {
         try {
           const dbUser = await User.findOne({ email: cleanTarget });
           if (dbUser) {
             dbUser.otpCode = otpCode;
             dbUser.otpExpires = new Date(expiresAt);
             dbUser.otpAttempts = 0;
+            if (!dbUser.isVerified && cleanPurpose === 'register') {
+              if (req.body.name) dbUser.name = String(req.body.name).trim();
+              if (req.body.jobTitle) dbUser.jobTitle = String(req.body.jobTitle).trim();
+              if (rawPass) dbUser.password = rawPass;
+            }
             await dbUser.save();
           }
         } catch (dbErr) {
@@ -1370,16 +1484,17 @@ export const sendLoginOtp = async (req, res) => {
         }
       }
 
-      // Gửi email thật qua Nodemailer Gmail
+      // Gửi email thật đúng mục đích (login / register) qua Mailer chính và fallback EmailService
       let mailResult = null;
       try {
-        mailResult = await sendRegistrationOtp(cleanTarget, otpCode);
+        mailResult = await sendMailerOtp(cleanTarget, otpCode, cleanPurpose);
       } catch (err) {
         console.warn('[AUTH] Thử lại với hàm gửi mail dự phòng:', err.message);
         try {
-          mailResult = await sendOtpEmail(cleanTarget, otpCode, purpose);
+          mailResult = await sendOtpEmail(cleanTarget, otpCode, cleanPurpose);
         } catch (backupErr) {
           console.error('[AUTH] Cả 2 cổng gửi email đều không khả dụng:', backupErr.message);
+          req.otpDispatched = false;
           return sendError(res, {
             message: 'Máy chủ gửi email tạm thời không phản hồi. Quý khách vui lòng thử lại sau ít phút hoặc đăng nhập bằng Mật khẩu.',
             status: 500,
@@ -1388,7 +1503,7 @@ export const sendLoginOtp = async (req, res) => {
       }
 
       console.log(`\n========================================`);
-      console.log(`[AUTH SECURITY] ĐÃ GỬI MÃ XÁC THỰC BẢO MẬT`);
+      console.log(`[AUTH SECURITY] ĐÃ GỬI MÃ XÁC THỰC BẢO MẬT (${cleanPurpose.toUpperCase()})`);
       console.log(`- Hòm thư nhận: ${cleanTarget}`);
       console.log(`- Mã xác nhận 6 số: ${otpCode}`);
       console.log(`========================================\n`);
@@ -1397,7 +1512,9 @@ export const sendLoginOtp = async (req, res) => {
         message: `Đã gửi mã xác nhận 6 số đến hòm thư ${cleanTarget}`,
         data: {
           identifier: cleanTarget,
+          email: cleanTarget,
           type: 'email',
+          purpose: cleanPurpose,
           expiresAt,
           previewUrl: mailResult?.previewUrl || null,
           simulated: mailResult?.simulated || false,
@@ -1410,6 +1527,7 @@ export const sendLoginOtp = async (req, res) => {
 
       // Nếu cổng SMS chưa được cấu hình hoặc gửi thất bại (nhất là trên Production Vercel)
       if (!smsResult || !smsResult.success) {
+        req.otpDispatched = false;
         console.warn(`[AUTH SECURITY] Cổng SMS không khả dụng cho ${cleanTarget}:`, smsResult?.error || 'Chưa cấu hình API Key SMS');
         return sendError(res, {
           message: smsResult?.error || 'Dịch vụ gửi SMS tạm thời chưa khả dụng. Quý khách vui lòng chọn Đăng nhập / Đăng ký bằng Email hoặc Mật khẩu.',
@@ -1455,118 +1573,121 @@ export const sendLoginOtp = async (req, res) => {
  */
 export const verifyOtpAndLogin = async (req, res) => {
   try {
-    const { email, identifier, otpCode, deviceName = 'Windows PC (Chrome)' } = req.body;
-    const targetInput = String(email || identifier || '').trim();
+    const { email, identifier, phone, otpCode, purpose, deviceName = 'Windows PC (Chrome)' } = req.body;
+    const targetInput = String(email || identifier || phone || '').trim();
 
     if (!targetInput || !otpCode) {
       return sendError(res, { message: 'Vui lòng cung cấp Email/Số điện thoại và mã xác nhận OTP', status: 400 });
     }
 
-    const isEmail = targetInput.includes('@');
-    const cleanTarget = isEmail ? targetInput.toLowerCase() : targetInput.replace(/\s+/g, '');
-    const cleanOtp = String(otpCode).trim();
+    const { isEmail, cleanTarget } = normalizeOtpTarget(targetInput);
+    const cleanOtp = normalizeOtpCode(otpCode);
+    if (!cleanOtp) {
+      return sendError(res, { message: 'Mã xác nhận OTP không hợp lệ. Vui lòng nhập đủ 6 chữ số!', status: 400 });
+    }
 
-    let isMatched = false;
+    const dbReady = checkDbReady();
+    const memRecord = otpStore.get(cleanTarget) || null;
+    const diskRecord = getOtpRecordFromStore(cleanTarget);
+    let dbOtpDoc = null;
     let dbUser = null;
 
-    // 🛡️ CHỐNG RACE CONDITION TRÊN BỘ NHỚ ĐỆM (otpStore):
-    // Tăng biến đếm sai ĐỒNG BỘ ngay lập tức trước bất kỳ lệnh await nào!
-    const record = otpStore.get(cleanTarget);
-    const hasActiveRecord = record && Date.now() <= record.expiresAt;
-
-    if (hasActiveRecord) {
-      if (record.code === cleanOtp) {
-        isMatched = true;
-        otpStore.delete(cleanTarget);
-        if (isDbConnected && isEmail) {
-          dbUser = await User.findOneAndUpdate(
-            { email: cleanTarget },
-            { $set: { isVerified: true, otpCode: null, otpExpires: null, otpAttempts: 0 } },
-            { new: true }
-          );
-        }
-      } else {
-        // Tăng đồng bộ ngay trên record trước khi nhường event loop
-        record.attempts = (record.attempts || 0) + 1;
-        const currentAttempts = record.attempts;
-
-        if (currentAttempts >= 5) {
-          otpStore.delete(cleanTarget);
-          if (isDbConnected && isEmail) {
-            await User.updateOne(
-              { email: cleanTarget },
-              { $set: { otpCode: null, otpExpires: null, otpAttempts: 0 } }
-            );
-          }
-          return sendError(res, {
-            message: 'Mã OTP đã bị vô hiệu hóa do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới!',
-            status: 400,
-          });
-        }
-
-        // Cập nhật nguyên tử với $inc trong MongoDB Atlas
-        if (isDbConnected && isEmail) {
-          await User.updateOne({ email: cleanTarget }, { $inc: { otpAttempts: 1 } });
-        }
-
-        const remainingAttempts = 5 - currentAttempts;
-        return sendError(res, {
-          message: `Mã xác nhận OTP không chính xác. Bạn còn ${remainingAttempts} lần thử trước khi mã bị vô hiệu hóa!`,
-          status: 400,
-          errors: { remainingAttempts },
-        });
+    if (dbReady) {
+      try {
+        dbOtpDoc = await OtpToken.findOne({ target: cleanTarget });
+      } catch (otpLookupErr) {
+        console.warn('[AUTH] Lỗi truy vấn OtpToken:', otpLookupErr.message);
+      }
+      if (isEmail) {
+        dbUser = await User.findOne({ email: cleanTarget });
       }
     }
 
-    // Nếu không có trong otpStore (ví dụ server khởi động lại), đối chiếu trong MongoDB Atlas
-    if (!isMatched && isDbConnected && isEmail) {
-      dbUser = await User.findOne({ email: cleanTarget });
-      if (dbUser && dbUser.otpCode) {
-        const isNotExpired = !dbUser.otpExpires || new Date() <= dbUser.otpExpires;
-        if (isNotExpired) {
-          if (dbUser.otpCode === cleanOtp) {
-            isMatched = true;
-            dbUser.isVerified = true;
-            dbUser.otpCode = null;
-            dbUser.otpExpires = null;
-            dbUser.otpAttempts = 0;
-            await dbUser.save();
-          } else {
-            // Tăng số lần sai nguyên tử với $inc
-            const updated = await User.findOneAndUpdate(
-              { email: cleanTarget, otpCode: { $ne: null } },
-              { $inc: { otpAttempts: 1 } },
-              { new: true }
-            );
-            if (updated && updated.otpAttempts >= 5) {
-              await User.updateOne(
-                { email: cleanTarget },
-                { $set: { otpCode: null, otpExpires: null, otpAttempts: 0 } }
-              );
-              return sendError(res, {
-                message: 'Mã OTP đã bị vô hiệu hóa do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới!',
-                status: 400,
-              });
-            }
-            const rem = Math.max(0, 5 - (updated?.otpAttempts || 1));
-            return sendError(res, {
-              message: `Mã xác nhận OTP không chính xác. Bạn còn ${rem} lần thử trước khi mã bị vô hiệu hóa!`,
-              status: 400,
-              errors: { remainingAttempts: rem },
-            });
-          }
+    const dbOtpCandidate = dbOtpDoc
+      ? {
+          code: normalizeOtpCode(dbOtpDoc.code),
+          expiresAt: new Date(dbOtpDoc.expiresAt).getTime(),
+          attempts: dbOtpDoc.attempts || 0,
+          name: dbOtpDoc.pendingName || '',
+          passwordHash: dbOtpDoc.pendingPasswordHash || '',
+          jobTitle: dbOtpDoc.pendingJobTitle || '',
+          purpose: dbOtpDoc.purpose || 'login',
         }
+      : null;
+
+    const dbUserCandidate =
+      dbUser && dbUser.otpCode
+        ? {
+            code: normalizeOtpCode(dbUser.otpCode),
+            expiresAt: dbUser.otpExpires ? new Date(dbUser.otpExpires).getTime() : Date.now() + 5 * 60 * 1000,
+            attempts: dbUser.otpAttempts || 0,
+            name: dbUser.name || '',
+            passwordHash: dbUser.password || '',
+            jobTitle: dbUser.jobTitle || '',
+            purpose: dbUser.isVerified ? 'login' : 'register',
+          }
+        : null;
+
+    // Chọn bản ghi OTP mới nhất hiện có (ưu tiên RAM khi còn hiệu lực & cùng/mới hơn để đếm attempts đồng bộ)
+    const candidates = [memRecord, dbOtpCandidate, diskRecord, dbUserCandidate].filter(Boolean);
+    let activeCandidate = null;
+    for (const item of candidates) {
+      if (!activeCandidate || Number(item.expiresAt || 0) > Number(activeCandidate.expiresAt || 0)) {
+        activeCandidate = item;
       }
     }
 
-    if (!isMatched) {
+    if (!activeCandidate) {
       return sendError(res, {
         message: 'Mã xác nhận OTP không chính xác hoặc đã hết hạn (5 phút). Vui lòng yêu cầu mã OTP mới!',
         status: 400,
       });
     }
 
-    otpStore.delete(cleanTarget);
+    if (activeCandidate.expiresAt && Date.now() > Number(activeCandidate.expiresAt)) {
+      await clearOtpChallenge(cleanTarget, isEmail);
+      return sendError(res, {
+        message: 'Mã xác nhận OTP đã hết hạn (5 phút). Vui lòng nhấn "Gửi lại mã" để nhận mã mới!',
+        status: 400,
+      });
+    }
+
+    if (normalizeOtpCode(activeCandidate.code) !== cleanOtp) {
+      const nextAttempts = Math.max(Number(memRecord?.attempts || 0), Number(activeCandidate.attempts || 0)) + 1;
+      if (memRecord) {
+        memRecord.attempts = nextAttempts;
+      }
+      if (diskRecord && memRecord !== diskRecord) {
+        saveOtpRecordToStore(cleanTarget, { ...activeCandidate, attempts: nextAttempts });
+      }
+      if (dbReady) {
+        try {
+          if (dbOtpDoc) {
+            await OtpToken.updateOne({ target: cleanTarget }, { $set: { attempts: nextAttempts } });
+          }
+          if (dbUser && dbUser.otpCode) {
+            await User.updateOne({ email: cleanTarget }, { $set: { otpAttempts: nextAttempts } });
+          }
+        } catch (_) {}
+      }
+
+      if (nextAttempts >= 5) {
+        await clearOtpChallenge(cleanTarget, isEmail);
+        return sendError(res, {
+          message: 'Mã OTP đã bị vô hiệu hóa do nhập sai quá 5 lần. Vui lòng yêu cầu mã OTP mới!',
+          status: 400,
+        });
+      }
+
+      const remainingAttempts = 5 - nextAttempts;
+      return sendError(res, {
+        message: `Mã xác nhận OTP không chính xác. Bạn còn ${remainingAttempts} lần thử trước khi mã bị vô hiệu hóa!`,
+        status: 400,
+        errors: { remainingAttempts },
+      });
+    }
+
+    const matchedOtpRecord = { ...activeCandidate };
 
     const storeUser = findUserInStore(cleanTarget);
     const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
@@ -1575,6 +1696,7 @@ export const verifyOtpAndLogin = async (req, res) => {
 
     // 🚨 BẪY BẢO MẬT: CHẶN TÀI KHOẢN ADMIN ĐĂNG NHẬP QUA CỔNG OTP CỦA USER THƯỜNG
     if (assignedRole === 'admin' || dbUser?.role === 'admin' || storeUser?.role === 'admin') {
+      await clearOtpChallenge(cleanTarget, isEmail);
       const telemetry = extractTelemetry(req);
       try {
         await AdminAuditLog.create({
@@ -1603,53 +1725,131 @@ export const verifyOtpAndLogin = async (req, res) => {
       });
     }
 
-    // Ưu tiên Họ tên thật người dùng đã nhập lúc đăng ký (từ body hoặc từ cache OTP)
-    const submittedName = (req.body.name || record?.name || '').trim();
-    const submittedPasswordHash = record?.passwordHash || (req.body.password ? await hashPassword(String(req.body.password)) : '');
-    const submittedJobTitle = (req.body.jobTitle || record?.jobTitle || '').trim();
+    // Xóa OTP sau khi khớp hợp lệ (trước khi tạo/kích hoạt session)
+    await clearOtpChallenge(cleanTarget, isEmail);
 
-    const finalUser = dbUser ? {
-      _id: dbUser._id,
-      name: submittedName || dbUser.name,
-      email: dbUser.email,
-      role: dbUser.role || assignedRole,
-      jobTitle: submittedJobTitle || dbUser.jobTitle || 'Thành viên cộng đồng',
-      avatar: isAdm ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : (dbUser.avatar && !dbUser.avatar.includes('/images/man.jpg') ? dbUser.avatar : ''),
-      coverImage: dbUser.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
-      bio: dbUser.bio || '',
-      isVerified: true,
-      authProvider: dbUser.authProvider || 'local',
-      customLayout: dbUser.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
-      profileMusic: dbUser.profileMusic || {
-        enabled: true,
-        title: 'Lofi Chill - Đêm muộn ở văn phòng',
-        artist: 'Freedom Chill Beat',
-        sourceType: 'preset',
-        presetId: 'lofi_night',
-        url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
-      },
-    } : {
-      _id: storeUser?._id || `u_${isEmail ? 'email' : 'phone'}_${Date.now()}`,
-      name: submittedName || storeUser?.name || (isAdm ? 'Trần Đình Quân' : (isEmail ? (cleanTarget.split('@')[0].charAt(0).toUpperCase() + cleanTarget.split('@')[0].slice(1)) : `Thành viên (${cleanTarget})`)),
-      email: isEmail ? cleanTarget : `${cleanTarget}@phone.cantstophere.com`,
-      phone: !isEmail ? cleanTarget : undefined,
-      password: submittedPasswordHash || storeUser?.password || '',
-      role: assignedRole,
-      jobTitle: submittedJobTitle || storeUser?.jobTitle || (isAdm ? 'System Admin & Lead Dev' : 'Thành viên cộng đồng'),
-      avatar: isAdm ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : (storeUser?.avatar && !storeUser.avatar.includes('/images/man.jpg') ? storeUser.avatar : ''),
-      customLayout: storeUser?.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
-      profileMusic: storeUser?.profileMusic || {
-        enabled: true,
-        title: 'Lofi Chill - Đêm muộn ở văn phòng',
-        artist: 'Freedom Chill Beat',
-        sourceType: 'preset',
-        presetId: 'lofi_night',
-        url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
-      },
-      isVerified: true,
+    // Ưu tiên Họ tên thật người dùng đã nhập lúc đăng ký (từ body hoặc từ challenge OTP)
+    const submittedName = String(req.body.name || matchedOtpRecord?.name || '').trim();
+    const rawSubmittedPassword = req.body.password ? String(req.body.password) : '';
+    const submittedPasswordHash = matchedOtpRecord?.passwordHash || (rawSubmittedPassword ? await hashPassword(rawSubmittedPassword) : '');
+    const submittedJobTitle = String(req.body.jobTitle || matchedOtpRecord?.jobTitle || '').trim();
+    const isRegisterFlow = String(purpose || matchedOtpRecord?.purpose || '').toLowerCase().trim() === 'register';
+
+    if (dbReady && isEmail) {
+      if (dbUser) {
+        const wasVerified = Boolean(dbUser.isVerified);
+        dbUser.isVerified = true;
+        dbUser.otpCode = null;
+        dbUser.otpExpires = null;
+        dbUser.otpAttempts = 0;
+        if ((!wasVerified || isRegisterFlow) && submittedName) {
+          dbUser.name = submittedName;
+        }
+        if ((!wasVerified || isRegisterFlow) && submittedJobTitle) {
+          dbUser.jobTitle = submittedJobTitle;
+        }
+        if ((!wasVerified || isRegisterFlow) && (rawSubmittedPassword || submittedPasswordHash)) {
+          dbUser.password = rawSubmittedPassword || submittedPasswordHash;
+        }
+        await dbUser.save();
+      } else {
+        const emailPrefix = cleanTarget.split('@')[0] || 'Thành viên';
+        const fallbackDisplayName =
+          submittedName ||
+          storeUser?.name ||
+          (emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1));
+        const initialPassword =
+          rawSubmittedPassword ||
+          submittedPasswordHash ||
+          crypto.randomBytes(24).toString('hex');
+
+        try {
+          dbUser = await User.create({
+            name: fallbackDisplayName,
+            email: cleanTarget,
+            password: initialPassword,
+            role: assignedRole,
+            jobTitle: submittedJobTitle || storeUser?.jobTitle || 'Thành viên cộng đồng',
+            avatar: '',
+            coverImage: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
+            authProvider: 'local',
+            isVerified: true,
+          });
+        } catch (createErr) {
+          // Đề phòng race condition E11000 nếu email vừa được tạo song song
+          dbUser = await User.findOneAndUpdate(
+            { email: cleanTarget },
+            { $set: { isVerified: true, otpCode: null, otpExpires: null, otpAttempts: 0 } },
+            { new: true }
+          );
+          if (!dbUser) {
+            console.warn('[AUTH] Không thể tạo tài khoản MongoDB sau OTP:', createErr.message);
+          }
+        }
+      }
+    }
+
+    const defaultProfileMusic = {
+      enabled: true,
+      title: 'Lofi Chill - Đêm muộn ở văn phòng',
+      artist: 'Freedom Chill Beat',
+      sourceType: 'preset',
+      presetId: 'lofi_night',
+      url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
     };
 
-    saveUserToStore(finalUser);
+    const finalUser = dbUser
+      ? {
+          _id: dbUser._id,
+          name: (isRegisterFlow && submittedName) ? submittedName : dbUser.name,
+          email: dbUser.email,
+          role: dbUser.role || assignedRole,
+          jobTitle: (isRegisterFlow && submittedJobTitle) ? submittedJobTitle : (dbUser.jobTitle || 'Thành viên cộng đồng'),
+          avatar:
+            dbUser.avatar && !dbUser.avatar.includes('/images/man.jpg')
+              ? dbUser.avatar
+              : '',
+          coverImage:
+            dbUser.coverImage ||
+            'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
+          bio: dbUser.bio || '',
+          isVerified: true,
+          authProvider: dbUser.authProvider || 'local',
+          customLayout: dbUser.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
+          profileMusic: dbUser.profileMusic || defaultProfileMusic,
+          socialLinks: dbUser.socialLinks || {},
+        }
+      : {
+          _id: storeUser?._id || `u_${isEmail ? 'email' : 'phone'}_${Date.now()}`,
+          name:
+            submittedName ||
+            storeUser?.name ||
+            (isEmail
+              ? cleanTarget.split('@')[0].charAt(0).toUpperCase() + cleanTarget.split('@')[0].slice(1)
+              : `Thành viên (${cleanTarget})`),
+          email: isEmail ? cleanTarget : `${cleanTarget}@phone.cantstophere.com`,
+          phone: !isEmail ? cleanTarget : undefined,
+          role: assignedRole,
+          jobTitle: submittedJobTitle || storeUser?.jobTitle || 'Thành viên cộng đồng',
+          avatar:
+            storeUser?.avatar && !storeUser.avatar.includes('/images/man.jpg')
+              ? storeUser.avatar
+              : '',
+          coverImage:
+            storeUser?.coverImage ||
+            'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
+          bio: storeUser?.bio || '',
+          customLayout: storeUser?.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
+          profileMusic: storeUser?.profileMusic || defaultProfileMusic,
+          socialLinks: storeUser?.socialLinks || {},
+          authProvider: storeUser?.authProvider || 'local',
+          isVerified: true,
+        };
+
+    saveUserToStore({
+      ...finalUser,
+      password: submittedPasswordHash || storeUser?.password || (dbUser?.password || ''),
+    });
 
     // Gửi tin nhắn SMS cảnh báo bảo mật xác nhận SĐT đã đăng nhập thành công
     let alertSms = null;
@@ -1657,7 +1857,7 @@ export const verifyOtpAndLogin = async (req, res) => {
       alertSms = await sendLoginAlertSms(cleanTarget, finalUser.name, deviceName);
     }
 
-    const tokenVersion = finalUser.tokenVersion !== undefined ? finalUser.tokenVersion : 0;
+    const tokenVersion = dbUser?.tokenVersion !== undefined ? dbUser.tokenVersion : (storeUser?.tokenVersion || 0);
     const token = await signAccessToken({
       id: finalUser._id,
       role: finalUser.role,

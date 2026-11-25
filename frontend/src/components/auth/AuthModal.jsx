@@ -409,9 +409,24 @@ export const AuthModal = () => {
     }
   };
 
-  // Timer đếm ngược và Polling kiểm tra trạng thái quét mã QR
+  // Dọn dẹp trạng thái OTP/thông báo tạm mỗi khi đóng modal để lần mở sau luôn sạch sẽ
   useEffect(() => {
-    if (authModalMode !== 'qr' || !qrSessionId || qrStatus !== 'pending') return;
+    if (!isAuthModalOpen) {
+      setEmailOtpStep(false);
+      setPendingRegisterData(null);
+      setSocialRegData(null);
+      setOtpInput('');
+      setSmsNotification(null);
+      setErrorMsg('');
+      setSuccessMsg('');
+      setLoginMethod('password');
+    }
+  }, [isAuthModalOpen]);
+
+  // Timer đếm ngược và Polling kiểm tra trạng thái quét mã QR
+  const isQrView = authModalMode === 'qr' || (authModalMode === 'login' && loginMethod === 'qr');
+  useEffect(() => {
+    if (!isQrView || !qrSessionId || qrStatus !== 'pending') return;
 
     // 1. Đếm ngược 120 giây
     const countTimer = setInterval(() => {
@@ -470,7 +485,7 @@ export const AuthModal = () => {
       clearInterval(countTimer);
       clearInterval(pollInterval);
     };
-  }, [authModalMode, qrSessionId, qrStatus]);
+  }, [isQrView, qrSessionId, qrStatus]);
 
   // Mô phỏng quét mã QR xác nhận tức thì
   const handleSimulateQrScan = async () => {
@@ -561,6 +576,31 @@ export const AuthModal = () => {
 
   if (!isAuthModalOpen) return null;
 
+  const extractApiErrorMsg = (err, fallback = 'Thao tác không thành công, vui lòng thử lại.') => {
+    const candidate = err?.response?.data?.message || err?.message;
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
+    return fallback;
+  };
+
+  const switchAuthMode = (nextMode, nextLoginMethod = 'password') => {
+    setAuthModalMode(nextMode);
+    if (nextMode === 'login') {
+      setLoginMethod(nextLoginMethod);
+    }
+    setSocialRegData(null);
+    setPendingRegisterData(null);
+    setEmailOtpStep(false);
+    setOtpInput('');
+    setSmsNotification(null);
+    setErrorMsg('');
+    setSuccessMsg('');
+    if (nextMode === 'qr' || (nextMode === 'login' && nextLoginMethod === 'qr')) {
+      initQrSession();
+    }
+  };
+
   // =========================================================================
   // 🚀 LUỒNG 1: SOCIAL LOGIN (GOOGLE, FACEBOOK, TIKTOK, GITHUB, X, LINKEDIN)
   // 👉 Đăng nhập Google BẮT BUỘC gửi và nhập mã OTP 6 số theo chính sách bảo mật.
@@ -574,7 +614,7 @@ export const AuthModal = () => {
 
     // 🛡️ NẾU ĐĂNG NHẬP BẰNG GOOGLE: Bắt buộc gửi mã xác thực OTP 6 số về Gmail và nhập đúng mới cho vào!
     if (providerId === 'google') {
-      const cleanEmail = loginForm.identifier.trim();
+      const cleanEmail = loginForm.identifier.trim().toLowerCase();
       if (!cleanEmail || !cleanEmail.includes('@')) {
         setLoginMethod('email-otp');
         setErrorMsg('Vui lòng nhập địa chỉ Gmail / Google của bạn ở ô bên dưới để nhận mã xác thực OTP bảo mật 6 số!');
@@ -591,12 +631,16 @@ export const AuthModal = () => {
         });
         const previewUrl = res?.data?.data?.previewUrl || null;
         setSocialPreviewUrl(previewUrl);
+        setPendingRegisterData(null);
         setOtpType('email');
+        setOtpInput('');
         setEmailOtpStep(true);
+        setOtpCooldownInSession(cleanEmail, 60);
         setOtpCountdown(60);
         setSuccessMsg(`✓ Đã gửi mã xác thực 6 số đến tài khoản Google: ${cleanEmail}. Vui lòng nhập mã để đăng nhập.`);
       } catch (err) {
-        setErrorMsg(err.message || 'Không thể gửi mã xác thực đến Email Google này. Vui lòng thử lại!');
+        setSuccessMsg('');
+        setErrorMsg(extractApiErrorMsg(err, 'Không thể gửi mã xác thực đến Email Google này. Vui lòng thử lại!'));
       } finally {
         setLoading(false);
       }
@@ -641,7 +685,7 @@ export const AuthModal = () => {
         setSuccessMsg(`✓ Đăng nhập thành công bằng tài khoản ${targetProvider.name}!`);
         safeScheduleClose(null, 350);
       } catch (finalErr) {
-        setErrorMsg(err.message || `Lỗi khi kết nối OAuth với ${targetProvider.name}. Vui lòng thử lại!`);
+        setErrorMsg(extractApiErrorMsg(finalErr || err, `Lỗi khi kết nối OAuth với ${targetProvider.name}. Vui lòng thử lại!`));
       }
     } finally {
       setLoading(false);
@@ -658,9 +702,10 @@ export const AuthModal = () => {
     if (sendingOtp || loading) return; // 🛡️ Chống double-submit
 
     const isPhone = otpType === 'phone';
+    const rawEmailTarget = pendingRegisterData?.email || (authModalMode === 'register' ? registerForm.identifier : loginForm.identifier);
     const target = isPhone
       ? (phoneDataForOtp.phone || phoneInput.replace(/\D/g, ''))
-      : (pendingRegisterData?.email || loginForm.identifier).trim();
+      : String(rawEmailTarget || '').trim().toLowerCase();
 
     const remainingCooldown = getRemainingOtpSeconds(target);
     if (remainingCooldown > 0) {
@@ -670,6 +715,7 @@ export const AuthModal = () => {
 
     setSendingOtp(true);
     setErrorMsg('');
+    setSuccessMsg('');
     try {
       if (isPhone) {
         const cleanPhone = (phoneDataForOtp.phone || phoneInput).replace(/\D/g, '');
@@ -695,24 +741,29 @@ export const AuthModal = () => {
         setSuccessMsg(`✓ Đã gửi lại tin nhắn SMS chứa mã OTP đến ${formatted}`);
         setOtpCooldownInSession(cleanPhone, 60);
       } else {
-        const targetEmail = (pendingRegisterData?.email || loginForm.identifier).trim();
-        if (!targetEmail) return;
+        if (!target) return;
 
         const res = await authService.sendOtp({
-          email: targetEmail,
-          identifier: targetEmail,
+          email: target,
+          identifier: target,
           purpose: pendingRegisterData ? 'register' : 'login',
+          ...(pendingRegisterData ? {
+            name: pendingRegisterData.name,
+            password: pendingRegisterData.password,
+            jobTitle: pendingRegisterData.jobTitle,
+          } : {}),
         });
         const previewUrl = res?.data?.data?.previewUrl || null;
         setSocialPreviewUrl(previewUrl);
-        setSuccessMsg(`✓ Đã gửi lại mã xác thực mới đến email: ${targetEmail}`);
-        setOtpCooldownInSession(targetEmail, 60);
+        setOtpInput('');
+        setSuccessMsg(`✓ Đã gửi lại mã xác thực mới đến email: ${target}`);
+        setOtpCooldownInSession(target, 60);
       }
       setOtpCountdown(60);
     } catch (err) {
       console.error('Lỗi gửi lại OTP:', err);
-      const serverMsg = err?.message || err?.response?.data?.message || 'Không thể gửi lại mã OTP. Vui lòng kiểm tra lại!';
-      setErrorMsg(serverMsg);
+      setSuccessMsg('');
+      setErrorMsg(extractApiErrorMsg(err, 'Không thể gửi lại mã OTP. Vui lòng kiểm tra lại!'));
     } finally {
       setSendingOtp(false);
     }
@@ -730,7 +781,7 @@ export const AuthModal = () => {
     try {
       if (authModalMode === 'login') {
         // ĐĂNG NHẬP NỘI BỘ BẰNG MẬT KHẨU TRỰC TIẾP
-        const emailInput = loginForm.identifier.trim();
+        const emailInput = loginForm.identifier.trim().toLowerCase();
         if (!emailInput) {
           setErrorMsg('Vui lòng nhập địa chỉ Email!');
           setLoading(false);
@@ -758,7 +809,7 @@ export const AuthModal = () => {
           return;
         }
 
-        const cleanEmail = registerForm.identifier.trim();
+        const cleanEmail = registerForm.identifier.trim().toLowerCase();
         const regData = {
           name: registerForm.name.trim(),
           email: cleanEmail,
@@ -767,16 +818,8 @@ export const AuthModal = () => {
         };
 
         setPendingRegisterData(regData);
-
-        const remainingCooldown = getRemainingOtpSeconds(cleanEmail);
-        if (remainingCooldown > 0) {
-          setEmailOtpStep(true);
-          setOtpCountdown(remainingCooldown);
-          setSuccessMsg(`Mã xác thực vừa được gửi đến ${cleanEmail}. Vui lòng nhập mã hoặc chờ ${remainingCooldown}s để gửi lại.`);
-          setLoading(false);
-          return;
-        }
-
+        setOtpType('email');
+        setSmsNotification(null);
         setSuccessMsg(`Đang gửi mã xác thực qua email tới ${cleanEmail}...`);
 
         try {
@@ -790,18 +833,29 @@ export const AuthModal = () => {
           });
           const previewUrl = res?.data?.data?.previewUrl || null;
           setSocialPreviewUrl(previewUrl);
+          setOtpInput('');
           setSuccessMsg(`✓ Đã gửi mã xác thực 6 số đến email: ${cleanEmail}`);
           setEmailOtpStep(true);
           setOtpCooldownInSession(cleanEmail, 60);
           setOtpCountdown(60);
         } catch (err) {
           console.error('Lỗi gửi OTP đăng ký:', err);
-          setErrorMsg(err.message || 'Không thể gửi mã OTP xác thực. Vui lòng kiểm tra server backend và email!');
-          setEmailOtpStep(false);
+          setSuccessMsg('');
+          const status = err?.status || err?.response?.status;
+          const remainingCooldown = getRemainingOtpSeconds(cleanEmail);
+          if (status === 429 && remainingCooldown > 0) {
+            setEmailOtpStep(true);
+            setOtpCountdown(remainingCooldown);
+            setErrorMsg(extractApiErrorMsg(err, `Vui lòng nhập mã vừa nhận hoặc chờ ${remainingCooldown}s để gửi lại.`));
+          } else {
+            setErrorMsg(extractApiErrorMsg(err, 'Không thể gửi mã OTP xác thực. Vui lòng kiểm tra server backend và email!'));
+            setEmailOtpStep(false);
+          }
         }
       }
     } catch (err) {
-      setErrorMsg(err.message || 'Thao tác không thành công, vui lòng thử lại.');
+      setSuccessMsg('');
+      setErrorMsg(extractApiErrorMsg(err, 'Thao tác không thành công, vui lòng thử lại.'));
     } finally {
       setLoading(false);
     }
@@ -812,133 +866,112 @@ export const AuthModal = () => {
     e?.preventDefault();
     if (loading) return; // 🛡️ Chống double-submit khi đang gửi request xác thực
 
-    const cleanOtp = otpInput.trim();
+    const cleanOtp = String(otpInput || '').replace(/\s+/g, '').trim();
     if (cleanOtp.length < 6) {
       triggerOtpShake();
+      setSuccessMsg('');
       setErrorMsg(`Vui lòng nhập đủ 6 chữ số mã xác nhận OTP nhận được từ ${otpType === 'phone' ? 'tin nhắn SMS' : 'email'}!`);
       return;
     }
 
     setLoading(true);
     setErrorMsg('');
+    setSuccessMsg('');
 
     try {
       if (pendingRegisterData) {
         // Hoàn tất ĐĂNG KÝ tài khoản nội bộ sau khi xác thực Email
-        let finalRegisteredUser = null;
-
+        let finalUserName = pendingRegisterData.name;
         if (pendingRegisterData.provider === 'google') {
           await socialLogin({ ...pendingRegisterData, otpCode: cleanOtp });
         } else {
-          const res = await authService.verifyOtp({
-            email: pendingRegisterData.email,
-            identifier: pendingRegisterData.email,
+          const cleanRegEmail = String(pendingRegisterData.email || '').trim().toLowerCase();
+          const regRes = await loginWithOtp({
+            email: cleanRegEmail,
+            identifier: cleanRegEmail,
             otpCode: cleanOtp,
+            purpose: 'register',
             name: pendingRegisterData.name,
             password: pendingRegisterData.password,
             jobTitle: pendingRegisterData.jobTitle,
-            purpose: 'register',
+            remember: true,
+            autoClose: false,
           });
-
-          const rawData = res?.data?.data || res?.data || {};
-          const receivedToken = rawData.token || null;
-          if (!receivedToken) {
-            throw new Error(res?.data?.message || 'Không nhận được mã xác thực token từ máy chủ!');
+          if (regRes?.data?.name) {
+            finalUserName = regRes.data.name;
           }
-          const receivedRefreshToken = rawData.refreshToken || null;
-          const { token: _t, refreshToken: _rt, ...extractedUser } = rawData;
-          finalRegisteredUser = {
-            ...extractedUser,
-            name: pendingRegisterData.name, // Đảm bảo giữ đúng Họ tên người dùng đã đặt 100%
-            email: pendingRegisterData.email,
-            role: 'user',
-            avatar: '', // Avatar ban đầu trống để người dùng tự cài đặt
-            jobTitle: pendingRegisterData.jobTitle || 'Thành viên cộng đồng',
-          };
-
-          if (typeof setToken === 'function') setToken(receivedToken);
-          if (typeof setUser === 'function') setUser(finalRegisteredUser);
-          localStorage.setItem('token', receivedToken);
-          localStorage.setItem('freedom_token', receivedToken);
-          if (receivedRefreshToken) {
-            localStorage.setItem('refreshToken', receivedRefreshToken);
-            localStorage.setItem('freedom_refresh_token', receivedRefreshToken);
-          }
-          localStorage.setItem('user', JSON.stringify(finalRegisteredUser));
-          localStorage.setItem('freedom_persisted_profile', JSON.stringify(finalRegisteredUser));
         }
 
-        saveGoogleAccountLocally(pendingRegisterData.email, pendingRegisterData.name, '');
+        saveGoogleAccountLocally(pendingRegisterData.email, finalUserName, '');
         clearOtpCooldownInSession(pendingRegisterData.email);
 
-        setSuccessMsg('✓ Đã xác thực thành công! Hoàn tất tạo tài khoản.');
-        setEmailOtpStep(false);
+        setSuccessMsg(`✓ Chào mừng ${finalUserName}! Tài khoản đã được kích hoạt & đăng nhập thành công.`);
         setSmsNotification(null);
+        setOtpInput('');
         setPendingRegisterData(null);
+        setEmailOtpStep(false);
         safeScheduleClose(() => {
           closeAuthModal();
           window.dispatchEvent(new Event('profile_updated'));
-          if (finalRegisteredUser) {
-            window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: finalRegisteredUser }));
-          }
-        }, 500);
+        }, 550);
       } else {
         // Đăng nhập nội bộ bằng mã OTP (Email hoặc SMS Số điện thoại)
         const isPhone = otpType === 'phone';
         const target = isPhone
           ? (phoneDataForOtp.phone || phoneInput.replace(/\D/g, ''))
-          : loginForm.identifier.trim();
+          : loginForm.identifier.trim().toLowerCase();
 
         const loginRes = await loginWithOtp({
           email: !isPhone ? target : undefined,
           phone: isPhone ? target : undefined,
           identifier: target,
           otpCode: cleanOtp,
+          purpose: 'login',
           remember: loginForm.remember,
+          autoClose: false,
         });
 
+        const loggedUser = loginRes?.data || JSON.parse(localStorage.getItem('user') || '{}');
         if (!isPhone && loginForm.remember) {
-          const userObj = loginRes?.user || JSON.parse(localStorage.getItem('user') || '{}');
-          saveGoogleAccountLocally(target, userObj?.name, userObj?.avatar);
+          saveGoogleAccountLocally(target, loggedUser?.name, loggedUser?.avatar);
         }
 
         clearOtpCooldownInSession(target);
 
-        setSuccessMsg('✓ Đăng nhập thành công!');
-        setEmailOtpStep(false);
+        setSuccessMsg(`✓ Chào mừng ${loggedUser?.name || 'bạn trở lại'}! Đăng nhập thành công.`);
         setSmsNotification(null);
-        safeScheduleClose(null, 500);
+        setOtpInput('');
+        setEmailOtpStep(false);
+        safeScheduleClose(() => {
+          closeAuthModal();
+          window.dispatchEvent(new Event('profile_updated'));
+        }, 550);
       }
     } catch (err) {
       triggerOtpShake();
-      setErrorMsg(err.message || 'Mã xác thực không chính xác hoặc đã hết hạn!');
+      setSuccessMsg('');
+      setErrorMsg(extractApiErrorMsg(err, 'Mã xác thực OTP không chính xác hoặc đã hết hạn!'));
     } finally {
       setLoading(false);
     }
   };
 
-  // Đăng nhập nhanh bằng mã OTP gửi về Email (cho người dùng quên mật khẩu)
+  // Đăng nhập nhanh bằng mã OTP gửi về Email (cho người dùng quên mật khẩu hoặc không cần mật khẩu)
   const handleSwitchToEmailOtpLogin = async () => {
     if (loading || sendingOtp) return; // 🛡️ Chống double-submit
 
-    const emailInput = loginForm.identifier.trim();
-    if (!emailInput) {
-      setErrorMsg('Vui lòng nhập địa chỉ Email trước để nhận mã xác thực!');
+    const emailInput = loginForm.identifier.trim().toLowerCase();
+    if (!emailInput || !emailInput.includes('@')) {
+      setErrorMsg('Vui lòng nhập địa chỉ Email hợp lệ trước để nhận mã xác thực OTP!');
       return;
     }
 
-    const remainingCooldown = getRemainingOtpSeconds(emailInput);
-    if (remainingCooldown > 0) {
-      setOtpType('email');
-      setSmsNotification(null);
-      setEmailOtpStep(true);
-      setOtpCountdown(remainingCooldown);
-      setSuccessMsg(`Mã xác thực đã được gửi đến email ${emailInput}. Vui lòng nhập mã hoặc chờ ${remainingCooldown}s để gửi lại.`);
-      return;
-    }
-
+    // Xóa sạch trạng thái đăng ký dở dang trước đó để không bị gửi nhầm sang luồng register
+    setPendingRegisterData(null);
+    setSocialRegData(null);
     setLoading(true);
     setErrorMsg('');
+    setSuccessMsg('');
     try {
       const res = await authService.sendOtp({
         email: emailInput,
@@ -948,6 +981,7 @@ export const AuthModal = () => {
       const previewUrl = res?.data?.data?.previewUrl || null;
       setSocialPreviewUrl(previewUrl);
       setOtpType('email');
+      setOtpInput('');
       setSmsNotification(null);
       setSuccessMsg(`✓ Đã gửi mã OTP đăng nhập đến email: ${emailInput}`);
       setEmailOtpStep(true);
@@ -955,8 +989,18 @@ export const AuthModal = () => {
       setOtpCountdown(60);
     } catch (err) {
       console.error('Lỗi gửi OTP đăng nhập:', err);
-      setErrorMsg(err.message || 'Không thể gửi mã OTP. Vui lòng kiểm tra lại server backend (cổng 5050)!');
-      setEmailOtpStep(false);
+      setSuccessMsg('');
+      const status = err?.status || err?.response?.status;
+      const remainingCooldown = getRemainingOtpSeconds(emailInput);
+      if (status === 429 && remainingCooldown > 0) {
+        setOtpType('email');
+        setEmailOtpStep(true);
+        setOtpCountdown(remainingCooldown);
+        setErrorMsg(extractApiErrorMsg(err, `Vui lòng nhập mã OTP vừa gửi hoặc chờ ${remainingCooldown}s để gửi lại.`));
+      } else {
+        setErrorMsg(extractApiErrorMsg(err, 'Không thể gửi mã OTP. Vui lòng kiểm tra lại kết nối hoặc thử lại sau!'));
+        setEmailOtpStep(false);
+      }
     } finally {
       setLoading(false);
     }
@@ -1027,15 +1071,70 @@ export const AuthModal = () => {
     }
   };
 
-  const targetEmailForOtp = pendingRegisterData?.email || loginForm.identifier;
+  const targetEmailForOtp = (pendingRegisterData?.email || loginForm.identifier || '').trim().toLowerCase();
 
   return (
-    <div className="modal-backdrop" onClick={closeAuthModal}>
-      <div className="modal-box" style={{ maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
-        {/* Nút đóng modal */}
-        <button className="modal-close-btn" onClick={closeAuthModal}>
-          ✕
-        </button>
+    <div className="modal-backdrop auth-modal-backdrop" onClick={closeAuthModal}>
+      <div
+        className="modal-box auth-modal-box"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-modal-heading"
+      >
+        {/* Đầu Modal cố định gọn gàng: Tiêu đề rõ chế độ & Nút đóng không bao giờ bị cắt */}
+        <div className="auth-modal-header">
+          <div className="auth-modal-title-group">
+            <h3 id="auth-modal-heading" className="auth-modal-title">
+              {emailOtpStep
+                ? (otpType === 'phone' ? 'Xác Thực SMS OTP' : 'Xác Thực Mã OTP Email')
+                : isQrView
+                ? 'Đăng Nhập Bằng Mã QR'
+                : authModalMode === 'register'
+                ? 'Đăng Ký Tài Khoản'
+                : 'Đăng Nhập'}
+            </h3>
+            <p className="auth-modal-subtitle">
+              {emailOtpStep
+                ? 'Nhập mã xác thực 6 chữ số để hoàn tất bảo mật tài khoản.'
+                : authModalMode === 'register'
+                ? 'Tham gia không gian sẻ chia "You Can\'t Stop Here" cùng những người đi làm.'
+                : 'Đăng nhập để chia sẻ câu chuyện và gửi lời động viên tới mọi người.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="auth-modal-close-btn"
+            onClick={closeAuthModal}
+            aria-label="Đóng cửa sổ đăng nhập"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Thanh chuyển chế độ Segmented Control nổi bật ngay đầu Modal */}
+        <div className="auth-segmented-control" role="tablist" aria-label="Chọn chế độ tài khoản">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={authModalMode === 'login' || authModalMode === 'qr'}
+            className={`auth-segmented-tab ${authModalMode === 'login' || authModalMode === 'qr' ? 'active' : ''}`}
+            onClick={() => switchAuthMode('login', 'password')}
+          >
+            <span>🔐</span>
+            <span>Đăng Nhập</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={authModalMode === 'register'}
+            className={`auth-segmented-tab ${authModalMode === 'register' ? 'active' : ''}`}
+            onClick={() => switchAuthMode('register')}
+          >
+            <span>✨</span>
+            <span>Đăng Ký Tài Khoản</span>
+          </button>
+        </div>
 
         {/* 📱 POPUP MÔ PHỎNG TIN NHẮN SMS ĐIỆN THOẠI (SMART PHONE SIMULATOR) */}
         {smsNotification && (
@@ -1046,7 +1145,7 @@ export const AuthModal = () => {
               color: '#f8fafc',
               borderRadius: '12px',
               padding: '12px 14px',
-              marginBottom: '16px',
+              marginBottom: '14px',
               border: '1.5px solid #0284c7',
               boxShadow: '0 10px 25px -5px rgba(2, 132, 199, 0.35)',
             }}
@@ -1129,60 +1228,14 @@ export const AuthModal = () => {
           </div>
         )}
 
-        {/* Chuyển tab Đăng nhập / Đăng ký */}
-        <div className="modal-tabs">
-          <button
-            type="button"
-            className={`modal-tab ${authModalMode === 'login' ? 'active' : ''}`}
-            onClick={() => {
-              setAuthModalMode('login');
-              setSocialRegData(null);
-              setEmailOtpStep(false);
-              setErrorMsg('');
-              setSuccessMsg('');
-            }}
+        {/* Thông báo lỗi ở các màn hình QR / Social */}
+        {errorMsg && !emailOtpStep && (isQrView || (authModalMode === 'register' && Boolean(socialRegData))) && (
+          <div
+            className="alert-message error"
+            role="alert"
+            style={{ margin: '10px 0 12px', background: '#fef2f2', color: '#b91c1c', border: '1.5px solid #fca5a5', padding: '10px 14px', borderRadius: '8px', fontWeight: 600 }}
           >
-            Đăng Nhập
-          </button>
-          <button
-            type="button"
-            className={`modal-tab ${authModalMode === 'register' ? 'active' : ''}`}
-            onClick={() => {
-              setAuthModalMode('register');
-              setSocialRegData(null);
-              setEmailOtpStep(false);
-              setErrorMsg('');
-              setSuccessMsg('');
-            }}
-          >
-            Đăng Ký
-          </button>
-          <button
-            type="button"
-            className={`modal-tab ${authModalMode === 'qr' ? 'active' : ''}`}
-            onClick={() => {
-              setAuthModalMode('qr');
-              setSocialRegData(null);
-              setEmailOtpStep(false);
-              setErrorMsg('');
-              setSuccessMsg('');
-              initQrSession();
-            }}
-          >
-            📱 Quét Mã QR
-          </button>
-        </div>
-
-        <p className="modal-lead-text" style={{ color: '#334155', fontSize: '0.86rem', margin: '8px 0 16px', lineHeight: 1.5, textAlign: 'center' }}>
-          {authModalMode === 'login'
-            ? 'Đăng nhập để chia sẻ câu chuyện và gửi lời động viên tới mọi người.'
-            : 'Tham gia không gian sẻ chia "You Can\'t Stop Here" cùng những người đi làm.'}
-        </p>
-
-        {/* Thông báo lỗi */}
-        {errorMsg && (
-          <div className="alert-message error" style={{ margin: '12px 0', background: '#fef2f2', color: '#b91c1c', border: '1.5px solid #fca5a5', padding: '10px 14px', borderRadius: '8px', fontWeight: 600 }}>
-            <span style={{ color: '#b91c1c' }}>⚠️</span> {errorMsg}
+            <span style={{ color: '#b91c1c' }}>⚠️</span> <span>{errorMsg}</span>
           </div>
         )}
 
@@ -1212,20 +1265,20 @@ export const AuthModal = () => {
 
         {/* Thông báo thành công */}
         {successMsg && (
-          <div className="alert-message success" style={{ margin: '12px 0', background: '#f0fdf4', color: '#15803d', border: '1.5px solid #86efac', padding: '10px 14px', borderRadius: '8px', fontWeight: 600 }}>
-            <span style={{ color: '#15803d' }}>✓</span> {successMsg}
+          <div className="alert-message success" style={{ margin: '10px 0 12px', background: '#f0fdf4', color: '#15803d', border: '1.5px solid #86efac', padding: '10px 14px', borderRadius: '8px', fontWeight: 600 }}>
+            <span style={{ color: '#15803d' }}>✓</span> <span>{successMsg}</span>
           </div>
         )}
 
         {/* ========================================================
             GIAO DIỆN ĐĂNG NHẬP BẰNG MÃ QR (QR CODE AUTH)
            ======================================================== */}
-        {authModalMode === 'qr' ? (
-          <div className="qr-login-container" style={{ textAlign: 'center', padding: '10px 0 20px' }}>
-            <h4 style={{ margin: '0 0 6px', fontSize: '1.1rem', color: '#1e293b' }}>
+        {isQrView ? (
+          <div className="qr-login-container" style={{ textAlign: 'center', padding: '6px 0 14px' }}>
+            <h4 style={{ margin: '0 0 6px', fontSize: '1.05rem', color: '#1e293b' }}>
               Đăng Nhập Nhanh Bằng Mã QR
             </h4>
-            <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '0 0 16px', lineHeight: 1.45 }}>
+            <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '0 0 14px', lineHeight: 1.45 }}>
               Quét mã QR bằng Camera điện thoại hoặc tài khoản đã đăng nhập để vào ngay:
             </p>
 
@@ -1316,7 +1369,7 @@ export const AuthModal = () => {
             )}
 
             {/* Nút mô phỏng quét QR dành cho kiểm thử tức thì */}
-            <div style={{ marginTop: '18px', paddingTop: '14px', borderTop: '1px dashed #e2e8f0' }}>
+            <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px dashed #e2e8f0' }}>
               <button
                 type="button"
                 className="page-btn"
@@ -1339,18 +1392,30 @@ export const AuthModal = () => {
                 <span>⚡</span>
                 <span>{simulatingQr ? 'Đang xác nhận...' : 'Thử nghiệm: Quét xác nhận ngay bằng tài khoản demo'}</span>
               </button>
-              <span style={{ fontSize: '0.74rem', color: '#94a3b8', display: 'block', marginTop: '6px' }}>
-                (Mẹo: Bấm nút trên để thử nghiệm tính năng tự động nhận diện đăng nhập mà không cần điện thoại thật)
-              </span>
+              <button
+                type="button"
+                onClick={() => switchAuthMode('login', 'password')}
+                style={{
+                  marginTop: '10px',
+                  background: 'none',
+                  border: 'none',
+                  color: '#64748b',
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                }}
+              >
+                ← Quay lại đăng nhập Email / Mật khẩu
+              </button>
             </div>
           </div>
         ) : emailOtpStep ? (
-          <div className="email-otp-verification-box" style={{ padding: '8px 4px' }}>
-            <div style={{ textAlign: 'center', marginBottom: '18px' }}>
+          <div className="email-otp-verification-box" style={{ padding: '4px 2px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
               <div
                 style={{
-                  width: '54px',
-                  height: '54px',
+                  width: '50px',
+                  height: '50px',
                   margin: '0 auto 10px',
                   background: otpType === 'phone' ? '#f0fdf4' : '#f0fdfa',
                   border: `2px solid ${otpType === 'phone' ? '#059669' : '#0d9488'}`,
@@ -1358,12 +1423,12 @@ export const AuthModal = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '1.6rem',
+                  fontSize: '1.45rem',
                 }}
               >
                 {otpType === 'phone' ? '📱' : '✉️'}
               </div>
-              <h4 style={{ margin: '0 0 6px', fontSize: '1.15rem', color: '#0f172a' }}>
+              <h4 style={{ margin: '0 0 6px', fontSize: '1.1rem', color: '#0f172a' }}>
                 {otpType === 'phone'
                   ? 'Nhập Mã Xác Thực SMS OTP'
                   : pendingRegisterData
@@ -1373,9 +1438,9 @@ export const AuthModal = () => {
               <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '0 0 4px', lineHeight: 1.5 }}>
                 {otpType === 'phone'
                   ? 'Mã xác thực 6 chữ số đã được gửi qua tin nhắn SMS tới:'
-                  : 'Mã xác thực gồm 6 chữ số đã được gửi qua email (Nodemailer) tới:'}
+                  : 'Mã xác thực gồm 6 chữ số đã được gửi qua email tới:'}
               </p>
-              <strong style={{ color: '#0d9488', fontSize: '1.02rem', letterSpacing: otpType === 'phone' ? '1px' : 'normal' }}>
+              <strong style={{ color: '#0d9488', fontSize: '1rem', letterSpacing: otpType === 'phone' ? '1px' : 'normal', wordBreak: 'break-word' }}>
                 {otpType === 'phone'
                   ? (phoneDataForOtp.formattedPhone || phoneDataForOtp.phone || phoneInput)
                   : targetEmailForOtp}
@@ -1383,7 +1448,7 @@ export const AuthModal = () => {
             </div>
 
             {/* Trạng thái Brandname SMS hoặc Link mở hòm thư Gmail */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '18px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
               {otpType === 'phone' ? (
                 <div
                   style={{
@@ -1452,7 +1517,7 @@ export const AuthModal = () => {
             </div>
 
             <form onSubmit={handleVerifyEmailOtpSubmit}>
-              <div className={`form-group otp-input-container ${isOtpShaking ? 'is-shaking' : ''}`} style={{ marginBottom: '14px' }}>
+              <div className={`form-group otp-input-container ${isOtpShaking ? 'is-shaking' : ''}`} style={{ marginBottom: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <label style={{ fontWeight: 600, color: '#334155', fontSize: '0.85rem' }}>
                     Nhập mã xác thực 6 chữ số *
@@ -1490,13 +1555,24 @@ export const AuthModal = () => {
 
                 <input
                   type="text"
-                  maxLength="6"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={12}
                   placeholder="• • • • • •"
                   value={otpInput}
                   disabled={loading}
                   onChange={(e) => {
-                    setOtpInput(e.target.value.replace(/\D/g, ''));
+                    setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6));
                     setErrorMsg('');
+                  }}
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData?.getData('text') || '';
+                    const digits = pasted.replace(/\D/g, '').slice(0, 6);
+                    if (digits) {
+                      e.preventDefault();
+                      setOtpInput(digits);
+                      setErrorMsg('');
+                    }
                   }}
                   autoFocus
                   className={`otp-input-field ${isOtpShaking ? 'is-shaking' : ''}`}
@@ -1505,12 +1581,12 @@ export const AuthModal = () => {
                     fontSize: '1.7rem',
                     letterSpacing: '8px',
                     fontWeight: 800,
-                    color: isOtpShaking ? '#b91c1c' : '#0f766e',
+                    color: isOtpShaking || errorMsg ? '#b91c1c' : '#0f766e',
                     fontFamily: 'monospace',
                     padding: '10px 12px',
                     borderRadius: '10px',
-                    border: isOtpShaking ? '2px solid #ef4444' : '2px solid #0d9488',
-                    background: isOtpShaking ? '#fef2f2' : '#f0fdfa',
+                    border: isOtpShaking || errorMsg ? '2px solid #ef4444' : '2px solid #0d9488',
+                    background: isOtpShaking || errorMsg ? '#fef2f2' : '#f0fdfa',
                     width: '100%',
                     boxSizing: 'border-box',
                     transition: 'border-color 0.2s, background-color 0.2s, color 0.2s',
@@ -1524,7 +1600,7 @@ export const AuthModal = () => {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  margin: '6px 0 18px',
+                  margin: '6px 0 14px',
                   fontSize: '0.8rem',
                 }}
               >
@@ -1548,10 +1624,30 @@ export const AuthModal = () => {
                 </button>
               </div>
 
+              {/* Thông báo lỗi đỏ trực quan ngay phía trên nút Xác Nhận & Hoàn Tất */}
+              {errorMsg && (
+                <div
+                  className="alert-message error"
+                  role="alert"
+                  style={{
+                    margin: '0 0 12px',
+                    background: '#fef2f2',
+                    color: '#b91c1c',
+                    border: '1.5px solid #fca5a5',
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    fontWeight: 600,
+                    fontSize: '0.84rem',
+                  }}
+                >
+                  <span style={{ color: '#b91c1c' }}>⚠️</span> <span>{errorMsg}</span>
+                </div>
+              )}
+
               <button
                 type="submit"
                 className="modal-submit-btn"
-                disabled={loading || otpInput.trim().length < 6}
+                disabled={loading || otpInput.replace(/\D/g, '').length < 6}
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -1561,8 +1657,8 @@ export const AuthModal = () => {
                   fontWeight: 700,
                   borderRadius: '10px',
                   border: 'none',
-                  cursor: loading || otpInput.trim().length < 6 ? 'not-allowed' : 'pointer',
-                  opacity: loading || otpInput.trim().length < 6 ? 0.65 : 1,
+                  cursor: loading || otpInput.replace(/\D/g, '').length < 6 ? 'not-allowed' : 'pointer',
+                  opacity: loading || otpInput.replace(/\D/g, '').length < 6 ? 0.65 : 1,
                 }}
               >
                 {loading ? 'Đang xác thực...' : 'Xác Nhận & Hoàn Tất'}
@@ -1575,8 +1671,11 @@ export const AuthModal = () => {
                   onClick={() => {
                     if (loading) return;
                     setEmailOtpStep(false);
+                    setPendingRegisterData(null);
+                    setOtpInput('');
                     setSmsNotification(null);
                     setErrorMsg('');
+                    setSuccessMsg('');
                   }}
                   style={{
                     background: 'none',
@@ -1853,7 +1952,7 @@ export const AuthModal = () => {
                     <label>Họ và tên *</label>
                     <input
                       type="text"
-                      placeholder="Ví dụ: Trần Đình Quân"
+                      placeholder="Ví dụ: Nguyễn Minh Anh"
                       value={registerForm.name}
                       onChange={(e) => {
                         setRegisterForm((prev) => ({ ...prev, name: e.target.value }));
@@ -1880,7 +1979,7 @@ export const AuthModal = () => {
                     <label>Địa chỉ Email *</label>
                     <input
                       type="email"
-                      placeholder="Nhập email của bạn (Ví dụ: anthonyq012025@gmail.com)"
+                      placeholder="Nhập email của bạn (Ví dụ: tenban@gmail.com)"
                       value={registerForm.identifier}
                       onChange={(e) => {
                         setRegisterForm((prev) => ({ ...prev, identifier: e.target.value }));
@@ -1904,14 +2003,33 @@ export const AuthModal = () => {
                     />
                   </div>
 
+                  {errorMsg && (
+                    <div
+                      className="alert-message error"
+                      role="alert"
+                      style={{
+                        margin: '4px 0 12px',
+                        background: '#fef2f2',
+                        color: '#b91c1c',
+                        border: '1.5px solid #fca5a5',
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        fontWeight: 600,
+                        fontSize: '0.84rem',
+                      }}
+                    >
+                      <span style={{ color: '#b91c1c' }}>⚠️</span> <span>{errorMsg}</span>
+                    </div>
+                  )}
+
                   <button type="submit" className="modal-submit-btn" disabled={loading}>
                     {loading ? 'Đang gửi mã xác thực...' : 'Đăng Ký & Nhận Mã OTP Qua Email ➔'}
                   </button>
                 </>
               ) : (
-                /* TAB ĐĂNG NHẬP (EMAIL & MẬT KHẨU HOẶC EMAIL OTP) */
+                /* TAB ĐĂNG NHẬP (EMAIL & MẬT KHẨU / EMAIL OTP / MÃ QR) */
                 <>
-                  {/* THANH CHỌN PHƯƠNG THỨC ĐĂNG NHẬP: CHỈ GIỮ 2 PHƯƠNG THỨC HOẠT ĐỘNG HOÀN CHỈNH */}
+                  {/* THANH CHỌN PHƯƠNG THỨC ĐĂNG NHẬP */}
                   <div
                     className="login-method-nav"
                     style={{
@@ -1934,7 +2052,7 @@ export const AuthModal = () => {
                       style={{
                         flex: 1,
                         padding: '9px 6px',
-                        fontSize: '0.82rem',
+                        fontSize: '0.8rem',
                         fontWeight: 700,
                         border: 'none',
                         borderRadius: '7px',
@@ -1943,9 +2061,10 @@ export const AuthModal = () => {
                         color: loginMethod === 'password' ? '#0f766e' : '#64748b',
                         boxShadow: loginMethod === 'password' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
                         transition: 'all 0.2s ease',
+                        whiteSpace: 'nowrap',
                       }}
                     >
-                      🔑 Email & Mật Khẩu
+                      🔑 Mật Khẩu
                     </button>
                     <button
                       type="button"
@@ -1958,7 +2077,7 @@ export const AuthModal = () => {
                       style={{
                         flex: 1,
                         padding: '9px 6px',
-                        fontSize: '0.82rem',
+                        fontSize: '0.8rem',
                         fontWeight: 700,
                         border: 'none',
                         borderRadius: '7px',
@@ -1967,9 +2086,31 @@ export const AuthModal = () => {
                         color: loginMethod === 'email-otp' ? '#0f766e' : '#64748b',
                         boxShadow: loginMethod === 'email-otp' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
                         transition: 'all 0.2s ease',
+                        whiteSpace: 'nowrap',
                       }}
                     >
                       ✉️ Email OTP
+                    </button>
+                    <button
+                      type="button"
+                      className={`login-method-btn ${loginMethod === 'qr' ? 'active' : ''}`}
+                      onClick={() => switchAuthMode('login', 'qr')}
+                      style={{
+                        flex: 1,
+                        padding: '9px 6px',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        border: 'none',
+                        borderRadius: '7px',
+                        cursor: 'pointer',
+                        background: loginMethod === 'qr' ? '#ffffff' : 'transparent',
+                        color: loginMethod === 'qr' ? '#0f766e' : '#64748b',
+                        boxShadow: loginMethod === 'qr' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
+                        transition: 'all 0.2s ease',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      📱 Quét QR
                     </button>
                   </div>
 
@@ -1983,7 +2124,7 @@ export const AuthModal = () => {
                         </label>
                         <input
                           type="email"
-                          placeholder="Nhập email (Ví dụ: anthonyq012025@gmail.com)"
+                          placeholder="Nhập email (Ví dụ: tenban@gmail.com)"
                           value={loginForm.identifier}
                           onChange={(e) => {
                             setLoginForm((prev) => ({ ...prev, identifier: e.target.value }));
@@ -1998,7 +2139,7 @@ export const AuthModal = () => {
                       </div>
 
                       {/* DUY TRÌ ĐĂNG NHẬP */}
-                      <div style={{ margin: '8px 0 16px' }}>
+                      <div style={{ margin: '8px 0 14px' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: '#475569' }}>
                           <input
                             type="checkbox"
@@ -2009,6 +2150,25 @@ export const AuthModal = () => {
                           <span style={{ fontWeight: 500 }}>Duy trì đăng nhập trên thiết bị này</span>
                         </label>
                       </div>
+
+                      {errorMsg && (
+                        <div
+                          className="alert-message error"
+                          role="alert"
+                          style={{
+                            margin: '0 0 12px',
+                            background: '#fef2f2',
+                            color: '#b91c1c',
+                            border: '1.5px solid #fca5a5',
+                            padding: '10px 14px',
+                            borderRadius: '10px',
+                            fontWeight: 600,
+                            fontSize: '0.84rem',
+                          }}
+                        >
+                          <span style={{ color: '#b91c1c' }}>⚠️</span> <span>{errorMsg}</span>
+                        </div>
+                      )}
 
                       <button
                         type="button"
@@ -2030,7 +2190,7 @@ export const AuthModal = () => {
                         <label>Địa chỉ Email *</label>
                         <input
                           type="text"
-                          placeholder="Nhập email (Ví dụ: anthonyq012025@gmail.com)"
+                          placeholder="Nhập email (Ví dụ: tenban@gmail.com)"
                           value={loginForm.identifier}
                           onChange={(e) => {
                             setLoginForm((prev) => ({ ...prev, identifier: e.target.value }));
@@ -2045,7 +2205,11 @@ export const AuthModal = () => {
                           <label>Mật khẩu *</label>
                           <button
                             type="button"
-                            onClick={() => setLoginMethod('email-otp')}
+                            onClick={() => {
+                              setLoginMethod('email-otp');
+                              setErrorMsg('');
+                              setSuccessMsg('');
+                            }}
                             style={{
                               background: 'none',
                               border: 'none',
@@ -2073,7 +2237,7 @@ export const AuthModal = () => {
                       </div>
 
                       {/* DUY TRÌ ĐĂNG NHẬP */}
-                      <div style={{ margin: '10px 0 16px' }}>
+                      <div style={{ margin: '10px 0 14px' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', color: '#475569' }}>
                           <input
                             type="checkbox"
@@ -2084,6 +2248,25 @@ export const AuthModal = () => {
                           <span style={{ fontWeight: 500 }}>Duy trì đăng nhập trên thiết bị này</span>
                         </label>
                       </div>
+
+                      {errorMsg && (
+                        <div
+                          className="alert-message error"
+                          role="alert"
+                          style={{
+                            margin: '0 0 12px',
+                            background: '#fef2f2',
+                            color: '#b91c1c',
+                            border: '1.5px solid #fca5a5',
+                            padding: '10px 14px',
+                            borderRadius: '10px',
+                            fontWeight: 600,
+                            fontSize: '0.84rem',
+                          }}
+                        >
+                          <span style={{ color: '#b91c1c' }}>⚠️</span> <span>{errorMsg}</span>
+                        </div>
+                      )}
 
                       <button type="submit" className="modal-submit-btn" disabled={loading}>
                         {loading ? 'Đang xử lý...' : 'Đăng Nhập Ngay'}

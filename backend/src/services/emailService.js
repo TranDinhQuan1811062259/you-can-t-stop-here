@@ -203,7 +203,7 @@ export const sendOtpEmail = async (toEmail, otpCode, type = 'login') => {
           .badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 999px; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
           .content { padding: 32px 26px; line-height: 1.6; }
           .otp-card { text-align: center; margin: 26px 0; padding: 22px; background: #f0fdfa; border: 2px dashed #0d9488; border-radius: 12px; }
-          .otp-code { font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0f766e; font-family: monospace, sans-serif; display: inline-block; }
+          .otp-code { font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0f766e; font-family: monospace, sans-serif; display: inline-block; user-select: all; -webkit-user-select: all; }
           .footer { background: #f8fafc; padding: 18px 24px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; }
         </style>
       </head>
@@ -263,7 +263,7 @@ export const sendOtpEmail = async (toEmail, otpCode, type = 'login') => {
           .badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 999px; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
           .content { padding: 32px 26px; line-height: 1.6; }
           .otp-card { text-align: center; margin: 26px 0; padding: 22px; background: #f0fdfa; border: 2px dashed #0d9488; border-radius: 12px; }
-          .otp-code { font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0f766e; font-family: monospace, sans-serif; display: inline-block; }
+          .otp-code { font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0f766e; font-family: monospace, sans-serif; display: inline-block; user-select: all; -webkit-user-select: all; }
           .footer { background: #f8fafc; padding: 18px 24px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; }
         </style>
       </head>

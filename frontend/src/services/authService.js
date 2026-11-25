@@ -101,10 +101,37 @@ export const authService = {
   logoutAll: () => apiClient.post('/auth/logout-all'),
 
   // Gửi mã xác nhận OTP qua Email
-  sendOtp: (data) => apiClient.post('/auth/send-otp', data),
+  sendOtp: (data = {}) => {
+    const rawEmail = data.email ?? (typeof data.identifier === 'string' && data.identifier.includes('@') ? data.identifier : undefined);
+    const rawIdentifier = data.identifier ?? rawEmail ?? data.phone;
+    const normalizeId = (val) => {
+      if (typeof val !== 'string') return val;
+      const trimmed = val.trim();
+      return trimmed.includes('@') ? trimmed.toLowerCase() : trimmed.replace(/\s+/g, '');
+    };
+    return apiClient.post('/auth/send-otp', {
+      ...data,
+      ...(rawEmail !== undefined ? { email: normalizeId(rawEmail) } : {}),
+      ...(rawIdentifier !== undefined ? { identifier: normalizeId(rawIdentifier) } : {}),
+    });
+  },
 
   // Xác thực OTP và đăng nhập
-  verifyOtp: (data) => apiClient.post('/auth/verify-otp', data),
+  verifyOtp: (data = {}) => {
+    const rawEmail = data.email ?? (typeof data.identifier === 'string' && data.identifier.includes('@') ? data.identifier : undefined);
+    const rawIdentifier = data.identifier ?? rawEmail ?? data.phone;
+    const normalizeId = (val) => {
+      if (typeof val !== 'string') return val;
+      const trimmed = val.trim();
+      return trimmed.includes('@') ? trimmed.toLowerCase() : trimmed.replace(/\s+/g, '');
+    };
+    return apiClient.post('/auth/verify-otp', {
+      ...data,
+      ...(rawEmail !== undefined ? { email: normalizeId(rawEmail) } : {}),
+      ...(rawIdentifier !== undefined ? { identifier: normalizeId(rawIdentifier) } : {}),
+      otpCode: String(data.otpCode || '').replace(/\s+/g, '').trim(),
+    });
+  },
 
   // Đăng nhập / Đăng ký qua nền tảng Mạng xã hội (Google, Facebook, X, LinkedIn, GitHub)
   socialLogin: (socialData) => apiClient.post('/auth/social-login', socialData),

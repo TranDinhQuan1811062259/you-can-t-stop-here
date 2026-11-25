@@ -571,3 +571,63 @@ export const saveUserToStore = (userData) => {
   saveStore(store);
   return mergedUser;
 };
+
+/**
+ * Lưu bản ghi OTP dự phòng xuống db_store.json (Hỗ trợ bền vững khi restart server hoặc chưa kết nối MongoDB)
+ */
+export const saveOtpRecordToStore = (target, record) => {
+  const cleanKey = String(target || '').trim().toLowerCase();
+  if (!cleanKey || !record) return;
+
+  const store = loadStore();
+  const now = Date.now();
+  const nextRecords = {};
+
+  if (store.otpRecords && typeof store.otpRecords === 'object') {
+    for (const [k, v] of Object.entries(store.otpRecords)) {
+      if (v && v.expiresAt && Number(v.expiresAt) > now) {
+        nextRecords[k] = v;
+      }
+    }
+  }
+
+  nextRecords[cleanKey] = {
+    code: String(record.code || '').replace(/\s+/g, '').trim(),
+    expiresAt: Number(record.expiresAt),
+    type: record.type || 'email',
+    purpose: record.purpose || 'login',
+    attempts: Number(record.attempts || 0),
+    name: record.name || '',
+    passwordHash: record.passwordHash || '',
+    jobTitle: record.jobTitle || '',
+  };
+
+  store.otpRecords = nextRecords;
+  saveStore(store);
+};
+
+/**
+ * Đọc bản ghi OTP dự phòng từ db_store.json
+ */
+export const getOtpRecordFromStore = (target) => {
+  const cleanKey = String(target || '').trim().toLowerCase();
+  if (!cleanKey) return null;
+
+  const store = loadStore();
+  const record = store.otpRecords?.[cleanKey] || null;
+  return record;
+};
+
+/**
+ * Xóa bản ghi OTP dự phòng khỏi db_store.json
+ */
+export const deleteOtpRecordFromStore = (target) => {
+  const cleanKey = String(target || '').trim().toLowerCase();
+  if (!cleanKey) return;
+
+  const store = loadStore();
+  if (store.otpRecords && Object.prototype.hasOwnProperty.call(store.otpRecords, cleanKey)) {
+    delete store.otpRecords[cleanKey];
+    saveStore(store);
+  }
+};
