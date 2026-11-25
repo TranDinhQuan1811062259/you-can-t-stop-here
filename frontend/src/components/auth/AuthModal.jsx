@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth, ensureAdminPrivileges } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
@@ -231,34 +232,49 @@ export const AuthModal = () => {
   }, []);
 
   // 🚀 Xử lý đăng nhập bằng Google Identity Services (Client-side ID Token)
+  const [googleLoading, setGoogleLoading] = useState(false);
+
   const handleGoogleSuccess = async (credentialResponse) => {
     const idToken = credentialResponse?.credential;
     if (!idToken) {
+      setGoogleLoading(false);
+      setLoading(false);
+      setSuccessMsg('');
       setErrorMsg('Không nhận được thông tin xác thực từ Google.');
       return;
     }
 
+    setGoogleLoading(true);
     setLoading(true);
     setErrorMsg('');
     setSuccessMsg('Đang xác thực với Google...');
 
     try {
-      await loginWithGoogle(idToken);
-      setSuccessMsg('✓ Đăng nhập Google thành công!');
-      setTimeout(() => {
+      const gRes = await loginWithGoogle(idToken, { autoClose: false });
+      const userName = gRes?.data?.name || 'bạn';
+      setGoogleLoading(false);
+      setLoading(false);
+      setErrorMsg('');
+      setSuccessMsg(`✓ Chào mừng ${userName}! Đăng nhập Google thành công.`);
+      safeScheduleClose(() => {
         closeAuthModal();
-      }, 300);
+        window.dispatchEvent(new Event('profile_updated'));
+      }, 500);
     } catch (err) {
       console.error('[Google Login Error]:', err);
-      setErrorMsg(
-        err.response?.data?.message || err.message || 'Đăng nhập Google thất bại. Vui lòng thử lại!'
-      );
-    } finally {
+      setGoogleLoading(false);
       setLoading(false);
+      setSuccessMsg('');
+      setErrorMsg(
+        err?.response?.data?.message || err?.message || 'Đăng nhập Google thất bại. Vui lòng thử lại!'
+      );
     }
   };
 
   const handleGoogleError = () => {
+    setGoogleLoading(false);
+    setLoading(false);
+    setSuccessMsg('');
     setErrorMsg('Đăng nhập Google không thành công hoặc bạn đã đóng cửa sổ.');
   };
 
@@ -419,6 +435,7 @@ export const AuthModal = () => {
       setSmsNotification(null);
       setErrorMsg('');
       setSuccessMsg('');
+      setGoogleLoading(false);
       setLoginMethod('password');
     }
   }, [isAuthModalOpen]);
@@ -574,7 +591,7 @@ export const AuthModal = () => {
     return () => window.removeEventListener('open_google_otp_flow', handleGoogleOtpFlow);
   }, [openLoginModal, setAuthModalMode]);
 
-  if (!isAuthModalOpen) return null;
+  if (!isAuthModalOpen || typeof document === 'undefined') return null;
 
   const extractApiErrorMsg = (err, fallback = 'Thao tác không thành công, vui lòng thử lại.') => {
     const candidate = err?.response?.data?.message || err?.message;
@@ -596,6 +613,7 @@ export const AuthModal = () => {
     setSmsNotification(null);
     setErrorMsg('');
     setSuccessMsg('');
+    setGoogleLoading(false);
     if (nextMode === 'qr' || (nextMode === 'login' && nextLoginMethod === 'qr')) {
       initQrSession();
     }
@@ -1073,7 +1091,7 @@ export const AuthModal = () => {
 
   const targetEmailForOtp = (pendingRegisterData?.email || loginForm.identifier || '').trim().toLowerCase();
 
-  return (
+  return createPortal((
     <div className="modal-backdrop auth-modal-backdrop" onClick={closeAuthModal}>
       <div
         className="modal-box auth-modal-box"
@@ -1263,8 +1281,8 @@ export const AuthModal = () => {
           </div>
         )}
 
-        {/* Thông báo thành công */}
-        {successMsg && (
+        {/* Thông báo thành công (ẩn ngay khi có errorMsg để không hiện chồng 2 banner) */}
+        {successMsg && !errorMsg && (
           <div className="alert-message success" style={{ margin: '10px 0 12px', background: '#f0fdf4', color: '#15803d', border: '1.5px solid #86efac', padding: '10px 14px', borderRadius: '8px', fontWeight: 600 }}>
             <span style={{ color: '#15803d' }}>✓</span> <span>{successMsg}</span>
           </div>
@@ -2318,7 +2336,7 @@ export const AuthModal = () => {
         )}
       </div>
     </div>
-  );
+  ), document.body);
 };
 
 export default AuthModal;

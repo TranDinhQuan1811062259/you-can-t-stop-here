@@ -13,31 +13,33 @@ const authBroadcastChannel =
     : null;
 
 /**
- * Đảm bảo tài khoản Quản trị viên luôn có đầy đủ đặc quyền Admin và hình đại diện chuẩn
+ * Đảm bảo tài khoản Quản trị viên luôn giữ nguyên quyền Admin và hình đại diện chuẩn
  */
 export const ensureAdminPrivileges = (userData) => {
   if (!userData) return userData;
   const email = (userData.email || '').toLowerCase().trim();
 
-  // Chỉ trao quyền Admin tối cao nếu email trùng khớp với Quản trị viên chính thức
+  // Giữ nguyên role: 'admin' do Backend xác thực hoặc khớp email Quản trị viên chính thức
   const isAdmin =
+    userData.role === 'admin' ||
+    userData.isAdmin === true ||
     email === 'anthonyq012025@gmail.com' ||
-    email === 'admin@cantstophere.com' ||
-    (userData.role === 'admin' && (email.startsWith('admin@') || userData._id === '6aec5b46ee112662b33c0e32'));
+    email === 'admin@cantstophere.com';
 
   if (isAdmin) {
-    const rawAvatar = userData.avatar;
+    const rawAvatar = userData.avatar || '';
     const isBadAvatar =
       !rawAvatar ||
       rawAvatar.includes('/images/man.jpg') ||
       rawAvatar.includes('google_avatar');
+    const isPrimaryOwner = email === 'anthonyq012025@gmail.com';
 
     return {
       ...userData,
       role: 'admin',
       isAdmin: true,
       jobTitle: userData.jobTitle || 'System Admin & Lead Dev',
-      avatar: isBadAvatar ? ADMIN_AVATAR : rawAvatar,
+      avatar: isBadAvatar ? (isPrimaryOwner ? ADMIN_AVATAR : '') : rawAvatar,
     };
   }
 
@@ -397,20 +399,22 @@ export const AuthProvider = ({ children }) => {
         ...(phone ? { phone: target } : {}),
         identifier: target,
         otpCode: cleanOtp,
+        otp: cleanOtp,
         ...(purpose ? { purpose } : {}),
         ...(name ? { name: String(name).trim() } : {}),
         ...(password ? { password } : {}),
         ...(jobTitle ? { jobTitle: String(jobTitle).trim() } : {}),
       });
-      const rawData = res?.data?.data || res?.data || {};
-      const receivedToken = rawData.token || null;
+      const rawData = res?.data?.data || res?.data || res || {};
+      const receivedToken = res?.token || rawData.token || null;
 
       if (!receivedToken) {
-        throw new Error(res?.data?.message || res?.message || 'Mã xác nhận OTP không chính xác hoặc đã hết hạn!');
+        throw new Error(res?.message || res?.data?.message || 'Mã xác nhận OTP không chính xác hoặc đã hết hạn!');
       }
 
-      const receivedRefreshToken = rawData.refreshToken || null;
-      const { token: _t, refreshToken: _rt, alertSms, ...extractedUser } = rawData;
+      const receivedRefreshToken = res?.refreshToken || rawData.refreshToken || null;
+      const userCandidate = res?.user || rawData.user || rawData;
+      const { token: _t, refreshToken: _rt, alertSms, user: _u, success: _s, message: _m, data: _d, ...extractedUser } = userCandidate;
       const safeUser = ensureAdminPrivileges(extractedUser);
 
       setToken(receivedToken);
@@ -540,24 +544,28 @@ export const AuthProvider = ({ children }) => {
   /**
    * Đăng nhập qua Google Identity Services (Client-side ID Token Verification)
    */
-  const loginWithGoogle = async (credential) => {
+  const loginWithGoogle = async (credential, options = {}) => {
+    const { autoClose = true } = options || {};
     try {
       const res = await authService.googleLogin(credential);
-      const rawData = res?.data?.data || res?.data || {};
+      const rawData = res?.data?.data || res?.data || res || {};
 
-      const receivedToken = rawData.token || res?.token || null;
+      const receivedToken = res?.token || rawData.token || null;
       if (!receivedToken) {
-        throw new Error(res?.data?.message || 'Không nhận được mã xác thực token từ máy chủ!');
+        throw new Error(res?.message || res?.data?.message || 'Không nhận được mã xác thực token từ máy chủ!');
       }
 
-      const receivedRefreshToken = rawData.refreshToken || res?.refreshToken || null;
-      const { token: _t, refreshToken: _rt, ...extractedUser } = rawData;
+      const receivedRefreshToken = res?.refreshToken || rawData.refreshToken || null;
+      const userCandidate = res?.user || rawData.user || rawData;
+      const { token: _t, refreshToken: _rt, user: _u, success: _s, message: _m, data: _d, ...extractedUser } = userCandidate;
       const safeUser = ensureAdminPrivileges(extractedUser);
 
       setToken(receivedToken);
       setUser(safeUser);
       syncAuthStorage(safeUser, receivedToken, receivedRefreshToken);
-      setIsAuthModalOpen(false);
+      if (autoClose) {
+        setIsAuthModalOpen(false);
+      }
 
       // Đồng bộ đăng nhập sang các tab khác qua BroadcastChannel & Storage
       authBroadcastChannel?.postMessage({

@@ -1520,6 +1520,22 @@ export const Header = () => {
                   <span>{streakCount || 0}</span>
                 </button>
 
+                {/* Lối vào Trang Quản Trị nổi bật dành riêng cho Admin */}
+                {user?.role === 'admin' && (
+                  <button
+                    type="button"
+                    className="header-admin-portal-btn"
+                    onClick={() => {
+                      playClickSound();
+                      navigate('/admin');
+                    }}
+                    title="Mở Trang Quản Trị Hệ Thống (/admin)"
+                  >
+                    <span className="btn-icon">🛡️</span>
+                    <span className="admin-portal-btn-label">Quản Trị</span>
+                  </button>
+                )}
+
                 {/* Nút Cài đặt tài khoản & hồ sơ */}
                 <button
                   type="button"

@@ -22,6 +22,7 @@ dotenv.config();
  * Biến trạng thái kết nối Database (dùng cho các controller)
  */
 export let isDbConnected = false;
+let activeConnectPromise = null;
 
 /**
  * Kiểm tra trạng thái kết nối thực tế của Mongoose
@@ -34,50 +35,79 @@ export const checkDbReady = () => mongoose.connection.readyState === 1 || isDbCo
  * Tự động dự phòng sang MongoDB Local trên máy nếu Atlas gặp sự cố mạng
  */
 export const connectDB = async () => {
+  if (mongoose.connection.readyState === 1) {
+    isDbConnected = true;
+    return true;
+  }
+
+  if (activeConnectPromise) {
+    return activeConnectPromise;
+  }
+
   const mongoUri = process.env.MONGO_URI;
 
   if (!mongoUri) {
     console.error('❌ [Lỗi Cấu Hình] Chưa tìm thấy biến MONGO_URI trong file .env!');
     console.error('👉 Vui lòng mở file backend/.env và điền MONGO_URI của bạn.');
-    return;
+    return false;
   }
 
-  try {
-    const conn = await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 5000, // Đợi tối đa 5s
-      connectTimeoutMS: 5000,
-      family: 4,                      // Ép dùng IPv4, tránh treo DNS IPv6 trên Windows
-      autoIndex: true,
-    });
-
-    isDbConnected = true;
-
-    console.log(`\n======================================================`);
-    console.log(`✅ [MongoDB Atlas] Kết nối cơ sở dữ liệu THÀNH CÔNG!`);
-    console.log(`🏠 Host:     ${conn.connection.host}`);
-    console.log(`📁 Database: ${conn.connection.name}`);
-    console.log(`======================================================\n`);
-  } catch (error) {
-    isDbConnected = false;
-    console.log(`\n------------------------------------------------------`);
-    console.log(`⚠️  [MongoDB] Chưa thể kết nối Atlas (${error.message})`);
-    console.log(`🔄 Đang thử kết nối MongoDB Local trên máy (nếu có)...`);
-
+  activeConnectPromise = (async () => {
     try {
-      const localConn = await mongoose.connect('mongodb://127.0.0.1:27017/freedom_blog', {
-        serverSelectionTimeoutMS: 3000,
-        family: 4,
+      const conn = await mongoose.connect(mongoUri, {
+        serverSelectionTimeoutMS: 5000, // Đợi tối đa 5s
+        connectTimeoutMS: 5000,
+        family: 4,                      // Ép dùng IPv4, tránh treo DNS IPv6 trên Windows
+        autoIndex: true,
       });
+
       isDbConnected = true;
-      console.log(`✅ [MongoDB Local] Đã kết nối MongoDB cục bộ trên máy thành công!`);
-      console.log(`📁 Database: ${localConn.connection.name}`);
-      console.log(`------------------------------------------------------\n`);
-    } catch (localErr) {
-      console.log(`ℹ️ [Hệ thống Bền Vững] Server kích hoạt bộ lưu trữ đĩa cứng backend/data/db_store.json.`);
-      console.log(`💾 Toàn bộ bài viết, bình luận và chỉnh sửa sẽ luôn được lưu vĩnh viễn trên máy của bạn.`);
-      console.log(`------------------------------------------------------\n`);
+
+      console.log(`\n======================================================`);
+      console.log(`✅ [MongoDB Atlas] Kết nối cơ sở dữ liệu THÀNH CÔNG!`);
+      console.log(`🏠 Host:     ${conn.connection.host}`);
+      console.log(`📁 Database: ${conn.connection.name}`);
+      console.log(`======================================================\n`);
+      return true;
+    } catch (error) {
+      isDbConnected = false;
+      console.log(`\n------------------------------------------------------`);
+      console.log(`⚠️  [MongoDB] Chưa thể kết nối Atlas (${error.message})`);
+      console.log(`🔄 Đang thử kết nối MongoDB Local trên máy (nếu có)...`);
+
+      try {
+        const localConn = await mongoose.connect('mongodb://127.0.0.1:27017/freedom_blog', {
+          serverSelectionTimeoutMS: 3000,
+          family: 4,
+        });
+        isDbConnected = true;
+        console.log(`✅ [MongoDB Local] Đã kết nối MongoDB cục bộ trên máy thành công!`);
+        console.log(`📁 Database: ${localConn.connection.name}`);
+        console.log(`------------------------------------------------------\n`);
+        return true;
+      } catch (localErr) {
+        console.log(`ℹ️ [Hệ thống Bền Vững] Server kích hoạt bộ lưu trữ đĩa cứng backend/data/db_store.json.`);
+        console.log(`💾 Toàn bộ bài viết, bình luận và chỉnh sửa sẽ luôn được lưu vĩnh viễn trên máy của bạn.`);
+        console.log(`------------------------------------------------------\n`);
+        return false;
+      }
+    } finally {
+      activeConnectPromise = null;
     }
+  })();
+
+  return activeConnectPromise;
+};
+
+/**
+ * Đảm bảo kết nối MongoDB sẵn sàng trên cả môi trường Serverless (Vercel) lẫn Node Server truyền thống
+ */
+export const ensureDbConnected = async () => {
+  if (mongoose.connection.readyState === 1) {
+    isDbConnected = true;
+    return true;
   }
+  return connectDB();
 };
 
 // Lắng nghe các sự kiện kết nối của Mongoose

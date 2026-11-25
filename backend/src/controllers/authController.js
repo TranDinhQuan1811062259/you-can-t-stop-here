@@ -1,13 +1,13 @@
 import crypto from 'crypto';
 import User from '../models/User.js';
-import OtpToken from '../models/OtpToken.js';
+import OtpVerification from '../models/OtpVerification.js';
 import Post from '../models/Post.js';
 import Category from '../models/Category.js';
 import AdminAuditLog from '../models/AdminAuditLog.js';
 import { extractTelemetry } from '../utils/telemetryHelper.js';
 import { sendAdminSecurityAlertEmail } from '../services/emailService.js';
 import { OAuth2Client } from 'google-auth-library';
-import { isDbConnected, checkDbReady } from '../config/db.js';
+import { isDbConnected, checkDbReady, ensureDbConnected } from '../config/db.js';
 import {
   signToken,
   signAccessToken,
@@ -58,8 +58,8 @@ const normalizeOtpTarget = (rawTarget) => {
 const normalizeOtpCode = (rawOtp) => String(rawOtp || '').replace(/\s+/g, '').trim();
 
 /**
- * Lưu thử thách OTP đồng bộ vào RAM (otpStore), ổ cứng dự phòng và MongoDB (OtpToken)
- * để đảm bảo không bị mất mã khi restart server hoặc chạy đa tiến trình serverless.
+ * Lưu thử thách OTP bền vững trong MongoDB (OtpVerification) — bắt buộc cho Vercel Serverless Functions
+ * Đồng bộ thêm RAM/disk dự phòng cho trường hợp chạy offline không có MongoDB.
  */
 const persistOtpChallenge = async ({
   cleanTarget,
@@ -72,12 +72,12 @@ const persistOtpChallenge = async ({
   jobTitle = '',
 }) => {
   const cleanCode = normalizeOtpCode(otpCode);
-  const cleanPurpose = String(purpose || 'login').toLowerCase().trim();
+  const normalizedPurpose = String(purpose || 'login').toLowerCase().trim() === 'register' ? 'register' : 'login';
   const record = {
     code: cleanCode,
     expiresAt: Number(expiresAt),
     type: isEmail ? 'email' : 'phone',
-    purpose: cleanPurpose,
+    purpose: normalizedPurpose,
     attempts: 0,
     name: String(name || '').trim(),
     passwordHash: passwordHash || '',
@@ -87,18 +87,19 @@ const persistOtpChallenge = async ({
   otpStore.set(cleanTarget, record);
   saveOtpRecordToStore(cleanTarget, record);
 
+  await ensureDbConnected().catch(() => false);
   if (checkDbReady()) {
     try {
-      await OtpToken.findOneAndUpdate(
-        { target: cleanTarget },
+      await OtpVerification.findOneAndUpdate(
+        { email: cleanTarget },
         {
           $set: {
-            target: cleanTarget,
-            code: cleanCode,
-            type: record.type,
-            purpose: cleanPurpose,
-            attempts: 0,
+            email: cleanTarget,
+            otp: cleanCode,
+            purpose: normalizedPurpose,
             expiresAt: new Date(expiresAt),
+            attempts: 0,
+            targetType: record.type,
             pendingName: record.name,
             pendingPasswordHash: record.passwordHash,
             pendingJobTitle: record.jobTitle,
@@ -107,7 +108,7 @@ const persistOtpChallenge = async ({
         { upsert: true, new: true }
       );
     } catch (otpDbErr) {
-      console.warn('[AUTH] Cảnh báo lưu OtpToken vào MongoDB:', otpDbErr.message);
+      console.warn('[AUTH] Cảnh báo lưu OtpVerification vào MongoDB:', otpDbErr.message);
     }
   }
 
@@ -121,9 +122,10 @@ const clearOtpChallenge = async (cleanTarget, isEmail = true) => {
   otpStore.delete(cleanTarget);
   deleteOtpRecordFromStore(cleanTarget);
 
+  await ensureDbConnected().catch(() => false);
   if (checkDbReady()) {
     try {
-      await OtpToken.deleteOne({ target: cleanTarget });
+      await OtpVerification.deleteOne({ email: cleanTarget });
       if (isEmail) {
         await User.updateOne(
           { email: cleanTarget },
@@ -158,7 +160,7 @@ export const register = async (req, res) => {
     const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
     const hashedPassword = await hashPassword(password);
 
-    // Lưu đồng bộ vào RAM, ổ cứng dự phòng & MongoDB OtpToken
+    // Lưu đồng bộ vào RAM, ổ cứng dự phòng & MongoDB OtpVerification
     await persistOtpChallenge({
       cleanTarget: cleanEmail,
       isEmail: true,
@@ -255,7 +257,9 @@ export const login = async (req, res) => {
     const cleanInput = input.toLowerCase().trim();
     const cleanPhone = input.replace(/[\s.-]/g, '');
 
-    if (isDbConnected) {
+    await ensureDbConnected().catch(() => false);
+
+    if (checkDbReady()) {
       const user = await User.findOne({
         $or: [
           { email: cleanInput },
@@ -296,7 +300,7 @@ export const login = async (req, res) => {
           });
         }
 
-        const isMatch = await user.comparePassword(password);
+        const isMatch = user.password ? await user.comparePassword(password) : false;
         if (isMatch) {
           const tokenVersion = user.tokenVersion !== undefined ? user.tokenVersion : 0;
           const token = await signAccessToken({
@@ -570,23 +574,24 @@ export const socialLogin = async (req, res) => {
         });
       }
 
-      // Đã có mã OTP -> Xác thực với cache bộ nhớ, OtpToken & MongoDB
+      // Đã có mã OTP -> Xác thực với cache bộ nhớ, OtpVerification & MongoDB
+      await ensureDbConnected().catch(() => false);
       const cachedOtp = otpStore.get(cleanEmail) || getOtpRecordFromStore(cleanEmail);
       let dbOtpDoc = null;
-      if (!cachedOtp && checkDbReady()) {
+      if (checkDbReady()) {
         try {
-          dbOtpDoc = await OtpToken.findOne({ target: cleanEmail });
+          dbOtpDoc = await OtpVerification.findOne({ email: cleanEmail });
         } catch (_) {}
       }
       let isValidOtp = false;
 
-      if (cachedOtp && normalizeOtpCode(cachedOtp.code) === submittedOtp) {
-        if (Date.now() <= Number(cachedOtp.expiresAt)) {
+      if (dbOtpDoc && normalizeOtpCode(dbOtpDoc.otp) === submittedOtp) {
+        if (dbOtpDoc.expiresAt && new Date(dbOtpDoc.expiresAt).getTime() >= Date.now()) {
           isValidOtp = true;
           await clearOtpChallenge(cleanEmail, true);
         }
-      } else if (dbOtpDoc && normalizeOtpCode(dbOtpDoc.code) === submittedOtp) {
-        if (dbOtpDoc.expiresAt && new Date(dbOtpDoc.expiresAt).getTime() >= Date.now()) {
+      } else if (cachedOtp && normalizeOtpCode(cachedOtp.code) === submittedOtp) {
+        if (Date.now() <= Number(cachedOtp.expiresAt)) {
           isValidOtp = true;
           await clearOtpChallenge(cleanEmail, true);
         }
@@ -1443,13 +1448,16 @@ export const sendLoginOtp = async (req, res) => {
       return sendError(res, { message: 'Vui lòng cung cấp địa chỉ Email hoặc Số điện thoại hợp lệ', status: 400 });
     }
 
+    await ensureDbConnected().catch(() => false);
+
     const { isEmail, cleanTarget } = normalizeOtpTarget(targetInput);
-    const cleanPurpose = String(purpose || 'login').toLowerCase().trim();
-    const otpCode = generateOtp();
+    const cleanPurpose = String(purpose || 'login').toLowerCase().trim() === 'register' ? 'register' : 'login';
+    const otpCode = String(generateOtp()).trim();
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 phút
     const rawPass = req.body.password ? String(req.body.password) : '';
     const hashedPassword = rawPass ? await hashPassword(rawPass) : '';
 
+    // Lưu / ghi đè OTP vào MongoDB (OtpVerification) trước khi gửi mail (bền vững qua Vercel Serverless)
     await persistOtpChallenge({
       cleanTarget,
       isEmail,
@@ -1464,7 +1472,7 @@ export const sendLoginOtp = async (req, res) => {
     req.otpDispatched = true;
 
     if (isEmail) {
-      // Cập nhật mã OTP vào MongoDB Atlas nếu tài khoản đã tồn tại
+      // Cập nhật thêm bản ghi OTP dự phòng trên User nếu tài khoản đã tồn tại
       if (checkDbReady()) {
         try {
           const dbUser = await User.findOne({ email: cleanTarget });
@@ -1570,33 +1578,35 @@ export const sendLoginOtp = async (req, res) => {
 
 /**
  * Xác nhận mã OTP (Email hoặc SMS) và kích hoạt tài khoản / hoàn tất đăng nhập
+ * Truy vấn trực tiếp OtpVerification từ MongoDB (khắc phục Vercel Serverless không chia sẻ RAM).
  */
 export const verifyOtpAndLogin = async (req, res) => {
   try {
-    const { email, identifier, phone, otpCode, purpose, deviceName = 'Windows PC (Chrome)' } = req.body;
+    const { email, identifier, phone, otpCode, otp, purpose, deviceName = 'Windows PC (Chrome)' } = req.body;
     const targetInput = String(email || identifier || phone || '').trim();
+    const submittedOtpRaw = otpCode !== undefined ? otpCode : otp;
 
-    if (!targetInput || !otpCode) {
+    if (!targetInput || !submittedOtpRaw) {
       return sendError(res, { message: 'Vui lòng cung cấp Email/Số điện thoại và mã xác nhận OTP', status: 400 });
     }
 
+    await ensureDbConnected().catch(() => false);
+
     const { isEmail, cleanTarget } = normalizeOtpTarget(targetInput);
-    const cleanOtp = normalizeOtpCode(otpCode);
+    const cleanOtp = normalizeOtpCode(submittedOtpRaw);
     if (!cleanOtp) {
       return sendError(res, { message: 'Mã xác nhận OTP không hợp lệ. Vui lòng nhập đủ 6 chữ số!', status: 400 });
     }
 
     const dbReady = checkDbReady();
-    const memRecord = otpStore.get(cleanTarget) || null;
-    const diskRecord = getOtpRecordFromStore(cleanTarget);
     let dbOtpDoc = null;
     let dbUser = null;
 
     if (dbReady) {
       try {
-        dbOtpDoc = await OtpToken.findOne({ target: cleanTarget });
+        dbOtpDoc = await OtpVerification.findOne({ email: cleanTarget });
       } catch (otpLookupErr) {
-        console.warn('[AUTH] Lỗi truy vấn OtpToken:', otpLookupErr.message);
+        console.warn('[AUTH] Lỗi truy vấn OtpVerification:', otpLookupErr.message);
       }
       if (isEmail) {
         dbUser = await User.findOne({ email: cleanTarget });
@@ -1605,7 +1615,7 @@ export const verifyOtpAndLogin = async (req, res) => {
 
     const dbOtpCandidate = dbOtpDoc
       ? {
-          code: normalizeOtpCode(dbOtpDoc.code),
+          code: normalizeOtpCode(dbOtpDoc.otp),
           expiresAt: new Date(dbOtpDoc.expiresAt).getTime(),
           attempts: dbOtpDoc.attempts || 0,
           name: dbOtpDoc.pendingName || '',
@@ -1628,8 +1638,11 @@ export const verifyOtpAndLogin = async (req, res) => {
           }
         : null;
 
-    // Chọn bản ghi OTP mới nhất hiện có (ưu tiên RAM khi còn hiệu lực & cùng/mới hơn để đếm attempts đồng bộ)
-    const candidates = [memRecord, dbOtpCandidate, diskRecord, dbUserCandidate].filter(Boolean);
+    const memRecord = otpStore.get(cleanTarget) || null;
+    const diskRecord = getOtpRecordFromStore(cleanTarget);
+
+    // Ưu tiên bản ghi MongoDB OtpVerification mới nhất trên Serverless; fallback sang User/RAM/disk khi offline
+    const candidates = [dbOtpCandidate, dbUserCandidate, memRecord, diskRecord].filter(Boolean);
     let activeCandidate = null;
     for (const item of candidates) {
       if (!activeCandidate || Number(item.expiresAt || 0) > Number(activeCandidate.expiresAt || 0)) {
@@ -1663,7 +1676,7 @@ export const verifyOtpAndLogin = async (req, res) => {
       if (dbReady) {
         try {
           if (dbOtpDoc) {
-            await OtpToken.updateOne({ target: cleanTarget }, { $set: { attempts: nextAttempts } });
+            await OtpVerification.updateOne({ email: cleanTarget }, { $set: { attempts: nextAttempts } });
           }
           if (dbUser && dbUser.otpCode) {
             await User.updateOne({ email: cleanTarget }, { $set: { otpAttempts: nextAttempts } });
@@ -1689,44 +1702,13 @@ export const verifyOtpAndLogin = async (req, res) => {
 
     const matchedOtpRecord = { ...activeCandidate };
 
+    // Xóa bản ghi OTP ngay sau khi khớp hợp lệ
+    await clearOtpChallenge(cleanTarget, isEmail);
+
     const storeUser = findUserInStore(cleanTarget);
     const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
     const isAdm = cleanTarget === adminEmail || cleanTarget === (process.env.ADMIN_PHONE || '0901234567');
-    const assignedRole = isAdm ? 'admin' : (dbUser?.role || 'user');
-
-    // 🚨 BẪY BẢO MẬT: CHẶN TÀI KHOẢN ADMIN ĐĂNG NHẬP QUA CỔNG OTP CỦA USER THƯỜNG
-    if (assignedRole === 'admin' || dbUser?.role === 'admin' || storeUser?.role === 'admin') {
-      await clearOtpChallenge(cleanTarget, isEmail);
-      const telemetry = extractTelemetry(req);
-      try {
-        await AdminAuditLog.create({
-          action: 'BLOCKED_AT_USER_PORTAL',
-          email: cleanTarget,
-          ip: telemetry.ip,
-          location: telemetry.location,
-          userAgent: telemetry.userAgent,
-          timeVn: telemetry.timeVn,
-          details: { attemptFrom: 'OTP Verification User Portal', reason: 'Admin account attempt at user OTP login portal' },
-        });
-      } catch (_) {}
-      sendAdminSecurityAlertEmail({
-        action: 'BLOCKED_AT_USER_PORTAL',
-        targetEmail: cleanTarget,
-        ip: telemetry.ip,
-        location: telemetry.location,
-        userAgent: telemetry.userAgent,
-        timeVn: telemetry.timeVn,
-        details: { reason: 'Admin account blocked at regular user OTP login portal' },
-      }).catch(() => {});
-
-      return sendError(res, {
-        message: 'Mã xác nhận OTP không chính xác hoặc đã hết hạn (5 phút). Vui lòng yêu cầu mã OTP mới!',
-        status: 400,
-      });
-    }
-
-    // Xóa OTP sau khi khớp hợp lệ (trước khi tạo/kích hoạt session)
-    await clearOtpChallenge(cleanTarget, isEmail);
+    const assignedRole = dbUser?.role || storeUser?.role || (isAdm ? 'admin' : 'user');
 
     // Ưu tiên Họ tên thật người dùng đã nhập lúc đăng ký (từ body hoặc từ challenge OTP)
     const submittedName = String(req.body.name || matchedOtpRecord?.name || '').trim();
@@ -1758,25 +1740,23 @@ export const verifyOtpAndLogin = async (req, res) => {
           submittedName ||
           storeUser?.name ||
           (emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1));
-        const initialPassword =
-          rawSubmittedPassword ||
-          submittedPasswordHash ||
-          crypto.randomBytes(24).toString('hex');
+        const createPayload = {
+          name: fallbackDisplayName,
+          email: cleanTarget,
+          role: assignedRole,
+          jobTitle: submittedJobTitle || storeUser?.jobTitle || (assignedRole === 'admin' ? 'Quản Trị Viên Hệ Thống' : 'Thành viên cộng đồng'),
+          avatar: '',
+          coverImage: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
+          authProvider: 'local',
+          isVerified: true,
+        };
+        if (rawSubmittedPassword || submittedPasswordHash) {
+          createPayload.password = rawSubmittedPassword || submittedPasswordHash;
+        }
 
         try {
-          dbUser = await User.create({
-            name: fallbackDisplayName,
-            email: cleanTarget,
-            password: initialPassword,
-            role: assignedRole,
-            jobTitle: submittedJobTitle || storeUser?.jobTitle || 'Thành viên cộng đồng',
-            avatar: '',
-            coverImage: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
-            authProvider: 'local',
-            isVerified: true,
-          });
+          dbUser = await User.create(createPayload);
         } catch (createErr) {
-          // Đề phòng race condition E11000 nếu email vừa được tạo song song
           dbUser = await User.findOneAndUpdate(
             { email: cleanTarget },
             { $set: { isVerified: true, otpCode: null, otpExpires: null, otpAttempts: 0 } },
@@ -1798,12 +1778,13 @@ export const verifyOtpAndLogin = async (req, res) => {
       url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
     };
 
+    const resolvedRole = dbUser?.role || storeUser?.role || assignedRole;
     const finalUser = dbUser
       ? {
           _id: dbUser._id,
           name: (isRegisterFlow && submittedName) ? submittedName : dbUser.name,
           email: dbUser.email,
-          role: dbUser.role || assignedRole,
+          role: resolvedRole,
           jobTitle: (isRegisterFlow && submittedJobTitle) ? submittedJobTitle : (dbUser.jobTitle || 'Thành viên cộng đồng'),
           avatar:
             dbUser.avatar && !dbUser.avatar.includes('/images/man.jpg')
@@ -1815,6 +1796,7 @@ export const verifyOtpAndLogin = async (req, res) => {
           bio: dbUser.bio || '',
           isVerified: true,
           authProvider: dbUser.authProvider || 'local',
+          googleId: dbUser.googleId || '',
           customLayout: dbUser.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
           profileMusic: dbUser.profileMusic || defaultProfileMusic,
           socialLinks: dbUser.socialLinks || {},
@@ -1829,7 +1811,7 @@ export const verifyOtpAndLogin = async (req, res) => {
               : `Thành viên (${cleanTarget})`),
           email: isEmail ? cleanTarget : `${cleanTarget}@phone.cantstophere.com`,
           phone: !isEmail ? cleanTarget : undefined,
-          role: assignedRole,
+          role: resolvedRole,
           jobTitle: submittedJobTitle || storeUser?.jobTitle || 'Thành viên cộng đồng',
           avatar:
             storeUser?.avatar && !storeUser.avatar.includes('/images/man.jpg')
@@ -1860,7 +1842,7 @@ export const verifyOtpAndLogin = async (req, res) => {
     const tokenVersion = dbUser?.tokenVersion !== undefined ? dbUser.tokenVersion : (storeUser?.tokenVersion || 0);
     const token = await signAccessToken({
       id: finalUser._id,
-      role: finalUser.role,
+      role: resolvedRole,
       name: finalUser.name,
       email: finalUser.email,
       tokenVersion,
@@ -1870,10 +1852,16 @@ export const verifyOtpAndLogin = async (req, res) => {
       tokenVersion,
     });
 
-    return sendSuccess(res, {
-      message: !isEmail
-        ? `Xác thực SMS OTP thành công! Đã gửi thông báo xác nhận đến SĐT ${cleanTarget}.`
-        : 'Xác thực mã OTP thành công! Đăng nhập hoàn tất.',
+    const msg = !isEmail
+      ? `Xác thực SMS OTP thành công! Đã gửi thông báo xác nhận đến SĐT ${cleanTarget}.`
+      : 'Xác thực mã OTP thành công! Đăng nhập hoàn tất.';
+
+    return res.status(200).json({
+      success: true,
+      message: msg,
+      token,
+      refreshToken,
+      user: finalUser,
       data: {
         ...finalUser,
         token,
@@ -2606,32 +2594,73 @@ export const logoutAll = async (req, res) => {
  * 🚀 Đăng nhập / Đăng ký qua Google Identity Services (Client-side ID Token Verification)
  * POST /api/auth/google
  * Body: { credential }
+ * Tự động liên kết googleId vào tài khoản có sẵn cùng Email (bao gồm Admin) và giữ nguyên Role.
  */
 export const googleLogin = async (req, res) => {
   try {
-    const { credential } = req.body;
-    if (!credential) {
+    const tokenInput = String(
+      req.body?.credential || req.body?.idToken || req.body?.access_token || req.body?.token || ''
+    ).trim();
+
+    if (!tokenInput) {
       return sendError(res, {
         message: 'Thiếu Google credential ID token.',
         status: 400,
       });
     }
 
-    const clientId = (process.env.GOOGLE_CLIENT_ID || '').trim();
-    if (!clientId) {
-      return sendError(res, {
-        message: 'Máy chủ chưa được cấu hình biến môi trường GOOGLE_CLIENT_ID.',
-        status: 500,
-      });
+    const clientId = (process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || '').trim();
+    let payload = null;
+
+    if (tokenInput.split('.').length === 3) {
+      if (!clientId) {
+        return sendError(res, {
+          message: 'Máy chủ chưa được cấu hình biến môi trường GOOGLE_CLIENT_ID.',
+          status: 500,
+        });
+      }
+
+      try {
+        const client = new OAuth2Client(clientId);
+        const ticket = await client.verifyIdToken({
+          idToken: tokenInput,
+          audience: clientId,
+        });
+        payload = ticket.getPayload();
+      } catch (verifyErr) {
+        console.error('[AUTH GOOGLE VERIFY ERROR]:', verifyErr.message);
+        let detailMsg = 'Xác thực Google ID token không hợp lệ hoặc đã hết hạn. Vui lòng thử đăng nhập lại.';
+        if (verifyErr.message?.includes('Token used too late')) {
+          detailMsg = 'Phiên xác thực Google vừa hết hạn. Vui lòng bấm Đăng nhập bằng Google lại lần nữa.';
+        } else if (verifyErr.message?.includes('Wrong recipient')) {
+          detailMsg = 'GOOGLE_CLIENT_ID không khớp giữa Frontend và Backend. Vui lòng kiểm tra cấu hình OAuth.';
+        }
+        return sendError(res, {
+          message: detailMsg,
+          status: 401,
+        });
+      }
+    } else {
+      try {
+        const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${tokenInput}` },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!userInfoRes.ok) {
+          return sendError(res, {
+            message: 'Không thể lấy thông tin tài khoản từ Google (access token không hợp lệ).',
+            status: 401,
+          });
+        }
+        payload = await userInfoRes.json();
+      } catch (userInfoErr) {
+        return sendError(res, {
+          message: `Lỗi kết nối máy chủ xác thực Google: ${userInfoErr.message}`,
+          status: 401,
+        });
+      }
     }
 
-    const client = new OAuth2Client(clientId);
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: clientId,
-    });
-
-    const payload = ticket.getPayload();
     if (!payload || !payload.email) {
       return sendError(res, {
         message: 'Không thể xác thực thông tin tài khoản từ Google ID token.',
@@ -2639,95 +2668,82 @@ export const googleLogin = async (req, res) => {
       });
     }
 
+    await ensureDbConnected().catch(() => false);
+
     const { email, name, picture, sub: googleId } = payload;
     const cleanEmail = email.toLowerCase().trim();
     const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
-    const assignedRole = cleanEmail === adminEmail ? 'admin' : 'user';
-
-    let existingGoogleUser = null;
-    if (isDbConnected) {
-      existingGoogleUser = await User.findOne({
-        $or: [
-          { email: cleanEmail },
-          { providerId: googleId, authProvider: 'google' },
-        ],
-      });
-    }
-    const storeGoogleUser = findUserInStore(cleanEmail);
-    const isGoogleAdmin = assignedRole === 'admin' || existingGoogleUser?.role === 'admin' || storeGoogleUser?.role === 'admin';
-
-    // 🚨 BẪY BẢO MẬT: TỪ CHỐI TÀI KHOẢN ADMIN ĐĂNG NHẬP QUA CỔNG GOOGLE CỦA USER THƯỜNG
-    if (isGoogleAdmin) {
-      const telemetry = extractTelemetry(req);
-      try {
-        await AdminAuditLog.create({
-          action: 'BLOCKED_AT_USER_PORTAL',
-          email: cleanEmail,
-          ip: telemetry.ip,
-          location: telemetry.location,
-          userAgent: telemetry.userAgent,
-          timeVn: telemetry.timeVn,
-          details: { attemptFrom: 'Google OAuth User Portal', reason: 'Admin Google account login attempt at user portal' },
-        });
-      } catch (_) {}
-      sendAdminSecurityAlertEmail({
-        action: 'BLOCKED_AT_USER_PORTAL',
-        targetEmail: cleanEmail,
-        ip: telemetry.ip,
-        location: telemetry.location,
-        userAgent: telemetry.userAgent,
-        timeVn: telemetry.timeVn,
-        details: { reason: 'Admin attempt via Google OAuth at regular user login portal' },
-      }).catch(() => {});
-
-      return sendError(res, {
-        message: 'Đăng nhập không thành công. Vui lòng thử lại.',
-        status: 401,
-      });
-    }
-
+    const defaultRole = cleanEmail === adminEmail ? 'admin' : 'user';
+    const fallbackGoogleAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80';
     const adminAvatar = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
-    const finalAvatar = (assignedRole === 'admin')
-      ? adminAvatar
-      : (picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80');
+
+    const defaultProfileMusic = {
+      enabled: true,
+      title: 'Lofi Chill - Đêm muộn ở văn phòng',
+      artist: 'Freedom Chill Beat',
+      sourceType: 'preset',
+      presetId: 'lofi_night',
+      url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
+    };
 
     let user = null;
 
-    if (isDbConnected) {
-      // Tìm tài khoản theo email hoặc theo cặp provider + providerId (googleId)
-      user = await User.findOne({
-        $or: [
-          { email: cleanEmail },
-          { providerId: googleId, authProvider: 'google' },
-        ],
-      });
+    if (checkDbReady()) {
+      // Tìm tài khoản hiện có theo email (giữ nguyên mọi role 'admin' / 'user' cũ) hoặc googleId
+      const orClauses = [{ email: cleanEmail }];
+      if (googleId) {
+        orClauses.push({ googleId });
+        orClauses.push({ providerId: googleId, authProvider: 'google' });
+      }
+      const existingUser = await User.findOne({ $or: orClauses });
 
-      if (user) {
-        // Hợp nhất tài khoản: cập nhật nếu chưa có
-        if (name && (!user.name || user.name === 'Thành viên')) {
-          user.name = name.trim();
+      if (existingUser) {
+        // Tự động liên kết googleId vào tài khoản có sẵn, giữ nguyên role ('admin' / 'user') & dữ liệu cũ
+        const updateFields = {
+          isVerified: true,
+        };
+        if (googleId) {
+          updateFields.googleId = googleId;
+          if (!existingUser.providerId) {
+            updateFields.providerId = googleId;
+          }
         }
-        if (picture && (!user.avatar || user.avatar.includes('/images/man.jpg'))) {
-          user.avatar = finalAvatar;
+        if (!existingUser.authProvider) {
+          updateFields.authProvider = 'google';
         }
-        if (!user.providerId) {
-          user.providerId = googleId;
+        if (!existingUser.role) {
+          updateFields.role = defaultRole;
         }
-        if (!user.authProvider || user.authProvider === 'local') {
-          user.authProvider = 'google';
+        if (name && (!existingUser.name || existingUser.name === 'Thành viên')) {
+          updateFields.name = name.trim();
         }
-        user.isVerified = true;
-        await user.save();
+        const hasMissingOrDefaultAvatar =
+          !existingUser.avatar ||
+          existingUser.avatar.includes('/images/man.jpg') ||
+          existingUser.avatar.includes('google_avatar');
+        if (hasMissingOrDefaultAvatar && picture) {
+          updateFields.avatar = picture;
+        }
+
+        user = await User.findByIdAndUpdate(
+          existingUser._id,
+          { $set: updateFields },
+          { new: true }
+        );
       } else {
-        // Tạo tài khoản người dùng mới
+        const finalAvatar =
+          defaultRole === 'admin'
+            ? (picture || adminAvatar)
+            : (picture || fallbackGoogleAvatar);
+
         user = await User.create({
-          name: name ? name.trim() : 'Google User',
+          name: name ? name.trim() : (cleanEmail.split('@')[0] || 'Google User'),
           email: cleanEmail,
-          password: `google_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-          role: assignedRole,
+          role: defaultRole,
           authProvider: 'google',
-          providerId: googleId,
-          jobTitle: 'Thành viên cộng đồng',
+          googleId: googleId || undefined,
+          providerId: googleId || '',
+          jobTitle: defaultRole === 'admin' ? 'Quản Trị Viên Hệ Thống' : 'Thành viên cộng đồng',
           avatar: finalAvatar,
           coverImage: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
           bio: 'Đã kết nối tài khoản an toàn qua Google Identity Services.',
@@ -2735,10 +2751,11 @@ export const googleLogin = async (req, res) => {
         });
       }
 
+      const resolvedRole = user.role || defaultRole;
       const tokenVersion = user.tokenVersion !== undefined ? user.tokenVersion : 0;
       const token = await signAccessToken({
         id: user._id,
-        role: user.role,
+        role: resolvedRole,
         name: user.name,
         email: user.email,
         jobTitle: user.jobTitle,
@@ -2749,90 +2766,100 @@ export const googleLogin = async (req, res) => {
         tokenVersion,
       });
 
-      const responseData = {
+      const responseUser = {
         _id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: resolvedRole,
         jobTitle: user.jobTitle,
         avatar: user.avatar,
         coverImage: user.coverImage,
         bio: user.bio,
+        googleId: user.googleId || googleId || '',
         customLayout: user.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
-        profileMusic: user.profileMusic || {
-          enabled: true,
-          title: 'Lofi Chill - Đêm muộn ở văn phòng',
-          artist: 'Freedom Chill Beat',
-          sourceType: 'preset',
-          presetId: 'lofi_night',
-          url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
-        },
+        profileMusic: user.profileMusic || defaultProfileMusic,
         socialLinks: user.socialLinks || {},
         authProvider: user.authProvider || 'google',
+        isVerified: true,
+      };
+
+      const responseData = {
+        ...responseUser,
         token,
         refreshToken,
       };
 
       saveUserToStore(responseData);
 
-      return sendSuccess(res, {
+      return res.status(200).json({
+        success: true,
         message: 'Đăng nhập Google thành công!',
+        token,
+        refreshToken,
+        user: responseUser,
         data: responseData,
       });
     }
 
-    // Mock store nếu DB không khả dụng
+    // Fallback persistent store nếu DB chưa khả dụng
     const existingStoreUser = findUserInStore(cleanEmail);
     const targetId = existingStoreUser ? existingStoreUser._id : `u_google_${Date.now()}`;
+    const resolvedRole = existingStoreUser?.role || defaultRole;
+    const resolvedAvatar =
+      existingStoreUser?.avatar &&
+      !existingStoreUser.avatar.includes('/images/man.jpg') &&
+      !existingStoreUser.avatar.includes('google_avatar')
+        ? existingStoreUser.avatar
+        : (picture || (resolvedRole === 'admin' ? adminAvatar : fallbackGoogleAvatar));
 
-    const mockUser = {
+    const storeUserPayload = {
       ...(existingStoreUser || {}),
       _id: targetId,
-      name: name ? name.trim() : (existingStoreUser?.name || 'Google User'),
+      name: existingStoreUser?.name || (name ? name.trim() : 'Google User'),
       email: cleanEmail,
-      role: existingStoreUser?.role || assignedRole,
-      jobTitle: existingStoreUser?.jobTitle || 'Thành viên cộng đồng',
-      avatar: finalAvatar,
+      role: resolvedRole,
+      jobTitle: existingStoreUser?.jobTitle || (resolvedRole === 'admin' ? 'Quản Trị Viên Hệ Thống' : 'Thành viên cộng đồng'),
+      avatar: resolvedAvatar,
       coverImage: existingStoreUser?.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
       bio: existingStoreUser?.bio || 'Đã kết nối tài khoản an toàn qua Google Identity Services.',
-      authProvider: 'google',
-      providerId: googleId,
+      authProvider: existingStoreUser?.authProvider || 'google',
+      googleId: googleId || existingStoreUser?.googleId || '',
+      providerId: existingStoreUser?.providerId || googleId || '',
       isVerified: true,
       customLayout: existingStoreUser?.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
-      profileMusic: existingStoreUser?.profileMusic || {
-        enabled: true,
-        title: 'Lofi Chill - Đêm muộn ở văn phòng',
-        artist: 'Freedom Chill Beat',
-        sourceType: 'preset',
-        presetId: 'lofi_night',
-        url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
-      },
+      profileMusic: existingStoreUser?.profileMusic || defaultProfileMusic,
     };
 
-    saveUserToStore(mockUser);
+    saveUserToStore(storeUserPayload);
 
-    const tokenVersion = mockUser.tokenVersion !== undefined ? mockUser.tokenVersion : 0;
+    const tokenVersion = storeUserPayload.tokenVersion !== undefined ? storeUserPayload.tokenVersion : 0;
     const token = await signAccessToken({
-      id: mockUser._id,
-      role: mockUser.role,
-      name: mockUser.name,
-      email: mockUser.email,
+      id: storeUserPayload._id,
+      role: resolvedRole,
+      name: storeUserPayload.name,
+      email: storeUserPayload.email,
       tokenVersion,
     });
     const refreshToken = await signRefreshToken({
-      id: mockUser._id,
+      id: storeUserPayload._id,
       tokenVersion,
     });
 
-    const responseData = {
-      ...mockUser,
+    const responseUser = { ...storeUserPayload };
+    delete responseUser.password;
+    delete responseUser.rawPassword;
+
+    return res.status(200).json({
+      success: true,
+      message: 'Đăng nhập Google thành công!',
       token,
       refreshToken,
-    };
-
-    return sendSuccess(res, {
-      message: 'Đăng nhập Google thành công!',
-      data: responseData,
+      user: responseUser,
+      data: {
+        ...responseUser,
+        token,
+        refreshToken,
+      },
     });
   } catch (error) {
     console.error('[AUTH GOOGLE ERROR]:', error);

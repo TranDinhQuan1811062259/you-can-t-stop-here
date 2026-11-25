@@ -1,5 +1,5 @@
 import User from '../models/User.js';
-import { isDbConnected } from '../config/db.js';
+import { ensureDbConnected, checkDbReady } from '../config/db.js';
 import { verifyToken } from '../utils/token.js';
 import { sendError } from '../utils/apiResponse.js';
 import { findUserInStore } from '../utils/persistentStore.js';
@@ -15,7 +15,9 @@ export const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
       const decoded = await verifyToken(token);
 
-      if (isDbConnected) {
+      await ensureDbConnected().catch(() => false);
+
+      if (checkDbReady()) {
         const query = [];
         if (decoded.id && String(decoded.id).match(/^[0-9a-fA-F]{24}$/)) {
           query.push({ _id: decoded.id });
@@ -100,7 +102,8 @@ export const optionalProtect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
       const decoded = await verifyToken(token);
 
-      if (isDbConnected) {
+      await ensureDbConnected().catch(() => false);
+      if (checkDbReady()) {
         const query = [];
         if (decoded.id && String(decoded.id).match(/^[0-9a-fA-F]{24}$/)) {
           query.push({ _id: decoded.id });

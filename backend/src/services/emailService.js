@@ -180,6 +180,49 @@ export const sendWelcomeNewsletter = async (toEmail) => {
   }
 };
 
+const buildOtpEmailHtml = (toEmail, otpCode, actionText) => `
+  <!DOCTYPE html>
+  <html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      body { margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; }
+      .otp-code { font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0f766e; font-family: monospace, sans-serif; display: inline-block; user-select: all; -webkit-user-select: all; white-space: nowrap; }
+    </style>
+  </head>
+  <body style="margin: 0; padding: 24px 12px; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; border-collapse: separate;">
+      <tr>
+        <td bgcolor="#0f172a" style="background-color: #0f172a; background-image: linear-gradient(135deg, #0f172a 0%, #0d9488 100%); padding: 36px 24px 32px; text-align: center; color: #ffffff; border-radius: 14px 14px 0 0; height: auto;">
+          <div style="margin: 0 0 12px 0; line-height: 1.5;">
+            <span style="display: inline-block; background-color: #1e293b; background: rgba(255,255,255,0.2); color: #ffffff; padding: 6px 14px; border-radius: 999px; font-size: 11px; line-height: 1.4; text-transform: uppercase; font-weight: 700;">Xác Thực Bảo Mật</span>
+          </div>
+          <h2 style="margin: 0; padding: 0; font-size: 22px; line-height: 1.45; font-weight: 800; color: #ffffff;">YOU CAN'T STOP HERE</h2>
+          <p style="margin: 10px 0 0; font-size: 13px; line-height: 1.5; color: #e2e8f0;">Mã xác thực gửi tới: <strong style="color: #ffffff;">${toEmail}</strong></p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 32px 26px; line-height: 1.6;">
+          <p style="margin: 0 0 12px;">Xin chào bạn,</p>
+          <p style="margin: 0 0 20px;">Chúng tôi nhận được yêu cầu <strong>${actionText}</strong> trên hệ thống You Can't Stop Here. Đây là mã xác thực OTP của bạn:</p>
+          <div style="text-align: center; margin: 26px 0; padding: 22px; background-color: #f0fdfa; border: 2px dashed #0d9488; border-radius: 12px;">
+            <span class="otp-code" style="font-size: 36px; line-height: 1.25; font-weight: 800; letter-spacing: 8px; color: #0f766e; font-family: monospace, sans-serif; display: inline-block; user-select: all; -webkit-user-select: all; white-space: nowrap;">${otpCode}</span>
+            <p style="margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: #0d9488; font-weight: 600;">Mã có hiệu lực trong 5 phút</p>
+          </div>
+          <p style="font-size: 13px; line-height: 1.55; color: #64748b; margin: 0;">Nếu không phải bạn yêu cầu, vui lòng bỏ qua thư này. Không cung cấp mã xác nhận này cho bất kỳ ai để đảm bảo an toàn cho tài khoản.</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="background-color: #f8fafc; padding: 18px 24px; text-align: center; font-size: 12px; line-height: 1.5; color: #64748b; border-top: 1px solid #f1f5f9; border-radius: 0 0 14px 14px;">
+          © 2026 YOU CAN'T STOP HERE • Không gian an toàn và sẻ chia của người đi làm
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>
+`;
+
 /**
  * Gửi Mã Xác Thực OTP (6 số) đến Email chính chủ
  */
@@ -188,49 +231,10 @@ export const sendOtpEmail = async (toEmail, otpCode, type = 'login') => {
   const actionText = isRegister ? 'tạo tài khoản mới' : 'đăng nhập tài khoản';
   const subject = `[${otpCode}] là mã xác thực ${actionText} của bạn - You Can't Stop Here`;
   const textContent = `Mã xác thực của bạn là: ${otpCode}. Mã có hiệu lực trong 5 phút. Vui lòng không chia sẻ mã này với bất kỳ ai.`;
+  const htmlContent = buildOtpEmailHtml(toEmail, otpCode, actionText);
 
   // 1. Ưu tiên gửi qua Brevo HTTP API nếu có BREVO_API_KEY
   if (process.env.BREVO_API_KEY) {
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html lang="vi">
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; }
-          .wrapper { width: 100%; max-width: 580px; margin: 30px auto; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 6px 24px rgba(0,0,0,0.07); border: 1px solid #e2e8f0; }
-          .header { background: linear-gradient(135deg, #0f172a 0%, #0d9488 100%); padding: 32px 24px; text-align: center; color: #ffffff; }
-          .badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 999px; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
-          .content { padding: 32px 26px; line-height: 1.6; }
-          .otp-card { text-align: center; margin: 26px 0; padding: 22px; background: #f0fdfa; border: 2px dashed #0d9488; border-radius: 12px; }
-          .otp-code { font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0f766e; font-family: monospace, sans-serif; display: inline-block; user-select: all; -webkit-user-select: all; }
-          .footer { background: #f8fafc; padding: 18px 24px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; }
-        </style>
-      </head>
-      <body>
-        <div class="wrapper">
-          <div class="header">
-            <span class="badge">Xác Thực Bảo Mật</span>
-            <h2 style="margin: 0; font-size: 22px;">YOU CAN'T STOP HERE</h2>
-            <p style="margin: 6px 0 0; opacity: 0.85; font-size: 13px;">Mã xác thực gửi tới: ${toEmail}</p>
-          </div>
-          <div class="content">
-            <p>Xin chào bạn,</p>
-            <p>Chúng tôi nhận được yêu cầu <strong>${actionText}</strong> trên hệ thống You Can't Stop Here. Đây là mã xác thực OTP của bạn:</p>
-            <div class="otp-card">
-              <span class="otp-code">${otpCode}</span>
-              <p style="margin: 10px 0 0; font-size: 13px; color: #0d9488; font-weight: 600;">Mã có hiệu lực trong 5 phút</p>
-            </div>
-            <p style="font-size: 13px; color: #64748b;">Nếu không phải bạn yêu cầu, vui lòng bỏ qua thư này. Không cung cấp mã xác nhận này cho bất kỳ ai để đảm bảo an toàn cho tài khoản.</p>
-          </div>
-          <div class="footer">
-            © 2026 YOU CAN'T STOP HERE • Không gian an toàn và sẻ chia của người đi làm
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
     const brevoRes = await sendEmailViaBrevo({
       toEmail,
       subject,
@@ -247,49 +251,6 @@ export const sendOtpEmail = async (toEmail, otpCode, type = 'login') => {
     const transporter = await getTransporter();
     const senderEmail = process.env.EMAIL_USER || 'security@cantstophere.com';
     const senderName = "You Can't Stop Here - Bảo Mật";
-
-    const isRegister = type === 'register';
-    const actionText = isRegister ? 'tạo tài khoản mới' : 'đăng nhập tài khoản';
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html lang="vi">
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; }
-          .wrapper { width: 100%; max-width: 580px; margin: 30px auto; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 6px 24px rgba(0,0,0,0.07); border: 1px solid #e2e8f0; }
-          .header { background: linear-gradient(135deg, #0f172a 0%, #0d9488 100%); padding: 32px 24px; text-align: center; color: #ffffff; }
-          .badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 999px; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
-          .content { padding: 32px 26px; line-height: 1.6; }
-          .otp-card { text-align: center; margin: 26px 0; padding: 22px; background: #f0fdfa; border: 2px dashed #0d9488; border-radius: 12px; }
-          .otp-code { font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0f766e; font-family: monospace, sans-serif; display: inline-block; user-select: all; -webkit-user-select: all; }
-          .footer { background: #f8fafc; padding: 18px 24px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; }
-        </style>
-      </head>
-      <body>
-        <div class="wrapper">
-          <div class="header">
-            <span class="badge">Xác Thực Bảo Mật</span>
-            <h2 style="margin: 0; font-size: 22px;">YOU CAN'T STOP HERE</h2>
-            <p style="margin: 6px 0 0; opacity: 0.85; font-size: 13px;">Mã xác thực gửi tới: ${toEmail}</p>
-          </div>
-          <div class="content">
-            <p>Xin chào bạn,</p>
-            <p>Chúng tôi nhận được yêu cầu <strong>${actionText}</strong> trên hệ thống You Can't Stop Here. Đây là mã xác thực OTP của bạn:</p>
-            <div class="otp-card">
-              <span class="otp-code">${otpCode}</span>
-              <p style="margin: 10px 0 0; font-size: 13px; color: #0d9488; font-weight: 600;">Mã có hiệu lực trong 5 phút</p>
-            </div>
-            <p style="font-size: 13px; color: #64748b;">Nếu không phải bạn yêu cầu, vui lòng bỏ qua thư này. Không cung cấp mã xác nhận này cho bất kỳ ai để đảm bảo an toàn cho tài khoản.</p>
-          </div>
-          <div class="footer">
-            © 2026 YOU CAN'T STOP HERE • Không gian an toàn và sẻ chia của người đi làm
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
 
     const mailOptions = {
       from: `"${senderName}" <${senderEmail}>`,

@@ -155,6 +155,7 @@ export const verifyMailerConnection = async () => {
 
 /**
  * Tạo giao diện HTML email chứa mã OTP hiện đại, ấm áp cho You Can't Stop Here
+ * Tối ưu tương thích Gmail desktop/mobile: table wrapper, fallback màu nền đặc, không overflow:hidden hay height cố định
  */
 const generateOtpEmailTemplate = (toEmail, otpCode, actionName = 'kích hoạt tài khoản mới') => {
   return `
@@ -166,49 +167,45 @@ const generateOtpEmailTemplate = (toEmail, otpCode, actionName = 'kích hoạt t
       <title>Mã Xác Thực OTP - You Can't Stop Here</title>
       <style>
         body { margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; }
-        .wrapper { width: 100%; max-width: 580px; margin: 30px auto; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 6px 24px rgba(0,0,0,0.07); border: 1px solid #e2e8f0; }
-        .header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0d9488 100%); padding: 32px 24px; text-align: center; color: #ffffff; }
-        .badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 4px 14px; border-radius: 999px; font-size: 11px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.5px; }
-        .header h2 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 0.5px; }
-        .header p { margin: 6px 0 0; opacity: 0.85; font-size: 13px; }
-        .content { padding: 32px 28px; line-height: 1.6; }
-        .greeting { font-size: 16px; font-weight: 600; color: #0f172a; margin-bottom: 12px; }
-        .desc { font-size: 14px; color: #475569; margin: 0 0 20px; }
-        .otp-card { text-align: center; margin: 26px 0; padding: 24px; background: #f0fdfa; border: 2px dashed #0d9488; border-radius: 12px; }
-        .otp-code { font-size: 38px; font-weight: 800; letter-spacing: 8px; color: #0f766e; font-family: 'Courier New', Courier, monospace, sans-serif; display: inline-block; user-select: all; -webkit-user-select: all; }
-        .otp-expiry { margin: 12px 0 0; font-size: 13px; color: #0d9488; font-weight: 600; }
-        .warning-box { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 13px; color: #92400e; margin: 20px 0; }
-        .footer { background: #f8fafc; padding: 20px 24px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; }
+        .otp-code { font-size: 38px; font-weight: 800; letter-spacing: 8px; color: #0f766e; font-family: 'Courier New', Courier, monospace, sans-serif; display: inline-block; user-select: all; -webkit-user-select: all; white-space: nowrap; }
       </style>
     </head>
-    <body>
-      <div class="wrapper">
-        <div class="header">
-          <span class="badge">Xác Thực Bảo Mật</span>
-          <h2>YOU CAN'T STOP HERE</h2>
-          <p>Mã xác thực gửi tới: <strong>${toEmail}</strong></p>
-        </div>
-        <div class="content">
-          <p class="greeting">Xin chào bạn,</p>
-          <p class="desc">
-            Chúng tôi nhận được yêu cầu <strong>${actionName}</strong> trên hệ thống <strong>You Can't Stop Here</strong>. 
-            Vui lòng sử dụng mã xác thực OTP 6 số bên dưới để tiếp tục:
-          </p>
-          <div class="otp-card">
-            <span class="otp-code">${otpCode}</span>
-            <p class="otp-expiry">⏳ Mã xác thực có hiệu lực trong vòng 5 phút</p>
-          </div>
-          <div class="warning-box">
-            🔒 <strong>Lưu ý bảo mật:</strong> Tuyệt đối không chia sẻ mã xác thực này cho bất kỳ ai để bảo vệ tài khoản của bạn.
-          </div>
-          <p class="desc" style="font-size: 12px; color: #94a3b8;">
-            Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email. Tài khoản của bạn vẫn được an toàn.
-          </p>
-        </div>
-        <div class="footer">
-          © 2026 YOU CAN'T STOP HERE • Không gian an toàn và sẻ chia của người đi làm
-        </div>
-      </div>
+    <body style="margin: 0; padding: 24px 12px; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; border-collapse: separate;">
+        <tr>
+          <td bgcolor="#0f172a" style="background-color: #0f172a; background-image: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0d9488 100%); padding: 36px 24px 32px; text-align: center; color: #ffffff; border-radius: 14px 14px 0 0; height: auto;">
+            <div style="margin: 0 0 12px 0; line-height: 1.5;">
+              <span style="display: inline-block; background-color: #1e293b; background: rgba(255,255,255,0.2); color: #ffffff; padding: 6px 16px; border-radius: 999px; font-size: 11px; line-height: 1.4; text-transform: uppercase; font-weight: 700; letter-spacing: 0.6px;">Xác Thực Bảo Mật</span>
+            </div>
+            <h2 style="margin: 0; padding: 0; font-size: 22px; line-height: 1.45; font-weight: 800; letter-spacing: 0.5px; color: #ffffff;">YOU CAN'T STOP HERE</h2>
+            <p style="margin: 10px 0 0; font-size: 13px; line-height: 1.5; color: #e2e8f0;">Mã xác thực gửi tới: <strong style="color: #ffffff;">${toEmail}</strong></p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 32px 28px; line-height: 1.6;">
+            <p style="font-size: 16px; font-weight: 600; color: #0f172a; margin: 0 0 12px;">Xin chào bạn,</p>
+            <p style="font-size: 14px; color: #475569; margin: 0 0 20px; line-height: 1.6;">
+              Chúng tôi nhận được yêu cầu <strong>${actionName}</strong> trên hệ thống <strong>You Can't Stop Here</strong>.
+              Vui lòng sử dụng mã xác thực OTP 6 số bên dưới để tiếp tục:
+            </p>
+            <div style="text-align: center; margin: 26px 0; padding: 24px; background-color: #f0fdfa; border: 2px dashed #0d9488; border-radius: 12px;">
+              <span class="otp-code" style="font-size: 38px; line-height: 1.25; font-weight: 800; letter-spacing: 8px; color: #0f766e; font-family: 'Courier New', Courier, monospace, sans-serif; display: inline-block; user-select: all; -webkit-user-select: all; white-space: nowrap;">${otpCode}</span>
+              <p style="margin: 12px 0 0; font-size: 13px; line-height: 1.45; color: #0d9488; font-weight: 600;">⏳ Mã xác thực có hiệu lực trong vòng 5 phút</p>
+            </div>
+            <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 13px; line-height: 1.55; color: #92400e; margin: 20px 0;">
+              🔒 <strong>Lưu ý bảo mật:</strong> Tuyệt đối không chia sẻ mã xác thực này cho bất kỳ ai để bảo vệ tài khoản của bạn.
+            </div>
+            <p style="font-size: 12px; color: #94a3b8; margin: 0; line-height: 1.55;">
+              Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email. Tài khoản của bạn vẫn được an toàn.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background-color: #f8fafc; padding: 20px 24px; text-align: center; font-size: 12px; line-height: 1.5; color: #64748b; border-top: 1px solid #f1f5f9; border-radius: 0 0 14px 14px;">
+            © 2026 YOU CAN'T STOP HERE • Không gian an toàn và sẻ chia của người đi làm
+          </td>
+        </tr>
+      </table>
     </body>
     </html>
   `;

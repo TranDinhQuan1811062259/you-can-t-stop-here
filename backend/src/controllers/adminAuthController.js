@@ -4,7 +4,7 @@ import { extractTelemetry } from '../utils/telemetryHelper.js';
 import { sendAdminSecurityAlertEmail } from '../services/emailService.js';
 import { signAccessToken, signRefreshToken } from '../utils/token.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
-import { isDbConnected } from '../config/db.js';
+import { ensureDbConnected, checkDbReady } from '../config/db.js';
 import { findUserInStore, defaultStoreUsers } from '../utils/persistentStore.js';
 import { comparePassword } from '../utils/hash.js';
 
@@ -28,7 +28,8 @@ export const adminLogin = async (req, res) => {
   try {
     let adminUser = null;
 
-    if (isDbConnected) {
+    await ensureDbConnected().catch(() => false);
+    if (checkDbReady()) {
       adminUser = await User.findOne({ email: cleanEmail });
     }
 
@@ -204,6 +205,13 @@ export const adminTelemetry = async (req, res) => {
  */
 export const getSecurityLogs = async (req, res) => {
   try {
+    await ensureDbConnected().catch(() => false);
+    if (!checkDbReady()) {
+      return sendSuccess(res, {
+        message: 'Cơ sở dữ liệu chưa sẵn sàng, tạm hiển thị nhật ký trống.',
+        data: [],
+      });
+    }
     const logs = await AdminAuditLog.find()
       .select('action email ip location userAgent timeVn details createdAt')
       .sort({ createdAt: -1 })

@@ -1,38 +1,40 @@
 import mongoose from 'mongoose';
 
-const otpTokenSchema = new mongoose.Schema(
+const otpVerificationSchema = new mongoose.Schema(
   {
-    target: {
+    email: {
       type: String,
       required: true,
       unique: true,
-      trim: true,
       lowercase: true,
+      trim: true,
+      index: true,
     },
-    code: {
+    otp: {
       type: String,
       required: true,
       trim: true,
     },
-    type: {
-      type: String,
-      enum: ['email', 'phone'],
-      default: 'email',
-    },
     purpose: {
       type: String,
+      enum: ['login', 'register'],
       default: 'login',
-      trim: true,
       lowercase: true,
+      trim: true,
+    },
+    expiresAt: {
+      type: Date,
+      required: true,
     },
     attempts: {
       type: Number,
       default: 0,
       min: 0,
     },
-    expiresAt: {
-      type: Date,
-      required: true,
+    targetType: {
+      type: String,
+      enum: ['email', 'phone'],
+      default: 'email',
     },
     pendingName: {
       type: String,
@@ -54,6 +56,6 @@ const otpTokenSchema = new mongoose.Schema(
   }
 );
 
-otpTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+otpVerificationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export default mongoose.model('OtpToken', otpTokenSchema);
+export default mongoose.model('OtpVerification', otpVerificationSchema);

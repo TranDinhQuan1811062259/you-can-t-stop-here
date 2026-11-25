@@ -22,9 +22,7 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: function () {
-        return !this.authProvider || this.authProvider === 'local';
-      },
+      required: false,
       minlength: [6, 'Mật khẩu phải có ít nhất 6 ký tự'],
     },
     role: {
@@ -32,7 +30,7 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'admin'],
       default: 'user',
     },
-    // Trạng thái kích hoạt và mã OTP cho luồng đăng ký bằng email
+    // Trạng thái kích hoạt và mã OTP cho luồng đăng ký / đăng nhập bằng email
     isVerified: {
       type: Boolean,
       default: false,
@@ -57,6 +55,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ['local', 'google', 'facebook', 'x', 'linkedin', 'github'],
       default: 'local',
+    },
+    googleId: {
+      type: String,
+      sparse: true,
     },
     providerId: {
       type: String,
