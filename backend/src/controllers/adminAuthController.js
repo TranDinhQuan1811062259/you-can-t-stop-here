@@ -1,12 +1,167 @@
+import crypto from 'crypto';
 import AdminAuditLog from '../models/AdminAuditLog.js';
 import User from '../models/User.js';
 import { extractTelemetry } from '../utils/telemetryHelper.js';
 import { sendAdminSecurityAlertEmail } from '../services/emailService.js';
-import { signAccessToken, signRefreshToken } from '../utils/token.js';
+import { signAccessToken, signRefreshToken, signAdminToken } from '../utils/token.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { ensureDbConnected, checkDbReady } from '../config/db.js';
 import { findUserInStore, defaultStoreUsers } from '../utils/persistentStore.js';
 import { comparePassword } from '../utils/hash.js';
+
+// Bộ đếm chống brute-force Mã PIN Quản Trị: tối đa 5 lần sai trong 15 phút theo userId / IP
+const PIN_MAX_ATTEMPTS = 5;
+const PIN_LOCK_WINDOW_MS = 15 * 60 * 1000;
+const adminPinAttempts = new Map();
+
+const pinAttemptsCleanup = setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of adminPinAttempts.entries()) {
+    if (!entry || (entry.lockedUntil && now > entry.lockedUntil) || now - entry.windowStart > PIN_LOCK_WINDOW_MS) {
+      adminPinAttempts.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
+if (pinAttemptsCleanup.unref) {
+  pinAttemptsCleanup.unref();
+}
+
+const safeComparePin = (inputPin, expectedPin) => {
+  const a = Buffer.from(String(inputPin || ''), 'utf8');
+  const b = Buffer.from(String(expectedPin || ''), 'utf8');
+  if (a.length !== b.length || b.length === 0) return false;
+  return crypto.timingSafeEqual(a, b);
+};
+
+/**
+ * Xác thực Mã PIN Quản Trị (POST /api/admin/verify-pin)
+ * Yêu cầu đã đăng nhập và req.user.role === 'admin'. Cấp adminToken có hiệu lực 2 giờ.
+ */
+export const verifyAdminPin = async (req, res) => {
+  const userId = String(req.user?._id || req.user?.id || '').trim();
+  const userEmail = String(req.user?.email || '').toLowerCase().trim();
+  const attemptKey = userId ? `user:${userId}` : `ip:${req.ip || 'unknown'}`;
+  const now = Date.now();
+
+  let record = adminPinAttempts.get(attemptKey);
+  if (record) {
+    if (record.lockedUntil && now < record.lockedUntil) {
+      const waitMinutes = Math.max(1, Math.ceil((record.lockedUntil - now) / 60000));
+      return res.status(429).json({
+        success: false,
+        requireAdminPin: true,
+        message: `Bạn đã nhập sai Mã PIN quá ${PIN_MAX_ATTEMPTS} lần. Vui lòng thử lại sau ${waitMinutes} phút!`,
+      });
+    }
+    if (now - record.windowStart > PIN_LOCK_WINDOW_MS) {
+      record = { count: 0, windowStart: now, lockedUntil: null };
+      adminPinAttempts.set(attemptKey, record);
+    }
+  }
+
+  const submittedPin = String(req.body?.pin ?? '').trim();
+  const expectedPin = String(process.env.ADMIN_SECRET_PIN || '261126').trim();
+
+  if (!submittedPin) {
+    return res.status(400).json({
+      success: false,
+      requireAdminPin: true,
+      message: 'Vui lòng nhập Mã PIN Quản Trị.',
+    });
+  }
+
+  if (!safeComparePin(submittedPin, expectedPin)) {
+    const nextCount = (record?.count || 0) + 1;
+    const lockedUntil = nextCount >= PIN_MAX_ATTEMPTS ? now + PIN_LOCK_WINDOW_MS : null;
+    adminPinAttempts.set(attemptKey, {
+      count: nextCount,
+      windowStart: record?.windowStart || now,
+      lockedUntil,
+    });
+
+    const telemetry = extractTelemetry(req);
+    ensureDbConnected()
+      .then(() => {
+        if (checkDbReady()) {
+          return AdminAuditLog.create({
+            action: 'LOGIN_FAILED',
+            email: userEmail || userId,
+            ip: telemetry.ip,
+            location: telemetry.location,
+            userAgent: telemetry.userAgent,
+            timeVn: telemetry.timeVn,
+            details: { reason: `Invalid Admin PIN attempt (${nextCount}/${PIN_MAX_ATTEMPTS})` },
+          });
+        }
+        return null;
+      })
+      .catch(() => {});
+
+    if (lockedUntil) {
+      sendAdminSecurityAlertEmail({
+        action: 'LOGIN_FAILED',
+        targetEmail: userEmail || userId,
+        ip: telemetry.ip,
+        location: telemetry.location,
+        userAgent: telemetry.userAgent,
+        timeVn: telemetry.timeVn,
+        details: { reason: 'Admin PIN brute-force lockout triggered (5 failed attempts in 15m)' },
+      }).catch(() => {});
+
+      return res.status(429).json({
+        success: false,
+        requireAdminPin: true,
+        message: 'Bạn đã nhập sai Mã PIN quá 5 lần trong 15 phút. Cổng xác thực PIN tạm khóa 15 phút!',
+      });
+    }
+
+    const remaining = PIN_MAX_ATTEMPTS - nextCount;
+    return res.status(403).json({
+      success: false,
+      requireAdminPin: true,
+      message: `Mã PIN Quản Trị không chính xác. Bạn còn ${remaining} lần thử!`,
+    });
+  }
+
+  adminPinAttempts.delete(attemptKey);
+
+  try {
+    const adminToken = await signAdminToken({
+      id: userId,
+      role: req.user?.role || 'admin',
+      email: userEmail,
+    });
+
+    const telemetry = extractTelemetry(req);
+    ensureDbConnected()
+      .then(() => {
+        if (checkDbReady()) {
+          return AdminAuditLog.create({
+            action: 'LOGIN_SUCCESS',
+            email: userEmail || userId,
+            ip: telemetry.ip,
+            location: telemetry.location,
+            userAgent: telemetry.userAgent,
+            timeVn: telemetry.timeVn,
+            details: { portal: 'Admin PIN Gate Unlocked (2h)' },
+          });
+        }
+        return null;
+      })
+      .catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      message: 'Xác thực Mã PIN Quản Trị thành công!',
+      adminToken,
+    });
+  } catch (err) {
+    return sendError(res, {
+      message: err?.message || 'Không thể tạo token mở khóa Quản trị.',
+      status: 500,
+    });
+  }
+};
 
 /**
  * Đăng nhập Cổng Bảo Mật Admin Riêng Biệt (POST /api/admin/auth/login)

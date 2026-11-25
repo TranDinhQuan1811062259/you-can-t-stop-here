@@ -1,7 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { adminLogin, adminTelemetry, getSecurityLogs } from '../controllers/adminAuthController.js';
-import { authenticateToken, adminOnly } from '../middlewares/authMiddleware.js';
+import { adminLogin, adminTelemetry, getSecurityLogs, verifyAdminPin } from '../controllers/adminAuthController.js';
+import { authenticateToken, adminOnly, verifyAdminGate } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
@@ -17,13 +17,17 @@ const adminLoginLimiter = rateLimit({
   },
 });
 
-// 1. Đăng nhập Cổng Quản Trị
+// 1. Đăng nhập Cổng Quản Trị riêng (Isolated Gateway) & Telemetry
 router.post('/auth/login', adminLoginLimiter, adminLogin);
-
-// 2. Telemetry ghi nhận âm thầm lượt truy cập trang /admin-portal
 router.post('/auth/telemetry', adminTelemetry);
 
-// 3. Lấy 50 Security Logs mới nhất (Bảo vệ bởi JWT + Role Admin)
-router.get('/security-logs', authenticateToken, adminOnly, getSecurityLogs);
+// 2. Xác thực Mã PIN Quản Trị -> Cấp adminToken (2h) — Yêu cầu đã đăng nhập role Admin
+router.post('/verify-pin', authenticateToken, adminOnly, verifyAdminPin);
+
+// 3. Khóa cứng toàn bộ các route /api/admin/* phía dưới bằng JWT + Admin Role + verifyAdminGate (x-admin-token)
+router.use(authenticateToken, adminOnly, verifyAdminGate);
+
+// 4. Lấy 50 Security Logs mới nhất
+router.get('/security-logs', getSecurityLogs);
 
 export default router;

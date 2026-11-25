@@ -9,13 +9,30 @@ const apiClient = axios.create({
   },
 });
 
-// Interceptor cho Request: Gắn Bearer Token nếu người dùng đã đăng nhập
+// Interceptor cho Request: Gắn Bearer Token và x-admin-token cho các endpoint /api/admin/*
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token') || localStorage.getItem('freedom_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    const reqUrl = String(config.url || '');
+    const isAdminEndpoint = reqUrl.startsWith('/admin') || reqUrl.includes('/api/admin');
+    const isAdminPublicOrPinEndpoint =
+      reqUrl.includes('/admin/verify-pin') ||
+      reqUrl.includes('/admin/auth/login') ||
+      reqUrl.includes('/admin/auth/telemetry');
+
+    if (isAdminEndpoint && !isAdminPublicOrPinEndpoint) {
+      try {
+        const adminToken = sessionStorage.getItem('freedom_admin_token');
+        if (adminToken) {
+          config.headers['x-admin-token'] = adminToken;
+        }
+      } catch (_) {}
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -158,6 +175,7 @@ apiClient.interceptors.response.use(
           localStorage.removeItem('freedom_persisted_profile');
           sessionStorage.removeItem('token');
           sessionStorage.removeItem('user');
+          sessionStorage.removeItem('freedom_admin_token');
           window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
           notifySessionExpired();
         } catch (_) {}
@@ -166,6 +184,19 @@ apiClient.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
+    }
+
+    if (status === 403 && error.response?.data?.requireAdminPin) {
+      try {
+        sessionStorage.removeItem('freedom_admin_token');
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('freedom_admin_pin_required', {
+              detail: { message: error.response?.data?.message || 'Vui lòng xác thực mã PIN quản trị' },
+            })
+          );
+        }
+      } catch (_) {}
     }
 
     return Promise.reject(formatApiError(error));
@@ -194,6 +225,7 @@ function formatApiError(error) {
     message,
     status: error.response?.status,
     code: error.code,
+    requireAdminPin: Boolean(error.response?.data?.requireAdminPin),
   };
 }
 

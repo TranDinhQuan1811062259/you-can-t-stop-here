@@ -18,7 +18,20 @@ export const AdminSecurityConsolePage = () => {
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [logsError, setLogsError] = useState('');
 
+  // Trạng thái mở khóa Mã PIN Quản Trị (x-admin-token lưu trong sessionStorage)
+  const [adminToken, setAdminToken] = useState(() => {
+    try {
+      return sessionStorage.getItem('freedom_admin_token') || '';
+    } catch (_) {
+      return '';
+    }
+  });
+  const [pinInput, setPinInput] = useState('');
+  const [isVerifyingPin, setIsVerifyingPin] = useState(false);
+  const [pinError, setPinError] = useState('');
+
   const isAdminAuthenticated = Boolean(user && user.role === 'admin');
+  const isPinUnlocked = Boolean(isAdminAuthenticated && adminToken);
 
   // Ghi nhận âm thầm Telemetry lượt truy cập vào /admin-portal
   useEffect(() => {
@@ -29,9 +42,32 @@ export const AdminSecurityConsolePage = () => {
     } catch (_) {}
   }, []);
 
-  // Tải danh sách Audit Logs nếu đã đăng nhập quyền Admin
+  // Lắng nghe sự kiện Backend yêu cầu mở khóa lại Mã PIN Quản Trị (403 requireAdminPin)
+  useEffect(() => {
+    const handlePinRequired = (e) => {
+      try {
+        sessionStorage.removeItem('freedom_admin_token');
+      } catch (_) {}
+      setAdminToken('');
+      setLogs([]);
+      setPinError(e?.detail?.message || 'Phiên mở khóa PIN đã hết hạn. Vui lòng nhập lại Mã PIN Quản Trị!');
+    };
+    window.addEventListener('freedom_admin_pin_required', handlePinRequired);
+    return () => window.removeEventListener('freedom_admin_pin_required', handlePinRequired);
+  }, []);
+
+  // Xóa adminToken khỏi state nếu đăng xuất
+  useEffect(() => {
+    if (!isAdminAuthenticated) {
+      setAdminToken('');
+      setPinInput('');
+      setPinError('');
+    }
+  }, [isAdminAuthenticated]);
+
+  // Tải danh sách Audit Logs nếu đã đăng nhập Admin & đã mở khóa PIN (có x-admin-token)
   const fetchSecurityLogs = useCallback(async () => {
-    if (!isAdminAuthenticated) return;
+    if (!isPinUnlocked) return;
     setIsLoadingLogs(true);
     setLogsError('');
     try {
@@ -40,17 +76,62 @@ export const AdminSecurityConsolePage = () => {
       setLogs(Array.isArray(data) ? data : []);
     } catch (err) {
       console.warn('Lỗi lấy Security Logs:', err);
-      setLogsError(err.response?.data?.message || 'Không thể tải nhật ký an ninh do lỗi kết nối mạng.');
+      if (err?.requireAdminPin) {
+        try {
+          sessionStorage.removeItem('freedom_admin_token');
+        } catch (_) {}
+        setAdminToken('');
+        setPinError(err.message || 'Vui lòng xác thực Mã PIN Quản Trị!');
+      } else {
+        setLogsError(err.response?.data?.message || err.message || 'Không thể tải nhật ký an ninh do lỗi kết nối mạng.');
+      }
     } finally {
       setIsLoadingLogs(false);
     }
-  }, [isAdminAuthenticated]);
+  }, [isPinUnlocked]);
 
   useEffect(() => {
-    if (isAdminAuthenticated) {
+    if (isPinUnlocked) {
       fetchSecurityLogs();
     }
-  }, [isAdminAuthenticated, fetchSecurityLogs]);
+  }, [isPinUnlocked, fetchSecurityLogs]);
+
+  // Xác thực Mã PIN Quản Trị -> nhận adminToken (2h) lưu vào sessionStorage
+  const handleVerifyPin = async (e) => {
+    e.preventDefault();
+    const cleanPin = pinInput.trim();
+    if (!cleanPin || isVerifyingPin) return;
+
+    setIsVerifyingPin(true);
+    setPinError('');
+    playClickSound();
+
+    try {
+      const res = await apiClient.post('/admin/verify-pin', { pin: cleanPin });
+      const receivedAdminToken = res?.adminToken || res?.data?.adminToken || '';
+      if (!receivedAdminToken) {
+        throw new Error(res?.message || 'Không nhận được adminToken từ máy chủ.');
+      }
+      sessionStorage.setItem('freedom_admin_token', receivedAdminToken);
+      setAdminToken(receivedAdminToken);
+      setPinInput('');
+      setPinError('');
+    } catch (err) {
+      setPinError(err?.response?.data?.message || err?.message || 'Mã PIN Quản Trị không chính xác!');
+    } finally {
+      setIsVerifyingPin(false);
+    }
+  };
+
+  const handleLockAdminPin = () => {
+    playClickSound();
+    try {
+      sessionStorage.removeItem('freedom_admin_token');
+    } catch (_) {}
+    setAdminToken('');
+    setPinInput('');
+    setLogs([]);
+  };
 
   // Xử lý đăng nhập cổng Admin
   const handleAdminLogin = async (e) => {
@@ -163,11 +244,33 @@ export const AdminSecurityConsolePage = () => {
               &larr; Về Trang Chủ
             </button>
 
+            {isPinUnlocked && (
+              <button
+                type="button"
+                onClick={handleLockAdminPin}
+                style={{
+                  background: 'rgba(245, 158, 11, 0.15)',
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  color: '#fbbf24',
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                🔒 Khóa PIN
+              </button>
+            )}
+
             {isAdminAuthenticated && (
               <button
                 type="button"
                 onClick={() => {
                   playClickSound();
+                  try {
+                    sessionStorage.removeItem('freedom_admin_token');
+                  } catch (_) {}
                   logout();
                 }}
                 style={{
@@ -331,8 +434,135 @@ export const AdminSecurityConsolePage = () => {
               Được bảo vệ bởi Rate Limiter (tối đa 5 lần thử / 15 phút).
             </div>
           </div>
+        ) : !isPinUnlocked ? (
+          /* Đã đăng nhập role Admin -> Yêu cầu xác thực Mã PIN Quản Trị để nhận adminToken (2h) */
+          <div
+            style={{
+              maxWidth: '420px',
+              margin: '3rem auto',
+              background: '#0f172a',
+              border: '1px solid rgba(45, 212, 191, 0.35)',
+              borderRadius: '18px',
+              padding: '2rem',
+              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.65), 0 0 36px rgba(13, 148, 136, 0.14)',
+            }}
+          >
+            <div style={{ textAlign: 'center', marginBottom: '1.4rem' }}>
+              <div
+                style={{
+                  width: '54px',
+                  height: '54px',
+                  borderRadius: '50%',
+                  background: 'rgba(13, 148, 136, 0.16)',
+                  border: '1.5px solid rgba(45, 212, 191, 0.45)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 12px',
+                  fontSize: '1.5rem',
+                }}
+              >
+                🔐
+              </div>
+              <div
+                style={{
+                  display: 'inline-block',
+                  background: 'rgba(45, 212, 191, 0.12)',
+                  color: '#5eead4',
+                  border: '1px solid rgba(45, 212, 191, 0.3)',
+                  padding: '3px 10px',
+                  borderRadius: '999px',
+                  fontSize: '0.7rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.8px',
+                  marginBottom: '8px',
+                }}
+              >
+                ADMIN PIN GATE • 2H TOKEN
+              </div>
+              <h2 style={{ margin: 0, fontSize: '1.22rem', color: '#f8fafc' }}>Nhập Mã PIN Quản Trị</h2>
+              <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5 }}>
+                Tài khoản <strong style={{ color: '#e2e8f0' }}>{user?.email}</strong> đã xác thực. Vui lòng nhập Mã PIN Quản Trị để mở khóa API quản trị.
+              </p>
+            </div>
+
+            {pinError && (
+              <div
+                role="alert"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  color: '#f87171',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  fontSize: '0.82rem',
+                  marginBottom: '1rem',
+                  fontWeight: 600,
+                }}
+              >
+                ⚠️ {pinError}
+              </div>
+            )}
+
+            <form onSubmit={handleVerifyPin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', color: '#cbd5e1', marginBottom: '6px', fontWeight: 600 }}>
+                  Mã PIN Bảo Mật
+                </label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={pinInput}
+                  onChange={(e) => {
+                    setPinInput(e.target.value);
+                    setPinError('');
+                  }}
+                  placeholder="••••••"
+                  autoFocus
+                  required
+                  style={{
+                    width: '100%',
+                    background: '#1e293b',
+                    border: pinError ? '1.5px solid #ef4444' : '1.5px solid rgba(45, 212, 191, 0.4)',
+                    borderRadius: '10px',
+                    padding: '12px 14px',
+                    color: '#f8fafc',
+                    fontSize: '1.2rem',
+                    letterSpacing: '6px',
+                    textAlign: 'center',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isVerifyingPin || !pinInput.trim()}
+                style={{
+                  background: 'linear-gradient(135deg, #0d9488 0%, #0284c7 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '12px',
+                  fontSize: '0.9rem',
+                  fontWeight: 700,
+                  cursor: isVerifyingPin || !pinInput.trim() ? 'not-allowed' : 'pointer',
+                  opacity: isVerifyingPin || !pinInput.trim() ? 0.65 : 1,
+                  boxShadow: '0 6px 18px rgba(13, 148, 136, 0.35)',
+                }}
+              >
+                {isVerifyingPin ? 'Đang kiểm tra PIN...' : 'Mở Khóa Trang Quản Trị 🔓'}
+              </button>
+            </form>
+
+            <div style={{ marginTop: '1.2rem', textAlign: 'center', fontSize: '0.72rem', color: '#64748b' }}>
+              Giới hạn tối đa 5 lần nhập sai / 15 phút. Token tự hết hạn sau 2 giờ.
+            </div>
+          </div>
         ) : (
-          /* Đã đăng nhập: Bảng Giám Sát Security Logs */
+          /* Đã đăng nhập Admin & Mở khóa PIN: Bảng Giám Sát Security Logs */
           <div>
             <div
               style={{

@@ -189,6 +189,7 @@ export const AuthProvider = ({ children }) => {
         sessionStorage.removeItem('token');
         sessionStorage.removeItem('user');
         sessionStorage.removeItem('freedom_otp_resend_until');
+        sessionStorage.removeItem('freedom_admin_token');
       } catch (_) {}
       window.dispatchEvent(new Event('profile_updated'));
       window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
@@ -278,6 +279,7 @@ export const AuthProvider = ({ children }) => {
       sessionStorage.removeItem('token');
       sessionStorage.removeItem('user');
       sessionStorage.removeItem('freedom_otp_resend_until');
+      sessionStorage.removeItem('freedom_admin_token');
       // Chống gợi ý Google One Tap bật lên ngay khi vừa chủ động đăng xuất
       sessionStorage.setItem('google_onetap_dismissed', 'true');
     } catch (_) {}

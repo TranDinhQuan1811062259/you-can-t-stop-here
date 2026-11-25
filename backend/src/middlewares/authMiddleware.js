@@ -1,6 +1,6 @@
 import User from '../models/User.js';
 import { ensureDbConnected, checkDbReady } from '../config/db.js';
-import { verifyToken } from '../utils/token.js';
+import { verifyToken, verifyAdminToken } from '../utils/token.js';
 import { sendError } from '../utils/apiResponse.js';
 import { findUserInStore } from '../utils/persistentStore.js';
 
@@ -87,6 +87,42 @@ export const adminOnly = (req, res, next) => {
     message: 'Truy cập bị từ chối! Thao tác này chỉ dành cho Quản Trị Viên (Admin).',
     status: 403,
   });
+};
+
+/**
+ * Middleware khóa cứng cổng Quản Trị bằng x-admin-token (sau khi đã mở khóa Mã PIN 2h)
+ */
+export const verifyAdminGate = async (req, res, next) => {
+  const rawToken = req.headers['x-admin-token'];
+  const adminToken = typeof rawToken === 'string' ? rawToken.trim() : '';
+
+  if (!adminToken) {
+    return res.status(403).json({
+      success: false,
+      requireAdminPin: true,
+      message: 'Vui lòng xác thực mã PIN quản trị',
+    });
+  }
+
+  try {
+    const decoded = await verifyAdminToken(adminToken);
+    const reqUserId = String(req.user?._id || req.user?.id || '').trim();
+    if (!decoded || decoded.isAdminUnlocked !== true || (reqUserId && String(decoded.id) !== reqUserId)) {
+      return res.status(403).json({
+        success: false,
+        requireAdminPin: true,
+        message: 'Vui lòng xác thực mã PIN quản trị',
+      });
+    }
+    req.adminGate = decoded;
+    return next();
+  } catch (err) {
+    return res.status(403).json({
+      success: false,
+      requireAdminPin: true,
+      message: 'Vui lòng xác thực mã PIN quản trị',
+    });
+  }
 };
 
 /**

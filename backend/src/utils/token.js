@@ -10,6 +10,7 @@ const revokedTokensFilePath = path.join(dataDir, 'revoked_tokens.json');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'you_cant_stop_here_secret_key_2026_super_secure';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || `${JWT_SECRET}_refresh_v1`;
+const JWT_ADMIN_SECRET = process.env.JWT_ADMIN_SECRET || `${JWT_SECRET}_admin_gate_v1`;
 
 // Base64Url helpers
 const base64UrlEncode = (str) =>
@@ -307,4 +308,69 @@ export const verifyRefreshToken = async (token) => {
   }
 
   throw new Error('Refresh token không hợp lệ hoặc đã hết hạn');
+};
+
+/**
+ * Tạo Admin Gate Token ngắn hạn sau khi xác thực Mã PIN Quản Trị (Mặc định 2 giờ = 7200 giây)
+ */
+export const signAdminToken = async (payload, expiresInSeconds = 2 * 60 * 60) => {
+  const adminPayload = {
+    id: String(payload?.id || payload?._id || ''),
+    role: payload?.role || 'admin',
+    email: payload?.email || '',
+    isAdminUnlocked: true,
+    tokenType: 'admin_gate',
+  };
+  return signJwtGeneric(adminPayload, JWT_ADMIN_SECRET, expiresInSeconds);
+};
+
+/**
+ * Xác minh Admin Gate Token (x-admin-token header)
+ */
+export const verifyAdminToken = async (token) => {
+  if (!token) throw new Error('Thiếu mã xác thực Admin PIN token');
+  if (isTokenRevoked(token)) {
+    throw new Error('Admin token đã bị thu hồi');
+  }
+
+  try {
+    const jwtModule = await import('jsonwebtoken');
+    const jwt = jwtModule.default || jwtModule;
+    if (typeof jwt.verify === 'function') {
+      const decoded = jwt.verify(token, JWT_ADMIN_SECRET);
+      if (decoded.tokenType !== 'admin_gate' || decoded.isAdminUnlocked !== true) {
+        throw new Error('Admin token không hợp lệ');
+      }
+      return decoded;
+    }
+  } catch (err) {
+    if (err.name === 'TokenExpiredError' || err.message === 'Admin token không hợp lệ') {
+      throw err;
+    }
+  }
+
+  const parts = String(token).split('.');
+  if (parts.length === 3) {
+    const [encodedHeader, encodedPayload, signature] = parts;
+    const expectedSignature = crypto
+      .createHmac('sha256', JWT_ADMIN_SECRET)
+      .update(`${encodedHeader}.${encodedPayload}`)
+      .digest('base64')
+      .replace(/=/g, '')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_');
+
+    if (signature === expectedSignature) {
+      const payload = JSON.parse(base64UrlDecode(encodedPayload));
+      if (payload.exp && Date.now() / 1000 > payload.exp) {
+        throw new Error('Admin PIN token đã hết hạn');
+      }
+      if (payload.tokenType !== 'admin_gate' || payload.isAdminUnlocked !== true) {
+        throw new Error('Admin token không hợp lệ');
+      }
+      return payload;
+    }
+  }
+
+  throw new Error('Admin PIN token không hợp lệ hoặc đã hết hạn');
 };

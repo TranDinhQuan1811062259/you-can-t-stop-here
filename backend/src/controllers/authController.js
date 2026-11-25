@@ -1452,6 +1452,40 @@ export const sendLoginOtp = async (req, res) => {
 
     const { isEmail, cleanTarget } = normalizeOtpTarget(targetInput);
     const cleanPurpose = String(purpose || 'login').toLowerCase().trim() === 'register' ? 'register' : 'login';
+
+    // 🛡️ BẢO MẬT ADMIN: Chặn hoàn toàn việc xin mã OTP công khai cho tài khoản Admin (chống dò email)
+    if (isEmail) {
+      const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
+      let existingTargetUser = null;
+      if (checkDbReady()) {
+        existingTargetUser = await User.findOne({ email: cleanTarget }).select('role email');
+      }
+      const storeTargetUser = findUserInStore(cleanTarget);
+      if (
+        existingTargetUser?.role === 'admin' ||
+        storeTargetUser?.role === 'admin' ||
+        cleanTarget === adminEmail
+      ) {
+        req.otpDispatched = false;
+        const telemetry = extractTelemetry(req);
+        if (checkDbReady()) {
+          AdminAuditLog.create({
+            action: 'BLOCKED_AT_USER_PORTAL',
+            email: cleanTarget,
+            ip: telemetry.ip,
+            location: telemetry.location,
+            userAgent: telemetry.userAgent,
+            timeVn: telemetry.timeVn,
+            details: { attemptFrom: 'Public OTP Request (send-otp)', reason: 'Blocked public OTP generation for admin email' },
+          }).catch(() => {});
+        }
+        return sendError(res, {
+          message: 'Không thể gửi mã OTP cho yêu cầu này. Vui lòng đăng nhập qua Google OAuth chính chủ.',
+          status: 403,
+        });
+      }
+    }
+
     const otpCode = String(generateOtp()).trim();
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 phút
     const rawPass = req.body.password ? String(req.body.password) : '';
@@ -1702,13 +1736,22 @@ export const verifyOtpAndLogin = async (req, res) => {
 
     const matchedOtpRecord = { ...activeCandidate };
 
-    // Xóa bản ghi OTP ngay sau khi khớp hợp lệ
-    await clearOtpChallenge(cleanTarget, isEmail);
-
     const storeUser = findUserInStore(cleanTarget);
     const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
     const isAdm = cleanTarget === adminEmail || cleanTarget === (process.env.ADMIN_PHONE || '0901234567');
     const assignedRole = dbUser?.role || storeUser?.role || (isAdm ? 'admin' : 'user');
+
+    // 🛡️ BẢO MẬT ADMIN: Chặn tuyệt đối luồng OTP công khai cho tài khoản Admin
+    if (assignedRole === 'admin' || dbUser?.role === 'admin' || storeUser?.role === 'admin') {
+      await clearOtpChallenge(cleanTarget, isEmail);
+      return sendError(res, {
+        message: 'Không thể sử dụng phương thức OTP cho yêu cầu này. Vui lòng đăng nhập qua Google OAuth chính chủ.',
+        status: 403,
+      });
+    }
+
+    // Xóa bản ghi OTP ngay sau khi khớp hợp lệ
+    await clearOtpChallenge(cleanTarget, isEmail);
 
     // Ưu tiên Họ tên thật người dùng đã nhập lúc đăng ký (từ body hoặc từ challenge OTP)
     const submittedName = String(req.body.name || matchedOtpRecord?.name || '').trim();
