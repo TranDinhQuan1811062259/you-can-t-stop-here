@@ -31,8 +31,9 @@ export const buildTtsStreamUrl = ({
   if (!rawApiBase || isPlaceholderApiBase(rawApiBase)) {
     return null;
   }
+  const ttsBase = rawApiBase.endsWith('/api') ? rawApiBase : `${rawApiBase}/api`;
   const cleanEncoded = encodeURIComponent(String(text || '').slice(0, 300));
-  return `${rawApiBase}/tts?text=${cleanEncoded}&lang=${encodeURIComponent(lang)}&gender=${encodeURIComponent(gender)}&region=${encodeURIComponent(region)}&mood=${encodeURIComponent(mood)}`;
+  return `${ttsBase}/tts?text=${cleanEncoded}&lang=${encodeURIComponent(lang)}&gender=${encodeURIComponent(gender)}&region=${encodeURIComponent(region)}&mood=${encodeURIComponent(mood)}`;
 };
 
 export const formatTime = (totalSeconds) => {
