@@ -162,6 +162,15 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
   const [uploadingCover, setUploadingCover] = useState(false);
 
   useEffect(() => {
+    return () => {
+      if (musicDebounceTimerRef.current) {
+        clearTimeout(musicDebounceTimerRef.current);
+        musicDebounceTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (isOpen) {
       const targetTab = initialTab || profileModalTab;
       if (targetTab && ['info', 'layout', 'music'].includes(targetTab)) {
@@ -578,7 +587,7 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="modal-form">
+        <form noValidate onSubmit={handleSubmit} className="modal-form">
           {/* ========================================================
               TAB 1: THÔNG TIN CÁ NHÂN & LIÊN HỆ
              ======================================================== */}
@@ -776,7 +785,7 @@ export const EditProfileModal = ({ isOpen, onClose, initialTab }) => {
 
               {/* Mạng xã hội */}
               <div className="form-group" style={{ marginTop: '16px' }}>
-                <label style={{ fontWeight: 700, color: 'var(--bg-dark)', marginBottom: '8px', display: 'block' }}>
+                <label style={{ fontWeight: 700, color: '#1e293b', marginBottom: '8px', display: 'block' }}>
                   🌐 Liên kết mạng xã hội cá nhân
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>

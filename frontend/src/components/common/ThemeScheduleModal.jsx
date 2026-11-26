@@ -279,7 +279,7 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '14px' }}>
             {/* Giờ Bắt Đầu Chế Độ Ngày */}
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--pastel-amber)', fontWeight: 700, marginBottom: '6px' }}>
@@ -342,16 +342,16 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
           </div>
 
           {/* Gợi ý khung giờ nhanh */}
-          <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
-            <span style={{ fontSize: '0.76rem', color: '#334155', marginRight: '6px', fontWeight: 700 }}>Gợi ý nhanh:</span>
+          <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border-card)' }}>
+            <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginRight: '6px', fontWeight: 700 }}>Gợi ý nhanh:</span>
             <div style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
               <button
                 type="button"
                 onClick={() => handleApplyPreset('06:00', '18:00')}
                 style={{
-                  background: '#ffffff',
-                  border: '1.5px solid #cbd5e1',
-                  color: '#1e293b',
+                  background: 'var(--bg-input)',
+                  border: '1.5px solid var(--border-card)',
+                  color: 'var(--text-main)',
                   borderRadius: '8px',
                   padding: '4px 10px',
                   fontSize: '0.76rem',
@@ -366,9 +366,9 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
                 type="button"
                 onClick={() => handleApplyPreset('07:00', '19:00')}
                 style={{
-                  background: '#ffffff',
-                  border: '1.5px solid #cbd5e1',
-                  color: '#1e293b',
+                  background: 'var(--bg-input)',
+                  border: '1.5px solid var(--border-card)',
+                  color: 'var(--text-main)',
                   borderRadius: '8px',
                   padding: '4px 10px',
                   fontSize: '0.76rem',
@@ -383,9 +383,9 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
                 type="button"
                 onClick={() => handleApplyPreset('08:00', '21:00')}
                 style={{
-                  background: '#ffffff',
-                  border: '1.5px solid #cbd5e1',
-                  color: '#1e293b',
+                  background: 'var(--bg-input)',
+                  border: '1.5px solid var(--border-card)',
+                  color: 'var(--text-main)',
                   borderRadius: '8px',
                   padding: '4px 10px',
                   fontSize: '0.76rem',
@@ -421,7 +421,7 @@ export const ThemeScheduleModal = ({ isOpen, onClose }) => {
         )}
 
         {/* Nút Hành Động Cuối Modal */}
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             type="button"
             className="page-btn"

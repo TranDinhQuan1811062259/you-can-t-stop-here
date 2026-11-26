@@ -11,8 +11,6 @@ export const SharePostModal = ({ isOpen, onClose, post, onShareSuccess }) => {
   const [reposted, setReposted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  if (!isOpen || !post) return null;
-
   // Khóa cuộn trang và lắng nghe Escape để đóng modal chia sẻ
   useEffect(() => {
     if (!isOpen) return;
@@ -27,6 +25,8 @@ export const SharePostModal = ({ isOpen, onClose, post, onShareSuccess }) => {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);
+
+  if (!isOpen || !post) return null;
 
   const currentUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/post/${post.slug}`

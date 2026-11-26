@@ -348,7 +348,10 @@ export const PersonalHubModal = () => {
   const handleAddNoteSubmit = async (e) => {
     e.preventDefault();
     const content = newNoteContent.trim();
-    if (!content) return;
+    if (!content) {
+      setNoteError('Vui lòng nhập nội dung ghi chú trước khi lưu.');
+      return;
+    }
 
     if (personalNotes.length >= 20) {
       setNoteError('Bạn đã đạt giới hạn tối đa 20 mục tiêu. Hãy xóa bớt mục tiêu cũ nhé!');
@@ -370,7 +373,10 @@ export const PersonalHubModal = () => {
   // Xử lý cập nhật Profile
   const handleUpdateProfileSubmit = async (e) => {
     e.preventDefault();
-    if (!profileName.trim()) return;
+    if (!profileName.trim()) {
+      setProfileMessage({ type: 'error', text: 'Tên hiển thị không được để trống.' });
+      return;
+    }
 
     setIsUpdatingProfile(true);
     setProfileMessage(null);
@@ -750,7 +756,7 @@ export const PersonalHubModal = () => {
           {activeTab === 'notes' && (
             <>
               {/* Form thêm nhanh mục tiêu */}
-              <form onSubmit={handleAddNoteSubmit} className="notes-input-bar">
+              <form noValidate onSubmit={handleAddNoteSubmit} className="notes-input-bar">
                 <input
                   type="text"
                   className="notes-text-input"
@@ -1181,7 +1187,7 @@ export const PersonalHubModal = () => {
                   </div>
                 </h4>
 
-                <form onSubmit={handleUpdateProfileSubmit} className="hub-profile-form">
+                <form noValidate onSubmit={handleUpdateProfileSubmit} className="hub-profile-form">
                   <div className="hub-form-group">
                     <label className="hub-form-label">Tên hiển thị / Biệt danh</label>
                     <input

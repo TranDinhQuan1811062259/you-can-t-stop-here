@@ -429,7 +429,7 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
           );
         })()}
 
-        <form onSubmit={handleSubmit} className="modal-form">
+        <form noValidate onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
             <label>Tiêu đề bài viết *</label>
             <input
@@ -442,7 +442,7 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
           </div>
 
           {/* Hàng thông tin tác giả hiển thị */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '14px' }}>
             <div className="form-group">
               <label>Tác giả bài viết *</label>
               <input
@@ -466,7 +466,7 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '14px', alignItems: 'flex-start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '14px', alignItems: 'flex-start' }}>
             <div className="form-group category-select-group">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                 <label style={{ margin: 0, fontWeight: 700 }}>Chuyên mục / Thể loại *</label>
@@ -638,13 +638,13 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
                 📸 Chụp từ Camera/Webcam
               </button>
             </div>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleCoverImageChange}
                 disabled={uploadingCover}
-                style={{ fontSize: '0.85rem' }}
+                style={{ fontSize: '0.85rem', maxWidth: '100%', minWidth: 0 }}
               />
               {uploadingCover && (
                 <span style={{ fontSize: '0.85rem', color: 'var(--primary-hover)', fontWeight: 600 }}>
@@ -937,12 +937,12 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
           />
 
           {/* Chế độ hiển thị bài viết (Công khai hoặc Chỉ bạn bè) */}
-          <div className="form-group" style={{ marginTop: '14px', background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <label style={{ fontWeight: 700, color: 'var(--bg-dark)', marginBottom: '8px', display: 'block' }}>
+          <div className="form-group" style={{ marginTop: '14px', background: '#f8fafc', color: '#1e293b', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <label style={{ fontWeight: 700, color: '#0f172a', marginBottom: '8px', display: 'block' }}>
               🔒 Chế độ hiển thị bài viết
             </label>
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b' }}>
                 <input
                   type="radio"
                   name="edit-visibility"
@@ -953,7 +953,7 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
                 <span>🌐 <strong>Công khai</strong> (Tất cả mọi người đều đọc được)</span>
               </label>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b' }}>
                 <input
                   type="radio"
                   name="edit-visibility"
@@ -966,8 +966,8 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
             </div>
           </div>
 
-          <div className="form-group" style={{ marginTop: '14px', background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 600, color: 'var(--bg-dark)', marginBottom: 0 }}>
+          <div className="form-group" style={{ marginTop: '14px', background: '#f8fafc', color: '#1e293b', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 600, color: '#0f172a', marginBottom: 0 }}>
               <input
                 type="checkbox"
                 checked={formData.showReactionCount}
@@ -980,7 +980,7 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
               Nếu bỏ chọn, người đọc chỉ thấy các biểu tượng cảm xúc (Đồng Cảm 🫂, Stop 🛑, Yêu thích ❤️, Cố Lên 💪) mà không thấy con số cụ thể.
             </p>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 600, color: 'var(--bg-dark)', marginBottom: 0, marginTop: '12px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 600, color: '#0f172a', marginBottom: 0, marginTop: '12px' }}>
               <input
                 type="checkbox"
                 checked={formData.allowComments}

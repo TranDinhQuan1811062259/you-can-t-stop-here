@@ -2318,7 +2318,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
             </div>
 
             {/* Ô Gửi Lời Nhắn Vô Danh */}
-            <form onSubmit={handleSendThought} style={{ marginTop: '9px', display: 'flex', gap: '8px' }}>
+            <form noValidate onSubmit={handleSendThought} style={{ marginTop: '9px', display: 'flex', gap: '8px' }}>
               <input
                 type="text"
                 placeholder="Gửi một lời chúc ấm áp cho những người cùng nghe..."
@@ -2327,6 +2327,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
                 maxLength={120}
                 style={{
                   flex: 1,
+                  minWidth: 0,
                   padding: '8px 12px',
                   borderRadius: '9px',
                   background: 'rgba(255, 255, 255, 0.06)',

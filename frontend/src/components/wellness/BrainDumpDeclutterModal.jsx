@@ -230,10 +230,12 @@ export const BrainDumpDeclutterModal = ({ isOpen, onClose }) => {
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Ô nhập Brain Dump */}
           <form
+            noValidate
             onSubmit={handleAddThought}
             style={{
               display: 'flex',
               gap: '12px',
+              flexWrap: 'wrap',
               backgroundColor: 'rgba(30, 41, 59, 0.7)',
               padding: '12px 16px',
               borderRadius: '16px',
@@ -247,6 +249,7 @@ export const BrainDumpDeclutterModal = ({ isOpen, onClose }) => {
               placeholder="Có điều gì đang làm bạn rối trí, băn khoăn hay ngộp thở lúc này? Gõ vào đây..."
               style={{
                 flex: 1,
+                minWidth: 0,
                 backgroundColor: 'transparent',
                 border: 'none',
                 color: '#ffffff',

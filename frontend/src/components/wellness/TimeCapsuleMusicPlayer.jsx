@@ -376,10 +376,12 @@ export const TimeCapsuleMusicPlayer = ({
       {/* Khung nhập Link YouTube tùy chỉnh */}
       {showCustomInput && (
         <form
+          noValidate
           onSubmit={handleApplyCustomUrl}
           style={{
             display: 'flex',
             gap: '8px',
+            flexWrap: 'wrap',
             marginBottom: '12px',
             padding: '8px 12px',
             borderRadius: '10px',
@@ -395,6 +397,7 @@ export const TimeCapsuleMusicPlayer = ({
             onChange={(e) => setCustomUrlInput(e.target.value)}
             style={{
               flex: 1,
+              minWidth: 0,
               padding: '6px 10px',
               borderRadius: '8px',
               background: 'rgba(255, 255, 255, 0.08)',

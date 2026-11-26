@@ -119,8 +119,6 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setErrorMsg('');
@@ -262,6 +260,8 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
 
     return () => clearTimeout(timer);
   }, [isOpen, formData.title, formData.summary, formData.content, formData.category, formData.tags, postFormat, videoUrlInput]);
+
+  if (!isOpen) return null;
 
   const handleClearDraft = () => {
     try {
@@ -1095,7 +1095,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="modal-form">
+        <form noValidate onSubmit={handleSubmit} className="modal-form">
           {/* Tiêu đề: chỉ bắt buộc khi là Bài viết sâu */}
           {postFormat === 'article' && (
             <div className="form-group">
@@ -1619,12 +1619,12 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
           />
 
           {/* Chế độ hiển thị bài viết (Công khai hoặc Chỉ bạn bè) */}
-          <div className="form-group" style={{ marginTop: '14px', background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <label style={{ fontWeight: 700, color: 'var(--bg-dark)', marginBottom: '8px', display: 'block' }}>
+          <div className="form-group" style={{ marginTop: '14px', background: '#f8fafc', color: '#1e293b', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <label style={{ fontWeight: 700, color: '#0f172a', marginBottom: '8px', display: 'block' }}>
               🔒 Chế độ hiển thị bài viết
             </label>
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b' }}>
                 <input
                   type="radio"
                   name="visibility"
@@ -1635,7 +1635,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
                 <span>🌐 <strong>Công khai</strong> (Tất cả mọi người đều đọc được)</span>
               </label>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: '#1e293b' }}>
                 <input
                   type="radio"
                   name="visibility"
@@ -1648,8 +1648,8 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
             </div>
           </div>
 
-          <div className="form-group" style={{ marginTop: '14px', background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 600, color: 'var(--bg-dark)', marginBottom: 0 }}>
+          <div className="form-group" style={{ marginTop: '14px', background: '#f8fafc', color: '#1e293b', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 600, color: '#0f172a', marginBottom: 0 }}>
               <input
                 type="checkbox"
                 checked={formData.showReactionCount}
@@ -1662,7 +1662,7 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
               Nếu bỏ chọn, bài viết chỉ hiển thị các biểu tượng cảm xúc (Đồng Cảm 🫂, Stop 🛑, Yêu thích ❤️, Cố Lên 💪) mà không hiển thị con số cụ thể.
             </p>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 600, color: 'var(--bg-dark)', marginBottom: 0, marginTop: '12px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 600, color: '#0f172a', marginBottom: 0, marginTop: '12px' }}>
               <input
                 type="checkbox"
                 checked={formData.allowComments}

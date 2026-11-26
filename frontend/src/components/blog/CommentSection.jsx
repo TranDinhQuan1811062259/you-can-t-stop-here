@@ -325,7 +325,7 @@ export const CommentSection = ({
           )}
         </div>
       ) : isAuthenticated ? (
-        <form onSubmit={handleSubmit} className="comment-form">
+        <form noValidate onSubmit={handleSubmit} className="comment-form">
           {errorMsg && <div className="modal-error">{errorMsg}</div>}
 
           {/* Banner báo đang trả lời người khác (Facebook Style) */}

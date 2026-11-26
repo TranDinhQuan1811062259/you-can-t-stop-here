@@ -762,7 +762,7 @@ export const AnonymousWhisperWall = ({ isOpen, onClose }) => {
           </div>
 
           {/* Ô nhập lời thì thầm bằng chữ */}
-          <form onSubmit={handleSendTextWhisper} style={{ display: 'flex', gap: '8px' }}>
+          <form noValidate onSubmit={handleSendTextWhisper} style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <input
               type="text"
               value={newText}
@@ -771,6 +771,7 @@ export const AnonymousWhisperWall = ({ isOpen, onClose }) => {
               maxLength={120}
               style={{
                 flex: 1,
+                minWidth: 0,
                 background: 'rgba(0, 0, 0, 0.4)',
                 border: '1.5px solid rgba(129, 140, 248, 0.3)',
                 borderRadius: '12px',

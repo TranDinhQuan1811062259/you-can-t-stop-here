@@ -55,26 +55,26 @@ export const ShareModal = ({ isOpen, onClose, post, onShareSuccess }) => {
   const handleShareFacebook = () => {
     notifyServerShared();
     const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`;
-    window.open(fbUrl, '_blank', 'width=600,height=500,scrollbars=yes,resizable=yes');
+    window.open(fbUrl, '_blank', 'width=600,height=500,scrollbars=yes,resizable=yes,noopener,noreferrer');
   };
 
   const handleShareTwitter = () => {
     notifyServerShared();
     const tweetText = `Đọc câu chuyện "${post.title}" trên You Can't Stop Here: `;
     const xUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(tweetText)}`;
-    window.open(xUrl, '_blank', 'width=600,height=500,scrollbars=yes,resizable=yes');
+    window.open(xUrl, '_blank', 'width=600,height=500,scrollbars=yes,resizable=yes,noopener,noreferrer');
   };
 
   const handleShareLinkedIn = () => {
     notifyServerShared();
     const liUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(postUrl)}`;
-    window.open(liUrl, '_blank', 'width=600,height=500,scrollbars=yes,resizable=yes');
+    window.open(liUrl, '_blank', 'width=600,height=500,scrollbars=yes,resizable=yes,noopener,noreferrer');
   };
 
   const handleShareZalo = () => {
     notifyServerShared();
     const zaloUrl = `https://zalo.me/share?url=${encodeURIComponent(postUrl)}`;
-    window.open(zaloUrl, '_blank', 'width=600,height=500,scrollbars=yes,resizable=yes');
+    window.open(zaloUrl, '_blank', 'width=600,height=500,scrollbars=yes,resizable=yes,noopener,noreferrer');
   };
 
   const handleNativeShare = async () => {

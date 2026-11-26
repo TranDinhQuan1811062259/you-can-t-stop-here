@@ -327,7 +327,13 @@ export const AuthModal = () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const cleanEmail = socialRegData.email.trim();
+      const cleanName = (socialRegData.name || '').trim();
+      const cleanEmail = (socialRegData.email || '').trim();
+      if (!cleanName) {
+        setErrorMsg('Vui lòng nhập tên hiển thị của bạn!');
+        setLoading(false);
+        return;
+      }
       if (!cleanEmail) {
         setErrorMsg('Vui lòng nhập địa chỉ email!');
         setLoading(false);
@@ -338,7 +344,7 @@ export const AuthModal = () => {
       if (socialRegData.providerId === 'google') {
         setPendingRegisterData({
           provider: 'google',
-          name: socialRegData.name.trim(),
+          name: cleanName,
           email: cleanEmail,
           avatar: socialRegData.avatar,
           jobTitle: socialRegData.jobTitle.trim(),
@@ -821,13 +827,23 @@ export const AuthModal = () => {
         safeScheduleClose(null, 350);
       } else {
         // ĐĂNG KÝ TÀI KHOẢN NỘI BỘ: GỬI MÃ OTP QUA NODEMAILER ĐỂ XÁC THỰC EMAIL
-        if (!registerForm.name || !registerForm.identifier || !registerForm.password) {
+        if (!registerForm.name.trim() || !registerForm.identifier.trim() || !registerForm.password) {
           setErrorMsg('Vui lòng điền đầy đủ Họ tên, Email và Mật khẩu!');
           setLoading(false);
           return;
         }
 
         const cleanEmail = registerForm.identifier.trim().toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+          setErrorMsg('Vui lòng nhập đúng định dạng địa chỉ email!');
+          setLoading(false);
+          return;
+        }
+        if (registerForm.password.length < 6) {
+          setErrorMsg('Mật khẩu cần tối thiểu 6 ký tự!');
+          setLoading(false);
+          return;
+        }
         const regData = {
           name: registerForm.name.trim(),
           email: cleanEmail,
@@ -1534,7 +1550,7 @@ export const AuthModal = () => {
               )}
             </div>
 
-            <form onSubmit={handleVerifyEmailOtpSubmit}>
+            <form noValidate onSubmit={handleVerifyEmailOtpSubmit}>
               <div className={`form-group otp-input-container ${isOtpShaking ? 'is-shaking' : ''}`} style={{ marginBottom: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <label style={{ fontWeight: 600, color: '#334155', fontSize: '0.85rem' }}>
@@ -1857,7 +1873,7 @@ export const AuthModal = () => {
             </div>
 
             {/* Form đăng ký tinh gọn, nhanh chóng */}
-            <form onSubmit={handleConfirmSocialRegister} className="modal-form">
+            <form noValidate onSubmit={handleConfirmSocialRegister} className="modal-form">
               <div className="form-group" style={{ marginBottom: '10px' }}>
                 <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Họ và tên hiển thị *</label>
                 <input
@@ -1962,7 +1978,7 @@ export const AuthModal = () => {
              KÈM LỰA CHỌN MẠNG XÃ HỘI TRỰC TIẾP
              ======================================================== */
           <>
-            <form onSubmit={handleSubmitInternalForm} className="modal-form">
+            <form noValidate onSubmit={handleSubmitInternalForm} className="modal-form">
               {authModalMode === 'register' ? (
                 /* TAB ĐĂNG KÝ BẰNG EMAIL & MẬT KHẨU */
                 <>

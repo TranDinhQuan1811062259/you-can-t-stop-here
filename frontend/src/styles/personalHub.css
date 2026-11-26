@@ -415,6 +415,8 @@
 
 .notes-text-input {
   flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
   background: transparent;
   border: none;
   outline: none;
@@ -697,6 +699,9 @@
 
 .hub-form-input,
 .hub-form-textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   background: rgba(10, 15, 30, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;

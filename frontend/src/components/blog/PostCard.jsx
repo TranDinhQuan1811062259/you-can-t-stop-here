@@ -18,10 +18,9 @@ const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org
 
 export const PostCard = ({ post }) => {
   const { user } = useAuth();
-  if (!post) return null;
 
-  const categoryName = post.category?.name || 'Tâm sự';
-  const categoryIcon = post.category?.icon || (() => {
+  const categoryName = post?.category?.name || 'Tâm sự';
+  const categoryIcon = post?.category?.icon || (() => {
     const lower = categoryName.toLowerCase();
     if (lower.includes('thế giới') || lower.includes('quốc tế') || lower.includes('global')) return '🌍';
     if (lower.includes('chiến sự') || lower.includes('chiến tranh') || lower.includes('hòa bình') || lower.includes('xung đột')) return '🕊️';
@@ -33,12 +32,12 @@ export const PostCard = ({ post }) => {
     if (lower.includes('tâm sự') || lower.includes('life')) return '☕';
     return '🏷️';
   })();
-  const postId = post._id || post.slug;
-  const readingInfo = calculateReadingTime(post);
+  const postId = post?._id || post?.slug;
+  const readingInfo = post ? calculateReadingTime(post) : { minutes: 1, text: '1 phút đọc' };
 
   const [isPlayingAi, setIsPlayingAi] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
-  const [localSharesCount, setLocalSharesCount] = useState(post.sharesCount || post.repostCount || 0);
+  const [localSharesCount, setLocalSharesCount] = useState(post?.sharesCount || post?.repostCount || 0);
 
   // Predictive Post Detail Warm-Cache: Nạp trước bài viết âm thầm khi hover 120ms hoặc focus
   const hoverPrefetchTimerRef = useRef(null);
@@ -73,7 +72,7 @@ export const PostCard = ({ post }) => {
 
   const scheduleAuthorPrefetch = (immediate = false) => {
     cancelAuthorPrefetch();
-    const authorTarget = post.user?._id || post.user || post.author || post.user?.name;
+    const authorTarget = post?.user?._id || post?.user || post?.author || post?.user?.name;
     if (!authorTarget) return;
     if (immediate) {
       prefetchUserProfile(authorTarget);
@@ -125,6 +124,7 @@ export const PostCard = ({ post }) => {
   // Kiểm tra xem bài viết có phải do người đang đăng nhập viết không (Đồng bộ tuyệt đối thông tin chính chủ)
   const isCurrentUserAuthor = Boolean(
     user &&
+    post &&
     ((post.user && (post.user._id || post.user)?.toString() === user._id?.toString()) ||
       (post.author && user.name && post.author.trim().toLowerCase() === user.name.trim().toLowerCase()) ||
       (user.role === 'admin' && (post.author === 'Đơn Thân Mẹ' || post.author === 'Trần Đình Quân' || post.author === 'Trần Đỉnh Quân')))
@@ -132,7 +132,7 @@ export const PostCard = ({ post }) => {
 
   // Giữ đúng tác giả của từng bài viết; nếu là chính chủ đang đăng nhập thì đồng bộ 100% tên & avatar hiện tại
   const cleanAdminAvatar = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
-  const rawAuthor = post.author || post.user?.name || (isCurrentUserAuthor ? user.name : '');
+  const rawAuthor = post?.author || post?.user?.name || (isCurrentUserAuthor ? user.name : '');
   const isInvalidAuthor =
     !rawAuthor ||
     typeof rawAuthor !== 'string' ||
@@ -140,23 +140,23 @@ export const PostCard = ({ post }) => {
   const authorName = isInvalidAuthor
     ? (isCurrentUserAuthor ? user?.name || 'Tác giả' : 'Thành viên')
     : rawAuthor.trim();
-  const authorJob = post.authorJob || post.user?.jobTitle || (isCurrentUserAuthor ? user.jobTitle : 'Thành viên cộng đồng');
+  const authorJob = post?.authorJob || post?.user?.jobTitle || (isCurrentUserAuthor ? user.jobTitle : 'Thành viên cộng đồng');
 
   // Đồng bộ Avatar chuẩn xác 100%:
   const getAuthorAvatar = () => {
     // 1. Nếu tác giả bài viết có avatar riêng hợp lệ
-    const raw = post.authorAvatar || post.user?.avatar || (isCurrentUserAuthor ? user?.avatar : '');
+    const raw = post?.authorAvatar || post?.user?.avatar || (isCurrentUserAuthor ? user?.avatar : '');
     if (raw && !raw.includes('man.jpg') && !raw.includes('google_avatar')) {
       return raw;
     }
 
     // 2. Chỉ gắn avatar Admin nếu bài viết thực sự do Admin đăng
     const isPostByAdmin =
-      post.author === 'Đơn Thân Mẹ' ||
-      post.author === 'Trần Đình Quân' ||
-      post.author === 'Anthony Quân' ||
-      post.user?.role === 'admin' ||
-      post.user?.email === 'anthonyq012025@gmail.com';
+      post?.author === 'Đơn Thân Mẹ' ||
+      post?.author === 'Trần Đình Quân' ||
+      post?.author === 'Anthony Quân' ||
+      post?.user?.role === 'admin' ||
+      post?.user?.email === 'anthonyq012025@gmail.com';
 
     if (isPostByAdmin) {
       return cleanAdminAvatar;
@@ -166,12 +166,14 @@ export const PostCard = ({ post }) => {
   };
 
   const authorAvatar = getAuthorAvatar();
-  const authorFrame = user?.customLayout?.frameStyle && isCurrentUserAuthor ? user.customLayout.frameStyle : (post.user?.customLayout?.frameStyle || 'none');
-  const authorStreak = isCurrentUserAuthor ? (user?.streakCount || 0) : (post.user?.streakCount || post.authorStreakCount || 0);
+  const authorFrame = user?.customLayout?.frameStyle && isCurrentUserAuthor ? user.customLayout.frameStyle : (post?.user?.customLayout?.frameStyle || 'none');
+  const authorStreak = isCurrentUserAuthor ? (user?.streakCount || 0) : (post?.user?.streakCount || post?.authorStreakCount || 0);
   const authorHonorBadge = getHighestBadge(authorStreak);
 
   const [deleting, setDeleting] = useState(false);
   const [approving, setApproving] = useState(false);
+
+  if (!post) return null;
 
   // Xóa bài viết dành riêng cho chính chủ tác giả
   const handleAuthorDelete = async (e) => {

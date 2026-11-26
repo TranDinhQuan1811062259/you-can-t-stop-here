@@ -631,8 +631,7 @@ export const Header = () => {
       startWeatherAmbient(nextSeason.id);
     }
     // Tự động đồng bộ tab mùa của playlist thu âm theo ô thời tiết bên cạnh!
-    setSelectedTrackSeason(nextSeason.id);
-    setMelodicSeason(nextSeason.id);
+    music.selectRecordingSeason?.(nextSeason.id);
   };
 
   const handleToggleWeatherAmbient = () => {
@@ -857,10 +856,20 @@ export const Header = () => {
             {activeFestiveEvent && (
               <div
                 className="header-festive-event-pill"
+                role="button"
+                tabIndex={0}
                 onClick={() => {
                   playClickSound();
                   playFestiveEventSound(activeFestiveEvent);
                   setIsShowcaseModalOpen(true);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    playClickSound();
+                    playFestiveEventSound(activeFestiveEvent);
+                    setIsShowcaseModalOpen(true);
+                  }
                 }}
                 title={`${activeFestiveEvent.name} • ${activeFestiveEvent.bannerDesc || ''}. Bấm để xem không gian sự kiện đặc biệt!`}
               >
@@ -871,9 +880,18 @@ export const Header = () => {
                 {user?.role === 'admin' && (
                   <span
                     className="festive-pill-badge"
+                    role="button"
+                    tabIndex={0}
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsEventManagerOpen(true);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsEventManagerOpen(true);
+                      }
                     }}
                     title="Cài đặt lịch sự kiện (Admin)"
                   >
@@ -889,9 +907,17 @@ export const Header = () => {
               {isEffectivePlaying && (
                 <div
                   className="header-live-waveform-pill"
+                  tabIndex={0}
                   onClick={() => {
                     playClickSound();
                     setIsAmbientMenuOpen((prev) => !prev);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      playClickSound();
+                      setIsAmbientMenuOpen((prev) => !prev);
+                    }
                   }}
                   title={`Đang phát: ${currentTrackMeta.title} • Phím 'Space' để Play/Pause • 'M' để tắt/bật tiếng`}
                   role="button"
@@ -1452,10 +1478,20 @@ export const Header = () => {
                         <div
                           key={p._id || p.slug}
                           className="header-search-result-item"
+                          role="button"
+                          tabIndex={0}
                           onClick={() => {
                             playClickSound();
-                            navigate(`/posts/${p.slug}`);
+                            navigate(`/post/${p.slug}`);
                             setIsSearchFocused(false);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              playClickSound();
+                              navigate(`/post/${p.slug}`);
+                              setIsSearchFocused(false);
+                            }
                           }}
                         >
                           <div className="search-result-icon">

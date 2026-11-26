@@ -359,7 +359,7 @@ export const WorkplaceMoodRadarModal = ({ isOpen, onClose }) => {
             </div>
 
             {/* Ô nhập câu chia sẻ 1 dòng */}
-            <form onSubmit={handleAddShoutout} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <form noValidate onSubmit={handleAddShoutout} style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
               <input
                 type="text"
                 value={newShoutoutText}
@@ -368,6 +368,7 @@ export const WorkplaceMoodRadarModal = ({ isOpen, onClose }) => {
                 maxLength={80}
                 style={{
                   flex: 1,
+                  minWidth: 0,
                   background: 'rgba(0, 0, 0, 0.45)',
                   border: '1.5px solid rgba(56, 189, 248, 0.3)',
                   borderRadius: '12px',

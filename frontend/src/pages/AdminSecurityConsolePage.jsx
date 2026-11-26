@@ -169,7 +169,11 @@ export const AdminSecurityConsolePage = () => {
   const handleVerifyPin = async (e) => {
     e.preventDefault();
     const cleanPin = pinInput.trim();
-    if (!cleanPin || isVerifyingPin) return;
+    if (isVerifyingPin) return;
+    if (!cleanPin) {
+      setPinError('Vui lòng nhập mã PIN bảo mật để tiếp tục.');
+      return;
+    }
 
     setIsVerifyingPin(true);
     setPinError('');
@@ -331,7 +335,10 @@ export const AdminSecurityConsolePage = () => {
   // Xử lý đăng nhập cổng Admin
   const handleAdminLogin = async (e) => {
     e.preventDefault();
-    if (!email.trim() || !password) return;
+    if (!email.trim() || !password) {
+      setErrorMessage('Vui lòng nhập đầy đủ email và mật khẩu quản trị.');
+      return;
+    }
 
     setIsLoading(true);
     setErrorMessage('');
@@ -447,7 +454,7 @@ export const AdminSecurityConsolePage = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={() => {
@@ -581,7 +588,7 @@ export const AdminSecurityConsolePage = () => {
               </div>
             )}
 
-            <form onSubmit={handleAdminLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form noValidate onSubmit={handleAdminLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.78rem', color: '#cbd5e1', marginBottom: '6px', fontWeight: 600 }}>
                   Email Quản Trị
@@ -641,7 +648,8 @@ export const AdminSecurityConsolePage = () => {
                   padding: '12px',
                   fontSize: '0.88rem',
                   fontWeight: 700,
-                  cursor: 'pointer',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  opacity: isLoading ? 0.65 : 1,
                   marginTop: '6px',
                   boxShadow: '0 4px 15px rgba(2, 132, 199, 0.3)',
                   transition: 'all 0.2s ease',
@@ -762,7 +770,7 @@ export const AdminSecurityConsolePage = () => {
                   </div>
                 )}
 
-                <form onSubmit={handleVerifyPin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <form noValidate onSubmit={handleVerifyPin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.78rem', color: '#cbd5e1', marginBottom: '6px', fontWeight: 600 }}>
                       Mã PIN Bảo Mật (Lớp 1)
@@ -897,9 +905,9 @@ export const AdminSecurityConsolePage = () => {
                   </div>
                 )}
 
-                <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <form noValidate onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '8px' }}>
                       <label style={{ fontSize: '0.78rem', color: '#cbd5e1', fontWeight: 600 }}>
                         Mã OTP 6 số từ Email
                       </label>
@@ -942,8 +950,8 @@ export const AdminSecurityConsolePage = () => {
                         borderRadius: '10px',
                         padding: '12px 14px',
                         color: '#f8fafc',
-                        fontSize: '1.35rem',
-                        letterSpacing: '8px',
+                        fontSize: 'clamp(1.1rem, 4.5vw, 1.35rem)',
+                        letterSpacing: 'clamp(4px, 1.5vw, 8px)',
                         textAlign: 'center',
                         fontWeight: 800,
                         outline: 'none',

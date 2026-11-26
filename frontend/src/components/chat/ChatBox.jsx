@@ -288,7 +288,7 @@ export const ChatBox = () => {
       </div>
 
       {/* Khung nhập tin nhắn */}
-      <form onSubmit={handleSend} className="chatbox-input-row">
+      <form noValidate onSubmit={handleSend} className="chatbox-input-row">
         <input
           type="text"
           className="chatbox-text-input"

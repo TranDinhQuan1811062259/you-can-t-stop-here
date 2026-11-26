@@ -689,7 +689,7 @@ export const CreateStoryModal = ({ isOpen, onClose, storyToEdit = null }) => {
           </div>
 
           {/* CỘT PHẢI: FORM NHẬP NỘI DUNG, UPLOAD MEDIA, CHỌN NHẠC & MÀU NỀN */}
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <form noValidate onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {/* Input File Ẩn cho Upload Ảnh / Video */}
             <input
               type="file"

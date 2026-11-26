@@ -473,7 +473,7 @@ export const LateNightTeaLoungeModal = ({ isOpen, onClose }) => {
             </div>
 
             {/* Ô nhập ghi chú nhanh */}
-            <form onSubmit={handleAddNote} style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+            <form noValidate onSubmit={handleAddNote} style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
               <input
                 type="text"
                 value={noteInput}
@@ -482,6 +482,7 @@ export const LateNightTeaLoungeModal = ({ isOpen, onClose }) => {
                 maxLength={70}
                 style={{
                   flex: 1,
+                  minWidth: 0,
                   backgroundColor: 'rgba(15, 23, 42, 0.8)',
                   border: '1px solid rgba(255, 255, 255, 0.12)',
                   borderRadius: '12px',
@@ -499,10 +500,11 @@ export const LateNightTeaLoungeModal = ({ isOpen, onClose }) => {
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '12px',
-                  padding: '0 20px',
+                  padding: '10px 20px',
                   fontSize: '0.85rem',
                   fontWeight: 700,
-                  cursor: noteInput.trim() ? 'pointer' : 'default',
+                  flexShrink: 0,
+                  cursor: noteInput.trim() ? 'pointer' : 'not-allowed',
                   opacity: noteInput.trim() ? 1 : 0.6,
                 }}
               >

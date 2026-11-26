@@ -69,11 +69,11 @@ export const SecurityBellNotification = () => {
     e.stopPropagation();
     playClickSound();
     if (isFacebook) {
-      window.open('https://facebook.com', '_blank');
+      window.open('https://facebook.com', '_blank', 'noopener,noreferrer');
       return;
     }
     if (isTikTok) {
-      window.open('https://tiktok.com', '_blank');
+      window.open('https://tiktok.com', '_blank', 'noopener,noreferrer');
       return;
     }
     if (isPhone) {
@@ -91,11 +91,11 @@ export const SecurityBellNotification = () => {
       return;
     }
     if (notification.previewUrl) {
-      window.open(notification.previewUrl, '_blank');
+      window.open(notification.previewUrl, '_blank', 'noopener,noreferrer');
     } else if (isGmail) {
-      window.open('https://mail.google.com', '_blank');
+      window.open('https://mail.google.com', '_blank', 'noopener,noreferrer');
     } else if (notification.url) {
-      window.open(notification.url, '_blank');
+      window.open(notification.url, '_blank', 'noopener,noreferrer');
     }
   };
 

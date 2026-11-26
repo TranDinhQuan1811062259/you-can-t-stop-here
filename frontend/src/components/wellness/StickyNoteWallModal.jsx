@@ -576,6 +576,7 @@ export const StickyNoteWallModal = ({ isOpen, onClose }) => {
         {/* Khung Soạn Thảo Giấy Nhớ Mới (Khi bấm Viết) */}
         {isWriting && (
           <form
+            noValidate
             onSubmit={handlePostNote}
             style={{
               padding: '16px 20px',
@@ -636,7 +637,7 @@ export const StickyNoteWallModal = ({ isOpen, onClose }) => {
               }}
             />
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
               <input
                 type="text"
                 placeholder="Ký tên (vd: Bạn bàn bên / Cú đêm tầng 5...)"
@@ -650,7 +651,8 @@ export const StickyNoteWallModal = ({ isOpen, onClose }) => {
                   background: '#ffffff',
                   fontSize: '0.8rem',
                   color: '#334155',
-                  flex: 1,
+                  flex: '1 1 180px',
+                  minWidth: 0,
                   maxWidth: '300px',
                 }}
               />

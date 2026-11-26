@@ -456,7 +456,7 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
         >
           {/* TAB 1: VIẾT THƯ MỚI */}
           {activeTab === 'write' && (
-            <form onSubmit={handleCreateCapsule} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <form noValidate onSubmit={handleCreateCapsule} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, color: '#fcd34d', marginBottom: '8px' }}>
                   Tiêu đề bức thư *
@@ -745,7 +745,7 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
                 </div>
 
                 {/* Chọn ngày tùy chỉnh */}
-                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Hoặc chọn ngày cụ thể:</span>
                   <input
                     type="date"

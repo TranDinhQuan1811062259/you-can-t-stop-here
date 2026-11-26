@@ -232,9 +232,6 @@ export const AssistiveChatWidget = () => {
     toggleWidget();
   };
 
-  // Chỉ hiển thị khi đã đăng nhập
-  if (!isAuthenticated) return null;
-
   // Lấy dữ liệu hội thoại & danh bạ
   const fetchConversationsData = () => {
     setLoadingList(true);
@@ -259,6 +256,7 @@ export const AssistiveChatWidget = () => {
   };
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     if (isWidgetOpen && !activeConversation) {
       if (activeTab === 'messages') {
         fetchConversationsData();
@@ -266,7 +264,7 @@ export const AssistiveChatWidget = () => {
         fetchFriendsData();
       }
     }
-  }, [isWidgetOpen, activeTab, sortBy, searchQuery, activeConversation]);
+  }, [isAuthenticated, isWidgetOpen, activeTab, sortBy, searchQuery, activeConversation]);
 
   // Lấy tin nhắn trong activeConversation
   const fetchActiveMessages = () => {
@@ -287,6 +285,7 @@ export const AssistiveChatWidget = () => {
   };
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     if (activeConversation) {
       setConvStatus(activeConversation.status || 'accepted');
       setIsStranger(Boolean(activeConversation.isStranger));
@@ -299,17 +298,19 @@ export const AssistiveChatWidget = () => {
 
       return () => clearInterval(timer);
     }
-  }, [activeConversation]);
+  }, [isAuthenticated, activeConversation]);
 
   // Tự động cuộn xuống tin nhắn mới nhất
   useEffect(() => {
+    if (!isAuthenticated) return;
     if (activeConversation && messages.length > 0) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, activeConversation]);
+  }, [isAuthenticated, messages, activeConversation]);
 
   // Đóng menu trạng thái khi bấm ra ngoài
   useEffect(() => {
+    if (!isAuthenticated) return;
     const handleOutsideClick = (e) => {
       if (statusMenuRef.current && !statusMenuRef.current.contains(e.target)) {
         setStatusMenuOpen(false);
@@ -319,7 +320,10 @@ export const AssistiveChatWidget = () => {
       document.addEventListener('mousedown', handleOutsideClick);
     }
     return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [statusMenuOpen]);
+  }, [isAuthenticated, statusMenuOpen]);
+
+  // Chỉ hiển thị khi đã đăng nhập
+  if (!isAuthenticated) return null;
 
   // Gửi tin nhắn
   const handleSendMessage = async (e) => {
@@ -905,7 +909,7 @@ export const AssistiveChatWidget = () => {
               </div>
 
               {/* Footer Soạn & Gửi Tin Nhắn */}
-              <form onSubmit={handleSendMessage} className="assistive-input-footer">
+              <form noValidate onSubmit={handleSendMessage} className="assistive-input-footer">
                 <input
                   type="text"
                   className="assistive-msg-input"

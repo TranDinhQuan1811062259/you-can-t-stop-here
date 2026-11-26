@@ -5149,6 +5149,188 @@ body.theme-dark .back-home-btn,
   font-size: 0.8rem;
 }
 
+/* ==========================================================================
+   4-ROLE QA SQUAD: DAY/NIGHT CONTRAST & MOBILE POPOVER OVERFLOW FIXES
+   ========================================================================== */
+body.theme-light .site-footer,
+[data-theme="light"] .site-footer,
+.mode-light .site-footer {
+  background: linear-gradient(180deg, rgba(224, 242, 254, 0.72) 0%, #f0f9ff 100%);
+  color: #334155;
+  border-top: 1px solid rgba(14, 165, 233, 0.22);
+}
+
+body.theme-light .footer-col h3,
+[data-theme="light"] .footer-col h3,
+.mode-light .footer-col h3 {
+  color: #0f172a;
+}
+
+body.theme-light .footer-col p,
+[data-theme="light"] .footer-col p,
+.mode-light .footer-col p,
+body.theme-light .footer-desc,
+[data-theme="light"] .footer-desc,
+.mode-light .footer-desc {
+  color: #334155;
+}
+
+body.theme-light .footer-tag-item,
+[data-theme="light"] .footer-tag-item,
+.mode-light .footer-tag-item {
+  background: rgba(14, 165, 233, 0.12);
+  color: #0369a1;
+  border: 1px solid rgba(14, 165, 233, 0.25);
+}
+
+.footer-contact-heading {
+  color: #ffffff;
+}
+
+.footer-contact-copy {
+  color: #cbd5e1;
+}
+
+.footer-contact-link {
+  color: #e2e8f0;
+  transition: color 0.2s ease;
+}
+
+.footer-contact-link:hover {
+  color: #38bdf8;
+}
+
+.footer-contact-link--fb {
+  color: #38bdf8;
+}
+
+.footer-contact-link--fb:hover {
+  color: #7dd3fc;
+}
+
+.footer-contact-link--zalo {
+  color: #34d399;
+}
+
+.footer-contact-link--zalo:hover {
+  color: #6ee7b7;
+}
+
+.footer-contact-meta {
+  color: #94a3b8;
+}
+
+body.theme-light .footer-contact-heading,
+[data-theme="light"] .footer-contact-heading,
+.mode-light .footer-contact-heading {
+  color: #0f172a;
+}
+
+body.theme-light .footer-contact-copy,
+[data-theme="light"] .footer-contact-copy,
+.mode-light .footer-contact-copy {
+  color: #334155;
+}
+
+body.theme-light .footer-contact-link,
+[data-theme="light"] .footer-contact-link,
+.mode-light .footer-contact-link {
+  color: #1e293b;
+}
+
+body.theme-light .footer-contact-link:hover,
+[data-theme="light"] .footer-contact-link:hover,
+.mode-light .footer-contact-link:hover {
+  color: #0284c7;
+}
+
+body.theme-light .footer-contact-link--fb,
+[data-theme="light"] .footer-contact-link--fb,
+.mode-light .footer-contact-link--fb {
+  color: #0369a1;
+}
+
+body.theme-light .footer-contact-link--zalo,
+[data-theme="light"] .footer-contact-link--zalo,
+.mode-light .footer-contact-link--zalo {
+  color: #047857;
+}
+
+body.theme-light .footer-contact-meta,
+[data-theme="light"] .footer-contact-meta,
+.mode-light .footer-contact-meta {
+  color: #475569;
+}
+
+body.theme-light .footer-bottom,
+[data-theme="light"] .footer-bottom,
+.mode-light .footer-bottom {
+  border-top-color: rgba(14, 165, 233, 0.22);
+  color: #475569;
+}
+
+/* Light Mode form-group labels & input placeholders contrast */
+body.theme-light .form-group label,
+[data-theme="light"] .form-group label,
+.mode-light .form-group label,
+body.theme-light .modal-box label,
+[data-theme="light"] .modal-box label,
+.mode-light .modal-box label {
+  color: #1e293b;
+}
+
+body.theme-light .form-group input,
+[data-theme="light"] .form-group input,
+.mode-light .form-group input,
+body.theme-light .form-group select,
+[data-theme="light"] .form-group select,
+.mode-light .form-group select,
+body.theme-light .form-group textarea,
+[data-theme="light"] .form-group textarea,
+.mode-light .form-group textarea {
+  color: #0f172a;
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+  box-sizing: border-box;
+}
+
+body.theme-light .form-group input::placeholder,
+[data-theme="light"] .form-group input::placeholder,
+.mode-light .form-group input::placeholder,
+body.theme-light .form-group textarea::placeholder,
+[data-theme="light"] .form-group textarea::placeholder,
+.mode-light .form-group textarea::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+body.theme-dark .modal-box .form-group input::placeholder,
+[data-theme="dark"] .modal-box .form-group input::placeholder,
+.mode-dark .modal-box .form-group input::placeholder,
+body.theme-dark .modal-box .form-group textarea::placeholder,
+[data-theme="dark"] .modal-box .form-group textarea::placeholder,
+.mode-dark .modal-box .form-group textarea::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+/* Mobile (360px - 430px) Header Popovers anti-overflow */
+@media (max-width: 640px) {
+  .site-header .season-popover-dropdown,
+  .site-header .header-ambient-dropdown {
+    position: fixed;
+    top: 64px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 80px);
+    overflow-y: auto;
+    box-sizing: border-box;
+    transform: none;
+  }
+}
+
 .footer-tag-item:hover {
   background: var(--primary-color);
   color: #fff;
@@ -6022,10 +6204,14 @@ body.theme-light .post-body h4 {
 
 .sub-modal-box {
   background: #ffffff;
+  color: #0f172a;
   border-radius: var(--radius-md);
   padding: 24px;
   width: 100%;
   max-width: 520px;
+  max-height: 90dvh;
+  overflow-y: auto;
+  box-sizing: border-box;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border-color);
 }
@@ -6714,11 +6900,14 @@ body.theme-light .post-body h4 {
 
 .chatbox-text-input {
   flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 8px 14px;
   border-radius: 20px;
   border: 1px solid #cbd5e1;
   font-size: 0.88rem;
   outline: none;
+  color: #0f172a;
   background: #f8fafc;
   transition: var(--transition);
 }
@@ -8602,6 +8791,8 @@ body.theme-dark .assistive-message-row.other-msg .assistive-msg-bubble,
 
 .assistive-msg-input {
   flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
   background: #f1f5f9;
   border: 1px solid #cbd5e1;
   border-radius: 20px;
@@ -14853,13 +15044,13 @@ body.theme-light .festive-mgmt-empty-state p {
 
 .festive-form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
   gap: 14px;
 }
 
 .festive-form-grid-3 {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: 14px;
 }
 

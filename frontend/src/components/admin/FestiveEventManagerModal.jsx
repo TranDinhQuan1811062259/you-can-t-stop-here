@@ -18,6 +18,7 @@ export const FestiveEventManagerModal = ({ isOpen, onClose, onEventUpdated }) =>
   const [events, setEvents] = useState([]);
   const [previewEventId, setPreviewEventId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('list'); // 'list' | 'create' | 'edit'
   const [editingEvent, setEditingEvent] = useState(null);
   const [message, setMessage] = useState('');
@@ -171,7 +172,16 @@ export const FestiveEventManagerModal = ({ isOpen, onClose, onEventUpdated }) =>
 
   const handleSaveEdit = async (e) => {
     e.preventDefault();
+    if (isSaving) return;
     playClickSound();
+
+    if (!formData.name.trim() || !formData.bannerTitle.trim()) {
+      setErrorMsg('Vui lòng nhập đầy đủ Tên sự kiện và Tiêu đề Banner trước khi lưu.');
+      return;
+    }
+
+    setErrorMsg('');
+    setIsSaving(true);
     try {
       const particles = formData.particlesStr
         .split(',')
@@ -209,6 +219,8 @@ export const FestiveEventManagerModal = ({ isOpen, onClose, onEventUpdated }) =>
       if (onEventUpdated) onEventUpdated();
     } catch (err) {
       setErrorMsg(err.message || 'Không thể lưu cài đặt sự kiện');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -569,7 +581,7 @@ export const FestiveEventManagerModal = ({ isOpen, onClose, onEventUpdated }) =>
 
         {/* TAB 2 & 3: TẠO MỚI HOẶC CHỈNH SỬA SỰ KIỆN */}
         {(activeTab === 'create' || activeTab === 'edit') && (
-          <form className="festive-mgmt-form-container" onSubmit={handleSaveEdit}>
+          <form noValidate className="festive-mgmt-form-container" onSubmit={handleSaveEdit}>
             <div className="festive-form-grid">
               <div className="festive-form-group">
                 <label className="festive-form-label">
@@ -760,8 +772,20 @@ export const FestiveEventManagerModal = ({ isOpen, onClose, onEventUpdated }) =>
               >
                 Hủy Bỏ
               </button>
-              <button type="submit" className="festive-btn-submit">
-                {activeTab === 'edit' ? '✓ Lưu Thay Đổi Sự Kiện' : '➕ Tạo Sự Kiện Mới Ngay'}
+              <button
+                type="submit"
+                className="festive-btn-submit"
+                disabled={isSaving}
+                style={{
+                  opacity: isSaving ? 0.65 : 1,
+                  cursor: isSaving ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {isSaving
+                  ? 'Đang lưu...'
+                  : activeTab === 'edit'
+                    ? '✓ Lưu Thay Đổi Sự Kiện'
+                    : '➕ Tạo Sự Kiện Mới Ngay'}
               </button>
             </div>
           </form>

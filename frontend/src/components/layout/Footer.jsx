@@ -36,14 +36,14 @@ export const Footer = () => {
                 borderTop: '1px solid rgba(255, 255, 255, 0.08)',
               }}
             >
-              <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <div className="footer-contact-meta" style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Liên Hệ &amp; Hỗ Trợ:
               </div>
 
               <a
                 href="tel:0931465310"
+                className="footer-contact-link"
                 style={{
-                  color: '#e2e8f0',
                   textDecoration: 'none',
                   fontSize: '0.86rem',
                   display: 'inline-flex',
@@ -52,23 +52,21 @@ export const Footer = () => {
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#38bdf8';
                   e.currentTarget.style.transform = 'translateX(4px)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.color = '#e2e8f0';
                   e.currentTarget.style.transform = 'translateX(0)';
                 }}
                 title="Gọi điện hoặc nhắn Zalo hỗ trợ: 0931465310"
               >
                 <span
+                  className="footer-contact-link--fb"
                   style={{
                     width: '26px',
                     height: '26px',
                     borderRadius: '50%',
                     background: 'rgba(56, 189, 248, 0.15)',
                     border: '1px solid rgba(56, 189, 248, 0.3)',
-                    color: '#38bdf8',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -78,13 +76,13 @@ export const Footer = () => {
                 >
                   <i className="fa-solid fa-phone"></i>
                 </span>
-                <span>Hotline / Zalo: <strong style={{ color: '#38bdf8' }}>0931465310</strong></span>
+                <span>Hotline / Zalo: <strong className="footer-contact-link--fb">0931465310</strong></span>
               </a>
 
               <a
                 href="mailto:Anthonyq012025@gmail.com"
+                className="footer-contact-link"
                 style={{
-                  color: '#e2e8f0',
                   textDecoration: 'none',
                   fontSize: '0.86rem',
                   display: 'inline-flex',
@@ -93,23 +91,21 @@ export const Footer = () => {
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#34d399';
                   e.currentTarget.style.transform = 'translateX(4px)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.color = '#e2e8f0';
                   e.currentTarget.style.transform = 'translateX(0)';
                 }}
                 title="Gửi thư điện tử tới: Anthonyq012025@gmail.com"
               >
                 <span
+                  className="footer-contact-link--zalo"
                   style={{
                     width: '26px',
                     height: '26px',
                     borderRadius: '50%',
                     background: 'rgba(52, 211, 153, 0.15)',
                     border: '1px solid rgba(52, 211, 153, 0.3)',
-                    color: '#34d399',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -119,7 +115,7 @@ export const Footer = () => {
                 >
                   <i className="fa-solid fa-envelope"></i>
                 </span>
-                <span>Email: <strong style={{ color: '#34d399' }}>Anthonyq012025@gmail.com</strong></span>
+                <span>Email: <strong className="footer-contact-link--zalo">Anthonyq012025@gmail.com</strong></span>
               </a>
             </div>
           </div>
@@ -148,8 +144,8 @@ export const Footer = () => {
           <div className="footer-bottom-meta">
             <p>
               © {new Date().getFullYear()} YOU CAN'T STOP HERE. Luôn luôn có một lối đi tiếp cho bạn. •{' '}
-              <a href="tel:0931465310" style={{ color: '#38bdf8', textDecoration: 'none' }}>0931465310</a> •{' '}
-              <a href="mailto:Anthonyq012025@gmail.com" style={{ color: '#34d399', textDecoration: 'none' }}>Anthonyq012025@gmail.com</a>
+              <a href="tel:0931465310" className="footer-contact-link--fb" style={{ textDecoration: 'none' }}>0931465310</a> •{' '}
+              <a href="mailto:Anthonyq012025@gmail.com" className="footer-contact-link--zalo" style={{ textDecoration: 'none' }}>Anthonyq012025@gmail.com</a>
             </p>
             <div className="footer-author-credit">
               <span>Phát triển bởi </span>
@@ -195,9 +191,9 @@ export const Footer = () => {
             </div>
           </div>
           <div className="footer-bottom-links">
-            <Link to="/" style={{ color: 'var(--text-light)' }}>Trang chủ</Link>
-            <Link to="/music" style={{ color: '#38bdf8', textDecoration: 'none' }}>Không gian nhạc ❄️</Link>
-            <a href="#root" style={{ color: 'var(--primary-color)' }}>Lên đầu trang ↑</a>
+            <Link to="/" className="footer-contact-link">Trang chủ</Link>
+            <Link to="/music" className="footer-contact-link--fb" style={{ textDecoration: 'none' }}>Không gian nhạc ❄️</Link>
+            <a href="#root" className="footer-contact-link--fb">Lên đầu trang ↑</a>
           </div>
         </div>
       </div>

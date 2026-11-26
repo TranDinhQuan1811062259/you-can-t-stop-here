@@ -58,7 +58,10 @@ export const GratitudeJarModal = ({ isOpen, onClose }) => {
 
   const handleFoldStar = (e) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    if (!inputText.trim()) {
+      setAlertMsg('⚠️ Hãy viết ít nhất một điều nhỏ bé làm bạn thấy biết ơn trước khi gấp sao!');
+      return;
+    }
 
     playStarChimeSound();
     const newStar = {
@@ -292,7 +295,7 @@ export const GratitudeJarModal = ({ isOpen, onClose }) => {
 
           {/* TAB 1: GẤP SAO MỚI */}
           {activeTab === 'fold' && (
-            <form onSubmit={handleFoldStar} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form noValidate onSubmit={handleFoldStar} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 700, color: '#fcd34d', marginBottom: '8px' }}>
                   Hôm nay có điều gì nhỏ xíu làm bạn mỉm cười hoặc thấy biết ơn? *

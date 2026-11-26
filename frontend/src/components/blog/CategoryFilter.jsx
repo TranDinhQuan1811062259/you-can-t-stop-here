@@ -63,7 +63,10 @@ export const CategoryFilter = ({
 
   const handleCreateCategory = async (e) => {
     e?.preventDefault();
-    if (!newCatName.trim()) return;
+    if (!newCatName.trim()) {
+      setErrorMsg('Vui lòng nhập tên thể loại mới!');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -240,7 +243,7 @@ export const CategoryFilter = ({
               </div>
             )}
 
-            <form onSubmit={handleCreateCategory}>
+            <form noValidate onSubmit={handleCreateCategory}>
               {/* Tên thể loại */}
               <div style={{ marginBottom: '14px' }}>
                 <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
@@ -258,6 +261,8 @@ export const CategoryFilter = ({
                     padding: '10px 14px',
                     borderRadius: '10px',
                     border: '1.5px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#0f172a',
                     fontSize: '0.92rem',
                     boxSizing: 'border-box',
                   }}
@@ -311,6 +316,8 @@ export const CategoryFilter = ({
                     padding: '8px 14px',
                     borderRadius: '10px',
                     border: '1.5px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#0f172a',
                     fontSize: '0.86rem',
                     boxSizing: 'border-box',
                   }}
