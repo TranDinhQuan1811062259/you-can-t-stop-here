@@ -314,8 +314,17 @@ export const AuthProvider = ({ children }) => {
     hasInitializedAuthRef.current = true;
 
     const initialToken = localStorage.getItem('token') || localStorage.getItem('freedom_token');
+    const rawStoredUser = localStorage.getItem('user') || localStorage.getItem('freedom_persisted_profile');
+    const hasRealToken = Boolean(
+      initialToken &&
+      !['null', 'undefined', 'false', ''].includes(initialToken.trim()) &&
+      initialToken.trim().length >= 16
+    );
+    const hasStoredUserProfile = Boolean(
+      rawStoredUser && !['null', 'undefined', 'false', '{}', ''].includes(rawStoredUser.trim())
+    );
 
-    if (initialToken) {
+    if (hasRealToken) {
       authService
         .getMe()
         .then((res) => {
@@ -329,18 +338,24 @@ export const AuthProvider = ({ children }) => {
           }
         })
         .catch((err) => {
-          // Nếu server trả về 401 Unauthorized thì xóa phiên hết hạn, logout an toàn và báo toast
+          // Nếu server trả về 401 Unauthorized thì xóa phiên hết hạn, chỉ báo toast khi thực sự từng đăng nhập hợp lệ
           if (err?.status === 401 || err?.response?.status === 401) {
             console.warn('[Auth] Token máy chủ hết hạn lúc khởi động, thực hiện đăng xuất an toàn');
             logout(false);
-            notifySessionExpired();
+            if (hasStoredUserProfile) {
+              notifySessionExpired();
+            }
           } else {
             console.log('[Auth] Máy chủ offline hoặc lỗi mạng, giữ nguyên phiên làm việc hiện tại');
           }
         })
         .finally(() => setLoading(false));
     } else {
-      setUser(null);
+      if (initialToken) {
+        logout(false);
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     }
   }, []);

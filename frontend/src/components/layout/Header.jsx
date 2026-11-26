@@ -593,10 +593,13 @@ export const Header = () => {
     const showNotice = (msg) => {
       setSecurityNotice(msg);
       if (timerId) clearTimeout(timerId);
-      timerId = setTimeout(() => setSecurityNotice(null), 5000);
+      timerId = setTimeout(() => setSecurityNotice(null), 4000);
     };
 
     const handleNoticeEvent = (e) => {
+      try {
+        sessionStorage.removeItem('freedom_logout_notice');
+      } catch (_) {}
       showNotice(e.detail || '✓ Đã thu hồi toàn bộ phiên đăng nhập trên tất cả thiết bị thành công!');
     };
 
@@ -712,13 +715,16 @@ export const Header = () => {
     <>
       {securityNotice && (
         <div
+          role="status"
+          aria-live="polite"
+          className="header-security-notice-toast"
           style={{
             position: 'fixed',
-            top: '72px',
+            top: '124px',
             left: '50%',
             transform: 'translateX(-50%)',
-            zIndex: 99999,
-            maxWidth: 'calc(100vw - 32px)',
+            zIndex: 9990,
+            maxWidth: 'calc(100vw - 24px)',
             width: 'max-content',
             boxSizing: 'border-box',
             background: 'rgba(15, 23, 42, 0.95)',
@@ -1774,40 +1780,43 @@ export const Header = () => {
                 <span className="item-label">Góc Nhạc</span>
               </NavLink>
 
-              {/* Cụm Trạm Chữa Lành: Link trực tiếp /wellness + nút mở nhanh 17 công cụ */}
+              {/* Cụm Trạm Chữa Lành: Split-button liền khối (Link /wellness + Nút mở nhanh 17 công cụ) */}
               <div className="header-wellness-dropdown-wrapper header-wellness-split-group" ref={wellnessDropdownRef}>
-              <NavLink
-                to="/wellness"
-                state={{ transitionDirection: 'next', targetSlug: '__wellness__' }}
-                onClick={() => {
-                  playClickSound();
-                  setIsWellnessDropdownOpen(false);
-                }}
-                className={({ isActive }) => `dashboard-3d-item tab-wellness-hub ${isActive ? 'active' : ''}`}
-                title="Mở trang Trạm Chữa Lành (/wellness)"
-              >
-                <span className="healing-icon-pill healing-icon-sage" style={{ width: '28px', height: '28px', fontSize: '0.85rem' }}>
-                  🌿
-                </span>
-                <span className="item-label">Trạm Chữa Lành</span>
-              </NavLink>
-              <button
-                type="button"
-                className={`dashboard-3d-item wellness-quick-chevron-btn ${isWellnessDropdownOpen || isWellnessOpen || isTimeCapsuleOpen || isRadioOpen || isGratitudeJarOpen || isStickyWallOpen || isEmergencyCalmOpen || isCozyCafeOpen || isMoodPixelOpen || isRantAndBurnOpen || isDriftBottleOpen || isMoodRadarOpen || isWhisperWallOpen || isMentalFirstAidOpen || isTeaLoungeOpen || isDeclutterOpen || isMoodWeatherOpen || isFocusCocoonOpen ? 'active' : ''}`}
-                onClick={() => {
-                  playClickSound();
-                  setIsWellnessDropdownOpen((prev) => !prev);
-                }}
-                title="Mở nhanh danh sách 17 công cụ chữa lành"
-                aria-label="Mở nhanh danh sách 17 công cụ chữa lành"
-                aria-expanded={isWellnessDropdownOpen}
-              >
-                <span className="wellness-hub-badge">17</span>
-                <i
-                  className={`fa-solid fa-chevron-${isWellnessDropdownOpen ? 'up' : 'down'}`}
-                  style={{ fontSize: '0.68rem', opacity: 0.85 }}
-                ></i>
-              </button>
+                <div className={`wellness-split-shell ${isWellnessDropdownOpen || isWellnessOpen || isTimeCapsuleOpen || isRadioOpen || isGratitudeJarOpen || isStickyWallOpen || isEmergencyCalmOpen || isCozyCafeOpen || isMoodPixelOpen || isRantAndBurnOpen || isDriftBottleOpen || isMoodRadarOpen || isWhisperWallOpen || isMentalFirstAidOpen || isTeaLoungeOpen || isDeclutterOpen || isMoodWeatherOpen || isFocusCocoonOpen ? 'is-active' : ''}`}>
+                  <NavLink
+                    to="/wellness"
+                    state={{ transitionDirection: 'next', targetSlug: '__wellness__' }}
+                    onClick={() => {
+                      playClickSound();
+                      setIsWellnessDropdownOpen(false);
+                    }}
+                    className={({ isActive }) => `dashboard-3d-item tab-wellness-hub ${isActive ? 'active' : ''}`}
+                    title="Mở trang Trạm Chữa Lành (/wellness)"
+                  >
+                    <span className="healing-icon-pill healing-icon-sage" style={{ width: '28px', height: '28px', fontSize: '0.85rem' }}>
+                      🌿
+                    </span>
+                    <span className="item-label">Trạm Chữa Lành</span>
+                  </NavLink>
+                  <span className="wellness-split-divider" aria-hidden="true" />
+                  <button
+                    type="button"
+                    className={`dashboard-3d-item wellness-quick-chevron-btn ${isWellnessDropdownOpen ? 'active' : ''}`}
+                    onClick={() => {
+                      playClickSound();
+                      setIsWellnessDropdownOpen((prev) => !prev);
+                    }}
+                    title="Mở nhanh danh sách 17 công cụ chữa lành"
+                    aria-label="Mở nhanh danh sách 17 công cụ chữa lành"
+                    aria-expanded={isWellnessDropdownOpen}
+                  >
+                    <span className="wellness-hub-badge">17</span>
+                    <i
+                      className={`fa-solid fa-chevron-${isWellnessDropdownOpen ? 'up' : 'down'}`}
+                      style={{ fontSize: '0.68rem', opacity: 0.85 }}
+                    ></i>
+                  </button>
+                </div>
 
               {/* Bảng Mega-Dropdown Danh Sách Công Cụ Chữa Lành Đã Phân Mục Rõ Ràng */}
               {isWellnessDropdownOpen && (() => {

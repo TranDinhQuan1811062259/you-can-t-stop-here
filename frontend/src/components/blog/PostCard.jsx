@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { formatDate } from '../../utils/formatDate';
@@ -13,6 +13,8 @@ import { getHighestBadge } from '../../utils/badgeHelper';
 import { extractYouTubeId } from '../../utils/contentFormatter';
 import { calculateReadingTime } from '../../utils/readingTime';
 import { AuthorQuickPeekWrapper } from '../profile/AuthorQuickPeekCard';
+
+const EditPostModal = lazy(() => import('./EditPostModal').then((m) => ({ default: m.EditPostModal || m.default })));
 
 const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
 
@@ -168,6 +170,8 @@ export const PostCard = ({ post }) => {
 
   const [deleting, setDeleting] = useState(false);
   const [approving, setApproving] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const canEditPost = Boolean(user && (isCurrentUserAuthor || user?.role === 'admin'));
 
   if (!post) return null;
 
@@ -374,6 +378,9 @@ export const PostCard = ({ post }) => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  lineHeight: 1.2,
                   boxShadow: '0 2px 6px rgba(168, 85, 247, 0.35)',
                 }}
                 title="Định dạng: Khoảnh khắc ảnh kèm status"
@@ -394,6 +401,9 @@ export const PostCard = ({ post }) => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  lineHeight: 1.2,
                   boxShadow: '0 2px 6px rgba(239, 68, 68, 0.35)',
                 }}
                 title="Định dạng: Video ngắn"
@@ -408,13 +418,16 @@ export const PostCard = ({ post }) => {
                   background: 'rgba(13, 148, 136, 0.2)',
                   color: '#14b8a6',
                   border: '1px solid rgba(20, 184, 166, 0.35)',
-                  padding: '2px 7px',
+                  padding: '2px 8px',
                   borderRadius: '999px',
                   fontSize: '0.68rem',
                   fontWeight: 600,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '3px',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  lineHeight: 1.2,
                 }}
                 title="Định dạng: Bài viết sâu"
               >
@@ -709,7 +722,23 @@ export const PostCard = ({ post }) => {
               </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              {canEditPost && (
+                <button
+                  type="button"
+                  className="card-edit-action-btn"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    playClickSound();
+                    setIsEditModalOpen(true);
+                  }}
+                  title="Chỉnh sửa bài viết này"
+                >
+                  ✏️ Chỉnh sửa
+                </button>
+              )}
+
               {post.isFlagged && (
                 <button
                   type="button"
@@ -745,6 +774,7 @@ export const PostCard = ({ post }) => {
                   fontWeight: 700,
                   cursor: 'pointer',
                   boxShadow: '0 2px 6px rgba(239, 68, 68, 0.25)',
+                  whiteSpace: 'nowrap',
                 }}
                 title="Xóa ngang tức thì bài viết vi phạm này khỏi hệ thống"
               >
@@ -754,56 +784,87 @@ export const PostCard = ({ post }) => {
           </div>
         )}
 
-        {/* Thanh công cụ dành riêng cho chính chủ tác giả (Xóa bài viết của mình) */}
-        {isCurrentUserAuthor && user?.role !== 'admin' && (
+        {/* Thanh công cụ dành riêng cho chính chủ tác giả (Chỉnh sửa & Xóa bài viết của mình) */}
+        {canEditPost && user?.role !== 'admin' && (
           <div
             className="card-author-actions-bar"
             style={{
               marginTop: '10px',
               paddingTop: '8px',
-              borderTop: '1px dashed #e2e8f0',
+              borderTop: '1px dashed rgba(148, 163, 184, 0.35)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
+              flexWrap: 'wrap',
               gap: '8px',
             }}
           >
             <span style={{ fontSize: '0.74rem', color: '#0d9488', fontWeight: 700 }}>
               ✍️ Bài viết của bạn
             </span>
-            <button
-              type="button"
-              disabled={deleting}
-              onClick={handleAuthorDelete}
-              style={{
-                background: 'rgba(239, 68, 68, 0.08)',
-                color: '#dc2626',
-                border: '1px solid rgba(239, 68, 68, 0.25)',
-                padding: '3px 10px',
-                borderRadius: '6px',
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#dc2626';
-                e.currentTarget.style.color = '#ffffff';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
-                e.currentTarget.style.color = '#dc2626';
-              }}
-              title="Xóa vĩnh viễn bài tâm sự này của bạn"
-            >
-              {deleting ? 'Đang xóa...' : '🗑️ Xóa bài'}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="card-edit-action-btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  playClickSound();
+                  setIsEditModalOpen(true);
+                }}
+                title="Chỉnh sửa bài viết này"
+              >
+                ✏️ Chỉnh sửa
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={handleAuthorDelete}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  color: '#dc2626',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#dc2626';
+                  e.currentTarget.style.color = '#ffffff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
+                  e.currentTarget.style.color = '#dc2626';
+                }}
+                title="Xóa vĩnh viễn bài tâm sự này của bạn"
+              >
+                {deleting ? 'Đang xóa...' : '🗑️ Xóa bài'}
+              </button>
+            </div>
           </div>
         )}
       </div>
+
+      {isEditModalOpen && (
+        <Suspense fallback={null}>
+          <EditPostModal
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            post={post}
+            onPostUpdated={() => {
+              setIsEditModalOpen(false);
+              window.dispatchEvent(new Event('post_updated'));
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Modal Chia Sẻ Bài Viết Đa Năng */}
       <SharePostModal

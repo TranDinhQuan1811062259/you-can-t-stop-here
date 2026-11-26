@@ -142,11 +142,53 @@ export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
   const activeThemeMeta = ATMOSPHERE_THEMES[currentAtmosphere.theme] || ATMOSPHERE_THEMES.default;
   const activeBgPreset = BACKGROUND_PRESETS.find((p) => p.id === currentAtmosphere.bgPreset) || BACKGROUND_PRESETS[0];
 
-  // Tính background thực tế cho Live Preview
+  // Tính background thực tế và tương phản chữ/pill cho Live Preview
   let previewBackground = activeBgPreset.previewBg;
   if (currentAtmosphere.bgPreset === 'custom') {
     previewBackground = currentAtmosphere.customBgGradient || currentAtmosphere.customColor || '#1e293b';
   }
+
+  const isHexLight = (hex) => {
+    if (!hex || typeof hex !== 'string') return false;
+    const clean = hex.trim().replace('#', '');
+    if (!/^[0-9a-fA-F]{6}$/.test(clean)) return false;
+    const r = parseInt(clean.slice(0, 2), 16);
+    const g = parseInt(clean.slice(2, 4), 16);
+    const b = parseInt(clean.slice(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62;
+  };
+
+  const isLightPreviewBg =
+    activeBgPreset.id === 'default' ||
+    activeBgPreset.id === 'joy_sunset' ||
+    activeBgPreset.id === 'pastel_dream' ||
+    (activeBgPreset.id === 'custom' &&
+      !currentAtmosphere.customBgGradient &&
+      isHexLight(currentAtmosphere.customColor));
+
+  const previewTitleColor = isLightPreviewBg
+    ? (activeBgPreset.id === 'pastel_dream' ? '#3b0764' : activeBgPreset.id === 'joy_sunset' ? '#431407' : '#0f172a')
+    : '#f8fafc';
+  const previewDescColor = isLightPreviewBg
+    ? (activeBgPreset.id === 'pastel_dream' ? '#4a044e' : activeBgPreset.id === 'joy_sunset' ? '#7c2d12' : '#334155')
+    : 'rgba(255, 255, 255, 0.9)';
+  const previewChipBg = isLightPreviewBg
+    ? (activeBgPreset.id === 'default' ? `${activeThemeMeta.accentColor}18` : 'rgba(255, 255, 255, 0.82)')
+    : 'rgba(15, 23, 42, 0.45)';
+  const previewChipBorder = isLightPreviewBg
+    ? (activeBgPreset.id === 'pastel_dream'
+        ? 'rgba(131, 24, 67, 0.35)'
+        : activeBgPreset.id === 'joy_sunset'
+        ? 'rgba(154, 52, 18, 0.35)'
+        : `${activeThemeMeta.accentColor}48`)
+    : 'rgba(255, 255, 255, 0.32)';
+  const previewChipColor = isLightPreviewBg
+    ? (activeBgPreset.id === 'pastel_dream' ? '#701a75' : activeBgPreset.id === 'joy_sunset' ? '#9a3412' : activeThemeMeta.accentColor)
+    : '#f8fafc';
+  const previewSecondPillColor = isLightPreviewBg
+    ? (activeBgPreset.id === 'pastel_dream' ? '#831843' : activeBgPreset.id === 'joy_sunset' ? '#9a3412' : activeThemeMeta.accentColor)
+    : '#bae6fd';
+  const previewTextShadow = isLightPreviewBg ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.6)';
 
   return (
     <div
@@ -409,14 +451,15 @@ export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
           👁️ Xem Trước Giao Diện Bài Viết Của Bạn:
         </span>
         <div
-          className={`post-atmosphere-preview-box ${currentAtmosphere.particleEffect !== 'none' ? `has-particle-${currentAtmosphere.particleEffect}` : ''}`}
+          className={`post-atmosphere-preview-box ${isLightPreviewBg ? 'is-light-preview' : 'is-dark-preview'} ${currentAtmosphere.particleEffect !== 'none' ? `has-particle-${currentAtmosphere.particleEffect}` : ''}`}
           style={{
             position: 'relative',
             overflow: 'hidden',
             borderRadius: '12px',
             padding: '16px 20px',
             background: previewBackground,
-            color: activeBgPreset.textColor,
+            color: previewTitleColor,
+            '--preview-desc-color': previewDescColor,
             border: `2px solid ${activeBgPreset.accentColor || activeThemeMeta.accentColor}`,
             boxShadow: activeBgPreset.boxShadow || `0 6px 20px ${activeThemeMeta.accentColor}25`,
             transition: 'all 0.3s ease',
@@ -451,9 +494,9 @@ export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
                   fontWeight: 700,
                   padding: '4px 10px',
                   borderRadius: '12px',
-                  background: activeBgPreset.id === 'default' ? `${activeThemeMeta.accentColor}18` : 'rgba(255, 255, 255, 0.16)',
-                  color: activeBgPreset.id === 'default' ? activeThemeMeta.accentColor : '#ffffff',
-                  border: `1px solid ${activeBgPreset.id === 'default' ? `${activeThemeMeta.accentColor}50` : 'rgba(255, 255, 255, 0.35)'}`,
+                  background: previewChipBg,
+                  color: previewChipColor,
+                  border: `1px solid ${previewChipBorder}`,
                   backdropFilter: 'blur(8px)',
                 }}
               >
@@ -470,9 +513,9 @@ export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
                   fontWeight: 700,
                   padding: '4px 10px',
                   borderRadius: '12px',
-                  background: activeBgPreset.id === 'default' ? `${activeBgPreset.accentColor}18` : 'rgba(255, 255, 255, 0.16)',
-                  color: activeBgPreset.id === 'default' ? activeBgPreset.accentColor : '#38bdf8',
-                  border: `1px solid ${activeBgPreset.id === 'default' ? `${activeBgPreset.accentColor}50` : 'rgba(56, 189, 248, 0.45)'}`,
+                  background: previewChipBg,
+                  color: previewSecondPillColor,
+                  border: `1px solid ${previewChipBorder}`,
                   backdropFilter: 'blur(8px)',
                 }}
               >
@@ -482,7 +525,7 @@ export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
             </div>
 
             {currentAtmosphere.theme !== 'default' && (
-              <span style={{ fontSize: '0.74rem', opacity: 0.9, fontStyle: 'italic', color: activeBgPreset.textColor }}>
+              <span style={{ fontSize: '0.74rem', fontWeight: 600, fontStyle: 'italic', color: previewDescColor }}>
                 🎧 Âm thanh: {activeThemeMeta.soundLabel}
               </span>
             )}
@@ -494,33 +537,33 @@ export const PostAtmosphereSelector = ({ atmosphere, onChange }) => {
                 margin: '0 0 6px 0',
                 fontSize: '1.05rem',
                 fontWeight: 800,
-                color: activeBgPreset.textColor,
-                textShadow: activeBgPreset.id === 'default' ? 'none' : '0 1px 4px rgba(0,0,0,0.6)',
+                color: previewTitleColor,
+                textShadow: previewTextShadow,
                 letterSpacing: '0.2px',
               }}
             >
               Tiêu đề bài viết: Không gian {activeBgPreset.name} {activeBgPreset.icon}
             </h5>
             <p
+              className="post-preview-desc"
               style={{
                 margin: '0 0 10px',
                 fontSize: '0.84rem',
-                opacity: 0.95,
                 lineHeight: 1.6,
-                color: activeBgPreset.textColor,
-                textShadow: activeBgPreset.id === 'default' ? 'none' : '0 1px 2px rgba(0,0,0,0.5)',
+                color: previewDescColor,
+                textShadow: previewTextShadow,
               }}
             >
               Không gian bài viết này sẽ hiện với phong cách màu sắc đặc trưng ({activeBgPreset.name}), hiệu ứng chuyển động ({currentAtmosphere.particleEffect !== 'none' ? currentAtmosphere.particleEffect : 'ánh sáng nền'}) và âm thanh duy trì khi người khác vào đọc...
             </p>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '10px', background: 'rgba(255, 255, 255, 0.18)', backdropFilter: 'blur(4px)', color: activeBgPreset.textColor }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 9px', borderRadius: '10px', background: previewChipBg, border: `1px solid ${previewChipBorder}`, backdropFilter: 'blur(4px)', color: previewChipColor }}>
                 🌟 Tương phản cao
               </span>
-              <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '10px', background: 'rgba(255, 255, 255, 0.18)', backdropFilter: 'blur(4px)', color: activeBgPreset.textColor }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 9px', borderRadius: '10px', background: previewChipBg, border: `1px solid ${previewChipBorder}`, backdropFilter: 'blur(4px)', color: previewChipColor }}>
                 🍃 Nhịp thở cảm xúc
               </span>
-              <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '10px', background: 'rgba(255, 255, 255, 0.18)', backdropFilter: 'blur(4px)', color: activeBgPreset.textColor }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 9px', borderRadius: '10px', background: previewChipBg, border: `1px solid ${previewChipBorder}`, backdropFilter: 'blur(4px)', color: previewChipColor }}>
                 🎵 Âm thanh sống động
               </span>
             </div>

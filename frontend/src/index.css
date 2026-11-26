@@ -1279,12 +1279,15 @@ body.theme-light .header-daily-quote-pill,
 .wellness-hub-mega-dropdown {
   position: absolute;
   top: calc(100% + 12px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: 680px;
-  max-width: calc(100vw - 28px);
+  right: 0;
+  left: auto;
+  transform: none;
+  width: min(640px, calc(100vw - 24px));
+  max-width: min(640px, calc(100vw - 24px));
   max-height: calc(100vh - 120px);
   overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
   scrollbar-width: thin;
   background: rgba(15, 23, 42, 0.96);
   backdrop-filter: blur(28px);
@@ -1297,17 +1300,17 @@ body.theme-light .header-daily-quote-pill,
   visibility: visible !important;
   pointer-events: auto !important;
   animation: wellnessMenuSlideDown 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-  transform-origin: top center;
+  transform-origin: top right;
 }
 
 @keyframes wellnessMenuSlideDown {
   0% {
     opacity: 0;
-    transform: translateX(-50%) translateY(-10px) scale(0.96);
+    transform: translateY(-8px) scale(0.97);
   }
   100% {
     opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -1425,9 +1428,10 @@ body.theme-light .wellness-tab-pill.active,
 
 .wellness-hub-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   padding: 14px 16px;
+  box-sizing: border-box;
 }
 
 .wellness-hub-card {
@@ -1443,6 +1447,8 @@ body.theme-light .wellness-tab-pill.active,
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
+  min-width: 0;
+  box-sizing: border-box;
   color: inherit;
   font-family: inherit;
 }
@@ -1673,6 +1679,18 @@ body.theme-light .wellness-hub-footer,
   color: #94a3b8;
 }
 
+@media (max-width: 960px) {
+  .wellness-hub-mega-dropdown {
+    position: fixed !important;
+    top: 102px !important;
+    left: auto !important;
+    right: 12px !important;
+    width: min(640px, calc(100vw - 24px)) !important;
+    max-width: calc(100vw - 24px) !important;
+    transform: none !important;
+  }
+}
+
 @media (max-width: 640px) {
   .wellness-hub-mega-dropdown {
     position: fixed !important;
@@ -1680,7 +1698,7 @@ body.theme-light .wellness-hub-footer,
     left: 12px !important;
     right: 12px !important;
     width: auto !important;
-    max-width: none !important;
+    max-width: calc(100vw - 24px) !important;
     transform: none !important;
   }
   .wellness-hub-grid {
@@ -4576,9 +4594,13 @@ body.theme-dark .modal-box label,
   color: #1e293b !important;
 }
 
-body.theme-dark .modal-box p,
-[data-theme="dark"] .modal-box p {
+body.theme-dark .modal-box p:not(.post-preview-desc),
+[data-theme="dark"] .modal-box p:not(.post-preview-desc) {
   color: #334155 !important;
+}
+
+.modal-box .post-atmosphere-preview-box .post-preview-desc {
+  color: var(--preview-desc-color, rgba(255, 255, 255, 0.9)) !important;
 }
 
 body.theme-dark .modal-box .form-group input,
@@ -11799,12 +11821,21 @@ body.theme-light .floating-write-post-btn {
   justify-content: center;
   background: rgba(15, 23, 42, 0.94);
   border: 1.5px solid rgba(255, 255, 255, 0.28);
+  color: #fde047;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
   cursor: grab;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s, border-color 0.22s;
+}
+
+.quick-pref-collapsed-bubble .fa-moon {
+  color: #fde047 !important;
+}
+
+.quick-pref-collapsed-bubble .fa-sun {
+  color: #f59e0b !important;
 }
 
 .quick-pref-collapsed-bubble:hover {
@@ -19729,30 +19760,33 @@ body.theme-dark .post-atmosphere-sound-bar span,
   100% { transform: translateX(-40%); }
 }
 
-/* 2. MƯA RƠI TÍ TÁCH (RAIN) */
+/* 2. MƯA RƠI TÍ TÁCH (RAIN) - Liền mạch toàn khung không đường cắt ngang */
 .post-particle-rain-overlay,
 .preview-rain-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: -96px;
+  left: -28px;
+  width: calc(100% + 56px);
+  height: calc(100% + 128px);
   pointer-events: none;
   z-index: 1;
   background-image: repeating-linear-gradient(
     105deg,
-    rgba(147, 197, 253, 0.2) 0px,
-    rgba(147, 197, 253, 0.2) 1.5px,
+    rgba(186, 230, 253, 0.22) 0px,
+    rgba(186, 230, 253, 0.22) 1.5px,
     transparent 1.5px,
-    transparent 28px
+    transparent 26px
   );
-  animation: rainFall 0.8s linear infinite;
-  opacity: 0.7;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  animation: rainFall 0.9s linear infinite;
+  will-change: transform;
+  opacity: 0.72;
 }
 
 @keyframes rainFall {
-  0% { background-position: 0 0; }
-  100% { background-position: -20px 80px; }
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-25.72px, 96px, 0); }
 }
 
 /* 3. LẤP LÁNH & PHÁO HOA (SPARKLES) */
@@ -27433,16 +27467,136 @@ body.theme-light .ambient-quality-toggle-pill,
   border-color: rgba(2, 132, 199, 0.35);
 }
 
-/* Header Wellness Split Navigation */
+/* Header Wellness Split Navigation (Liền khối "Trạm Chữa Lành | 17 ▾") */
 .site-header .header-wellness-split-group {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  position: relative;
+}
+
+.site-header .wellness-split-shell {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(20, 184, 166, 0.42);
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.14), rgba(16, 185, 129, 0.09));
+  overflow: hidden;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.site-header .wellness-split-shell.is-active,
+.site-header .wellness-split-shell:hover {
+  border-color: rgba(45, 212, 191, 0.72);
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.26);
+}
+
+.site-header .wellness-split-shell .dashboard-3d-item {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+  margin: 0 !important;
+  min-height: 36px;
+}
+
+.site-header .wellness-split-shell .dashboard-3d-item.active::after {
+  display: none !important;
+}
+
+.site-header .wellness-split-shell .dashboard-3d-item:hover,
+.site-header .wellness-split-shell .dashboard-3d-item.active {
+  background: rgba(20, 184, 166, 0.18) !important;
+}
+
+.site-header .wellness-split-divider {
+  width: 1px;
+  align-self: stretch;
+  background: rgba(45, 212, 191, 0.34);
+  flex-shrink: 0;
 }
 
 .site-header .wellness-quick-chevron-btn {
-  padding: 0 9px !important;
+  padding: 0 11px 0 9px !important;
   gap: 5px !important;
+}
+
+body.theme-light .site-header .wellness-split-shell,
+[data-theme="light"] .site-header .wellness-split-shell,
+.mode-light .site-header .wellness-split-shell {
+  background: rgba(13, 148, 136, 0.08);
+  border-color: rgba(13, 148, 136, 0.35);
+}
+
+body.theme-light .site-header .wellness-split-shell .dashboard-3d-item:hover,
+body.theme-light .site-header .wellness-split-shell .dashboard-3d-item.active,
+[data-theme="light"] .site-header .wellness-split-shell .dashboard-3d-item:hover,
+[data-theme="light"] .site-header .wellness-split-shell .dashboard-3d-item.active,
+.mode-light .site-header .wellness-split-shell .dashboard-3d-item:hover,
+.mode-light .site-header .wellness-split-shell .dashboard-3d-item.active {
+  background: rgba(13, 148, 136, 0.16) !important;
+  color: #0f766e !important;
+}
+
+body.theme-light .site-header .wellness-split-divider,
+[data-theme="light"] .site-header .wellness-split-divider,
+.mode-light .site-header .wellness-split-divider {
+  background: rgba(13, 148, 136, 0.25);
+}
+
+/* PostCard Edit Action Button & Top Badge Wrap Protection */
+.card-top-badges-bar {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+.card-badges-left {
+  flex-wrap: wrap;
+}
+
+.card-format-pill {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.card-edit-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: rgba(13, 148, 136, 0.14);
+  color: #2dd4bf;
+  border: 1px solid rgba(45, 212, 191, 0.38);
+  transition: background 0.18s ease, color 0.18s ease, transform 0.15s ease;
+}
+
+.card-edit-action-btn:hover {
+  background: #0d9488;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+body.theme-light .card-edit-action-btn,
+[data-theme="light"] .card-edit-action-btn,
+.mode-light .card-edit-action-btn {
+  background: rgba(13, 148, 136, 0.1);
+  color: #0f766e;
+  border-color: rgba(13, 148, 136, 0.35);
+}
+
+body.theme-light .card-edit-action-btn:hover,
+[data-theme="light"] .card-edit-action-btn:hover,
+.mode-light .card-edit-action-btn:hover {
+  background: #0d9488;
+  color: #ffffff;
 }
 
 .wellness-hub-footer {
@@ -27758,6 +27912,14 @@ body.theme-light .wellness-tool-icon,
   .back-to-top-btn {
     bottom: 84px !important;
     right: 12px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-security-notice-toast {
+    top: 136px !important;
+    font-size: 0.8rem !important;
+    padding: 8px 14px !important;
   }
 }
 

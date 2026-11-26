@@ -455,9 +455,9 @@ export const PostDetailPage = () => {
   const authorSocial = post.user?.socialLinks || post.authorSocialLinks || (isCurrentUserAuthor ? user?.socialLinks : {});
   const authorProfileUrl = `/profile/${post.user?._id || post.user || encodeURIComponent(authorName)}`;
 
-  // CHỈ CHÍNH CHỦ bài viết mới có quyền sửa bài viết của mình
-  // Admin không can thiệp sửa nội dung tâm sự của người khác, Admin chỉ hỗ trợ kiểm duyệt & xóa bài vi phạm
-  const canEdit = isCurrentUserAuthor;
+  // Chỉ hiển thị nút Chỉnh sửa khi người dùng ĐÃ đăng nhập VÀ là tác giả hoặc quản trị viên (Admin)
+  const canEdit = Boolean(user && (isCurrentUserAuthor || user?.role === 'admin'));
+  const canAuthorDelete = Boolean(user && isCurrentUserAuthor);
 
   // Kiểm tra quyền xem nội dung Bạn Bè (Friends-only protection)
   const isFriend = friendsList.some(
@@ -1031,20 +1031,20 @@ export const PostDetailPage = () => {
                       💌 Chia sẻ
                     </button>
 
-                    {/* Nút Sửa bài viết CHỈ hiển thị cho chính chủ tác giả */}
+                    {/* Nút Chỉnh sửa (Tác giả hoặc Admin đã đăng nhập) */}
                     {canEdit && (
                       <button
                         type="button"
                         className="edit-post-trigger-btn"
                         onClick={() => setIsEditModalOpen(true)}
-                        title="Chỉnh sửa bài viết này (Dành riêng cho tác giả)"
+                        title="Chỉnh sửa bài viết này"
                       >
-                        ✏️ Sửa bài viết
+                        ✏️ Chỉnh sửa
                       </button>
                     )}
 
                     {/* Nút Xóa bài viết dành riêng cho chính chủ tác giả */}
-                    {canEdit && (
+                    {canAuthorDelete && (
                       <button
                         type="button"
                         disabled={isDeletingPost}

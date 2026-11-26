@@ -44,6 +44,25 @@ let isRefreshing = false;
 let failedQueue = [];
 let lastSessionExpiredNoticeTime = 0;
 
+const isValidStoredToken = (val) => {
+  if (!val || typeof val !== 'string') return false;
+  const trimmed = val.trim();
+  return !['', 'null', 'undefined', 'false'].includes(trimmed) && trimmed.length >= 16;
+};
+
+const hasPersistedUserSession = () => {
+  try {
+    const rawToken = localStorage.getItem('token') || localStorage.getItem('freedom_token');
+    const rawUser = localStorage.getItem('user') || localStorage.getItem('freedom_persisted_profile');
+    if (!isValidStoredToken(rawToken)) return false;
+    if (!rawUser || typeof rawUser !== 'string') return false;
+    const trimmedUser = rawUser.trim();
+    return !['', 'null', 'undefined', 'false', '{}'].includes(trimmedUser);
+  } catch (_) {
+    return false;
+  }
+};
+
 /**
  * Phát thông báo phiên đăng nhập hết hạn ra toàn hệ thống (Có Debounce chống spam)
  */
@@ -55,7 +74,6 @@ export const notifySessionExpired = () => {
 
   try {
     const noticeMsg = 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.';
-    sessionStorage.setItem('freedom_logout_notice', noticeMsg);
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('freedom_logout_notice', { detail: noticeMsg }));
       window.dispatchEvent(new CustomEvent('freedom_session_expired', { detail: { message: noticeMsg } }));
@@ -130,21 +148,21 @@ apiClient.interceptors.response.use(
       const storedRefreshToken =
         localStorage.getItem('refreshToken') || localStorage.getItem('freedom_refresh_token');
 
-      // Nếu không có refresh token, không thể làm mới ngầm -> Làm sạch session và thông báo nếu trước đó có token
+      // Nếu không có refresh token, không thể làm mới ngầm -> Chỉ thông báo khi thực sự có phiên đăng nhập trước đó
       if (!storedRefreshToken) {
-        const hadActiveSession = Boolean(localStorage.getItem('token') || localStorage.getItem('freedom_token'));
-        if (hadActiveSession) {
-          try {
-            localStorage.removeItem('token');
-            localStorage.removeItem('freedom_token');
-            localStorage.removeItem('user');
-            localStorage.removeItem('freedom_persisted_profile');
-            sessionStorage.removeItem('token');
-            sessionStorage.removeItem('user');
+        const hadActiveSession = hasPersistedUserSession();
+        try {
+          localStorage.removeItem('token');
+          localStorage.removeItem('freedom_token');
+          localStorage.removeItem('user');
+          localStorage.removeItem('freedom_persisted_profile');
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('user');
+          if (hadActiveSession) {
             window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
             notifySessionExpired();
-          } catch (_) {}
-        }
+          }
+        } catch (_) {}
         return Promise.reject(formatApiError(error));
       }
 
@@ -200,6 +218,7 @@ apiClient.interceptors.response.use(
       } catch (refreshErr) {
         // Refresh token đã hết hạn hoặc bị thu hồi (Revoke Session): Làm sạch session an toàn
         processQueue(refreshErr, null);
+        const hadActiveSession = hasPersistedUserSession();
         try {
           localStorage.removeItem('token');
           localStorage.removeItem('freedom_token');
@@ -211,8 +230,10 @@ apiClient.interceptors.response.use(
           sessionStorage.removeItem('user');
           sessionStorage.removeItem('adminToken');
           sessionStorage.removeItem('freedom_admin_token');
-          window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
-          notifySessionExpired();
+          if (hadActiveSession) {
+            window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
+            notifySessionExpired();
+          }
         } catch (_) {}
 
         return Promise.reject(formatApiError(refreshErr));

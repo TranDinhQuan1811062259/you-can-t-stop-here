@@ -452,8 +452,14 @@ export const MainLayout = () => {
             onPointerCancel={handlePointerCancel}
             title={`Kéo thả để di dời khắp màn hình • Bấm để mở rộng Cài đặt Ngày/Đêm & Âm thanh (${currentThemeMode === 'light' ? 'Chế độ Ngày' : 'Chế độ Đêm'})`}
           >
-            <span className="bubble-icon">
-              <i className={`fa-solid ${currentThemeMode === 'light' ? 'fa-sun' : 'fa-moon'}`}></i>
+            <span
+              className="bubble-icon"
+              style={{ color: currentThemeMode === 'light' ? '#f59e0b' : '#fde047' }}
+            >
+              <i
+                className={`fa-solid ${currentThemeMode === 'light' ? 'fa-sun' : 'fa-moon'}`}
+                style={{ color: currentThemeMode === 'light' ? '#f59e0b' : '#fde047' }}
+              ></i>
             </span>
           </button>
         ) : (
@@ -473,7 +479,7 @@ export const MainLayout = () => {
               <span className="pref-icon">
                 <i
                   className={`fa-solid ${currentThemeMode === 'light' ? 'fa-sun' : 'fa-moon'}`}
-                  style={{ color: currentThemeMode === 'light' ? 'var(--pastel-amber)' : 'var(--pastel-rose)' }}
+                  style={{ color: currentThemeMode === 'light' ? 'var(--pastel-amber)' : '#fde047' }}
                 ></i>
               </span>
               <span className="pref-label">
