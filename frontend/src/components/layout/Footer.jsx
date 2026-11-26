@@ -153,17 +153,45 @@ export const Footer = () => {
             </p>
             <div className="footer-author-credit">
               <span>Phát triển bởi </span>
-              <a
-                href="https://www.facebook.com/anthony.qill/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="footer-author-fb-link"
-                aria-label="Trang Facebook cá nhân của Trần Đỉnh Quân (Anthony)"
-                title="Mở Facebook cá nhân của Trần Đỉnh Quân (Anthony) ở tab mới"
-              >
-                <i className="fa-brands fa-facebook footer-author-fb-icon" aria-hidden="true"></i>
-                <span className="footer-author-fb-name">Trần Đỉnh Quân (Anthony)</span>
-              </a>
+              <div className="footer-author-links">
+                <a
+                  href="https://www.facebook.com/anthony.qill/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="footer-author-fb-link"
+                  aria-label="Trang Facebook cá nhân của Trần Đỉnh Quân (Anthony)"
+                  title="Mở Facebook cá nhân của Trần Đỉnh Quân (Anthony) ở tab mới"
+                >
+                  <i className="fa-brands fa-facebook footer-author-fb-icon" aria-hidden="true"></i>
+                  <span className="footer-author-fb-name">Trần Đỉnh Quân (Anthony)</span>
+                </a>
+
+                <span className="footer-author-sep" aria-hidden="true">•</span>
+
+                <a
+                  href="https://www.linkedin.com/in/anthonyqill/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="footer-author-social-badge is-linkedin"
+                  aria-label="Hồ sơ LinkedIn của Trần Đỉnh Quân (Anthony)"
+                  title="Mở hồ sơ LinkedIn của Trần Đỉnh Quân (Anthony) ở tab mới"
+                >
+                  <i className="fa-brands fa-linkedin footer-author-social-icon" aria-hidden="true"></i>
+                  <span>LinkedIn</span>
+                </a>
+
+                <a
+                  href="https://github.com/TranDinhQuan1811062259"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="footer-author-social-badge is-github"
+                  aria-label="Trang GitHub của Trần Đỉnh Quân (Anthony)"
+                  title="Mở GitHub của Trần Đỉnh Quân (Anthony) ở tab mới"
+                >
+                  <i className="fa-brands fa-github footer-author-social-icon" aria-hidden="true"></i>
+                  <span>GitHub</span>
+                </a>
+              </div>
             </div>
           </div>
           <div className="footer-bottom-links">

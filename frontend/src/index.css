@@ -5183,9 +5183,22 @@ body.theme-dark .back-home-btn,
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   font-size: 0.82rem;
   color: #94a3b8;
+}
+
+.footer-author-links {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.footer-author-sep {
+  color: #64748b;
+  font-size: 0.78rem;
+  user-select: none;
 }
 
 .footer-author-fb-link {
@@ -5232,9 +5245,63 @@ body.theme-dark .back-home-btn,
   text-decoration-color: currentColor;
 }
 
-.footer-author-fb-link:focus-visible {
+.footer-author-fb-link:focus-visible,
+.footer-author-social-badge:focus-visible {
   outline: 2px solid #38bdf8;
   outline-offset: 2px;
+}
+
+.footer-author-social-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(186, 230, 253, 0.26);
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.footer-author-social-icon {
+  font-size: 0.85rem;
+  transition: color 0.2s ease;
+}
+
+.footer-author-social-badge.is-linkedin .footer-author-social-icon {
+  color: #38bdf8;
+}
+
+.footer-author-social-badge.is-linkedin:hover {
+  background: rgba(10, 102, 194, 0.28);
+  border-color: #0a66c2;
+  color: #e0f2fe;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 14px rgba(10, 102, 194, 0.34);
+}
+
+.footer-author-social-badge.is-linkedin:hover .footer-author-social-icon {
+  color: #7dd3fc;
+}
+
+.footer-author-social-badge.is-github .footer-author-social-icon {
+  color: #e2e8f0;
+}
+
+.footer-author-social-badge.is-github:hover {
+  background: rgba(241, 245, 249, 0.16);
+  border-color: rgba(224, 242, 254, 0.65);
+  color: #ffffff;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(186, 230, 253, 0.22);
+}
+
+.footer-author-social-badge.is-github:hover .footer-author-social-icon {
+  color: #ffffff;
 }
 
 body.theme-light .footer-bottom,
@@ -5277,6 +5344,51 @@ body.theme-light .footer-author-fb-link:hover,
   border-color: #1877f2;
   color: #1877f2;
   box-shadow: 0 4px 12px rgba(24, 119, 242, 0.18);
+}
+
+body.theme-light .footer-author-social-badge,
+[data-theme="light"] .footer-author-social-badge,
+.mode-light .footer-author-social-badge {
+  background: rgba(255, 255, 255, 0.84);
+  border-color: rgba(125, 211, 252, 0.75);
+  color: #1e293b;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.08);
+}
+
+body.theme-light .footer-author-social-badge.is-linkedin .footer-author-social-icon,
+[data-theme="light"] .footer-author-social-badge.is-linkedin .footer-author-social-icon,
+.mode-light .footer-author-social-badge.is-linkedin .footer-author-social-icon {
+  color: #0a66c2;
+}
+
+body.theme-light .footer-author-social-badge.is-linkedin:hover,
+[data-theme="light"] .footer-author-social-badge.is-linkedin:hover,
+.mode-light .footer-author-social-badge.is-linkedin:hover {
+  background: rgba(10, 102, 194, 0.1);
+  border-color: #0a66c2;
+  color: #0a66c2;
+  box-shadow: 0 4px 12px rgba(10, 102, 194, 0.18);
+}
+
+body.theme-light .footer-author-social-badge.is-github .footer-author-social-icon,
+[data-theme="light"] .footer-author-social-badge.is-github .footer-author-social-icon,
+.mode-light .footer-author-social-badge.is-github .footer-author-social-icon {
+  color: #0f172a;
+}
+
+body.theme-light .footer-author-social-badge.is-github:hover,
+[data-theme="light"] .footer-author-social-badge.is-github:hover,
+.mode-light .footer-author-social-badge.is-github:hover {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #f8fafc;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+}
+
+body.theme-light .footer-author-social-badge.is-github:hover .footer-author-social-icon,
+[data-theme="light"] .footer-author-social-badge.is-github:hover .footer-author-social-icon,
+.mode-light .footer-author-social-badge.is-github:hover .footer-author-social-icon {
+  color: #ffffff;
 }
 
 /* ================= UTILITY STATES ================= */
@@ -5431,9 +5543,14 @@ body.theme-light .footer-author-fb-link:hover,
 
   .footer-bottom-meta,
   .footer-author-credit,
+  .footer-author-links,
   .footer-bottom-links {
     align-items: center;
     justify-content: center;
+  }
+
+  .footer-author-sep {
+    display: none;
   }
 }
 
