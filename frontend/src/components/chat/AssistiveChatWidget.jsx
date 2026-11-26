@@ -13,6 +13,10 @@ import {
   snapToNearestEdge,
 } from '../../utils/floatingButtonManager';
 import { maskSensitiveText } from '../../utils/sensitiveFilter';
+import {
+  isMessageFromCurrentUser,
+  getStrangerConversationState,
+} from '../../utils/chat-message-helpers';
 
 const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
 const getSafeAvatar = (av) => (av && !av.includes('man.jpg') && !av.includes('google_avatar')) ? av : DEFAULT_EMPTY_AVATAR;
@@ -325,6 +329,15 @@ export const AssistiveChatWidget = () => {
   // Chỉ hiển thị khi đã đăng nhập
   if (!isAuthenticated) return null;
 
+  const { showReceiverBanner, showSenderPendingHint } = getStrangerConversationState({
+    messages,
+    currentUser: user,
+    otherUser: activeConversation?.otherUser,
+    isFriend: isFriendState || Boolean(activeConversation?.otherUser?.isFriend),
+    isStranger,
+    convStatus,
+  });
+
   // Gửi tin nhắn
   const handleSendMessage = async (e) => {
     e?.preventDefault();
@@ -332,6 +345,7 @@ export const AssistiveChatWidget = () => {
 
     // Tự động làm sạch & chèn dấu chấm vào từ ngữ nhạy cảm
     const contentToSend = maskSensitiveText(inputContent.trim());
+    const shouldAutoAcceptOnReply = showReceiverBanner;
     setInputContent('');
     setSending(true);
 
@@ -348,6 +362,11 @@ export const AssistiveChatWidget = () => {
           if (prev.some((m) => m._id === res.data._id)) return prev;
           return [...prev, res.data];
         });
+        if (shouldAutoAcceptOnReply) {
+          setConvStatus('accepted');
+          setIsStranger(false);
+          chatService.acceptConversation(activeConversation._id).catch(() => {});
+        }
         fetchUnread();
       }
     } catch (err) {
@@ -363,8 +382,37 @@ export const AssistiveChatWidget = () => {
     try {
       await chatService.acceptConversation(activeConversation._id);
       setConvStatus('accepted');
+      setIsStranger(false);
+      setConversations((prev) =>
+        prev.map((c) =>
+          c._id === activeConversation._id ? { ...c, status: 'accepted', isStranger: false } : c
+        )
+      );
+      fetchUnread();
     } catch (err) {
       alert('Lỗi chấp nhận cuộc trò chuyện');
+    }
+  };
+
+  // Bỏ qua / ẩn yêu cầu trò chuyện từ người lạ
+  const handleDecline = async () => {
+    if (!activeConversation) {
+      closeChat();
+      return;
+    }
+    try {
+      await chatService.declineConversation(activeConversation._id);
+      setConvStatus('rejected');
+      setConversations((prev) =>
+        prev.map((c) =>
+          c._id === activeConversation._id ? { ...c, status: 'rejected' } : c
+        )
+      );
+      fetchUnread();
+    } catch (_) {
+      // Vẫn đóng phòng chat an toàn nếu gặp sự cố mạng
+    } finally {
+      closeChat();
     }
   };
 
@@ -395,12 +443,12 @@ export const AssistiveChatWidget = () => {
   const isLeft = btnPos.x < screenW / 2;
   const isTop = btnPos.y < screenH / 2;
 
-  // Tính toán vị trí cửa sổ chat: Luôn né hoàn toàn khỏi nút nổi, không bị đè lên bất kỳ phần tử nào
+  // Tính toán vị trí cửa sổ chat: Z-index 10050 luôn cao hơn toàn bộ nút nổi (Cài App, Viết tâm sự, Widget)
   const popupStyle = {
     position: 'fixed',
-    zIndex: 9998,
+    zIndex: 10050,
     width: isMobile ? 'calc(100vw - 24px)' : '375px',
-    maxHeight: 'calc(100vh - 100px)',
+    maxHeight: isMobile ? 'calc(100dvh - 90px)' : 'calc(100vh - 100px)',
   };
 
   if (isMobile) {
@@ -645,7 +693,20 @@ export const AssistiveChatWidget = () => {
                       {conversations.map((c) => {
                         const other = c.otherUser || {};
                         const stBadge = getStatusBadge(other.chatStatus);
-                        const isPendingStranger = c.isStranger && c.status === 'pending';
+                        const myId = (user?._id || user?.id || '').toString();
+                        const requestedById = (c.requestedBy?._id || c.requestedBy || '').toString();
+                        const lastSenderId = (c.lastMessage?.sender?._id || c.lastMessage?.sender?.id || c.lastMessage?.sender || '').toString();
+                        const iInitiated = Boolean(
+                          (requestedById && requestedById === myId) ||
+                          (lastSenderId && lastSenderId === myId)
+                        );
+                        const isIncomingStrangerRequest = Boolean(
+                          !other.isFriend &&
+                          c.isStranger &&
+                          c.status === 'pending' &&
+                          c.lastMessage &&
+                          !iInitiated
+                        );
 
                         return (
                           <div
@@ -676,7 +737,7 @@ export const AssistiveChatWidget = () => {
 
                               <div className="assistive-conv-sub-row">
                                 <span className="assistive-conv-snippet">
-                                  {isPendingStranger
+                                  {isIncomingStrangerRequest
                                     ? '⚠️ Tin nhắn chờ từ người lạ...'
                                     : c.lastMessage?.content || 'Bắt đầu cuộc trò chuyện...'}
                                 </span>
@@ -826,8 +887,8 @@ export const AssistiveChatWidget = () => {
                 </div>
               </div>
 
-              {/* Banner chấp nhận nếu là tin nhắn chờ từ người lạ */}
-              {isStranger && convStatus === 'pending' && (
+              {/* Banner chấp nhận chỉ hiển thị cho NGƯỜI NHẬN khi thỏa mãn 3 điều kiện */}
+              {showReceiverBanner && (
                 <div className="assistive-stranger-banner">
                   <div className="assistive-stranger-banner-top">
                     <span className="assistive-stranger-badge">
@@ -853,7 +914,7 @@ export const AssistiveChatWidget = () => {
                     <button
                       type="button"
                       className="assistive-decline-btn"
-                      onClick={closeChat}
+                      onClick={handleDecline}
                       title="Bỏ qua và đóng cuộc trò chuyện"
                     >
                       <span className="btn-icon">✕</span> Bỏ qua
@@ -871,10 +932,8 @@ export const AssistiveChatWidget = () => {
                   </div>
                 ) : (
                   messages.map((m) => {
-                    const myId = (user?._id || user?.id || '').toString();
-                    const senderId = (m.sender?._id || m.sender?.id || m.sender || '').toString();
-                    const isMe = senderId === myId || (Boolean(user?.email) && Boolean(m.sender?.email) && m.sender.email.toLowerCase() === user.email.toLowerCase());
-                    const isPendingStrangerMsg = !isMe && isStranger && convStatus === 'pending';
+                    const isMe = isMessageFromCurrentUser(m, user, activeConversation?.otherUser);
+                    const isPendingStrangerMsg = !isMe && showReceiverBanner;
 
                     return (
                       <div
@@ -907,6 +966,17 @@ export const AssistiveChatWidget = () => {
                 )}
                 <div ref={messagesEndRef} />
               </div>
+
+              {/* Ghi chú nhỏ phía trên ô nhập cho người chủ động nhắn tin trước */}
+              {showSenderPendingHint && (
+                <div className="stranger-sender-hint-bar">
+                  <i className="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                  <span>
+                    Tin nhắn sẽ được gửi vào mục Tin nhắn chờ của{' '}
+                    <strong>{activeConversation.otherUser?.name || 'đối phương'}</strong>
+                  </span>
+                </div>
+              )}
 
               {/* Footer Soạn & Gửi Tin Nhắn */}
               <form noValidate onSubmit={handleSendMessage} className="assistive-input-footer">

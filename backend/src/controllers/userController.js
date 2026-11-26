@@ -484,9 +484,11 @@ export const updateProfile = async (req, res) => {
       lastCheckInDate: user.lastCheckInDate,
     };
 
-    return sendSuccess(res, {
+    return res.status(200).json({
+      success: true,
       message: 'Cập nhật hồ sơ cá nhân thành công!',
       data: { user: sanitizedUser },
+      user: sanitizedUser,
     });
   } catch (error) {
     console.error('[UserHub] Lỗi updateProfile:', error);

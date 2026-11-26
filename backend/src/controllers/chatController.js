@@ -518,6 +518,20 @@ export const sendMessage = async (req, res) => {
 
         mongoMsgId = newDbMsg._id.toString();
 
+        // Nếu người nhận trực tiếp nhắn trả lời khi cuộc trò chuyện đang ở trạng thái chờ, tự động mở khóa
+        if (
+          dbConv.status === 'pending' &&
+          dbConv.requestedBy &&
+          dbConv.requestedBy.toString() !== currentUserId
+        ) {
+          dbConv.status = 'accepted';
+          dbConv.isStranger = false;
+        } else if (dbConv.status === 'rejected') {
+          dbConv.status = isFriend ? 'accepted' : 'pending';
+          dbConv.isStranger = !isFriend;
+          dbConv.requestedBy = currentUserId;
+        }
+
         dbConv.lastMessage = {
           content: cleanContent,
           sender: currentUserId,
@@ -553,6 +567,18 @@ export const sendMessage = async (req, res) => {
     };
 
     // Cập nhật thông tin cuộc trò chuyện trong persistent store
+    if (
+      conv.status === 'pending' &&
+      conv.requestedBy &&
+      conv.requestedBy.toString() !== currentUserId
+    ) {
+      conv.status = 'accepted';
+      conv.isStranger = false;
+    } else if (conv.status === 'rejected') {
+      conv.status = isFriend ? 'accepted' : 'pending';
+      conv.isStranger = !isFriend;
+      conv.requestedBy = currentUserId;
+    }
     conv.lastMessage = {
       _id: newMsg._id,
       content: cleanContent,
@@ -616,6 +642,37 @@ export const acceptConversation = async (req, res) => {
     return sendSuccess(res, {
       message: 'Đã đồng ý nhận tin nhắn từ người này!',
       data: conv || { _id: conversationId, status: 'accepted' },
+    });
+  } catch (error) {
+    return sendError(res, { message: error.message, status: 500 });
+  }
+};
+
+/**
+ * Bỏ qua / từ chối yêu cầu trò chuyện từ người lạ
+ */
+export const declineConversation = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+
+    if (checkDbReady() && mongoose.isValidObjectId(conversationId)) {
+      try {
+        await Conversation.findByIdAndUpdate(conversationId, {
+          status: 'rejected',
+        });
+      } catch (_) {}
+    }
+
+    const store = loadStore();
+    const conv = (store.conversations || []).find((c) => c._id === conversationId);
+    if (conv) {
+      conv.status = 'rejected';
+      saveStore(store);
+    }
+
+    return sendSuccess(res, {
+      message: 'Đã bỏ qua yêu cầu trò chuyện này.',
+      data: conv || { _id: conversationId, status: 'rejected' },
     });
   } catch (error) {
     return sendError(res, { message: error.message, status: 500 });

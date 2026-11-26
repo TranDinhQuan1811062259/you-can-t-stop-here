@@ -262,8 +262,8 @@ export const PersonalHubModal = () => {
       .get('/user/bonds')
       .then((res) => {
         if (isMounted) {
-          const list = res?.data?.data || [];
-          setTopBonds(Array.isArray(list) ? list : []);
+          const list = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
+          setTopBonds(list);
         }
       })
       .catch(() => {});
@@ -373,8 +373,16 @@ export const PersonalHubModal = () => {
   // Xử lý cập nhật Profile
   const handleUpdateProfileSubmit = async (e) => {
     e.preventDefault();
-    if (!profileName.trim()) {
+    const cleanName = profileName.trim();
+    const cleanBio = profileBio.trim();
+
+    if (!cleanName) {
       setProfileMessage({ type: 'error', text: 'Tên hiển thị không được để trống.' });
+      return;
+    }
+
+    if (cleanName.length < 2) {
+      setProfileMessage({ type: 'error', text: 'Tên hiển thị phải từ 2 ký tự trở lên.' });
       return;
     }
 
@@ -382,14 +390,14 @@ export const PersonalHubModal = () => {
     setProfileMessage(null);
 
     const res = await updateProfile({
-      name: profileName.trim(),
-      bio: profileBio.trim(),
+      name: cleanName,
+      bio: cleanBio,
     });
 
     setIsUpdatingProfile(false);
     if (res?.success) {
-      setProfileMessage({ type: 'success', text: 'Cập nhật hồ sơ thành công!' });
-      setTimeout(() => setProfileMessage(null), 3000);
+      setProfileMessage({ type: 'success', text: 'Đã cập nhật hồ sơ thành công!' });
+      setTimeout(() => setProfileMessage(null), 4000);
     } else {
       setProfileMessage({ type: 'error', text: res?.message || 'Không thể cập nhật hồ sơ' });
     }
@@ -519,11 +527,14 @@ export const PersonalHubModal = () => {
           {activeTab === 'streak' && (
             <>
               <div className="streak-hero-card">
-                <span className="streak-flame-icon-large">🔥</span>
-                <div className="streak-hero-count">{streakCount}</div>
+                <div className="streak-hero-eyebrow">Hành trình giữ lửa</div>
+                <span className="streak-flame-icon-large" aria-hidden="true">🔥</span>
+                <div className="streak-hero-count">{streakCount || 0}</div>
                 <div className="streak-hero-label">Ngày Giữ Lửa Liên Tục</div>
                 <p className="streak-hero-desc">
-                  “Dù chặng đường phía trước còn xa, mỗi ngày kiên trì một chút chính là ngọn lửa đưa bạn tới thành công.”
+                  {(streakCount || 0) === 0
+                    ? 'Hãy thắp ngọn lửa đầu tiên hôm nay để bắt đầu hành trình kiên trì và truyền động lực mỗi ngày!'
+                    : '“Dù chặng đường phía trước còn xa, mỗi ngày kiên trì một chút chính là ngọn lửa đưa bạn tới thành công.”'}
                 </p>
 
                 {/* Nút Điểm Danh */}
@@ -1194,7 +1205,10 @@ export const PersonalHubModal = () => {
                       type="text"
                       className="hub-form-input"
                       value={profileName}
-                      onChange={(e) => setProfileName(e.target.value)}
+                      onChange={(e) => {
+                        setProfileName(e.target.value);
+                        if (profileMessage) setProfileMessage(null);
+                      }}
                       maxLength={60}
                       required
                     />
@@ -1205,7 +1219,10 @@ export const PersonalHubModal = () => {
                     <textarea
                       className="hub-form-textarea"
                       value={profileBio}
-                      onChange={(e) => setProfileBio(e.target.value)}
+                      onChange={(e) => {
+                        setProfileBio(e.target.value);
+                        if (profileMessage) setProfileMessage(null);
+                      }}
                       maxLength={200}
                       placeholder="Một câu châm ngôn hoặc điều bạn đang theo đuổi..."
                     />
@@ -1213,12 +1230,11 @@ export const PersonalHubModal = () => {
 
                   {profileMessage && (
                     <div
-                      style={{
-                        fontSize: '0.8rem',
-                        color: profileMessage.type === 'success' ? '#4ade80' : '#f87171',
-                      }}
+                      className={`hub-profile-feedback ${profileMessage.type === 'success' ? 'is-success' : 'is-error'}`}
+                      role="status"
                     >
-                      {profileMessage.text}
+                      <span>{profileMessage.type === 'success' ? '✓' : '⚠️'}</span>
+                      <span>{profileMessage.text}</span>
                     </div>
                   )}
 

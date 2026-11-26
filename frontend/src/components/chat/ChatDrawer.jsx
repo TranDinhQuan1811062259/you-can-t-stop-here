@@ -65,7 +65,7 @@ export const ChatDrawer = () => {
         <div className="chat-drawer-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '1.4rem' }}>💬</span>
-            <h3 style={{ fontSize: '1.15rem', margin: 0, color: 'var(--bg-dark)' }}>
+            <h3 style={{ fontSize: '1.15rem', margin: 0, color: '#0f172a' }}>
               Tin Nhắn & Danh Bạ
             </h3>
           </div>
@@ -160,7 +160,20 @@ export const ChatDrawer = () => {
               <div className="conversations-list">
                 {conversations.map((c) => {
                   const other = c.otherUser || {};
-                  const isPendingStranger = c.isStranger && c.status === 'pending';
+                  const myId = (user?._id || user?.id || '').toString();
+                  const requestedById = (c.requestedBy?._id || c.requestedBy || '').toString();
+                  const lastSenderId = (c.lastMessage?.sender?._id || c.lastMessage?.sender?.id || c.lastMessage?.sender || '').toString();
+                  const iInitiated = Boolean(
+                    (requestedById && requestedById === myId) ||
+                    (lastSenderId && lastSenderId === myId)
+                  );
+                  const isPendingStranger = Boolean(
+                    !other.isFriend &&
+                    c.isStranger &&
+                    c.status === 'pending' &&
+                    c.lastMessage &&
+                    !iInitiated
+                  );
 
                   return (
                     <div

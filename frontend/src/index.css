@@ -6809,16 +6809,28 @@ body.theme-light .post-body h4 {
   right: 24px;
   width: 380px;
   height: 520px;
-  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
   background: #ffffff;
   border-radius: 16px;
-  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.28);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  z-index: 3000;
+  z-index: 10050 !important; /* Cao hơn mọi nút nổi Cài App, Viết tâm sự & Floating Prefs */
   border: 1px solid #e2e8f0;
   animation: popUpChat 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 640px) {
+  .floating-chat-box {
+    left: 12px;
+    right: 12px;
+    bottom: 14px;
+    width: auto;
+    max-width: calc(100vw - 24px);
+    height: min(520px, calc(100dvh - 84px));
+    max-height: calc(100dvh - 84px);
+  }
 }
 
 @keyframes popUpChat {
@@ -7675,12 +7687,12 @@ body.theme-light .post-body h4 {
   display: block;
   font-size: 1.5rem;
   font-weight: 800;
-  color: var(--bg-dark);
+  color: #0f172a;
 }
 
 .stat-card-label {
   font-size: 0.82rem;
-  color: #64748b;
+  color: #475569;
   font-weight: 600;
 }
 
@@ -7702,7 +7714,7 @@ body.theme-light .post-body h4 {
 .profile-section-title {
   font-size: 1.35rem;
   font-weight: 800;
-  color: var(--bg-dark);
+  color: #0f172a;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -7717,6 +7729,341 @@ body.theme-light .post-body h4 {
 .profile-empty-posts {
   text-align: center;
   padding: 48px 20px;
+}
+
+.profile-phone-pill {
+  font-size: 0.82rem;
+  color: #334155;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 2px 9px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.profile-memories-btn {
+  margin-top: 8px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(239, 68, 68, 0.14) 100%);
+  border: 1px solid rgba(217, 119, 6, 0.42);
+  color: #b45309;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.profile-memories-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.22);
+}
+
+.profile-share-qr-btn {
+  margin-top: 10px;
+  background: rgba(2, 132, 199, 0.08);
+  border: 1px solid rgba(2, 132, 199, 0.32);
+  color: #0369a1;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.profile-share-qr-btn:hover {
+  background: rgba(2, 132, 199, 0.14);
+  transform: translateY(-1px);
+}
+
+.profile-waking-notice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  color: #0369a1;
+  font-size: 0.86rem;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+/* ================= PROFILE PAGE DARK MODE (GLASSMORPHISM & HIGH CONTRAST) ================= */
+body.theme-dark .profile-header-card,
+[data-theme="dark"] .profile-header-card,
+.theme-dark .profile-header-card,
+.mode-dark .profile-header-card {
+  background: linear-gradient(165deg, rgba(19, 28, 43, 0.9) 0%, rgba(13, 19, 32, 0.94) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-color: rgba(148, 163, 184, 0.22);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
+  color: #f1f5f9;
+}
+
+body.theme-dark .profile-avatar-img,
+[data-theme="dark"] .profile-avatar-img,
+.theme-dark .profile-avatar-img,
+.mode-dark .profile-avatar-img {
+  border-color: #1e293b;
+  background: #0f172a;
+}
+
+body.theme-dark .profile-display-name,
+[data-theme="dark"] .profile-display-name,
+.theme-dark .profile-display-name,
+.mode-dark .profile-display-name {
+  color: #f8fafc;
+}
+
+body.theme-dark .profile-job-title,
+[data-theme="dark"] .profile-job-title,
+.theme-dark .profile-job-title,
+.mode-dark .profile-job-title {
+  color: #5eead4;
+}
+
+body.theme-dark .profile-phone-pill,
+[data-theme="dark"] .profile-phone-pill,
+.theme-dark .profile-phone-pill,
+.mode-dark .profile-phone-pill {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(148, 163, 184, 0.25);
+  color: #cbd5e1;
+}
+
+body.theme-dark .profile-bio-box,
+[data-theme="dark"] .profile-bio-box,
+.theme-dark .profile-bio-box,
+.mode-dark .profile-bio-box {
+  background: rgba(15, 23, 42, 0.72);
+  border-left-color: #34d399;
+  border-top-color: #34d399;
+}
+
+body.theme-dark .profile-bio-text,
+[data-theme="dark"] .profile-bio-text,
+.theme-dark .profile-bio-text,
+.mode-dark .profile-bio-text {
+  color: #e2e8f0;
+}
+
+body.theme-dark .profile-bio-hashtags-list,
+[data-theme="dark"] .profile-bio-hashtags-list,
+.theme-dark .profile-bio-hashtags-list,
+.mode-dark .profile-bio-hashtags-list {
+  border-top-color: rgba(148, 163, 184, 0.22);
+}
+
+body.theme-dark .hashtags-prefix,
+[data-theme="dark"] .hashtags-prefix,
+.theme-dark .hashtags-prefix,
+.mode-dark .hashtags-prefix,
+body.theme-dark .social-links-heading,
+[data-theme="dark"] .social-links-heading,
+.theme-dark .social-links-heading,
+.mode-dark .social-links-heading,
+body.theme-dark .profile-self-label,
+[data-theme="dark"] .profile-self-label,
+.theme-dark .profile-self-label,
+.mode-dark .profile-self-label {
+  color: #cbd5e1;
+}
+
+body.theme-dark .bio-chip-tag,
+[data-theme="dark"] .bio-chip-tag,
+.theme-dark .bio-chip-tag,
+.mode-dark .bio-chip-tag {
+  background: rgba(20, 184, 166, 0.16);
+  border-color: rgba(45, 212, 191, 0.35);
+  color: #5eead4;
+}
+
+body.theme-dark .profile-stat-card,
+[data-theme="dark"] .profile-stat-card,
+.theme-dark .profile-stat-card,
+.mode-dark .profile-stat-card {
+  background: linear-gradient(145deg, rgba(21, 30, 46, 0.88) 0%, rgba(15, 23, 38, 0.94) 100%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-color: rgba(148, 163, 184, 0.22);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+body.theme-dark .profile-stat-card:hover,
+[data-theme="dark"] .profile-stat-card:hover,
+.theme-dark .profile-stat-card:hover,
+.mode-dark .profile-stat-card:hover {
+  border-color: rgba(56, 189, 248, 0.42);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+}
+
+body.theme-dark .stat-card-number,
+[data-theme="dark"] .stat-card-number,
+.theme-dark .stat-card-number,
+.mode-dark .stat-card-number {
+  color: #f8fafc;
+}
+
+body.theme-dark .stat-card-label,
+[data-theme="dark"] .stat-card-label,
+.theme-dark .stat-card-label,
+.mode-dark .stat-card-label {
+  color: #cbd5e1;
+}
+
+body.theme-dark .profile-posts-section,
+[data-theme="dark"] .profile-posts-section,
+.theme-dark .profile-posts-section,
+.mode-dark .profile-posts-section {
+  background: linear-gradient(165deg, rgba(19, 28, 43, 0.88) 0%, rgba(13, 19, 32, 0.94) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-color: rgba(148, 163, 184, 0.2);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38);
+}
+
+body.theme-dark .profile-posts-header,
+[data-theme="dark"] .profile-posts-header,
+.theme-dark .profile-posts-header,
+.mode-dark .profile-posts-header {
+  border-bottom-color: rgba(148, 163, 184, 0.18);
+}
+
+body.theme-dark .profile-section-title,
+[data-theme="dark"] .profile-section-title,
+.theme-dark .profile-section-title,
+.mode-dark .profile-section-title,
+body.theme-dark .profile-empty-posts h3,
+[data-theme="dark"] .profile-empty-posts h3,
+.theme-dark .profile-empty-posts h3,
+.mode-dark .profile-empty-posts h3 {
+  color: #f8fafc;
+}
+
+body.theme-dark .profile-posts-subtitle,
+[data-theme="dark"] .profile-posts-subtitle,
+.theme-dark .profile-posts-subtitle,
+.mode-dark .profile-posts-subtitle,
+body.theme-dark .profile-empty-posts p,
+[data-theme="dark"] .profile-empty-posts p,
+.theme-dark .profile-empty-posts p,
+.mode-dark .profile-empty-posts p {
+  color: #cbd5e1;
+}
+
+body.theme-dark .profile-chat-btn,
+[data-theme="dark"] .profile-chat-btn,
+.theme-dark .profile-chat-btn,
+.mode-dark .profile-chat-btn {
+  background: rgba(20, 184, 166, 0.14);
+  color: #5eead4;
+  border-color: rgba(45, 212, 191, 0.52);
+}
+
+body.theme-dark .profile-chat-btn:hover,
+[data-theme="dark"] .profile-chat-btn:hover,
+.theme-dark .profile-chat-btn:hover,
+.mode-dark .profile-chat-btn:hover {
+  background: #0d9488;
+  color: #ffffff;
+}
+
+body.theme-dark .profile-memories-btn,
+[data-theme="dark"] .profile-memories-btn,
+.theme-dark .profile-memories-btn,
+.mode-dark .profile-memories-btn {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(239, 68, 68, 0.16) 100%);
+  border-color: rgba(251, 191, 36, 0.45);
+  color: #fde68a;
+}
+
+body.theme-dark .profile-share-qr-btn,
+[data-theme="dark"] .profile-share-qr-btn,
+.theme-dark .profile-share-qr-btn,
+.mode-dark .profile-share-qr-btn {
+  background: rgba(56, 189, 248, 0.14);
+  border-color: rgba(56, 189, 248, 0.42);
+  color: #7dd3fc;
+}
+
+body.theme-dark .profile-waking-notice,
+[data-theme="dark"] .profile-waking-notice,
+.theme-dark .profile-waking-notice,
+.mode-dark .profile-waking-notice {
+  background: rgba(14, 165, 233, 0.18);
+  border-color: rgba(56, 189, 248, 0.38);
+  color: #bae6fd;
+}
+
+body.theme-dark .profile-music-capsule,
+[data-theme="dark"] .profile-music-capsule,
+.theme-dark .profile-music-capsule,
+.mode-dark .profile-music-capsule {
+  background: linear-gradient(135deg, rgba(19, 28, 43, 0.88), rgba(15, 23, 38, 0.94));
+  border-color: rgba(45, 212, 191, 0.28);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+body.theme-dark .profile-music-capsule.is-playing,
+[data-theme="dark"] .profile-music-capsule.is-playing,
+.theme-dark .profile-music-capsule.is-playing,
+.mode-dark .profile-music-capsule.is-playing {
+  background: linear-gradient(135deg, rgba(15, 38, 46, 0.92), rgba(15, 23, 38, 0.96));
+  border-color: #2dd4bf;
+}
+
+body.theme-dark .music-song-title,
+[data-theme="dark"] .music-song-title,
+.theme-dark .music-song-title,
+.mode-dark .music-song-title {
+  color: #f8fafc;
+}
+
+body.theme-dark .music-song-artist,
+[data-theme="dark"] .music-song-artist,
+.theme-dark .music-song-artist,
+.mode-dark .music-song-artist {
+  color: #cbd5e1;
+}
+
+body.theme-dark .music-badge-tag,
+[data-theme="dark"] .music-badge-tag,
+.theme-dark .music-badge-tag,
+.mode-dark .music-badge-tag {
+  background: rgba(45, 212, 191, 0.16);
+  color: #5eead4;
+}
+
+body.theme-dark .music-volume-group,
+[data-theme="dark"] .music-volume-group,
+.theme-dark .music-volume-group,
+.mode-dark .music-volume-group {
+  background: rgba(30, 41, 59, 0.85);
+}
+
+body.theme-dark .profile-music-disabled-box,
+[data-theme="dark"] .profile-music-disabled-box,
+.theme-dark .profile-music-disabled-box,
+.mode-dark .profile-music-disabled-box {
+  background: rgba(19, 28, 43, 0.78);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #cbd5e1;
 }
 
 .profile-empty-posts .empty-icon {
@@ -7888,17 +8235,17 @@ body.theme-dark .assistive-touch-icon,
   100% { transform: scale(1); }
 }
 
-/* 2. Cửa sổ Popup Chat Mini nổi (KHÔNG có Backdrop che mờ!) */
+/* 2. Cửa sổ Popup Chat Mini nổi (Z-index cao hơn toàn bộ nút nổi Cài App, Viết tâm sự, Widget) */
 .assistive-chat-popup-window {
   position: fixed;
   width: 375px;
   height: 540px;
-  max-height: calc(100vh - 110px);
+  max-height: calc(100dvh - 96px);
   background: #ffffff;
   border-radius: 20px;
   border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.06);
-  z-index: 9998;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.24), 0 4px 14px rgba(0, 0, 0, 0.08);
+  z-index: 10050 !important;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -7981,7 +8328,7 @@ body.theme-dark .assistive-touch-icon,
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.14);
   padding: 8px;
   width: 250px;
-  z-index: 10001;
+  z-index: 10060;
   animation: fadeInDown 0.15s ease-out;
 }
 
@@ -8018,7 +8365,7 @@ body.theme-dark .assistive-touch-icon,
 .status-opt-name {
   display: block;
   font-size: 0.82rem;
-  color: var(--bg-dark);
+  color: #0f172a;
 }
 
 .status-opt-desc {
@@ -8476,7 +8823,7 @@ body.theme-dark .assistive-touch-icon,
 .assistive-room-user-name {
   font-size: 0.9rem;
   font-weight: 700;
-  color: var(--bg-dark);
+  color: #0f172a;
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -8932,6 +9279,45 @@ body.theme-dark .assistive-message-row.other-msg .assistive-msg-bubble,
   color: #94a3b8;
   margin-top: 2px;
   padding: 0 4px;
+}
+
+/* Ghi chú nhỏ cho người gửi khi tin nhắn đang nằm ở mục chờ của đối phương */
+.stranger-sender-hint-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  background: rgba(241, 245, 249, 0.95);
+  border-top: 1px solid #e2e8f0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: #475569;
+}
+
+.stranger-sender-hint-bar i {
+  color: #0284c7;
+  font-size: 0.74rem;
+  flex-shrink: 0;
+}
+
+.stranger-sender-hint-bar strong {
+  color: #0f172a;
+}
+
+.mode-dark .stranger-sender-hint-bar,
+body.theme-dark .stranger-sender-hint-bar,
+.theme-dark .stranger-sender-hint-bar,
+[data-theme="dark"] .stranger-sender-hint-bar {
+  background: rgba(15, 23, 42, 0.92);
+  border-top-color: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+}
+
+.mode-dark .stranger-sender-hint-bar strong,
+body.theme-dark .stranger-sender-hint-bar strong,
+.theme-dark .stranger-sender-hint-bar strong,
+[data-theme="dark"] .stranger-sender-hint-bar strong {
+  color: #f8fafc;
 }
 
 /* Input footer */

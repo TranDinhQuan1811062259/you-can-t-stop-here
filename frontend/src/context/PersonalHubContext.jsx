@@ -20,7 +20,7 @@ export const usePersonalHub = () => {
 };
 
 export const PersonalHubProvider = ({ children }) => {
-  const { user, token, isAuthenticated, openLoginModal } = useAuth();
+  const { user, token, isAuthenticated, openLoginModal, updateUserProfile } = useAuth();
 
   const [isHubOpen, setIsHubOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('streak'); // 'streak' | 'notes' | 'favorites'
@@ -36,13 +36,14 @@ export const PersonalHubProvider = ({ children }) => {
   const prevLikedTracksRef = useRef(likedTracks);
   const prevTrackLikesMapRef = useRef(trackLikesMap);
 
-  // Nạp dữ liệu Hub từ server
+  // Nạp dữ liệu Hub từ server (hỗ trợ cả response đã unwrap từ apiClient lẫn response thô)
   const loadHubData = useCallback(async () => {
     try {
       if (isAuthenticated && token) {
         setIsLoading(true);
         const res = await userService.getUserHub();
-        if (res?.data?.data) {
+        const hubPayload = res?.data?.data || res?.data;
+        if (hubPayload) {
           const {
             streakCount: sCount,
             lastCheckInDate: lDate,
@@ -50,7 +51,7 @@ export const PersonalHubProvider = ({ children }) => {
             likedTracks: lTracks,
             personalNotes: pNotes,
             trackLikesMap: tLikesMap,
-          } = res.data.data;
+          } = hubPayload;
 
           setStreakCount(sCount || 0);
           setLastCheckInDate(lDate || null);
@@ -64,8 +65,9 @@ export const PersonalHubProvider = ({ children }) => {
       } else {
         // Nếu là khách chưa đăng nhập: Nạp thống kê lượt like bài hát công khai
         const res = await userService.getTrackLikes();
-        if (res?.data?.data?.trackLikesMap) {
-          setTrackLikesMap(res.data.data.trackLikesMap);
+        const likesPayload = res?.data?.data || res?.data;
+        if (likesPayload?.trackLikesMap) {
+          setTrackLikesMap(likesPayload.trackLikesMap);
         }
         setLikedTracks([]);
         setPersonalNotes([]);
@@ -155,8 +157,9 @@ export const PersonalHubProvider = ({ children }) => {
 
     try {
       const res = await userService.checkIn();
-      if (res?.data?.data) {
-        const { streakCount: newStreak, lastCheckInDate: newDate, alreadyCheckedIn } = res.data.data;
+      const checkInData = res?.data?.data || res?.data;
+      if (checkInData) {
+        const { streakCount: newStreak, lastCheckInDate: newDate, alreadyCheckedIn } = checkInData;
         setStreakCount(newStreak);
         setHasCheckedInToday(true);
         setLastCheckInDate(newDate);
@@ -171,14 +174,18 @@ export const PersonalHubProvider = ({ children }) => {
           success: true,
           streakCount: newStreak,
           alreadyCheckedIn,
-          message: res.data.message,
+          message: res?.message || res?.data?.message,
         };
       }
+      return {
+        success: false,
+        message: res?.message || 'Không thể điểm danh lúc này',
+      };
     } catch (err) {
       console.error('[PersonalHub] Lỗi điểm danh:', err);
       return {
         success: false,
-        message: err?.response?.data?.message || 'Không thể điểm danh lúc này',
+        message: err?.response?.data?.message || err?.message || 'Không thể điểm danh lúc này',
       };
     }
   }, [isAuthenticated, openLoginModal]);
@@ -217,19 +224,24 @@ export const PersonalHubProvider = ({ children }) => {
 
       try {
         const res = await userService.toggleTrackLike(cleanTrackId);
-        if (res?.data?.data) {
-          const { isLiked, likedTracks: serverLikedTracks, likesCount } = res.data.data;
-          setLikedTracks(serverLikedTracks);
-          setTrackLikesMap((prev) => ({
-            ...prev,
-            [cleanTrackId]: likesCount,
-          }));
+        const likeData = res?.data?.data || res?.data;
+        if (likeData) {
+          const { likedTracks: serverLikedTracks, likesCount } = likeData;
+          if (Array.isArray(serverLikedTracks)) {
+            setLikedTracks(serverLikedTracks);
+          }
+          if (likesCount !== undefined) {
+            setTrackLikesMap((prev) => ({
+              ...prev,
+              [cleanTrackId]: likesCount,
+            }));
+          }
 
           notifyOtherTabs({
             type: 'HUB_TRACK_LIKE_UPDATED',
             trackId: cleanTrackId,
-            likedTracks: serverLikedTracks,
-            likesCount,
+            likedTracks: Array.isArray(serverLikedTracks) ? serverLikedTracks : nextLikedTracks,
+            likesCount: likesCount ?? nextCount,
           });
         }
       } catch (err) {
@@ -252,8 +264,9 @@ export const PersonalHubProvider = ({ children }) => {
 
       try {
         const res = await userService.addNote(content);
-        if (res?.data?.data) {
-          const { personalNotes: updatedNotes, newNote } = res.data.data;
+        const noteData = res?.data?.data || res?.data;
+        if (noteData?.personalNotes) {
+          const { personalNotes: updatedNotes, newNote } = noteData;
           setPersonalNotes(updatedNotes);
 
           notifyOtherTabs({
@@ -263,8 +276,9 @@ export const PersonalHubProvider = ({ children }) => {
 
           return { success: true, newNote };
         }
+        return { success: false, message: res?.message || 'Không thể thêm mục tiêu' };
       } catch (err) {
-        const msg = err?.response?.data?.message || 'Không thể thêm mục tiêu';
+        const msg = err?.response?.data?.message || err?.message || 'Không thể thêm mục tiêu';
         return { success: false, message: msg };
       }
     },
@@ -284,11 +298,12 @@ export const PersonalHubProvider = ({ children }) => {
 
       try {
         const res = await userService.toggleNote(noteId);
-        if (res?.data?.data?.personalNotes) {
-          setPersonalNotes(res.data.data.personalNotes);
+        const noteData = res?.data?.data || res?.data;
+        if (noteData?.personalNotes) {
+          setPersonalNotes(noteData.personalNotes);
           notifyOtherTabs({
             type: 'HUB_NOTES_UPDATED',
-            personalNotes: res.data.data.personalNotes,
+            personalNotes: noteData.personalNotes,
           });
         }
       } catch (err) {
@@ -310,11 +325,12 @@ export const PersonalHubProvider = ({ children }) => {
 
       try {
         const res = await userService.deleteNote(noteId);
-        if (res?.data?.data?.personalNotes) {
-          setPersonalNotes(res.data.data.personalNotes);
+        const noteData = res?.data?.data || res?.data;
+        if (noteData?.personalNotes) {
+          setPersonalNotes(noteData.personalNotes);
           notifyOtherTabs({
             type: 'HUB_NOTES_UPDATED',
-            personalNotes: res.data.data.personalNotes,
+            personalNotes: noteData.personalNotes,
           });
         }
       } catch (err) {
@@ -328,28 +344,43 @@ export const PersonalHubProvider = ({ children }) => {
   // 6. Cập nhật hồ sơ cá nhân nhanh (tên hiển thị, bio)
   const updateProfile = useCallback(
     async (profileData) => {
-      if (!isAuthenticated) return { success: false };
+      if (!isAuthenticated) {
+        return { success: false, message: 'Vui lòng đăng nhập để cập nhật hồ sơ' };
+      }
       try {
         const res = await userService.updateProfile(profileData);
-        if (res?.data?.data?.user) {
-          // Lưu lại localStorage user
+        // Chuẩn hóa đọc cả res.data?.user, res.user và res.data?.data?.user
+        const updatedUser = res?.data?.user || res?.user || res?.data?.data?.user;
+
+        if (res?.success || updatedUser) {
+          const nextProfile = updatedUser || profileData;
           try {
             const currentSaved = JSON.parse(localStorage.getItem('user') || '{}');
-            const merged = { ...currentSaved, ...res.data.data.user };
-            localStorage.setItem('user', JSON.stringify(merged));
-            localStorage.setItem('freedom_persisted_profile', JSON.stringify(merged));
-            window.dispatchEvent(new CustomEvent('freedom_auth_changed'));
+            const merged = { ...currentSaved, ...nextProfile };
+            if (typeof updateUserProfile === 'function') {
+              updateUserProfile(merged);
+            } else {
+              localStorage.setItem('user', JSON.stringify(merged));
+              localStorage.setItem('freedom_persisted_profile', JSON.stringify(merged));
+              window.dispatchEvent(new Event('profile_updated'));
+              window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: merged }));
+            }
           } catch (_) {}
-          return { success: true, user: res.data.data.user };
+          return { success: true, user: nextProfile };
         }
+
+        return {
+          success: false,
+          message: res?.message || 'Không thể cập nhật hồ sơ',
+        };
       } catch (err) {
         return {
           success: false,
-          message: err?.response?.data?.message || 'Không thể cập nhật hồ sơ',
+          message: err?.response?.data?.message || err?.message || 'Không thể cập nhật hồ sơ',
         };
       }
     },
-    [isAuthenticated]
+    [isAuthenticated, updateUserProfile]
   );
 
   const value = {

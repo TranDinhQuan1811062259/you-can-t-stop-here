@@ -19,6 +19,10 @@ export const chatService = {
   acceptConversation: (conversationId) =>
     apiClient.put(`/chat/conversations/${conversationId}/accept`),
 
+  // Bỏ qua / ẩn yêu cầu trò chuyện từ người lạ
+  declineConversation: (conversationId) =>
+    apiClient.put(`/chat/conversations/${conversationId}/decline`),
+
   // Lấy danh bạ bạn bè (params: { sortBy, q })
   getFriends: (params = {}) => apiClient.get('/chat/friends', { params }),
 

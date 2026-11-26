@@ -74,7 +74,22 @@ const processQueue = (error, newAccessToken = null) => {
   failedQueue = [];
 };
 
-// Interceptor cho Response: tự động unwrap dữ liệu và Silent Refresh Token ngầm khi access token hết hạn
+// Interceptor cho Response: tự động unwrap dữ liệu, retry nhẹ Cold Start và Silent Refresh Token
+const isTransientColdStartError = (error) => {
+  const status = error?.response?.status;
+  const code = error?.code;
+  const msg = String(error?.message || '').toLowerCase();
+  return (
+    code === 'ECONNABORTED' ||
+    code === 'ERR_NETWORK' ||
+    msg.includes('timeout') ||
+    msg.includes('network error') ||
+    status === 502 ||
+    status === 503 ||
+    status === 504
+  );
+};
+
 apiClient.interceptors.response.use(
   (response) => {
     return response.data;
@@ -82,6 +97,22 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const status = error.response?.status;
+    const method = String(originalRequest?.method || 'get').toLowerCase();
+    const isNavigatorOnline = typeof navigator === 'undefined' || navigator.onLine !== false;
+
+    // Tự động retry 1 lần sau ~2.5s cho các GET request khi Render backend đang thức dậy từ Sleep Mode
+    if (
+      method === 'get' &&
+      originalRequest &&
+      !originalRequest._coldStartRetried &&
+      !originalRequest._retry &&
+      isNavigatorOnline &&
+      isTransientColdStartError(error)
+    ) {
+      originalRequest._coldStartRetried = true;
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+      return apiClient(originalRequest);
+    }
 
     // Kiểm tra xem lỗi có phải là 401 Unauthorized và có thể làm mới token ngầm hay không
     const isAuthEndpoint =

@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import { chatService } from '../../services/chatService';
+import {
+  isMessageFromCurrentUser,
+  getStrangerConversationState,
+} from '../../utils/chat-message-helpers';
 
 const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12 7.5a3 3 0 100 6 3 3 0 000-6zm-6.75 10.5a7.48 7.48 0 0113.5 0 8.22 8.22 0 01-13.5 0z' clip-rule='evenodd'/%3E%3C/svg%3E";
 const getSafeAvatar = (av) => (av && !av.includes('man.jpg') && !av.includes('google_avatar')) ? av : DEFAULT_EMPTY_AVATAR;
@@ -71,11 +75,21 @@ export const ChatBox = () => {
 
   if (!activeConversation) return null;
 
+  const { showReceiverBanner, showSenderPendingHint } = getStrangerConversationState({
+    messages,
+    currentUser: user,
+    otherUser,
+    isFriend,
+    isStranger,
+    convStatus,
+  });
+
   const handleSend = async (e) => {
     if (e) e.preventDefault();
     if (!inputText.trim() || sending) return;
 
     const content = inputText.trim();
+    const shouldAutoAcceptOnReply = showReceiverBanner;
     setInputText('');
     setSending(true);
 
@@ -89,6 +103,11 @@ export const ChatBox = () => {
       const res = await chatService.sendMessage(payload);
       if (res.data) {
         setMessages((prev) => [...prev, res.data]);
+        if (shouldAutoAcceptOnReply) {
+          setConvStatus('accepted');
+          setIsStranger(false);
+          chatService.acceptConversation(convId).catch(() => {});
+        }
         scrollToBottom();
       }
     } catch (err) {
@@ -106,8 +125,19 @@ export const ChatBox = () => {
     try {
       await chatService.acceptConversation(convId);
       setConvStatus('accepted');
+      setIsStranger(false);
     } catch (err) {
       alert(err.message || 'Lỗi khi chấp nhận cuộc trò chuyện');
+    }
+  };
+
+  const handleDeclineStranger = async () => {
+    try {
+      await chatService.declineConversation(convId);
+      setConvStatus('rejected');
+      closeChat();
+    } catch (_) {
+      closeChat();
     }
   };
 
@@ -121,8 +151,6 @@ export const ChatBox = () => {
       alert(err.message || 'Lỗi khi kết bạn');
     }
   };
-
-  const isPendingRequest = isStranger && convStatus === 'pending';
 
   return (
     <div className="floating-chat-box">
@@ -174,28 +202,36 @@ export const ChatBox = () => {
         </div>
       </div>
 
-      {/* Banner Người Lạ (Nếu chưa được chấp nhận) */}
-      {isPendingRequest && (
+      {/* Banner Người Lạ (Chỉ hiển thị cho người nhận khi đủ 3 điều kiện) */}
+      {showReceiverBanner && (
         <div className="stranger-request-banner">
-          <div className="stranger-banner-text-block">
-            <div className="stranger-badge-row">
-              <span className="assistive-stranger-badge">
-                <span className="badge-shield">🛡️</span> Tin nhắn người lạ
-              </span>
-            </div>
-            <p className="stranger-banner-sub">
-              <span className="warning-animated-icon">⚠️</span>
-              <span><strong>{otherUser.name}</strong> chưa có trong danh bạ. Bạn có muốn bắt đầu trò chuyện?</span>
-            </p>
+          <div className="assistive-stranger-banner-top">
+            <span className="assistive-stranger-badge">
+              <span className="badge-shield">🛡️</span> Tin nhắn người lạ
+            </span>
           </div>
-          <button
-            type="button"
-            className="accept-stranger-btn"
-            onClick={handleAcceptStranger}
-            title="Đồng ý để bắt đầu trò chuyện"
-          >
-            ✓ Đồng ý trò chuyện
-          </button>
+          <p className="stranger-banner-sub">
+            <span className="warning-animated-icon">⚠️</span>
+            <span><strong>{otherUser.name}</strong> chưa có trong danh bạ. Bạn có muốn bắt đầu trò chuyện?</span>
+          </p>
+          <div className="assistive-stranger-actions">
+            <button
+              type="button"
+              className="accept-stranger-btn"
+              onClick={handleAcceptStranger}
+              title="Chấp nhận lời mời trò chuyện"
+            >
+              ✓ Chấp nhận
+            </button>
+            <button
+              type="button"
+              className="assistive-decline-btn"
+              onClick={handleDeclineStranger}
+              title="Bỏ qua yêu cầu trò chuyện này"
+            >
+              ✕ Bỏ qua
+            </button>
+          </div>
         </div>
       )}
 
@@ -208,36 +244,8 @@ export const ChatBox = () => {
           </div>
         ) : (
           messages.map((m) => {
-            const myId = (user?._id || user?.id || '').toString();
-            const myEmail = (user?.email || '').toLowerCase().trim();
-            const myName = (user?.name || '').trim().toLowerCase();
-
-            const otherId = (otherUser?._id || otherUser?.id || '').toString();
-            const otherEmail = (otherUser?.email || '').toLowerCase().trim();
-            const otherName = (otherUser?.name || '').trim().toLowerCase();
-
-            const senderId = (m.sender?._id || m.sender?.id || m.sender || '').toString();
-            const senderEmail = (m.sender?.email || '').toLowerCase().trim();
-            const senderName = (m.sender?.name || '').trim().toLowerCase();
-
-            // Nếu người gửi khớp với ID, email hoặc tên của đối phương trong cuộc trò chuyện 1-1
-            const isOther = Boolean(
-              (otherId && senderId && senderId === otherId) ||
-              (otherEmail && senderEmail && senderEmail === otherEmail) ||
-              (otherName && senderName && senderName === otherName)
-            );
-
-            // Nếu người gửi khớp trực tiếp với tài khoản hiện tại
-            const isMeExplicit = Boolean(
-              (myId && senderId && senderId === myId) ||
-              (myEmail && senderEmail && senderEmail === myEmail) ||
-              (myName && senderName && senderName === myName)
-            );
-
-            // Trong cuộc đối thoại 1-1 giữa tôi và đối phương: Nếu không phải đối phương gửi thì chính là tôi gửi
-            const isMe = isMeExplicit || !isOther;
-
-            const isPendingStrangerMsg = !isMe && isPendingRequest;
+            const isMe = isMessageFromCurrentUser(m, user, otherUser);
+            const isPendingStrangerMsg = !isMe && showReceiverBanner;
             const timeStr = new Date(m.createdAt).toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
@@ -272,6 +280,16 @@ export const ChatBox = () => {
         )}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Ghi chú nhỏ cho người gửi khi tin nhắn đang chờ ở phía đối phương */}
+      {showSenderPendingHint && (
+        <div className="stranger-sender-hint-bar">
+          <i className="fa-solid fa-paper-plane" aria-hidden="true"></i>
+          <span>
+            Tin nhắn sẽ được gửi vào mục Tin nhắn chờ của <strong>{otherUser.name || 'đối phương'}</strong>
+          </span>
+        </div>
+      )}
 
       {/* Nút Emojis nhanh */}
       <div className="chatbox-quick-emojis">

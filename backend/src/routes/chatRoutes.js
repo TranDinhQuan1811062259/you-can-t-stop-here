@@ -6,6 +6,7 @@ import {
   getMessages,
   sendMessage,
   acceptConversation,
+  declineConversation,
   getFriends,
   addFriend,
   removeFriend,
@@ -26,6 +27,7 @@ router.put('/status', updateChatStatus);
 router.get('/conversations', getConversations);
 router.post('/conversations/init', findOrCreateConversation);
 router.put('/conversations/:conversationId/accept', acceptConversation);
+router.put('/conversations/:conversationId/decline', declineConversation);
 
 // Tin nhắn trong một cuộc trò chuyện
 router.get('/conversations/:conversationId/messages', getMessages);

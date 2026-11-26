@@ -211,6 +211,16 @@ export const AuthProvider = ({ children }) => {
       const newUser = e?.detail;
       if (!newUser) {
         applyLogoutState();
+      } else if (typeof newUser === 'object') {
+        const currentStoredToken =
+          localStorage.getItem('token') || localStorage.getItem('freedom_token');
+        const currentStoredRt =
+          localStorage.getItem('refreshToken') || localStorage.getItem('freedom_refresh_token');
+        setUser((prev) => {
+          const merged = ensureAdminPrivileges({ ...(prev || {}), ...newUser });
+          syncAuthStorage(merged, currentStoredToken, currentStoredRt);
+          return merged;
+        });
       }
     };
 

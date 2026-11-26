@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { authService, getWarmCachedUserProfile, invalidateUserProfileCache } from '../services/authService';
 import { notificationService } from '../services/notificationService';
@@ -72,6 +72,7 @@ export const UserProfilePage = () => {
   const warmHit = getWarmCachedUserProfile(userId);
   const [profileData, setProfileData] = useState(() => warmHit?.data || null);
   const [loading, setLoading] = useState(() => !warmHit?.data);
+  const [isWakingServer, setIsWakingServer] = useState(false);
   const [error, setError] = useState(null);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
   const [profilePostsPage, setProfilePostsPage] = useState(1);
@@ -79,20 +80,41 @@ export const UserProfilePage = () => {
   const [mutualBondData, setMutualBondData] = useState(null);
   const [isMemoriesDrawerOpen, setIsMemoriesDrawerOpen] = useState(false);
 
+  const isMountedRef = useRef(true);
+  const wakeBannerTimerRef = useRef(null);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (wakeBannerTimerRef.current) {
+        clearTimeout(wakeBannerTimerRef.current);
+      }
+    };
+  }, []);
+
   const fetchProfile = async (options = {}) => {
     const force = Boolean(options?.force);
+    if (wakeBannerTimerRef.current) {
+      clearTimeout(wakeBannerTimerRef.current);
+      wakeBannerTimerRef.current = null;
+    }
+
     try {
       if (!force) {
         const warmEntry = getWarmCachedUserProfile(userId);
         if (warmEntry?.data) {
           setProfileData(warmEntry.data);
           setLoading(false);
+          setIsWakingServer(false);
           setError(null);
           // Tải điểm gắn kết 2 chiều (Mutual Bond) nếu đã đăng nhập và đang xem profile người khác
           if (currentUser && userId && String(currentUser._id) !== String(userId)) {
             try {
               const bondRes = await apiClient.get(`/user/bonds/${userId}`);
-              setMutualBondData(bondRes?.data?.data || null);
+              if (isMountedRef.current) {
+                setMutualBondData(bondRes?.data?.data || bondRes?.data || null);
+              }
             } catch (_) {}
           }
           return;
@@ -100,21 +122,62 @@ export const UserProfilePage = () => {
       }
 
       setLoading(true);
+      setIsWakingServer(false);
       setError(null);
-      const res = await authService.getUserProfile(userId, { force });
+
+      wakeBannerTimerRef.current = setTimeout(() => {
+        if (isMountedRef.current) {
+          setIsWakingServer(true);
+        }
+      }, 2800);
+
+      let res;
+      try {
+        res = await authService.getUserProfile(userId, { force });
+      } catch (firstErr) {
+        const isTransient =
+          !firstErr?.status ||
+          firstErr.status >= 500 ||
+          firstErr.code === 'ERR_NETWORK' ||
+          firstErr.code === 'ECONNABORTED';
+        const isOnline = typeof navigator === 'undefined' || navigator.onLine !== false;
+
+        // Dự phòng retry nhẹ 1 lần nếu gọi qua warm/dedup promise chưa tự retry
+        if (isTransient && isOnline && !options._retried) {
+          if (isMountedRef.current) setIsWakingServer(true);
+          await new Promise((resolve) => setTimeout(resolve, 2500));
+          if (!isMountedRef.current) return;
+          res = await authService.getUserProfile(userId, { force: true });
+        } else {
+          throw firstErr;
+        }
+      }
+
+      if (!isMountedRef.current) return;
       setProfileData(res.data);
 
       // Tải điểm gắn kết 2 chiều (Mutual Bond) nếu đã đăng nhập và đang xem profile người khác
       if (currentUser && userId && String(currentUser._id) !== String(userId)) {
         try {
           const bondRes = await apiClient.get(`/user/bonds/${userId}`);
-          setMutualBondData(bondRes?.data?.data || null);
+          if (isMountedRef.current) {
+            setMutualBondData(bondRes?.data?.data || bondRes?.data || null);
+          }
         } catch (_) {}
       }
     } catch (err) {
-      setError(err.message || 'Không thể tải thông tin trang cá nhân này.');
+      if (isMountedRef.current) {
+        setError(err.message || 'Không thể tải thông tin trang cá nhân này.');
+      }
     } finally {
-      setLoading(false);
+      if (wakeBannerTimerRef.current) {
+        clearTimeout(wakeBannerTimerRef.current);
+        wakeBannerTimerRef.current = null;
+      }
+      if (isMountedRef.current) {
+        setLoading(false);
+        setIsWakingServer(false);
+      }
     }
   };
 
@@ -123,9 +186,11 @@ export const UserProfilePage = () => {
     if (warmEntry?.data) {
       setProfileData(warmEntry.data);
       setLoading(false);
+      setIsWakingServer(false);
       setError(null);
     } else {
       setLoading(true);
+      setIsWakingServer(false);
       setError(null);
     }
     fetchProfile();
@@ -144,7 +209,21 @@ export const UserProfilePage = () => {
     };
   }, [userId]);
 
-  if (loading) return <ProfilePageSkeleton />;
+  if (loading) {
+    return (
+      <>
+        {isWakingServer && (
+          <div className="container" style={{ paddingTop: '18px' }}>
+            <div className="profile-waking-notice" role="status">
+              <i className="fa-solid fa-mug-hot" aria-hidden="true"></i>
+              <span>Máy chủ đang khởi động lại từ chế độ ngủ, hệ thống đang tự động kết nối lại...</span>
+            </div>
+          </div>
+        )}
+        <ProfilePageSkeleton />
+      </>
+    );
+  }
   if (error || !profileData) {
     return (
       <div className="container" style={{ padding: '60px 0', textAlign: 'center' }}>
@@ -154,7 +233,7 @@ export const UserProfilePage = () => {
             type="button"
             onClick={() => {
               playClickSound();
-              fetchProfile();
+              fetchProfile({ force: true });
             }}
             className="post-copy-link-btn"
             style={{ padding: '8px 18px', borderRadius: '12px', fontSize: '0.9rem' }}
@@ -524,7 +603,7 @@ export const UserProfilePage = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '6px' }}>
               <p className="profile-job-title" style={{ margin: 0 }}>{user.jobTitle || 'Thành viên cộng đồng'}</p>
               {user.phone && (isSelf || currentUser?.role === 'admin') && (
-                <span style={{ fontSize: '0.82rem', color: '#64748b', background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px' }}>
+                <span className="profile-phone-pill">
                   📱 {user.phone}
                 </span>
               )}
@@ -807,26 +886,10 @@ export const UserProfilePage = () => {
                 {/* Nút Xem Nhật Ký Tri Kỷ */}
                 <button
                   type="button"
+                  className="profile-memories-btn"
                   onClick={() => {
                     playClickSound();
                     setIsMemoriesDrawerOpen(true);
-                  }}
-                  style={{
-                    marginTop: '8px',
-                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(239, 68, 68, 0.15) 100%)',
-                    border: '1px solid rgba(245, 158, 11, 0.4)',
-                    color: '#d97706',
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    fontSize: '0.84rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    width: '100%',
-                    transition: 'all 0.2s ease',
                   }}
                   title={`Xem dòng thời gian và nhật ký tương tác tri kỷ với ${user.name}`}
                 >
@@ -843,23 +906,6 @@ export const UserProfilePage = () => {
               onClick={() => {
                 playClickSound();
                 setIsQrModalOpen(true);
-              }}
-              style={{
-                marginTop: '10px',
-                background: 'rgba(56, 189, 248, 0.1)',
-                border: '1px solid rgba(56, 189, 248, 0.35)',
-                color: '#38bdf8',
-                padding: '8px 14px',
-                borderRadius: '8px',
-                fontSize: '0.84rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                width: '100%',
-                transition: 'all 0.2s ease',
               }}
               title="Quét hoặc chia sẻ mã QR trang cá nhân này"
             >
