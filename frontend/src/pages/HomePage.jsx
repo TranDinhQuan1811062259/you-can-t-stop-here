@@ -298,9 +298,6 @@ export const HomePage = () => {
             }
             if (!targetTopic?.slug) {
               handleCategorySelect('', dir || 'prev');
-              if (typeof window !== 'undefined') {
-                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-              }
               return;
             }
             handleCategorySelect(targetTopic.slug, dir);
@@ -319,9 +316,6 @@ export const HomePage = () => {
                 type="button"
                 onClick={() => {
                   handleCategorySelect('', 'prev');
-                  if (typeof window !== 'undefined') {
-                    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-                  }
                 }}
                 className="hero-back-link"
               >

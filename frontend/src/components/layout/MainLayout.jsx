@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useState, useRef, Suspense, lazy } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigationType } from 'react-router-dom';
 import { RouteLoadingFallback } from '../common/RouteLoadingFallback';
 import { Header } from './Header';
 import { Footer } from './Footer';
@@ -292,65 +292,34 @@ export const MainLayout = () => {
     };
   }, []);
 
-  const prevRoutePathRef = useRef(location.pathname);
+  const navigationType = useNavigationType();
+  const handledScrollTopKeyRef = useRef(null);
 
-  // Tắt tự động khôi phục vị trí cuộn của trình duyệt khi chuyển route SPA
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('scrollRestoration' in window.history)) return undefined;
-    const prevSetting = window.history.scrollRestoration;
-    try {
-      window.history.scrollRestoration = 'manual';
-    } catch (_) {}
-    return () => {
-      try {
-        window.history.scrollRestoration = prevSetting;
-      } catch (_) {}
-    };
-  }, []);
-
-  // Ép vị trí đầu trang chuẩn xác (top: 0) ngay khi chuyển route hoặc quay về Trang Chủ
+  // Chỉ cuộn lên đầu trang khi người dùng chủ đích bấm vào điểm điều hướng lớn (Logo, Trang chủ)
+  // Khi chuyển qua lại giữa các trang/tab hoặc Back/Forward, giữ nguyên vị trí cuộn hiện tại
   useLayoutEffect(() => {
-    const prevPath = prevRoutePathRef.current;
-    prevRoutePathRef.current = location.pathname;
+    if (navigationType === 'POP') return undefined;
+    if (location.state?.forceScrollTop !== true || location.hash) return undefined;
+    if (handledScrollTopKeyRef.current === location.key) return undefined;
+    handledScrollTopKeyRef.current = location.key;
 
-    const searchParams = new URLSearchParams(location.search || '');
-    const isSearchQueryRedirect = location.pathname === '/' && Boolean(searchParams.get('q'));
-    const isExplicitHomeScroll =
-      location.pathname === '/' &&
-      !location.hash &&
-      !isSearchQueryRedirect &&
-      (prevPath !== '/' || location.state?.targetSlug === '' || location.state?.forceScrollTop);
-
-    const shouldResetTop =
-      prevPath !== location.pathname || isExplicitHomeScroll;
-
-    if (!shouldResetTop || location.hash || isSearchQueryRedirect) {
-      return undefined;
-    }
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     try {
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+      });
     } catch (_) {
       window.scrollTo(0, 0);
     }
 
-    let rafGuard = null;
-    if (location.pathname === '/') {
-      rafGuard = requestAnimationFrame(() => {
-        if (!location.hash && window.scrollY > 0) {
-          try {
-            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-          } catch (_) {
-            window.scrollTo(0, 0);
-          }
-        }
-      });
-    }
-
-    return () => {
-      if (rafGuard) cancelAnimationFrame(rafGuard);
-    };
-  }, [location.pathname, location.search, location.hash, location.key, location.state]);
+    return undefined;
+  }, [location.key, location.hash, location.state, navigationType]);
 
   const handleToggleTheme = () => {
     playClickSound();
