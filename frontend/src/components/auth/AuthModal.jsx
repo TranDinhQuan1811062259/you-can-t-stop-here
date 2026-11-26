@@ -334,54 +334,38 @@ export const AuthModal = () => {
         setLoading(false);
         return;
       }
-      if (!cleanEmail) {
-        setErrorMsg('Vui lòng nhập địa chỉ email!');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        setErrorMsg('Vui lòng nhập địa chỉ email hợp lệ để nhận mã xác thực OTP!');
         setLoading(false);
         return;
       }
 
-      // Nếu đăng ký bằng Google: Bắt buộc gửi mã xác thực 6 số OTP về Email!
-      if (socialRegData.providerId === 'google') {
-        setPendingRegisterData({
-          provider: 'google',
-          name: cleanName,
-          email: cleanEmail,
-          avatar: socialRegData.avatar,
-          jobTitle: socialRegData.jobTitle.trim(),
-          bio: socialRegData.bio.trim(),
-          socialUrl: socialRegData.socialUrl,
-          coverImage: getEffectiveCover(),
-        });
-        setOtpType('email');
-        setSuccessMsg(`Đang gửi mã xác thực Google 6 số tới ${cleanEmail}...`);
-
-        const res = await authService.sendOtp({
-          email: cleanEmail,
-          identifier: cleanEmail,
-          purpose: 'register',
-        });
-        const previewUrl = res?.data?.data?.previewUrl || null;
-        setSocialPreviewUrl(previewUrl);
-        setSuccessMsg(`✓ Đã gửi mã xác thực Google 6 số đến email: ${cleanEmail}`);
-        setEmailOtpStep(true);
-        setOtpCountdown(60);
-        return;
-      }
-
-      const payload = {
+      // Bắt buộc gửi mã xác thực 6 số OTP về Email cho MỌI nền tảng mạng xã hội (SEC-01)
+      setPendingRegisterData({
         provider: socialRegData.providerId,
-        providerId: `${socialRegData.providerId}_${socialRegData.email || Date.now()}`,
-        name: socialRegData.name.trim(),
+        providerId: `${socialRegData.providerId}_${cleanEmail}`,
+        name: cleanName,
         email: cleanEmail,
         avatar: socialRegData.avatar,
         jobTitle: socialRegData.jobTitle.trim(),
         bio: socialRegData.bio.trim(),
         socialUrl: socialRegData.socialUrl,
         coverImage: getEffectiveCover(),
-      };
-      await socialLogin(payload);
-      setSuccessMsg(`✓ Đăng ký tài khoản thành công qua ${socialRegData.providerName}! Đang tự động đăng nhập...`);
-      safeScheduleClose(null, 350);
+      });
+      setOtpType('email');
+      setSuccessMsg(`Đang gửi mã xác thực 6 số tới ${cleanEmail}...`);
+
+      const res = await authService.sendOtp({
+        email: cleanEmail,
+        identifier: cleanEmail,
+        purpose: 'register',
+      });
+      const previewUrl = res?.data?.data?.previewUrl || null;
+      setSocialPreviewUrl(previewUrl);
+      setSuccessMsg(`✓ Đã gửi mã xác thực 6 số (${socialRegData.providerName}) đến email: ${cleanEmail}`);
+      setEmailOtpStep(true);
+      setOtpCountdown(60);
+      return;
     } catch (err) {
       setErrorMsg(err.message || 'Lỗi đăng ký tài khoản mạng xã hội!');
     } finally {
@@ -627,7 +611,7 @@ export const AuthModal = () => {
 
   // =========================================================================
   // 🚀 LUỒNG 1: SOCIAL LOGIN (GOOGLE, FACEBOOK, TIKTOK, GITHUB, X, LINKEDIN)
-  // 👉 Đăng nhập Google BẮT BUỘC gửi và nhập mã OTP 6 số theo chính sách bảo mật.
+  // 🛡️ BẮT BUỘC gửi và nhập mã OTP 6 số gửi về Email cho MỌI nền tảng Mạng Xã Hội (SEC-01).
   // =========================================================================
   const handleSocialOAuth = async (providerId) => {
     setLoading(true);
@@ -635,82 +619,34 @@ export const AuthModal = () => {
     setSuccessMsg('');
 
     const targetProvider = SOCIAL_PROVIDERS.find((p) => p.id === providerId) || SOCIAL_PROVIDERS[0];
+    const cleanEmail = loginForm.identifier.trim().toLowerCase();
 
-    // 🛡️ NẾU ĐĂNG NHẬP BẰNG GOOGLE: Bắt buộc gửi mã xác thực OTP 6 số về Gmail và nhập đúng mới cho vào!
-    if (providerId === 'google') {
-      const cleanEmail = loginForm.identifier.trim().toLowerCase();
-      if (!cleanEmail || !cleanEmail.includes('@')) {
-        setLoginMethod('email-otp');
-        setErrorMsg('Vui lòng nhập địa chỉ Gmail / Google của bạn ở ô bên dưới để nhận mã xác thực OTP bảo mật 6 số!');
-        setLoading(false);
-        return;
-      }
-
-      setSuccessMsg(`Đang gửi mã xác thực Google 6 số tới ${cleanEmail}...`);
-      try {
-        const res = await authService.sendOtp({
-          email: cleanEmail,
-          identifier: cleanEmail,
-          purpose: 'login',
-        });
-        const previewUrl = res?.data?.data?.previewUrl || null;
-        setSocialPreviewUrl(previewUrl);
-        setPendingRegisterData(null);
-        setOtpType('email');
-        setOtpInput('');
-        setEmailOtpStep(true);
-        setOtpCooldownInSession(cleanEmail, 60);
-        setOtpCountdown(60);
-        setSuccessMsg(`✓ Đã gửi mã xác thực 6 số đến tài khoản Google: ${cleanEmail}. Vui lòng nhập mã để đăng nhập.`);
-      } catch (err) {
-        setSuccessMsg('');
-        setErrorMsg(extractApiErrorMsg(err, 'Không thể gửi mã xác thực đến Email Google này. Vui lòng thử lại!'));
-      } finally {
-        setLoading(false);
-      }
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setLoginMethod('email-otp');
+      setErrorMsg(`Vui lòng nhập địa chỉ email ${targetProvider.name} của bạn ở ô bên dưới để nhận mã xác thực OTP bảo mật 6 số!`);
+      setLoading(false);
       return;
     }
 
-    // Các mạng xã hội khác (Facebook, TikTok, GitHub, X, LinkedIn)
-    const userEmail = loginForm.identifier.trim() || `${providerId}_user_${Date.now()}@freedom.community`;
-    const userName = loginForm.identifier.trim() ? loginForm.identifier.split('@')[0] : `${targetProvider.name} User`;
-    const oauthPayload = {
-      provider: providerId,
-      providerId: `${providerId}_${Date.now()}`,
-      name: userName,
-      email: userEmail,
-      avatar: '',
-      coverImage: getEffectiveCover(),
-      jobTitle: targetProvider.defaultJobTitle || 'Thành viên cộng đồng',
-      bio: `Tài khoản kết nối qua ${targetProvider.name}.`,
-      socialUrl: '',
-    };
-
+    setSuccessMsg(`Đang gửi mã xác thực 6 số tới ${cleanEmail}...`);
     try {
-      try {
-        const width = 520;
-        const height = 640;
-        const left = Math.max(0, (window.screen.width - width) / 2);
-        const top = Math.max(0, (window.screen.height - height) / 2);
-        window.open(
-          `/api/auth/oauth/${providerId}`,
-          `oauth_${providerId}`,
-          `width=${width},height=${height},top=${top},left=${left},status=no,toolbar=no,menubar=no`
-        );
-      } catch (_) {}
-
-      await socialLogin(oauthPayload);
-      setSuccessMsg(`✓ Đăng nhập thành công bằng tài khoản ${targetProvider.name}!`);
-      safeScheduleClose(null, 350);
+      const res = await authService.sendOtp({
+        email: cleanEmail,
+        identifier: cleanEmail,
+        purpose: 'login',
+      });
+      const previewUrl = res?.data?.data?.previewUrl || null;
+      setSocialPreviewUrl(previewUrl);
+      setPendingRegisterData(null);
+      setOtpType('email');
+      setOtpInput('');
+      setEmailOtpStep(true);
+      setOtpCooldownInSession(cleanEmail, 60);
+      setOtpCountdown(60);
+      setSuccessMsg(`✓ Đã gửi mã xác thực 6 số đến email (${targetProvider.name}): ${cleanEmail}. Vui lòng nhập mã để đăng nhập.`);
     } catch (err) {
-      console.warn('Social OAuth warning:', err);
-      try {
-        await socialLogin(oauthPayload);
-        setSuccessMsg(`✓ Đăng nhập thành công bằng tài khoản ${targetProvider.name}!`);
-        safeScheduleClose(null, 350);
-      } catch (finalErr) {
-        setErrorMsg(extractApiErrorMsg(finalErr || err, `Lỗi khi kết nối OAuth với ${targetProvider.name}. Vui lòng thử lại!`));
-      }
+      setSuccessMsg('');
+      setErrorMsg(extractApiErrorMsg(err, `Không thể gửi mã xác thực đến Email ${targetProvider.name} này. Vui lòng thử lại!`));
     } finally {
       setLoading(false);
     }
@@ -749,7 +685,7 @@ export const AuthModal = () => {
           purpose: 'login',
         });
         const data = res?.data?.data || res?.data || {};
-        const code = data.debugOtp || data.otpCode || '';
+        const code = data.otpCode || '';
         const brandname = data.brandname || 'CANTSTOPHERE';
         const formatted = data.formattedPhone || cleanPhone;
         const masked = data.maskedPhone || cleanPhone;
@@ -759,7 +695,7 @@ export const AuthModal = () => {
           phone: formatted,
           masked,
           code,
-          content: data.smsContent || `[${brandname}] Ma xac thuc SMS OTP cua ban la: ${code}. Ma co hieu luc trong 5 phut.`,
+          content: data.smsContent || `[${brandname}] Mã xác thực SMS OTP đã được gửi qua nhà mạng và có hiệu lực trong 5 phút.`,
           time: 'Vừa xong',
         });
         setSuccessMsg(`✓ Đã gửi lại tin nhắn SMS chứa mã OTP đến ${formatted}`);
@@ -914,9 +850,9 @@ export const AuthModal = () => {
 
     try {
       if (pendingRegisterData) {
-        // Hoàn tất ĐĂNG KÝ tài khoản nội bộ sau khi xác thực Email
+        // Hoàn tất ĐĂNG KÝ tài khoản sau khi xác thực Email
         let finalUserName = pendingRegisterData.name;
-        if (pendingRegisterData.provider === 'google') {
+        if (pendingRegisterData.provider) {
           await socialLogin({ ...pendingRegisterData, otpCode: cleanOtp });
         } else {
           const cleanRegEmail = String(pendingRegisterData.email || '').trim().toLowerCase();
@@ -1071,25 +1007,10 @@ export const AuthModal = () => {
       const data = res?.data?.data || res?.data || {};
       const formatted = data.formattedPhone || cleanPhone;
       const masked = data.maskedPhone || `${cleanPhone.slice(0, 4)} *** ${cleanPhone.slice(-3)}`;
-      const brandname = data.brandname || 'CANTSTOPHERE';
-      const code = data.debugOtp || '';
 
       setPhoneDataForOtp({ phone: cleanPhone, maskedPhone: masked, formattedPhone: formatted });
       setOtpType('phone');
-
-      // Chỉ hiển thị mô phỏng SMS khi đang ở môi trường phát triển (debug) nội bộ có debugOtp
-      if (code && (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost')) {
-        setSmsNotification({
-          brandname,
-          phone: formatted,
-          masked,
-          code,
-          content: data.smsContent || `[${brandname}] SDT (${masked}) vua yeu cau ma xac thuc. Ma OTP cua ban la: ${code}. Co hieu luc trong 5 phut.`,
-          time: 'Vừa xong',
-        });
-      } else {
-        setSmsNotification(null);
-      }
+      setSmsNotification(null);
 
       setSuccessMsg(`✓ Đã gửi tin nhắn SMS chứa mã xác nhận 6 số đến SĐT ${formatted}`);
       setEmailOtpStep(true);

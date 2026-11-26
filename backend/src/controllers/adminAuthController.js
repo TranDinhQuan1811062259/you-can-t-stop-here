@@ -11,6 +11,23 @@ import { ensureDbConnected, checkDbReady } from '../config/db.js';
 import { findUserInStore, defaultStoreUsers } from '../utils/persistentStore.js';
 import { comparePassword } from '../utils/hash.js';
 
+// Mã PIN Quản Trị đọc từ biến môi trường (tuyệt đối không dùng PIN tĩnh dễ đoán)
+let ephemeralDevAdminPin = '';
+const resolveExpectedAdminPin = () => {
+  const envPin = String(process.env.ADMIN_PIN || process.env.ADMIN_SECRET_PIN || '').trim();
+  if (envPin) return envPin;
+  if (process.env.NODE_ENV === 'production') {
+    return '';
+  }
+  if (!ephemeralDevAdminPin) {
+    ephemeralDevAdminPin = String(crypto.randomInt(100000, 1000000));
+    console.warn(
+      `[SECURITY WARNING] Biến môi trường ADMIN_PIN / ADMIN_SECRET_PIN chưa được cấu hình! Mã PIN ngẫu nhiên cho phiên local dev này là: ${ephemeralDevAdminPin}`
+    );
+  }
+  return ephemeralDevAdminPin;
+};
+
 // Bộ đếm chống brute-force Mã PIN Quản Trị: tối đa 5 lần sai trong 15 phút theo userId / IP
 const PIN_MAX_ATTEMPTS = 5;
 const PIN_LOCK_WINDOW_MS = 15 * 60 * 1000;
@@ -84,7 +101,15 @@ export const verifyAdminPin = async (req, res) => {
   }
 
   const submittedPin = String(req.body?.pin ?? '').trim();
-  const expectedPin = String(process.env.ADMIN_SECRET_PIN || '261126').trim();
+  const expectedPin = resolveExpectedAdminPin();
+
+  if (!expectedPin) {
+    return res.status(500).json({
+      success: false,
+      requireAdminPin: true,
+      message: 'Hệ thống chưa cấu hình biến môi trường ADMIN_PIN hoặc ADMIN_SECRET_PIN.',
+    });
+  }
 
   if (!submittedPin) {
     return res.status(400).json({
@@ -405,14 +430,12 @@ export const adminLogin = async (req, res) => {
       });
     }
 
-    // 2. So sánh mật khẩu
+    // 2. So sánh mật khẩu (chỉ chấp nhận hash an toàn)
     let isMatch = false;
     if (typeof adminUser.comparePassword === 'function') {
       isMatch = await adminUser.comparePassword(password);
     } else if (adminUser.password) {
       isMatch = await comparePassword(password, adminUser.password);
-    } else if (adminUser.rawPassword) {
-      isMatch = adminUser.rawPassword === password;
     }
 
     if (!isMatch) {

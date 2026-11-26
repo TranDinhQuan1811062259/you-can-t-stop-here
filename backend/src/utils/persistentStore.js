@@ -18,8 +18,6 @@ export const defaultStoreUsers = [
     name: 'Anthony Quân (Trần Đình Quân)',
     email: 'anthonyq012025@gmail.com',
     phone: '0901234567',
-    password: 'password123',
-    rawPassword: '123456',
     role: 'admin',
     chatStatus: 'online',
     allowStrangerNotifications: true,
@@ -56,8 +54,6 @@ export const defaultStoreUsers = [
     name: 'Quản Trị Viên Freedom',
     email: 'admin@cantstophere.com',
     phone: '0901111222',
-    password: 'password123',
-    rawPassword: '123456',
     role: 'admin',
     chatStatus: 'online',
     friends: ['u_admin_1'],
@@ -78,8 +74,6 @@ export const defaultStoreUsers = [
     name: 'Minh Anh',
     email: 'minhanh@cantstophere.com',
     phone: '0902222333',
-    password: 'password123',
-    rawPassword: '123456',
     role: 'user',
     chatStatus: 'offline',
     friends: ['u_admin_1'],
@@ -100,8 +94,6 @@ export const defaultStoreUsers = [
     name: 'Thành Nam',
     email: 'nam.pm@cantstophere.com',
     phone: '0903333444',
-    password: 'password123',
-    rawPassword: '123456',
     role: 'user',
     chatStatus: 'busy',
     friends: ['u_admin_1'],
@@ -126,8 +118,6 @@ export const defaultStoreUsers = [
     name: 'Đức Huy',
     email: 'duchuy@cantstophere.com',
     phone: '0904444555',
-    password: 'password123',
-    rawPassword: '123456',
     role: 'user',
     chatStatus: 'online',
     friends: ['u_admin_1'],
@@ -148,8 +138,6 @@ export const defaultStoreUsers = [
     name: 'Hương Ly',
     email: 'huongly@cantstophere.com',
     phone: '0905555666',
-    password: 'password123',
-    rawPassword: '123456',
     role: 'user',
     chatStatus: 'online',
     friends: [],
@@ -418,19 +406,22 @@ export const loadStore = () => {
       if (parsed && typeof parsed === 'object') {
         let needsSave = false;
 
-        // Đảm bảo luôn có users
+        // Đảm bảo luôn có users & dọn sạch hoàn toàn trường rawPassword nhạy cảm
         if (!Array.isArray(parsed.users) || parsed.users.length === 0) {
           parsed.users = [...defaultStoreUsers];
           needsSave = true;
         } else {
-          // Bổ sung friends và chatStatus nếu chưa có
           parsed.users = parsed.users.map((u) => {
             const defU = defaultStoreUsers.find((du) => du._id === u._id);
+            const { rawPassword: _removedRaw, ...safeUser } = u || {};
+            if (u && 'rawPassword' in u) {
+              needsSave = true;
+            }
             return {
-              ...u,
-              friends: Array.isArray(u.friends) ? u.friends : (defU?.friends || []),
-              chatStatus: u.chatStatus || defU?.chatStatus || 'online',
-              allowStrangerNotifications: u.allowStrangerNotifications ?? true,
+              ...safeUser,
+              friends: Array.isArray(safeUser.friends) ? safeUser.friends : (defU?.friends || []),
+              chatStatus: safeUser.chatStatus || defU?.chatStatus || 'online',
+              allowStrangerNotifications: safeUser.allowStrangerNotifications ?? true,
             };
           });
         }
@@ -530,40 +521,42 @@ export const saveUserToStore = (userData) => {
   if (!userData) return null;
   const store = loadStore();
   store.users = store.users || [];
+  const { rawPassword: _ignoreRaw, ...sanitizedInput } = userData;
 
   const idx = store.users.findIndex(
     (u) =>
-      (userData._id && String(u._id) === String(userData._id)) ||
-      (userData.email && u.email && u.email.toLowerCase() === userData.email.toLowerCase())
+      (sanitizedInput._id && String(u._id) === String(sanitizedInput._id)) ||
+      (sanitizedInput.email && u.email && u.email.toLowerCase() === sanitizedInput.email.toLowerCase())
   );
 
   let mergedUser = null;
   if (idx !== -1) {
+    const { rawPassword: _oldRaw, ...existingClean } = store.users[idx] || {};
     mergedUser = {
-      ...store.users[idx],
-      ...userData,
+      ...existingClean,
+      ...sanitizedInput,
       customLayout: {
-        ...(store.users[idx].customLayout || {}),
-        ...(userData.customLayout || {}),
+        ...(existingClean.customLayout || {}),
+        ...(sanitizedInput.customLayout || {}),
       },
       profileMusic: {
-        ...(store.users[idx].profileMusic || {}),
-        ...(userData.profileMusic || {}),
+        ...(existingClean.profileMusic || {}),
+        ...(sanitizedInput.profileMusic || {}),
       },
       socialLinks: {
-        ...(store.users[idx].socialLinks || {}),
-        ...(userData.socialLinks || {}),
+        ...(existingClean.socialLinks || {}),
+        ...(sanitizedInput.socialLinks || {}),
       },
     };
     store.users[idx] = mergedUser;
   } else {
     mergedUser = {
-      _id: userData._id || `u_${Date.now()}`,
-      role: userData.role || 'user',
-      jobTitle: userData.jobTitle || 'Thành viên cộng đồng',
-      avatar: userData.avatar || '',
-      bio: userData.bio || '',
-      ...userData,
+      _id: sanitizedInput._id || `u_${Date.now()}`,
+      role: sanitizedInput.role || 'user',
+      jobTitle: sanitizedInput.jobTitle || 'Thành viên cộng đồng',
+      avatar: sanitizedInput.avatar || '',
+      bio: sanitizedInput.bio || '',
+      ...sanitizedInput,
     };
     store.users.push(mergedUser);
   }

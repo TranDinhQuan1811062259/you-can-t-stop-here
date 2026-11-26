@@ -150,7 +150,7 @@ export const AuthProvider = ({ children }) => {
 
         const rawUser = {
           _id: `u_${oauthProvider || 'oauth'}_${Date.now()}`,
-          name: oauthName ? decodeURIComponent(oauthName) : (isGoogle ? 'Đơn Thân Mẹ' : 'Thành viên cộng đồng'),
+          name: oauthName ? decodeURIComponent(oauthName) : (isGoogle ? 'Thành viên Google' : 'Thành viên cộng đồng'),
           email: oauthEmail ? decodeURIComponent(oauthEmail) : '',
           role: isAdm ? 'admin' : 'user',
           isAdmin: isAdm,

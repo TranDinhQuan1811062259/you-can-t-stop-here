@@ -121,24 +121,23 @@ export const PostCard = ({ post }) => {
     );
   };
 
-  // Kiểm tra xem bài viết có phải do người đang đăng nhập viết không (Đồng bộ tuyệt đối thông tin chính chủ)
+  // Kiểm tra xem bài viết có phải do người đang đăng nhập viết không (Chỉ khớp ID chính chủ hoặc tác giả legacy không gắn user)
   const isCurrentUserAuthor = Boolean(
     user &&
     post &&
     ((post.user && (post.user._id || post.user)?.toString() === user._id?.toString()) ||
-      (post.author && user.name && post.author.trim().toLowerCase() === user.name.trim().toLowerCase()) ||
-      (user.role === 'admin' && (post.author === 'Đơn Thân Mẹ' || post.author === 'Trần Đình Quân' || post.author === 'Trần Đỉnh Quân')))
+      (!post.user && post.author && user.name && post.author.trim().toLowerCase() === user.name.trim().toLowerCase()))
   );
 
   // Giữ đúng tác giả của từng bài viết; nếu là chính chủ đang đăng nhập thì đồng bộ 100% tên & avatar hiện tại
   const cleanAdminAvatar = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
-  const rawAuthor = post?.author || post?.user?.name || (isCurrentUserAuthor ? user.name : '');
+  const rawAuthor = post?.user?.name || post?.author || (isCurrentUserAuthor ? user.name : '');
   const isInvalidAuthor =
     !rawAuthor ||
     typeof rawAuthor !== 'string' ||
     ['hình ảnh', 'hình anh', 'image', 'picture', 'photo', 'ảnh'].includes(rawAuthor.trim().toLowerCase());
   const authorName = isInvalidAuthor
-    ? (isCurrentUserAuthor ? user?.name || 'Tác giả' : 'Thành viên')
+    ? (isCurrentUserAuthor ? user?.name || 'Thành viên cộng đồng' : 'Thành viên ẩn danh')
     : rawAuthor.trim();
   const authorJob = post?.authorJob || post?.user?.jobTitle || (isCurrentUserAuthor ? user.jobTitle : 'Thành viên cộng đồng');
 
@@ -150,13 +149,10 @@ export const PostCard = ({ post }) => {
       return raw;
     }
 
-    // 2. Chỉ gắn avatar Admin nếu bài viết thực sự do Admin đăng
+    // 2. Chỉ gắn avatar Admin nếu bài viết thực sự do tài khoản role admin đăng
     const isPostByAdmin =
-      post?.author === 'Đơn Thân Mẹ' ||
-      post?.author === 'Trần Đình Quân' ||
-      post?.author === 'Anthony Quân' ||
       post?.user?.role === 'admin' ||
-      post?.user?.email === 'anthonyq012025@gmail.com';
+      (isCurrentUserAuthor && user?.role === 'admin');
 
     if (isPostByAdmin) {
       return cleanAdminAvatar;

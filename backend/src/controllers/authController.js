@@ -15,7 +15,7 @@ import {
   verifyRefreshToken,
   revokeToken,
 } from '../utils/token.js';
-import { hashPassword } from '../utils/hash.js';
+import { hashPassword, comparePassword } from '../utils/hash.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { sendOtpEmail } from '../services/emailService.js';
 import { generateOtp, sendRegistrationOtp, sendOtpEmail as sendMailerOtp } from '../services/mailer.js';
@@ -222,7 +222,9 @@ export const register = async (req, res) => {
     req.otpDispatched = true;
     try {
       await sendRegistrationOtp(cleanEmail, otpCode);
-      console.log(`[AUTH] ✉️ Đã gửi mã OTP đăng ký [${otpCode}] tới hòm thư: ${cleanEmail}`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[AUTH] ✉️ Đã gửi mã OTP đăng ký [${otpCode}] tới hòm thư: ${cleanEmail}`);
+      }
     } catch (mailErr) {
       console.error('[AUTH] ❌ Gặp lỗi khi gửi email OTP qua Nodemailer:', mailErr.message);
     }
@@ -233,7 +235,6 @@ export const register = async (req, res) => {
         email: cleanEmail,
         requiresOtp: true,
         expiresAt: otpExpires,
-        debugOtp: (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') ? otpCode : undefined,
       },
       status: 201,
     });
@@ -300,7 +301,14 @@ export const login = async (req, res) => {
           });
         }
 
-        const isMatch = user.password ? await user.comparePassword(password) : false;
+        if (!user.password) {
+          return sendError(res, {
+            message: 'Tài khoản này chưa thiết lập mật khẩu, vui lòng đăng nhập bằng Email OTP hoặc đặt lại mật khẩu',
+            status: 400,
+          });
+        }
+
+        const isMatch = await user.comparePassword(password);
         if (isMatch) {
           const tokenVersion = user.tokenVersion !== undefined ? user.tokenVersion : 0;
           const token = await signAccessToken({
@@ -388,18 +396,19 @@ export const login = async (req, res) => {
         });
       }
 
-      let isMatch =
-        Boolean(found.rawPassword && password === found.rawPassword) ||
-        Boolean(found.password && password === found.password);
-
-      if (!isMatch && found.password) {
-        try {
-          isMatch = await comparePassword(password, found.password);
-        } catch (_) {}
+      if (!found.password) {
+        return sendError(res, {
+          message: 'Tài khoản này chưa thiết lập mật khẩu, vui lòng đăng nhập bằng Email OTP hoặc đặt lại mật khẩu',
+          status: 400,
+        });
       }
 
-      // Nếu tài khoản đã tồn tại trong store, cho phép đăng nhập đúng danh tính
-      if (isMatch || !found.password || found.rawPassword === undefined) {
+      let isMatch = false;
+      try {
+        isMatch = await comparePassword(password, found.password);
+      } catch (_) {}
+
+      if (isMatch) {
         const tokenVersion = found.tokenVersion !== undefined ? found.tokenVersion : 0;
         const token = await signAccessToken({
           id: found._id,
@@ -414,12 +423,13 @@ export const login = async (req, res) => {
           tokenVersion,
         });
 
+        const { password: _pw, rawPassword: _rpw, ...safeFound } = found;
         return sendSuccess(res, {
           message: 'Đăng nhập thành công!',
           data: {
-            ...found,
-            customLayout: found.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
-            profileMusic: found.profileMusic || {
+            ...safeFound,
+            customLayout: safeFound.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
+            profileMusic: safeFound.profileMusic || {
               enabled: true,
               title: 'Lofi Chill - Đêm muộn ở văn phòng',
               artist: 'Freedom Chill Beat',
@@ -469,9 +479,15 @@ export const socialLogin = async (req, res) => {
     }
 
     const cleanProvider = String(provider).toLowerCase().trim();
-    const cleanEmail = email && email.trim()
-      ? email.toLowerCase().trim()
-      : `${cleanProvider}_${providerId || Date.now()}@social.cantstophere.com`;
+    const cleanEmail = String(email || '').toLowerCase().trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!cleanEmail || !emailRegex.test(cleanEmail) || cleanEmail.endsWith('@social.cantstophere.com')) {
+      return sendError(res, {
+        message: 'Vui lòng cung cấp địa chỉ Email hợp lệ để xác thực OTP bảo mật trước khi đăng nhập!',
+        status: 400,
+      });
+    }
 
     const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
     const assignedRole = cleanEmail === adminEmail ? 'admin' : 'user';
@@ -518,14 +534,14 @@ export const socialLogin = async (req, res) => {
       });
     }
 
-    // 🛡️ BẢO MẬT GOOGLE: Bắt buộc xác thực mã OTP gửi về Email chính chủ
+    // 🛡️ BẢO MẬT MẠNG XÃ HỘI (SEC-01): Bắt buộc xác thực mã OTP gửi về Email chính chủ cho MỌI nền tảng
     const submittedOtp = normalizeOtpCode(req.body.otpCode);
-    const requiresOtpCheck = cleanProvider === 'google' || assignedRole === 'admin';
+    const requiresOtpCheck = true;
 
     if (requiresOtpCheck) {
       if (!submittedOtp) {
         req.otpDispatched = true;
-        // Chưa có mã OTP -> Sinh mã OTP 6 số và gửi qua Gmail chính chủ
+        // Chưa có mã OTP -> Sinh mã OTP 6 số và gửi qua Email chính chủ
         const generatedCode = generateOtp();
         const expiresAt = Date.now() + 5 * 60 * 1000;
         await persistOtpChallenge({
@@ -554,22 +570,23 @@ export const socialLogin = async (req, res) => {
           mailPreview = mRes?.previewUrl || null;
         } catch (mailErr) {
           try {
-            const mRes2 = await sendOtpEmail(cleanEmail, generatedCode, 'đăng nhập Google an toàn');
+            const mRes2 = await sendOtpEmail(cleanEmail, generatedCode, `đăng nhập ${cleanProvider.toUpperCase()} an toàn`);
             mailPreview = mRes2?.previewUrl || null;
           } catch (_) {}
         }
 
-        console.log(`[AUTH SECURITY] ✉️ Đã gửi mã xác thực Google OTP [${generatedCode}] tới: ${cleanEmail}`);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`[AUTH SECURITY] ✉️ Đã gửi mã xác thực OTP (${cleanProvider}) [${generatedCode}] tới: ${cleanEmail}`);
+        }
 
         return sendSuccess(res, {
-          message: `Mã xác thực 6 số đã được gửi tới Gmail: ${cleanEmail}. Vui lòng nhập mã để hoàn tất đăng nhập!`,
+          message: `Mã xác thực 6 số đã được gửi tới email: ${cleanEmail}. Vui lòng nhập mã để hoàn tất đăng nhập!`,
           data: {
             requiresOtp: true,
             email: cleanEmail,
             provider: cleanProvider,
             expiresAt,
             previewUrl: mailPreview,
-            debugOtp: (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') ? generatedCode : undefined,
           },
         });
       }
@@ -829,9 +846,10 @@ export const socialLogin = async (req, res) => {
       tokenVersion,
     });
 
+    const { password: _pw, rawPassword: _rpw, ...safeMockUser } = mockUser;
     return sendSuccess(res, {
       message: `Đăng nhập thành công với ${cleanProvider.toUpperCase()}! (Đã lưu bền vững trên ổ cứng)`,
-      data: { ...mockUser, token, refreshToken },
+      data: { ...safeMockUser, token, refreshToken },
     });
   } catch (error) {
     return sendError(res, { message: error.message, status: 500 });
@@ -977,14 +995,7 @@ export const updateProfile = async (req, res) => {
 
       // Đồng bộ tên tác giả, chức danh, AVATAR và MẠNG XÃ HỘI trên tất cả các bài viết do user này đã viết
       await Post.updateMany(
-        {
-          $or: [
-            { user: user._id },
-            { author: user.name },
-            { author: 'Trần Đình Quân' },
-            { author: 'Đình Quân Trần' },
-          ],
-        },
+        { user: user._id },
         {
           author: user.name,
           authorJob: user.jobTitle,
@@ -998,17 +1009,12 @@ export const updateProfile = async (req, res) => {
       const store = loadStore();
       if (store.posts) {
         store.posts.forEach((p) => {
-          if (
-            (p.user && p.user._id === user._id.toString()) ||
-            p.author === user.name ||
-            p.author === 'Trần Đình Quân' ||
-            p.author === 'Đình Quân Trần'
-          ) {
+          if (p.user && String(p.user._id || p.user) === String(user._id)) {
             p.author = user.name;
             p.authorJob = user.jobTitle;
             p.authorAvatar = user.avatar;
             p.authorSocialLinks = user.socialLinks;
-            if (!p.user) p.user = {};
+            if (!p.user || typeof p.user !== 'object') p.user = { _id: user._id };
             p.user.name = user.name;
             p.user.jobTitle = user.jobTitle;
             p.user.avatar = user.avatar;
@@ -1101,13 +1107,11 @@ export const updateProfile = async (req, res) => {
       if (newPassword.length < 6) {
         return sendError(res, { message: 'Mật khẩu mới phải có tối thiểu 6 ký tự', status: 400 });
       }
-      if (currentPassword && (baseTarget.password || baseTarget.rawPassword)) {
-        let isMatch = currentPassword === baseTarget.password || currentPassword === baseTarget.rawPassword;
-        if (!isMatch && baseTarget.password) {
-          try {
-            isMatch = await comparePassword(currentPassword, baseTarget.password);
-          } catch (_) {}
-        }
+      if (currentPassword && baseTarget.password) {
+        let isMatch = false;
+        try {
+          isMatch = await comparePassword(currentPassword, baseTarget.password);
+        } catch (_) {}
         if (!isMatch) {
           return sendError(res, { message: 'Mật khẩu hiện tại không chính xác', status: 400 });
         }
@@ -1116,19 +1120,20 @@ export const updateProfile = async (req, res) => {
       fallbackTokenVersion += 1;
     }
 
+    const { rawPassword: _dropRaw, ...safeBaseTarget } = baseTarget;
     const updatedUser = {
-      ...baseTarget,
-      _id: baseTarget._id || req.user?._id || 'u_admin_1',
-      name: name?.trim() || baseTarget.name || 'Trần Đình Quân',
+      ...safeBaseTarget,
+      _id: safeBaseTarget._id || req.user?._id || 'u_admin_1',
+      name: name?.trim() || safeBaseTarget.name || 'Thành viên cộng đồng',
       email: targetEmail,
-      role: baseTarget.role || req.user?.role || 'admin',
-      jobTitle: jobTitle !== undefined ? jobTitle.trim() : (baseTarget.jobTitle || 'System Admin & Lead Dev'),
-      bio: bio !== undefined ? bio.trim() : (baseTarget.bio || ''),
-      avatar: avatar || baseTarget.avatar || '',
-      coverImage: coverImage || baseTarget.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
-      phone: phone !== undefined ? phone.trim() : (baseTarget.phone || ''),
-      customLayout: customLayout || baseTarget.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
-      profileMusic: profileMusic || baseTarget.profileMusic || {
+      role: safeBaseTarget.role || req.user?.role || 'admin',
+      jobTitle: jobTitle !== undefined ? jobTitle.trim() : (safeBaseTarget.jobTitle || 'System Admin & Lead Dev'),
+      bio: bio !== undefined ? bio.trim() : (safeBaseTarget.bio || ''),
+      avatar: avatar || safeBaseTarget.avatar || '',
+      coverImage: coverImage || safeBaseTarget.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80',
+      phone: phone !== undefined ? phone.trim() : (safeBaseTarget.phone || ''),
+      customLayout: customLayout || safeBaseTarget.customLayout || { theme: 'default', frameStyle: 'none', ambientEffect: 'particles' },
+      profileMusic: profileMusic || safeBaseTarget.profileMusic || {
         enabled: true,
         title: 'Lofi Chill - Đêm muộn ở văn phòng',
         artist: 'Freedom Chill Beat',
@@ -1136,9 +1141,9 @@ export const updateProfile = async (req, res) => {
         presetId: 'lofi_night',
         url: 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3',
       },
-      socialLinks: socialLinks || baseTarget.socialLinks || {},
+      socialLinks: socialLinks || safeBaseTarget.socialLinks || {},
       tokenVersion: fallbackTokenVersion,
-      ...(newHashedPassword ? { password: newHashedPassword, rawPassword: newPassword } : {}),
+      ...(newHashedPassword ? { password: newHashedPassword } : {}),
     };
 
     // Ghi đè vào db_store.json trên ổ cứng ngay lập tức
@@ -1148,17 +1153,12 @@ export const updateProfile = async (req, res) => {
     const store = loadStore();
     if (store.posts) {
       store.posts.forEach((p) => {
-        if (
-          (p.user && String(p.user._id || p.user) === String(updatedUser._id)) ||
-          p.author === updatedUser.name ||
-          p.author === 'Trần Đình Quân' ||
-          p.author === 'Đình Quân Trần'
-        ) {
+        if (p.user && String(p.user._id || p.user) === String(updatedUser._id)) {
           p.author = updatedUser.name;
           p.authorJob = updatedUser.jobTitle;
           p.authorAvatar = updatedUser.avatar;
           p.authorSocialLinks = updatedUser.socialLinks;
-          if (!p.user) p.user = {};
+          if (!p.user || typeof p.user !== 'object') p.user = { _id: updatedUser._id };
           p.user.name = updatedUser.name;
           p.user.jobTitle = updatedUser.jobTitle;
           p.user.avatar = updatedUser.avatar;
@@ -1182,10 +1182,11 @@ export const updateProfile = async (req, res) => {
       tokenVersion: fallbackTokenVersion,
     });
 
+    const { password: _pw, rawPassword: _rpw, ...safeUpdatedUser } = updatedUser;
     return sendSuccess(res, {
       message: 'Cập nhật thông tin tài khoản thành công! (Đã lưu bền vững trên ổ cứng)',
       data: {
-        ...updatedUser,
+        ...safeUpdatedUser,
         token: freshToken,
         refreshToken: freshRefreshToken,
       },
@@ -1345,9 +1346,7 @@ export const getUserProfile = async (req, res) => {
       const isAuthorMatch = Boolean(
         p.author && targetUser.name && p.author.trim().toLowerCase() === targetUser.name.trim().toLowerCase()
       );
-      const isAdminAlias = (targetUser.name === 'Trần Đình Quân' || targetUser.name === 'Đơn Thân Mẹ') &&
-        (p.author === 'Trần Đình Quân' || p.author === 'Trần Đỉnh Quân' || p.author === 'Đơn Thân Mẹ');
-      return isIdMatch || isEmailMatch || isAuthorMatch || isAdminAlias;
+      return isIdMatch || isEmailMatch || isAuthorMatch;
     });
 
     let posts = localUserPosts;
@@ -1356,9 +1355,6 @@ export const getUserProfile = async (req, res) => {
         const postOr = [
           { author: targetUser.name },
         ];
-        if (targetUser.name === 'Trần Đình Quân' || targetUser.name === 'Đơn Thân Mẹ') {
-          postOr.push({ author: 'Trần Đình Quân' }, { author: 'Trần Đỉnh Quân' }, { author: 'Đơn Thân Mẹ' });
-        }
         if (targetUser._id && String(targetUser._id).match(/^[0-9a-fA-F]{24}$/)) {
           postOr.push({ user: targetUser._id });
         }
@@ -1544,11 +1540,13 @@ export const sendLoginOtp = async (req, res) => {
         }
       }
 
-      console.log(`\n========================================`);
-      console.log(`[AUTH SECURITY] ĐÃ GỬI MÃ XÁC THỰC BẢO MẬT (${cleanPurpose.toUpperCase()})`);
-      console.log(`- Hòm thư nhận: ${cleanTarget}`);
-      console.log(`- Mã xác nhận 6 số: ${otpCode}`);
-      console.log(`========================================\n`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`\n========================================`);
+        console.log(`[AUTH SECURITY] ĐÃ GỬI MÃ XÁC THỰC BẢO MẬT (${cleanPurpose.toUpperCase()})`);
+        console.log(`- Hòm thư nhận: ${cleanTarget}`);
+        console.log(`- Mã xác nhận 6 số: ${otpCode}`);
+        console.log(`========================================\n`);
+      }
 
       return sendSuccess(res, {
         message: `Đã gửi mã xác nhận 6 số đến hòm thư ${cleanTarget}`,
@@ -1560,7 +1558,6 @@ export const sendLoginOtp = async (req, res) => {
           expiresAt,
           previewUrl: mailResult?.previewUrl || null,
           simulated: mailResult?.simulated || false,
-          debugOtp: (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') ? otpCode : undefined,
         },
       });
     } else {
@@ -1583,12 +1580,14 @@ export const sendLoginOtp = async (req, res) => {
         });
       }
 
-      console.log(`\n========================================`);
-      console.log(`[AUTH SECURITY] ĐÃ GỬI TIN NHẮN SMS XÁC THỰC`);
-      console.log(`- Số điện thoại nhận: ${cleanTarget}`);
-      console.log(`- Mã xác nhận 6 số: ${otpCode}`);
-      console.log(`- Nội dung SMS: ${smsResult.content}`);
-      console.log(`========================================\n`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`\n========================================`);
+        console.log(`[AUTH SECURITY] ĐÃ GỬI TIN NHẮN SMS XÁC THỰC`);
+        console.log(`- Số điện thoại nhận: ${cleanTarget}`);
+        console.log(`- Mã xác nhận 6 số: ${otpCode}`);
+        console.log(`- Nội dung SMS: ${smsResult.content}`);
+        console.log(`========================================\n`);
+      }
 
       return sendSuccess(res, {
         message: `Đã gửi tin nhắn SMS chứa mã xác nhận 6 số đến SĐT ${smsResult.formattedPhone || cleanTarget}`,
@@ -1601,7 +1600,6 @@ export const sendLoginOtp = async (req, res) => {
           formattedPhone: smsResult.formattedPhone || cleanTarget,
           brandname: smsResult.brandname || 'CANTSTOPHERE',
           expiresAt,
-          debugOtp: (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') ? otpCode : undefined,
         },
       });
     }

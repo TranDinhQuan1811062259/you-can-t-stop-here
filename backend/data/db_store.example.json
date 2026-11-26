@@ -1,0 +1,81 @@
+{
+  "posts": [
+    {
+      "_id": "post_example_1",
+      "title": "Bài viết mẫu chào mừng đến với cộng đồng",
+      "slug": "bai-viet-mau-chao-mung-den-voi-cong-dong",
+      "summary": "Không gian chia sẻ câu chuyện, áp lực công việc và những góc nhìn chữa lành.",
+      "content": "<p>Đây là dữ liệu mẫu phục vụ phát triển cục bộ. Vui lòng tạo hoặc đồng bộ dữ liệu thực qua MongoDB.</p>",
+      "author": "Thành viên cộng đồng",
+      "authorJob": "Thành viên",
+      "authorAvatar": "",
+      "authorSocialLinks": {},
+      "category": {
+        "_id": "cat_1",
+        "name": "Áp lực & Kiệt sức (Burnout)",
+        "slug": "ap-luc-kiet-suc-burnout"
+      },
+      "user": {
+        "_id": "u_member_example",
+        "name": "Thành viên cộng đồng",
+        "jobTitle": "Thành viên",
+        "avatar": ""
+      },
+      "tags": ["khoi-dau", "chia-se"],
+      "views": 0,
+      "cheersCount": 0,
+      "isPublished": true,
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "comments": [],
+  "users": [
+    {
+      "_id": "u_member_example",
+      "name": "Thành viên cộng đồng",
+      "email": "member@example.com",
+      "role": "user",
+      "jobTitle": "Thành viên",
+      "avatar": "",
+      "coverImage": "",
+      "bio": "Tài khoản mẫu (không chứa mật khẩu hoặc thông tin nhạy cảm).",
+      "socialLinks": {},
+      "tokenVersion": 0,
+      "isVerified": true
+    }
+  ],
+  "categories": [
+    {
+      "_id": "cat_1",
+      "name": "Áp lực & Kiệt sức (Burnout)",
+      "slug": "ap-luc-kiet-suc-burnout",
+      "description": "Chia sẻ khi kiệt sức và cách cân bằng lại nhịp sống."
+    },
+    {
+      "_id": "cat_2",
+      "name": "Khủng hoảng nghề nghiệp (Career Crisis)",
+      "slug": "khung-hoang-nghe-nghiep-career-crisis",
+      "description": "Những câu hỏi về định hướng và bước ngoặt công việc."
+    },
+    {
+      "_id": "cat_3",
+      "name": "Chuyển ngành & Bắt đầu lại (Restart)",
+      "slug": "chuyen-nganh-bat-dau-lai-restart",
+      "description": "Hành trình thay đổi và tái tạo sự nghiệp."
+    },
+    {
+      "_id": "cat_4",
+      "name": "Những tia sáng & Động lực (Small Wins)",
+      "slug": "nhung-tia-sang-dong-luc-small-wins",
+      "description": "Ghi nhận những bước tiến nhỏ mỗi ngày."
+    }
+  ],
+  "subscribers": [],
+  "conversations": [],
+  "messages": [],
+  "festiveEvents": [],
+  "adminPreviewEventId": null,
+  "stories": [],
+  "timeCapsules": [],
+  "notifications": []
+}

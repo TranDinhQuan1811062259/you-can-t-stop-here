@@ -39,7 +39,7 @@ export const protect = async (req, res, next) => {
 
         req.user = storedUser || {
           _id: decoded.id,
-          name: decoded.name || (isAdm ? 'Anthony Quân (Trần Đình Quân)' : 'Thành viên cộng đồng'),
+          name: decoded.name || (isAdm ? 'Quản Trị Viên' : 'Thành viên cộng đồng'),
           email: decoded.email || (isAdm ? 'anthonyq012025@gmail.com' : ''),
           role: isAdm ? 'admin' : (decoded.role || 'user'),
           jobTitle: decoded.jobTitle || (isAdm ? 'System Admin & Lead Dev' : 'Người đi làm'),

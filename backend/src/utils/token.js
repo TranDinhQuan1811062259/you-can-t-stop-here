@@ -8,9 +8,23 @@ const __dirname = path.dirname(__filename);
 const dataDir = path.join(__dirname, '../../data');
 const revokedTokensFilePath = path.join(dataDir, 'revoked_tokens.json');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'you_cant_stop_here_secret_key_2026_super_secure';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || `${JWT_SECRET}_refresh_v1`;
-const JWT_ADMIN_SECRET = process.env.JWT_ADMIN_SECRET || `${JWT_SECRET}_admin_gate_v1`;
+let resolvedJwtSecret = process.env.JWT_SECRET ? String(process.env.JWT_SECRET).trim() : '';
+if (!resolvedJwtSecret) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[SECURITY WARNING] Thiếu biến môi trường JWT_SECRET trên Production! Đang sinh khóa ngẫu nhiên tạm thời theo phiên.');
+  } else {
+    console.warn('[SECURITY WARNING] Thiếu biến môi trường JWT_SECRET ở local dev. Đang sinh khóa ngẫu nhiên tạm thời.');
+  }
+  resolvedJwtSecret = crypto.randomBytes(64).toString('hex');
+}
+
+const JWT_SECRET = resolvedJwtSecret;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET
+  ? String(process.env.JWT_REFRESH_SECRET).trim()
+  : crypto.createHmac('sha256', JWT_SECRET).update('freedom_refresh_v1').digest('hex');
+const JWT_ADMIN_SECRET = process.env.JWT_ADMIN_SECRET
+  ? String(process.env.JWT_ADMIN_SECRET).trim()
+  : crypto.createHmac('sha256', JWT_SECRET).update('freedom_admin_gate_v1').digest('hex');
 
 // Base64Url helpers
 const base64UrlEncode = (str) =>

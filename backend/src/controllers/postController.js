@@ -9,6 +9,82 @@ import { loadStore, saveStore } from '../utils/persistentStore.js';
 import { maskSensitiveText, analyzeContentSafety } from '../utils/sensitiveFilter.js';
 import { createNotification } from '../services/notificationService.js';
 
+const INVALID_AUTHOR_PLACEHOLDERS = new Set([
+  'hình ảnh',
+  'hình anh',
+  'image',
+  'picture',
+  'photo',
+  'ảnh',
+]);
+
+const sanitizeAuthorName = (post) => {
+  const candidate = post?.user?.name || post?.author || '';
+  const trimmed = typeof candidate === 'string' ? candidate.trim() : '';
+  if (!trimmed || INVALID_AUTHOR_PLACEHOLDERS.has(trimmed.toLowerCase())) {
+    return 'Thành viên ẩn danh';
+  }
+  return trimmed;
+};
+
+// Bộ đệm lượt đọc trong RAM để tránh ghi đồng bộ db_store.json mỗi lần GET chi tiết bài viết
+const pendingViewDeltas = new Map();
+let isFlushingViews = false;
+
+const bufferPostView = (postKey) => {
+  if (!postKey) return 0;
+  const key = String(postKey);
+  const nextDelta = (pendingViewDeltas.get(key) || 0) + 1;
+  pendingViewDeltas.set(key, nextDelta);
+  return nextDelta;
+};
+
+const getBufferedViews = (post) => {
+  const baseViews = Number(post?.views || 0);
+  const idDelta = post?._id ? (pendingViewDeltas.get(String(post._id)) || 0) : 0;
+  const slugDelta = post?.slug ? (pendingViewDeltas.get(String(post.slug)) || 0) : 0;
+  return baseViews + Math.max(idDelta, slugDelta);
+};
+
+const flushPendingViewsToStore = async () => {
+  if (isFlushingViews || pendingViewDeltas.size === 0) return;
+  isFlushingViews = true;
+  const snapshot = new Map(pendingViewDeltas);
+  pendingViewDeltas.clear();
+  try {
+    const store = loadStore();
+    let mutated = false;
+    if (Array.isArray(store.posts)) {
+      for (const p of store.posts) {
+        const byId = p._id ? snapshot.get(String(p._id)) : 0;
+        const bySlug = p.slug ? snapshot.get(String(p.slug)) : 0;
+        const delta = Math.max(byId || 0, bySlug || 0);
+        if (delta > 0) {
+          p.views = Number(p.views || 0) + delta;
+          mutated = true;
+        }
+      }
+    }
+    if (mutated) {
+      await Promise.resolve(saveStore(store));
+    }
+  } catch (err) {
+    for (const [k, v] of snapshot.entries()) {
+      pendingViewDeltas.set(k, (pendingViewDeltas.get(k) || 0) + v);
+    }
+    console.warn('[postController] Lỗi flush lượt đọc định kỳ:', err.message);
+  } finally {
+    isFlushingViews = false;
+  }
+};
+
+const viewFlushTimer = setInterval(() => {
+  flushPendingViewsToStore().catch(() => {});
+}, 30 * 1000);
+if (viewFlushTimer.unref) {
+  viewFlushTimer.unref();
+}
+
 export const removeVietnameseTones = (str) => {
   if (!str) return '';
   return str
@@ -137,9 +213,11 @@ export const getPosts = async (req, res) => {
             }
           });
 
-          allPosts = Array.from(map.values());
-          store.posts = allPosts;
-          saveStore(store);
+          allPosts = Array.from(map.values()).map((item) => ({
+            ...item,
+            author: sanitizeAuthorName(item),
+            views: getBufferedViews(item),
+          }));
         }
       } catch (err) {
         console.warn('Lỗi đồng bộ MongoDB trong getPosts, dùng local store:', err.message);
@@ -296,65 +374,52 @@ export const getPostBySlug = async (req, res) => {
     const { slug } = req.params;
 
     if (checkDbReady()) {
-      let post = await Post.findOne({ slug, isPublished: true })
+      const post = await Post.findOne({ slug, isPublished: true })
         .populate('category', 'name slug description')
-        .populate('user', 'name avatar jobTitle bio socialLinks streakCount');
+        .populate('user', 'name avatar jobTitle bio socialLinks streakCount')
+        .lean();
 
       if (post) {
-        // CHỈ cập nhật thông tin nếu là bài viết của chính admin/tác giả cụ thể, tuyệt đối không đè lên bài người khác
-        if (
-          slug === '2-gio-sang-o-van-phong-va-cau-hoi-minh-dang-chay-dua-vi-dieu-gi' ||
-          post.author === 'Trần Đình Quân' ||
-          post.author === 'Đình Quân Trần'
-        ) {
-          const adminUser = await User.findOne({ email: 'anthonyq012025@gmail.com' });
-          if (adminUser) {
-            post.user = adminUser;
-            post.author = adminUser.name;
-            post.authorJob = adminUser.jobTitle;
-            post.authorAvatar = adminUser.avatar;
-            post.authorSocialLinks = adminUser.socialLinks;
-            post.authorStreakCount = adminUser.streakCount || 0;
-          }
-        } else if (post.user && post.user.name) {
-          post.author = post.user.name;
-          post.authorJob = post.user.jobTitle || post.authorJob;
-          post.authorAvatar = post.user.avatar || post.authorAvatar;
-          post.authorSocialLinks = post.user.socialLinks || post.authorSocialLinks;
-          post.authorStreakCount = post.user.streakCount || post.authorStreakCount || 0;
-        }
+        const nextViews = (post.views || 0) + 1;
+        const normalizedPost = {
+          ...post,
+          author: post.user?.name ? post.user.name : sanitizeAuthorName(post),
+          authorJob: post.user?.jobTitle || post.authorJob,
+          authorAvatar: post.user?.avatar || post.authorAvatar,
+          authorSocialLinks: post.user?.socialLinks || post.authorSocialLinks,
+          authorStreakCount: post.user?.streakCount || post.authorStreakCount || 0,
+          views: nextViews,
+        };
 
-        // Tăng lượt đọc thực tế
-        post.views = (post.views || 0) + 1;
-        await post.save();
-
-        // Đồng bộ view vào persistentStore
-        const store = loadStore();
-        const storedPost = (store.posts || []).find((p) => p.slug === slug || p._id === post._id.toString());
-        if (storedPost) {
-          storedPost.views = post.views;
-          saveStore(store);
-        }
+        // Cập nhật lượt đọc bất đồng bộ trong MongoDB & gom batch ghi store định kỳ
+        Post.updateOne({ _id: post._id }, { $inc: { views: 1 } }).catch((err) => {
+          console.warn('[postController] Lỗi tăng lượt đọc MongoDB:', err.message);
+        });
+        bufferPostView(post._id || post.slug || slug);
 
         return sendSuccess(res, {
           message: 'Lấy thông tin bài viết thành công',
-          data: post,
+          data: normalizedPost,
         });
       }
     }
 
-    // Đọc từ persistentStore (Ổ cứng db_store.json)
+    // Đọc từ persistentStore (Không ghi đồng bộ db_store.json khi chỉ đọc bài viết)
     const store = loadStore();
     const post = (store.posts || []).find(
       (p) => p.slug === slug || String(p._id) === String(slug)
     );
     if (post) {
-      post.views = (post.views || 0) + 1;
-      saveStore(store);
+      bufferPostView(post._id || post.slug || slug);
+      const responsePost = {
+        ...post,
+        author: sanitizeAuthorName(post),
+        views: getBufferedViews(post),
+      };
 
       return sendSuccess(res, {
         message: 'Lấy thông tin bài viết thành công',
-        data: post,
+        data: responsePost,
       });
     }
 
@@ -362,7 +427,15 @@ export const getPostBySlug = async (req, res) => {
   } catch (error) {
     const store = loadStore();
     const post = (store.posts || []).find((p) => p.slug === req.params.slug);
-    if (post) return sendSuccess(res, { data: post });
+    if (post) {
+      return sendSuccess(res, {
+        data: {
+          ...post,
+          author: sanitizeAuthorName(post),
+          views: getBufferedViews(post),
+        },
+      });
+    }
     return sendError(res, { message: error.message, status: 500 });
   }
 };

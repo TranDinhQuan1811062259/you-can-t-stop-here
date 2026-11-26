@@ -10,9 +10,16 @@ pnpm-debug.log*
 .env.local
 .env.*.local
 
-# Build output
+# Build output & Vite cache
 dist/
 build/
+frontend/.vite/
+.vite/
+
+# Runtime JSON stores & security blacklists
+backend/data/db_store.json
+backend/data/revoked_tokens.json
+!backend/data/db_store.example.json
 
 # Editor & System
 .DS_Store
