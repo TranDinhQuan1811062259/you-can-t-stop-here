@@ -215,9 +215,8 @@ export const PARTICLE_EFFECTS = [
 // WEB AUDIO API ENGINE CHUYÊN DỤNG CHO BÀI VIẾT
 // =========================================================================
 
-import { hasUserInteracted } from './audio-gesture-guard';
+import { getSharedAudioContext } from './audioCoordinator';
 
-let postAudioCtx = null;
 let postMasterGain = null;
 let currentAtmosphereSources = [];
 let currentThemePlaying = null;
@@ -226,18 +225,7 @@ let userVolume = 0.5;
 let isDuckByMusic = false;
 
 const getPostAudioContext = () => {
-  if (typeof window === 'undefined') return null;
-  if (!hasUserInteracted()) return null;
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) return null;
-
-  if (!postAudioCtx || postAudioCtx.state === 'closed') {
-    postAudioCtx = new AudioContextClass();
-  }
-  if (postAudioCtx.state === 'suspended') {
-    postAudioCtx.resume().catch(() => {});
-  }
-  return postAudioCtx;
+  return getSharedAudioContext();
 };
 
 const createNoiseBuffer = (ctx, duration = 3) => {
@@ -570,9 +558,10 @@ export const stopPostAtmosphere = (notify = true) => {
     currentAtmosphereSources = [];
   }
 
-  if (postMasterGain && postAudioCtx) {
+  const ctx = getPostAudioContext();
+  if (postMasterGain && ctx) {
     try {
-      postMasterGain.gain.setValueAtTime(0, postAudioCtx.currentTime);
+      postMasterGain.gain.setValueAtTime(0, ctx.currentTime);
       postMasterGain.disconnect();
     } catch (e) {}
     postMasterGain = null;
@@ -635,9 +624,10 @@ export const startPostAtmosphere = (themeId, targetVolume = 0.5) => {
 
 export const setPostAtmosphereVolume = (vol) => {
   userVolume = Math.max(0, Math.min(1, vol));
-  if (postMasterGain && postAudioCtx) {
+  const ctx = getPostAudioContext();
+  if (postMasterGain && ctx) {
     const effective = isDuckByMusic ? userVolume * 0.15 : userVolume;
-    postMasterGain.gain.setValueAtTime(effective, postAudioCtx.currentTime);
+    postMasterGain.gain.setValueAtTime(effective, ctx.currentTime);
   }
   notifyAtmosphereState();
 };
@@ -652,8 +642,9 @@ if (typeof window !== 'undefined') {
     const { isMusicDucking } = e.detail || {};
     if (isMusicDucking !== undefined && isMusicDucking !== isDuckByMusic) {
       isDuckByMusic = isMusicDucking;
-      if (postMasterGain && postAudioCtx) {
-        const now = postAudioCtx.currentTime;
+      const ctx = getPostAudioContext();
+      if (postMasterGain && ctx) {
+        const now = ctx.currentTime;
         const target = isDuckByMusic ? userVolume * 0.15 : userVolume;
         postMasterGain.gain.cancelScheduledValues(now);
         postMasterGain.gain.setValueAtTime(postMasterGain.gain.value, now);

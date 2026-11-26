@@ -3,6 +3,7 @@ import { useMusic } from '../../context/MusicContext';
 import { usePersonalHub } from '../../context/PersonalHubContext';
 import { playStarChimeSound, playWarmthSound, playClickSound } from '../../utils/soundEffects';
 import { resumeAmbientAudioContext } from '../../utils/ambientSoundEngine';
+import { audioCoordinator } from '../../utils/audioCoordinator';
 
 const MOTIVATION_QUOTES = [
   {
@@ -199,6 +200,10 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
     try {
       resumeAmbientAudioContext();
     } catch (_) {}
+    const willStartPlaying = !(isEffortTheme && currentTrackIndex === trackIdx && isPlaying);
+    if (willStartPlaying) {
+      audioCoordinator.activateSystemMusic('giving-efforts');
+    }
     if (isEffortTheme && currentTrackIndex === trackIdx) {
       // Đang ở đúng bài này, bấm vào thì toggle Play / Pause
       togglePlay();
@@ -206,7 +211,7 @@ export const GivingSomeEffortsSection = ({ compact = false, className = '' }) =>
       // Chuyển sang theme Giving Some Efforts và phát bài tương ứng
       playThemeTrack('giving-some-efforts', trackIdx);
     }
-  }, [isEffortTheme, currentTrackIndex, togglePlay, playThemeTrack]);
+  }, [isEffortTheme, currentTrackIndex, isPlaying, togglePlay, playThemeTrack]);
 
   // Phím tắt thông minh số 1 và 2: Chuyển nhanh giữa 2 nhịp nhạc khi không gõ text
   useEffect(() => {

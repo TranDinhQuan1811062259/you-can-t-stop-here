@@ -5,23 +5,11 @@
  * Tinh chỉnh chuẩn phím cơ bôi trơn (Lubed Switch): Trầm ấm, êm ái, KHÔNG BỊ RÈ, KHÔNG CHÁT TAI!
  */
 
-import { hasUserInteracted, markUserInteracted } from './audio-gesture-guard';
-
-let audioCtx = null;
+import { markUserInteracted } from './audio-gesture-guard';
+import { getSharedAudioContext } from './audioCoordinator';
 
 const getAudioContext = () => {
-  if (typeof window === 'undefined') return null;
-  if (!hasUserInteracted()) return null;
-  if (!audioCtx || audioCtx.state === 'closed') {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (AudioContextClass) {
-      audioCtx = new AudioContextClass();
-    }
-  }
-  if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => {});
-  }
-  return audioCtx;
+  return getSharedAudioContext();
 };
 
 // Cấu hình 8 Thể Loại Âm Thanh Bàn Phím ASMR Thư Giãn Đa Dạng

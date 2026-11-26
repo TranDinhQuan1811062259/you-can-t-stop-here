@@ -13,26 +13,44 @@ export const VoiceCloningModal = ({ isOpen, onClose, onVoiceSaved }) => {
   const [clonedProfile, setClonedProfile] = useState(null);
   const [isTestingSpeech, setIsTestingSpeech] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [sampleStorageNote, setSampleStorageNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const timerRef = useRef(null);
   const audioBlobRef = useRef(null);
+  const temporaryBlobUrlRef = useRef(null);
+  const sampleDataUrlRef = useRef('');
+
+  const revokeTemporaryBlobUrl = () => {
+    if (temporaryBlobUrlRef.current && temporaryBlobUrlRef.current.startsWith('blob:')) {
+      try {
+        URL.revokeObjectURL(temporaryBlobUrlRef.current);
+      } catch (_) {}
+    }
+    temporaryBlobUrlRef.current = null;
+  };
 
   useEffect(() => {
     if (!isOpen) {
+      revokeTemporaryBlobUrl();
+      sampleDataUrlRef.current = '';
       setStep('ready');
       setRecordDuration(0);
       setAudioUrl(null);
       setClonedProfile(null);
       setErrorMsg('');
+      setSampleStorageNote('');
       if (timerRef.current) clearInterval(timerRef.current);
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();
       }
       aiVoicePlayer.stop();
     }
+    return () => {
+      revokeTemporaryBlobUrl();
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -62,8 +80,36 @@ export const VoiceCloningModal = ({ isOpen, onClose, onVoiceSaved }) => {
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         audioBlobRef.current = audioBlob;
-        const url = URL.createObjectURL(audioBlob);
-        setAudioUrl(url);
+        revokeTemporaryBlobUrl();
+
+        // Không lưu blob: URL tạm thời vào localStorage hay gửi server (tránh ERR_FILE_NOT_FOUND sau F5).
+        // Nếu bản thu < 1.5MB, chuyển sang Data URL bền vững; ngược lại chỉ phát thử trong phiên hiện tại.
+        const MAX_PERSISTENT_AUDIO_BYTES = 1.5 * 1024 * 1024;
+        if (audioBlob.size < MAX_PERSISTENT_AUDIO_BYTES && typeof FileReader !== 'undefined') {
+          try {
+            const dataUrl = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+              reader.onerror = () => reject(new Error('FileReader error'));
+              reader.readAsDataURL(audioBlob);
+            });
+            sampleDataUrlRef.current = dataUrl;
+            setAudioUrl(dataUrl);
+            setSampleStorageNote('');
+          } catch (_) {
+            const tempUrl = URL.createObjectURL(audioBlob);
+            temporaryBlobUrlRef.current = tempUrl;
+            sampleDataUrlRef.current = '';
+            setAudioUrl(tempUrl);
+            setSampleStorageNote('Không thể mã hóa bản thu để lưu lâu dài; mẫu audio gốc chỉ phát lại trong phiên hiện tại.');
+          }
+        } else {
+          const tempUrl = URL.createObjectURL(audioBlob);
+          temporaryBlobUrlRef.current = tempUrl;
+          sampleDataUrlRef.current = '';
+          setAudioUrl(tempUrl);
+          setSampleStorageNote('Mẫu ghi âm vượt quá 1.5MB nên chỉ nghe lại trong phiên này (không lưu URL tạm để tránh lỗi sau khi F5); thông số giọng nói A.I vẫn được lưu bền vững.');
+        }
 
         // Tắt micro stream
         stream.getTracks().forEach((track) => track.stop());
@@ -144,10 +190,15 @@ export const VoiceCloningModal = ({ isOpen, onClose, onVoiceSaved }) => {
     setIsSaving(true);
 
     try {
+      const safeSampleAudioUrl =
+        sampleDataUrlRef.current && sampleDataUrlRef.current.startsWith('data:audio/')
+          ? sampleDataUrlRef.current
+          : '';
+
       const voiceData = {
         enabled: true,
         voiceName: clonedProfile.name || 'Giọng đọc cá nhân chính chủ',
-        sampleAudioUrl: audioUrl || '',
+        sampleAudioUrl: safeSampleAudioUrl,
         pitch: clonedProfile.pitch,
         rate: clonedProfile.rate,
         timbre: clonedProfile.timbre,
@@ -355,6 +406,11 @@ export const VoiceCloningModal = ({ isOpen, onClose, onVoiceSaved }) => {
                     Bản thu âm gốc của bạn:
                   </span>
                   <audio controls src={audioUrl} style={{ width: '100%', height: '36px' }} />
+                  {sampleStorageNote && (
+                    <p style={{ margin: '6px 0 0', fontSize: '0.75rem', color: '#b45309', lineHeight: 1.45 }}>
+                      ℹ️ {sampleStorageNote}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -387,6 +443,9 @@ export const VoiceCloningModal = ({ isOpen, onClose, onVoiceSaved }) => {
               <button
                 type="button"
                 onClick={() => {
+                  revokeTemporaryBlobUrl();
+                  sampleDataUrlRef.current = '';
+                  setSampleStorageNote('');
                   setStep('ready');
                   setAudioUrl(null);
                   setClonedProfile(null);

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { disposeThreeScene } from '../../utils/three-cleanup';
 
 /**
  * Tank3DCanvas - Bộ dựng xe tăng 3D T-54B Quân Đội Nhân Dân Việt Nam (Xe Tăng 565 Duyệt Binh)
@@ -625,16 +626,22 @@ export const Tank3DCanvas = ({
     // =========================================================================
     // NẠP MODEL .GLB AN TOÀN HOẶC DỰNG NGAY XE TĂNG 565 PROCEDURAL
     // =========================================================================
+    let isDisposed = false;
     if (modelUrl) {
       // Chỉ nạp nếu người dùng truyền URL cụ thể và kiểm tra không phải file HTML 404
       fetch(modelUrl, { method: 'HEAD' })
         .then((res) => {
+          if (isDisposed) return;
           const ct = res.headers.get('content-type') || '';
           if (res.ok && !ct.includes('text/html')) {
             const loader = new GLTFLoader();
             loader.load(
               modelUrl,
               (gltf) => {
+                if (isDisposed) {
+                  disposeThreeScene(gltf.scene, null);
+                  return;
+                }
                 const model = gltf.scene;
                 const box = new THREE.Box3().setFromObject(model);
                 const size = box.getSize(new THREE.Vector3());
@@ -659,6 +666,7 @@ export const Tank3DCanvas = ({
               },
               undefined,
               () => {
+                if (isDisposed) return;
                 buildProceduralTank();
                 setModelTypeLoaded('procedural');
               }
@@ -669,6 +677,7 @@ export const Tank3DCanvas = ({
           }
         })
         .catch(() => {
+          if (isDisposed) return;
           buildProceduralTank();
           setModelTypeLoaded('procedural');
         });
@@ -875,6 +884,7 @@ export const Tank3DCanvas = ({
     window.addEventListener('resize', handleResize);
 
     return () => {
+      isDisposed = true;
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       container.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mousemove', onMouseMove);
@@ -886,7 +896,7 @@ export const Tank3DCanvas = ({
       if (container && renderer.domElement && container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
-      renderer.dispose();
+      disposeThreeScene(scene, renderer);
     };
   }, [mode, modelUrl, targetPoint]);
 

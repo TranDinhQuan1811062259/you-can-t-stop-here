@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { disposeThreeScene } from '../../utils/three-cleanup';
 
 /**
  * Soldier3DCanvas - Bộ dựng mô hình 3D Người Chiến Sĩ Quân Đội Nhân Dân Việt Nam (K20 Hiện Đại)
@@ -594,7 +595,7 @@ export const Soldier3DCanvas = ({
       if (container && renderer.domElement && container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
-      renderer.dispose();
+      disposeThreeScene(scene, renderer);
     };
   }, [mode]);
 

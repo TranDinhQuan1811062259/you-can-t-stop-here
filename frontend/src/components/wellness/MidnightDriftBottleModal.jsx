@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { playClickSound, playSingingBowlSound } from '../../utils/soundEffects';
 import { triggerAsmrKeySound } from '../../utils/keyboardSoundEngine';
 import { hasUserInteracted } from '../../utils/audio-gesture-guard';
+import { audioCoordinator, getSharedAudioContext } from '../../utils/audioCoordinator';
 
 const INITIAL_DRIFT_BOTTLES = [
   {
@@ -82,6 +83,7 @@ export const MidnightDriftBottleModal = ({ isOpen, onClose }) => {
   const typewriterRef = useRef(null);
   const audioElRef = useRef(null);
   const audioCtxRef = useRef(null);
+  const sourceNodeRef = useRef(null);
   const gainNodeRef = useRef(null);
   const isAudioGraphConnectedRef = useRef(false);
   const filtersRef = useRef({});
@@ -93,17 +95,41 @@ export const MidnightDriftBottleModal = ({ isOpen, onClose }) => {
     } catch (_) {}
   }, [bottles]);
 
+  // Dọn dẹp toàn bộ node Web Audio DSP cũ để đảm bảo thanh volume hoạt động ở lần mở lại
+  const teardownAudioGraph = () => {
+    try {
+      sourceNodeRef.current?.disconnect?.();
+    } catch (_) {}
+    const { hpFilter, lpFilter, notchFilter, compressor } = filtersRef.current || {};
+    [hpFilter, lpFilter, notchFilter, compressor].forEach((node) => {
+      try {
+        node?.disconnect?.();
+      } catch (_) {}
+    });
+    try {
+      gainNodeRef.current?.disconnect?.();
+    } catch (_) {}
+
+    sourceNodeRef.current = null;
+    gainNodeRef.current = null;
+    filtersRef.current = {};
+    audioCtxRef.current = null;
+    isAudioGraphConnectedRef.current = false;
+  };
+
   // Thiết lập Web Audio DSP Graph để lọc tạp âm từ video gốc
   const initDeNoiseAudioGraph = () => {
     if (isAudioGraphConnectedRef.current || !audioElRef.current || !hasUserInteracted()) return;
     try {
-      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtxClass) return;
+      const ctx = getSharedAudioContext();
+      if (!ctx) return;
 
-      const ctx = new AudioCtxClass();
       audioCtxRef.current = ctx;
 
+      // Đảm bảo mức âm lượng gốc của thẻ <audio> là 1.0 để GainNode điều khiển chuẩn xác 0-100%
+      audioElRef.current.volume = 1;
       const source = ctx.createMediaElementSource(audioElRef.current);
+      sourceNodeRef.current = source;
 
       // 1. High-Pass Filter: Cắt bỏ hoàn toàn tiếng ù rù, tiếng rung chấn mic tần số thấp < 95Hz
       const hpFilter = ctx.createBiquadFilter();
@@ -134,7 +160,7 @@ export const MidnightDriftBottleModal = ({ isOpen, onClose }) => {
 
       // 5. Gain Node: Điều khiển âm lượng mượt mà
       const gainNode = ctx.createGain();
-      gainNode.gain.setValueAtTime(musicVolume / 100, ctx.currentTime);
+      gainNode.gain.setValueAtTime(Math.max(0, Math.min(1, musicVolume / 100)), ctx.currentTime);
       gainNodeRef.current = gainNode;
 
       // Lưu lại các filters để toggle bypass khi cần
@@ -164,10 +190,15 @@ export const MidnightDriftBottleModal = ({ isOpen, onClose }) => {
       audioElRef.current.pause();
       setIsMusicPlaying(false);
     } else {
+      audioCoordinator.activateExclusiveModal('midnight-bottle');
       initDeNoiseAudioGraph();
 
       if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
         audioCtxRef.current.resume().catch(() => {});
+      }
+
+      if (!isAudioGraphConnectedRef.current) {
+        audioElRef.current.volume = Math.max(0, Math.min(1, musicVolume / 100));
       }
 
       audioElRef.current
@@ -183,11 +214,12 @@ export const MidnightDriftBottleModal = ({ isOpen, onClose }) => {
 
   // Thay đổi âm lượng nhạc nền
   const handleVolumeChange = (newVol) => {
-    setMusicVolume(newVol);
+    const safeVol = Math.max(0, Math.min(100, Number(newVol) || 0));
+    setMusicVolume(safeVol);
     if (gainNodeRef.current && audioCtxRef.current) {
-      gainNodeRef.current.gain.setValueAtTime(newVol / 100, audioCtxRef.current.currentTime);
+      gainNodeRef.current.gain.setValueAtTime(safeVol / 100, audioCtxRef.current.currentTime);
     } else if (audioElRef.current) {
-      audioElRef.current.volume = newVol / 100;
+      audioElRef.current.volume = safeVol / 100;
     }
   };
 
@@ -214,18 +246,48 @@ export const MidnightDriftBottleModal = ({ isOpen, onClose }) => {
     }
   };
 
-  // Dọn dẹp an toàn khi đóng modal
+  // Đăng ký kênh âm thanh với AudioCoordinator để tránh chồng chéo nguồn phát
   useEffect(() => {
-    if (!isOpen) {
+    return audioCoordinator.registerChannel('midnight-bottle', {
+      pause: () => {
+        if (audioElRef.current) {
+          try {
+            audioElRef.current.pause();
+          } catch (_) {}
+        }
+        setIsMusicPlaying(false);
+      },
+    });
+  }, []);
+
+  // Tự động tạm dừng nhạc Header khi mở modal & dọn dẹp đồ thị âm thanh khi đóng modal
+  useEffect(() => {
+    if (isOpen) {
+      audioCoordinator.activateExclusiveModal('midnight-bottle');
+      if (audioElRef.current && !isAudioGraphConnectedRef.current) {
+        audioElRef.current.volume = Math.max(0, Math.min(1, musicVolume / 100));
+      }
+    } else {
       if (audioElRef.current) {
         try {
           audioElRef.current.pause();
           audioElRef.current.currentTime = 0;
         } catch (_) {}
       }
+      teardownAudioGraph();
       setIsMusicPlaying(false);
       setShowVideoModal(false);
     }
+
+    return () => {
+      if (audioElRef.current) {
+        try {
+          audioElRef.current.pause();
+          audioElRef.current.currentTime = 0;
+        } catch (_) {}
+      }
+      teardownAudioGraph();
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;

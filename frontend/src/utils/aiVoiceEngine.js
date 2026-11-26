@@ -1,10 +1,39 @@
 /**
  * HỆ THỐNG A.I TEXT-TO-SPEECH, PHÂN TÍCH TÂM TRẠNG BÀI VIẾT & NHÂN BẢN GIỌNG NÓI (VOICE CLONING)
  * Hỗ trợ Dual-Engine:
- * 1. Natural Native Vietnamese Audio Engine (Google Cloud TTS chuẩn ngữ điệu Việt 100%)
+ * 1. Natural Native Vietnamese Audio Engine (Edge/Cloud TTS chuẩn ngữ điệu Việt 100%)
  * 2. Web Speech API với bộ lọc phân loại Giọng Nam / Nữ / Trẻ em / Trầm ấm
  * 3. Định thời gian chính xác tới từng Phút:Giây (MM:SS) cho thanh tua (Timeline Scrubber)
  */
+
+import { audioCoordinator, getSharedAudioContext } from './audioCoordinator';
+
+const PLACEHOLDER_API_PATTERNS = [
+  'your-production-api.com',
+  'your-api.com',
+  'example.com',
+];
+
+export const isPlaceholderApiBase = (rawBase) => {
+  if (!rawBase) return false;
+  const normalized = String(rawBase).trim().toLowerCase();
+  return PLACEHOLDER_API_PATTERNS.some((pattern) => normalized.includes(pattern));
+};
+
+export const buildTtsStreamUrl = ({
+  text = '',
+  lang = 'vi',
+  gender = 'female',
+  region = 'north',
+  mood = 'auto',
+}) => {
+  const rawApiBase = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
+  if (!rawApiBase || isPlaceholderApiBase(rawApiBase)) {
+    return null;
+  }
+  const cleanEncoded = encodeURIComponent(String(text || '').slice(0, 300));
+  return `${rawApiBase}/tts?text=${cleanEncoded}&lang=${encodeURIComponent(lang)}&gender=${encodeURIComponent(gender)}&region=${encodeURIComponent(region)}&mood=${encodeURIComponent(mood)}`;
+};
 
 export const formatTime = (totalSeconds) => {
   if (isNaN(totalSeconds) || totalSeconds < 0) return '00:00';
@@ -457,14 +486,54 @@ class AIVoicePlayer {
     this.onProgressCallback = null;
     this.onStateChangeCallback = null;
     this.onTimeUpdateCallback = null;
+    this.onErrorCallback = null;
+
+    // Session & cleanup refs (chống double fallback race condition)
+    this._playbackSessionId = 0;
+    this._activeFetchController = null;
+    this._currentAudioObjectUrl = null;
+    this._onAudioElementError = null;
 
     if (this.audioElement) {
       this.audioElement.preload = 'auto';
       this.audioElement.onended = () => this._onChunkEnded();
       this.audioElement.onerror = () => {
-        // Nếu audio mạng bị chặn, fallback sang Web Speech
-        this._speakWithWebSpeech();
+        if (typeof this._onAudioElementError === 'function') {
+          this._onAudioElementError();
+        }
       };
+    }
+
+    if (typeof window !== 'undefined') {
+      audioCoordinator.registerChannel('tts', {
+        pause: () => this.pause(),
+        stop: () => this.stop(),
+        isPlaying: () => this.isPlaying && !this.isPaused,
+      });
+    }
+  }
+
+  _clearAudioObjectUrl() {
+    if (this._currentAudioObjectUrl) {
+      try {
+        URL.revokeObjectURL(this._currentAudioObjectUrl);
+      } catch (_) {}
+      this._currentAudioObjectUrl = null;
+    }
+  }
+
+  _abortPendingFetch() {
+    if (this._activeFetchController) {
+      try {
+        this._activeFetchController.abort();
+      } catch (_) {}
+      this._activeFetchController = null;
+    }
+  }
+
+  _notifyError(message) {
+    if (typeof this.onErrorCallback === 'function') {
+      this.onErrorCallback(message);
     }
   }
 
@@ -519,6 +588,7 @@ class AIVoicePlayer {
     onProgress,
     onStateChange,
     onTimeUpdate,
+    onError,
   }) {
     this.stop();
 
@@ -538,6 +608,7 @@ class AIVoicePlayer {
     this.onProgressCallback = onProgress;
     this.onStateChangeCallback = onStateChange;
     this.onTimeUpdateCallback = onTimeUpdate;
+    this.onErrorCallback = onError;
 
     // Thiết lập mốc thời gian chính xác (phút : giây)
     this._buildChunkTimings(this.chunks, speed);
@@ -545,6 +616,7 @@ class AIVoicePlayer {
 
     this.isPlaying = true;
     this.isPaused = false;
+    audioCoordinator.beginTtsDucking();
     this._notifyState('playing');
     this._startTimeTicker();
 
@@ -573,6 +645,7 @@ class AIVoicePlayer {
       this.isPaused = false;
       this._stopTimeTicker();
       this.currentSeconds = this.totalDurationSeconds;
+      audioCoordinator.endTtsDucking();
       this._notifyState('idle');
       if (this.onProgressCallback) this.onProgressCallback(100, this.chunks.length - 1, '');
       if (this.onTimeUpdateCallback) this.onTimeUpdateCallback(this.totalDurationSeconds, this.totalDurationSeconds);
@@ -609,18 +682,68 @@ class AIVoicePlayer {
 
   /**
    * Phát bằng Natural Audio Stream (Microsoft Edge Neural TTS chuẩn ngữ điệu đa ngôn ngữ & vùng miền)
+   * Dùng fetch kiểm tra Content-Type: audio/* trước khi nạp vào <audio>, tránh nạp HTML SPA fallback.
    */
-  _speakWithGoogleAudio(chunkText, voiceParams) {
-    if (!this.audioElement) {
+  async _speakWithGoogleAudio(chunkText, voiceParams) {
+    const sessionId = ++this._playbackSessionId;
+    this._abortPendingFetch();
+    this._onAudioElementError = null;
+    this._clearAudioObjectUrl();
+
+    let didFallback = false;
+    const triggerFallbackOnce = () => {
+      if (didFallback || sessionId !== this._playbackSessionId || !this.isPlaying || this.isPaused) {
+        return;
+      }
+      didFallback = true;
+      this._onAudioElementError = null;
+      this._clearAudioObjectUrl();
       this._speakWithWebSpeech(chunkText, null, voiceParams);
+    };
+
+    const audioUrl = buildTtsStreamUrl({
+      text: chunkText,
+      lang: this.lang || 'vi',
+      gender: this.gender || 'female',
+      region: this.region || 'north',
+      mood: this.activeMood || 'auto',
+    });
+
+    if (!audioUrl || !this.audioElement || typeof fetch !== 'function') {
+      triggerFallbackOnce();
       return;
     }
 
     try {
-      const cleanEncoded = encodeURIComponent(chunkText.slice(0, 300));
-      const audioUrl = `/api/tts?text=${cleanEncoded}&lang=${this.lang || 'vi'}&gender=${this.gender || 'female'}&region=${this.region || 'north'}&mood=${this.activeMood || 'auto'}`;
+      const controller = new AbortController();
+      this._activeFetchController = controller;
+      const response = await fetch(audioUrl, { signal: controller.signal });
 
-      this.audioElement.src = audioUrl;
+      if (sessionId !== this._playbackSessionId || !this.isPlaying || this.isPaused) {
+        return;
+      }
+
+      const contentType = (response.headers.get('content-type') || '').toLowerCase();
+      if (!response.ok || !contentType.startsWith('audio/')) {
+        console.warn(`[AIVoicePlayer] TTS server returned non-audio (${response.status}, "${contentType}"), switching to Web Speech fallback.`);
+        triggerFallbackOnce();
+        return;
+      }
+
+      const audioBlob = await response.blob();
+      if (sessionId !== this._playbackSessionId || !this.isPlaying || this.isPaused) {
+        return;
+      }
+      if (!audioBlob || audioBlob.size === 0) {
+        triggerFallbackOnce();
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(audioBlob);
+      this._currentAudioObjectUrl = objectUrl;
+      this._onAudioElementError = triggerFallbackOnce;
+
+      this.audioElement.src = objectUrl;
       this.audioElement.playbackRate = voiceParams.rate;
 
       // Giọng Nam hoặc giọng trầm: cho phép hạ cao độ để tạo âm sắc nam tính trầm ấm
@@ -630,20 +753,41 @@ class AIVoicePlayer {
         this.audioElement.preservesPitch = voiceParams.moodId !== 'child';
       }
 
-      this.audioElement.play().catch((err) => {
-        console.warn('Audio stream fallback to Web Speech:', err);
-        this._speakWithWebSpeech(chunkText, null, voiceParams);
-      });
-    } catch (e) {
-      this._speakWithWebSpeech(chunkText, null, voiceParams);
+      try {
+        await this.audioElement.play();
+      } catch (playErr) {
+        if (sessionId === this._playbackSessionId && this.isPlaying && !this.isPaused) {
+          console.warn('Audio stream fallback to Web Speech:', playErr);
+          triggerFallbackOnce();
+        }
+      }
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      console.warn('Audio stream fetch failed, fallback to Web Speech:', err);
+      triggerFallbackOnce();
+    } finally {
+      if (sessionId === this._playbackSessionId) {
+        this._activeFetchController = null;
+      }
     }
   }
 
   /**
-   * Phát bằng Web Speech API (Fallback khi ngoại tuyến)
+   * Phát bằng Web Speech API (Fallback khi ngoại tuyến hoặc máy chủ TTS chưa sẵn sàng)
    */
   _speakWithWebSpeech(chunkText, nativeVoice, voiceParams) {
-    if (!this.synth) return;
+    const speechSessionId = this._playbackSessionId;
+
+    if (!this.synth || typeof SpeechSynthesisUtterance === 'undefined') {
+      this.isPlaying = false;
+      this.isPaused = false;
+      this._stopTimeTicker();
+      audioCoordinator.endTtsDucking();
+      this._notifyState('idle');
+      this._notifyError('Trình duyệt chưa hỗ trợ giọng đọc Tiếng Việt offline hoặc máy chủ TTS đang khởi động, vui lòng thử lại.');
+      return;
+    }
+
     this.synth.cancel();
 
     const textToSpeak = chunkText || this.chunks[this.currentChunkIndex];
@@ -660,7 +804,7 @@ class AIVoicePlayer {
     const targetLangPrefix = this.lang || 'vi';
 
     const voices = this.synth.getVoices() || [];
-    const matchedVoice = nativeVoice || voices.find(v => {
+    const matchedVoice = nativeVoice || voices.find((v) => {
       const l = (v.lang || '').toLowerCase().replace('_', '-');
       const n = (v.name || '').toLowerCase();
       return l.startsWith(targetLangPrefix) || n.includes(targetLangPrefix);
@@ -677,13 +821,36 @@ class AIVoicePlayer {
       utterance.rate = voiceParams.rate;
     }
 
-    utterance.onend = () => this._onChunkEnded();
-    utterance.onerror = (e) => {
-      console.warn('Web Speech error:', e);
+    utterance.onend = () => {
+      if (speechSessionId !== this._playbackSessionId) return;
       this._onChunkEnded();
     };
+    utterance.onerror = (e) => {
+      if (speechSessionId !== this._playbackSessionId) return;
+      const errType = e?.error || '';
+      if (errType === 'canceled' || errType === 'interrupted') {
+        return;
+      }
+      console.warn('Web Speech error:', errType || e);
+      this.isPlaying = false;
+      this.isPaused = false;
+      this._stopTimeTicker();
+      audioCoordinator.endTtsDucking();
+      this._notifyState('idle');
+      this._notifyError('Trình duyệt chưa hỗ trợ giọng đọc Tiếng Việt offline hoặc máy chủ TTS đang khởi động, vui lòng thử lại.');
+    };
 
-    this.synth.speak(utterance);
+    try {
+      this.synth.speak(utterance);
+    } catch (speakErr) {
+      console.warn('Web Speech exception:', speakErr);
+      this.isPlaying = false;
+      this.isPaused = false;
+      this._stopTimeTicker();
+      audioCoordinator.endTtsDucking();
+      this._notifyState('idle');
+      this._notifyError('Trình duyệt chưa hỗ trợ giọng đọc Tiếng Việt offline hoặc máy chủ TTS đang khởi động, vui lòng thử lại.');
+    }
   }
 
   _onChunkEnded() {
@@ -696,18 +863,22 @@ class AIVoicePlayer {
   pause() {
     if (!this.isPlaying) return;
     this.isPaused = true;
+    this._abortPendingFetch();
+    this._onAudioElementError = null;
     if (this.audioElement && !this.audioElement.paused) {
       this.audioElement.pause();
     }
     if (this.synth) {
       this.synth.pause();
     }
+    audioCoordinator.endTtsDucking();
     this._notifyState('paused');
   }
 
-  resume(detectedMood) {
+  resume() {
     if (!this.isPlaying) return;
     this.isPaused = false;
+    audioCoordinator.beginTtsDucking();
     this._notifyState('playing');
 
     if (this.audioElement && this.audioElement.src && this.audioElement.paused) {
@@ -722,20 +893,25 @@ class AIVoicePlayer {
   }
 
   stop() {
+    this._playbackSessionId += 1;
     this.isPlaying = false;
     this.isPaused = false;
     this._stopTimeTicker();
+    this._abortPendingFetch();
+    this._onAudioElementError = null;
 
     if (this.audioElement) {
       this.audioElement.pause();
       this.audioElement.removeAttribute('src');
     }
+    this._clearAudioObjectUrl();
     if (this.synth) {
       this.synth.cancel();
     }
 
     this.currentChunkIndex = 0;
     this.currentSeconds = 0;
+    audioCoordinator.endTtsDucking();
     this._notifyState('idle');
   }
 
@@ -855,8 +1031,8 @@ export const aiVoicePlayer = new AIVoicePlayer();
  * 6. PHÂN TÍCH BẢN THU ÂM CỦA NGƯỜI DÙNG ĐỂ NHÂN BẢN GIỌNG NÓI (VOICE CLONING DSP)
  */
 export const analyzeRecordedVoiceAudio = async (audioBlob) => {
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) {
+  const ctx = getSharedAudioContext({ ignoreGestureGuard: true });
+  if (!ctx) {
     return {
       pitch: 1.05,
       rate: 1.0,
@@ -867,7 +1043,6 @@ export const analyzeRecordedVoiceAudio = async (audioBlob) => {
     };
   }
 
-  const ctx = new AudioContextClass();
   const arrayBuffer = await audioBlob.arrayBuffer();
   const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
 

@@ -6,6 +6,7 @@ import { triggerAsmrKeySound } from '../../utils/keyboardSoundEngine';
 import { TimeCapsuleMusicPlayer } from './TimeCapsuleMusicPlayer';
 import { TimeCapsuleGardenView } from './TimeCapsuleGardenView';
 import { useAuth } from '../../context/AuthContext';
+import { audioCoordinator } from '../../utils/audioCoordinator';
 
 const PRESET_DURATIONS = [
   { label: '1 Tháng (30 ngày)', days: 30, icon: '🌱' },
@@ -136,6 +137,7 @@ export const TimeCapsuleModal = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     if (isOpen) {
+      audioCoordinator.activateExclusiveModal('time-capsule');
       fetchCapsules();
       setReadingCapsule(null);
     }

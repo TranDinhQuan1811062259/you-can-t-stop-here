@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { playClickSound, playWarmthSound } from '../../utils/soundEffects';
 import { hasUserInteracted } from '../../utils/audio-gesture-guard';
+import { audioCoordinator, getSharedAudioContext } from '../../utils/audioCoordinator';
 
 // Danh sách các thẻ tâm trạng xả giận nhanh
 const QUICK_RANT_TAGS = [
@@ -218,15 +219,7 @@ class FireAudioSynthesizer {
 
   init() {
     if (typeof window === 'undefined' || !hasUserInteracted()) return;
-    if (!this.ctx || this.ctx.state === 'closed') {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (AudioContextClass) {
-        this.ctx = new AudioContextClass();
-      }
-    }
-    if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume().catch(() => {});
-    }
+    this.ctx = getSharedAudioContext();
   }
 
   start() {
@@ -306,10 +299,13 @@ class FireAudioSynthesizer {
       try {
         this.gainNode.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
         setTimeout(() => {
-          if (this.noiseNode) {
-            try { this.noiseNode.stop(); } catch (_) {}
-            this.noiseNode = null;
-          }
+          try { this.noiseNode?.stop?.(); } catch (_) {}
+          try { this.noiseNode?.disconnect?.(); } catch (_) {}
+          try { this.filterNode?.disconnect?.(); } catch (_) {}
+          try { this.gainNode?.disconnect?.(); } catch (_) {}
+          this.noiseNode = null;
+          this.filterNode = null;
+          this.gainNode = null;
         }, 450);
       } catch (_) {}
     }
@@ -362,15 +358,27 @@ export const RantAndBurnModal = ({ isOpen, onClose, onOpenCafe }) => {
         desc: 'Bản nhạc từ liên kết YouTube bạn vừa nhập',
         icon: '🔗',
       };
+      audioCoordinator.activateExclusiveModal('rant-burn');
       setSelectedSadMusic(customItem);
       setIsSadMusicPlaying(true);
       setIsCustomSadMode(false);
     }
   };
 
-  // Khởi tạo ngẫu nhiên quote chữa lành khi mở
+  // Đăng ký kênh Lò Đốt với AudioCoordinator để tránh chồng chéo âm thanh
+  useEffect(() => {
+    return audioCoordinator.registerChannel('rant-burn', {
+      pause: () => {
+        fireSynth.stop();
+        setIsSadMusicPlaying(false);
+      },
+    });
+  }, []);
+
+  // Khởi tạo ngẫu nhiên quote chữa lành & tạm dừng nhạc Header khi mở
   useEffect(() => {
     if (isOpen) {
+      audioCoordinator.activateExclusiveModal('rant-burn');
       setRantText('');
       setBurnStage('writing');
       setSelectedTag('');
@@ -509,6 +517,7 @@ export const RantAndBurnModal = ({ isOpen, onClose, onOpenCafe }) => {
   // Bắt đầu châm lửa thiêu rụi
   const handleStartBurn = () => {
     if (!rantText.trim()) return;
+    audioCoordinator.activateExclusiveModal('rant-burn');
     playWarmthSound();
     fireSynth.start();
     setBurnStage('burning');
@@ -778,6 +787,9 @@ export const RantAndBurnModal = ({ isOpen, onClose, onOpenCafe }) => {
                     type="button"
                     onClick={() => {
                       playClickSound();
+                      if (!isSadMusicPlaying) {
+                        audioCoordinator.activateExclusiveModal('rant-burn');
+                      }
                       setIsSadMusicPlaying((p) => !p);
                     }}
                     style={{
@@ -838,6 +850,7 @@ export const RantAndBurnModal = ({ isOpen, onClose, onOpenCafe }) => {
                       key={track.id}
                       onClick={() => {
                         playClickSound();
+                        audioCoordinator.activateExclusiveModal('rant-burn');
                         setSelectedSadMusic(track);
                         setIsSadMusicPlaying(true);
                         setIsCustomSadMode(false);

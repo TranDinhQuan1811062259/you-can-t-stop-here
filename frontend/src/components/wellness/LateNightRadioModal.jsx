@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { playClickSound } from '../../utils/soundEffects';
-import { hasUserInteracted } from '../../utils/audio-gesture-guard';
 import { AnonymousWhisperWall } from './AnonymousWhisperWall';
+import { audioCoordinator, getSharedAudioContext } from '../../utils/audioCoordinator';
+import { buildTtsStreamUrl } from '../../utils/aiVoiceEngine';
 import {
   getFabPos,
   saveFabPos,
@@ -115,22 +116,14 @@ const RADIO_TRACKS = [
 // =============================================================================
 // WEB AUDIO API SOUND ENGINES
 // =============================================================================
-let radioAudioCtx = null;
 let isRadioPlayingInternal = false;
 let masterGainNode = null;
+let masterFilterNode = null;
+let compressorNode = null;
 let cleanupCurrentEngineFn = null;
 
 const ensureAudioContext = () => {
-  if (typeof window === 'undefined' || !hasUserInteracted()) return null;
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) return null;
-  if (!radioAudioCtx || radioAudioCtx.state === 'closed') {
-    radioAudioCtx = new AudioContextClass();
-  }
-  if (radioAudioCtx.state === 'suspended') {
-    radioAudioCtx.resume().catch(() => {});
-  }
-  return radioAudioCtx;
+  return getSharedAudioContext();
 };
 
 // --- ENGINE 1: LO-FI RAIN ---
@@ -719,6 +712,8 @@ const startRadioEngine = (engineType = 'lofi_rain', volume = 0.5) => {
     masterGainNode.connect(masterFilter);
     masterFilter.connect(compressor);
     compressor.connect(ctx.destination);
+    masterFilterNode = masterFilter;
+    compressorNode = compressor;
   } else {
     masterGainNode.gain.setValueAtTime(volume * 0.8, ctx.currentTime);
   }
@@ -732,19 +727,19 @@ const stopRadioEngine = () => {
     cleanupCurrentEngineFn();
     cleanupCurrentEngineFn = null;
   }
-  if (radioAudioCtx) {
-    try {
-      radioAudioCtx.close();
-    } catch (e) {}
-    radioAudioCtx = null;
-  }
+  try { masterGainNode?.disconnect?.(); } catch (_) {}
+  try { masterFilterNode?.disconnect?.(); } catch (_) {}
+  try { compressorNode?.disconnect?.(); } catch (_) {}
   masterGainNode = null;
+  masterFilterNode = null;
+  compressorNode = null;
   isRadioPlayingInternal = false;
 };
 
 const setRadioEngineVolume = (vol) => {
-  if (masterGainNode && radioAudioCtx) {
-    masterGainNode.gain.setValueAtTime(vol, radioAudioCtx.currentTime);
+  const ctx = getSharedAudioContext({ ignoreGestureGuard: true });
+  if (masterGainNode && ctx) {
+    masterGainNode.gain.setValueAtTime(vol, ctx.currentTime);
   }
 };
 
@@ -915,9 +910,10 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     }
 
     setIsSpeaking(false);
-    if (masterGainNode && radioAudioCtx) {
+    const ctx = getSharedAudioContext({ ignoreGestureGuard: true });
+    if (masterGainNode && ctx) {
       try {
-        masterGainNode.gain.setValueAtTime(volume, radioAudioCtx.currentTime);
+        masterGainNode.gain.setValueAtTime(volume, ctx.currentTime);
       } catch (_) {}
     }
   };
@@ -937,9 +933,10 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     if (!cleanText) return;
 
     // Audio Ducking: Khi phát thanh viên đọc, hạ nhẹ âm lượng nhạc xuống 30%
-    if (masterGainNode && radioAudioCtx) {
+    const ctx = getSharedAudioContext({ ignoreGestureGuard: true });
+    if (masterGainNode && ctx) {
       try {
-        masterGainNode.gain.setValueAtTime(volume * 0.3, radioAudioCtx.currentTime);
+        masterGainNode.gain.setValueAtTime(volume * 0.3, ctx.currentTime);
       } catch (_) {}
     }
     setIsSpeaking(true);
@@ -947,9 +944,10 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     const onSpeechFinished = () => {
       if (speechSessionIdRef.current !== currentSessionId) return;
       setIsSpeaking(false);
-      if (masterGainNode && radioAudioCtx) {
+      const activeCtx = getSharedAudioContext({ ignoreGestureGuard: true });
+      if (masterGainNode && activeCtx) {
         try {
-          masterGainNode.gain.setValueAtTime(volume, radioAudioCtx.currentTime);
+          masterGainNode.gain.setValueAtTime(volume, activeCtx.currentTime);
         } catch (_) {}
       }
     };
@@ -1028,46 +1026,80 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
       }
     };
 
-    // Ưu tiên số 1: Phát Audio chuẩn từ API TTS của Backend (Microsoft Edge Neural Voice: Hoài My Nữ / Nam Minh Nam)
-    try {
-      const encoded = encodeURIComponent(cleanText.slice(0, 350));
-      const url = `/api/tts?text=${encoded}&gender=${targetGender}`;
-      const audio = new Audio(url);
-      audio.volume = 1.0;
-      audio.playbackRate = targetRegion === 'south' ? 0.92 : 1.0;
-
-      ttsAudioRef.current = audio;
-
-      audio.onended = () => {
-        if (speechSessionIdRef.current === currentSessionId) {
-          ttsAudioRef.current = null;
-          onSpeechFinished();
+    // Ưu tiên số 1: Phát Audio chuẩn từ API TTS (dùng VITE_API_BASE_URL và kiểm tra Content-Type audio/*)
+    (async () => {
+      let objectUrl = null;
+      const cleanupObjectUrl = () => {
+        if (objectUrl) {
+          try { URL.revokeObjectURL(objectUrl); } catch (_) {}
+          objectUrl = null;
         }
       };
 
-      audio.onerror = (e) => {
+      try {
+        const url = buildTtsStreamUrl({
+          text: cleanText,
+          gender: targetGender,
+          region: targetRegion,
+        });
+        if (!url || typeof fetch !== 'function') {
+          playBrowserSpeechFallback(cleanText);
+          return;
+        }
+
+        const res = await fetch(url);
+        if (speechSessionIdRef.current !== currentSessionId) return;
+
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+        if (!res.ok || !ct.startsWith('audio/')) {
+          playBrowserSpeechFallback(cleanText);
+          return;
+        }
+
+        const blob = await res.blob();
+        if (speechSessionIdRef.current !== currentSessionId || !blob || blob.size === 0) {
+          if (speechSessionIdRef.current === currentSessionId) {
+            playBrowserSpeechFallback(cleanText);
+          }
+          return;
+        }
+
+        objectUrl = URL.createObjectURL(blob);
+        const audio = new Audio(objectUrl);
+        audio.volume = 1.0;
+        audio.playbackRate = targetRegion === 'south' ? 0.92 : 1.0;
+
+        ttsAudioRef.current = audio;
+
+        let didFallback = false;
+        const triggerFallback = () => {
+          if (didFallback || speechSessionIdRef.current !== currentSessionId) return;
+          didFallback = true;
+          ttsAudioRef.current = null;
+          cleanupObjectUrl();
+          playBrowserSpeechFallback(cleanText);
+        };
+
+        audio.onended = () => {
+          cleanupObjectUrl();
+          if (speechSessionIdRef.current === currentSessionId) {
+            ttsAudioRef.current = null;
+            onSpeechFinished();
+          }
+        };
+
+        audio.onerror = () => triggerFallback();
+
+        await audio.play();
+      } catch (err) {
+        cleanupObjectUrl();
         if (speechSessionIdRef.current === currentSessionId) {
-          console.warn('[Radio TTS] Lỗi phát âm thanh /api/tts, fallback sang SpeechSynthesis:', e);
+          console.warn('[Radio TTS] Fallback sang SpeechSynthesis:', err);
           ttsAudioRef.current = null;
           playBrowserSpeechFallback(cleanText);
         }
-      };
-
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch((err) => {
-          if (speechSessionIdRef.current === currentSessionId) {
-            console.warn('[Radio TTS] Trình duyệt chặn autoplay, fallback sang SpeechSynthesis:', err);
-            ttsAudioRef.current = null;
-            playBrowserSpeechFallback(cleanText);
-          }
-        });
       }
-    } catch (_) {
-      if (speechSessionIdRef.current === currentSessionId) {
-        playBrowserSpeechFallback(cleanText);
-      }
-    }
+    })();
   };
 
   const handleToggleVoiceGender = (newGender) => {
@@ -1169,10 +1201,20 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
     };
   }, []);
 
-  // Dọn dẹp âm thanh khi unmount
+  // Dọn dẹp âm thanh khi unmount & đăng ký kênh với AudioCoordinator
   useEffect(() => {
+    const unregister = audioCoordinator.registerChannel('late-night-radio', {
+      pause: () => {
+        stopSpeaking();
+        stopRadioEngine();
+        setIsPlaying(false);
+      },
+      isPlaying: () => isRadioPlayingInternal,
+    });
     return () => {
+      unregister();
       stopSpeaking();
+      stopRadioEngine();
     };
   }, []);
 
@@ -1184,6 +1226,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
       setIsPlaying(false);
       stopSpeaking();
     } else {
+      audioCoordinator.activateExclusiveModal('late-night-radio');
       startRadioEngine(activeTrack.engine, volume);
       setIsPlaying(true);
       if (isVoiceEnabled) {
@@ -1196,6 +1239,7 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
   // Chọn bài hát bất kỳ từ danh sách (dừng triệt để giọng đọc cũ, chống đè giọng)
   const handleSelectTrack = (index) => {
     playClickSound();
+    audioCoordinator.activateExclusiveModal('late-night-radio');
     stopSpeaking();
     setTrackIndex(index);
     try {
@@ -1292,6 +1336,12 @@ export const LateNightRadioModal = ({ isOpen, onClose }) => {
   }, [isOpen]);
 
   const isModalVisible = (isOpen || internalOpen) && !isMiniMode;
+
+  useEffect(() => {
+    if (isModalVisible) {
+      audioCoordinator.activateExclusiveModal('late-night-radio');
+    }
+  }, [isModalVisible]);
 
   const handleExpandRadio = () => {
     playClickSound();

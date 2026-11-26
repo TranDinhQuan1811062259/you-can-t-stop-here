@@ -26,12 +26,24 @@ export const FloatingAiAudioPlayer = () => {
   const [speed, setSpeed] = useState(1.0);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isCloningOpen, setIsCloningOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [activeVoiceProfile, setActiveVoiceProfile] = useState(() => {
+    const sanitizeProfile = (profile) => {
+      if (!profile || !profile.pitch) return null;
+      const rawUrl = profile.sampleAudioUrl || '';
+      return {
+        ...profile,
+        sampleAudioUrl: rawUrl.startsWith('data:audio/') ? rawUrl : '',
+      };
+    };
     try {
       const raw = localStorage.getItem('freedom_custom_voice_profile');
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = sanitizeProfile(JSON.parse(raw));
+        if (parsed) return parsed;
+      }
     } catch (e) {}
-    return user?.customVoiceProfile || null;
+    return sanitizeProfile(user?.customVoiceProfile);
   });
 
   // Tự động phân tích tâm trạng nội dung bài viết
@@ -102,6 +114,7 @@ export const FloatingAiAudioPlayer = () => {
   // Khởi động phát âm thanh cho 1 bài viết cụ thể
   const startPlayingPost = (post, moodOverride = null, genderOverride = null, regionOverride = null) => {
     if (!post) return;
+    setErrorMsg('');
     setCurrentPost(post);
     const targetMood = moodOverride || post.audioMood || selectedMood || 'auto';
     const targetGender = genderOverride || post.voiceGender || selectedGender || 'female';
@@ -135,12 +148,19 @@ export const FloatingAiAudioPlayer = () => {
         setCurrentSeconds(curSec);
         if (totSec) setTotalDurationSeconds(totSec);
       },
+      onError: (msg) => {
+        setErrorMsg(
+          msg ||
+            'Trình duyệt chưa hỗ trợ giọng đọc Tiếng Việt offline hoặc máy chủ TTS đang khởi động, vui lòng thử lại.'
+        );
+      },
     });
   };
 
   // Toggle Play / Pause
   const handleTogglePlay = () => {
     playClickSound();
+    setErrorMsg('');
     if (playbackState === 'playing') {
       aiVoicePlayer.pause();
       setPlaybackState('paused');
@@ -369,7 +389,9 @@ export const FloatingAiAudioPlayer = () => {
                 <div className="floating-audio-sub-marquee">
                   <span className="subtitle-quote-icon">“</span>
                   <span className="subtitle-text">
-                    {currentSentence || 'Đang chuẩn bị bản đọc truyền cảm cho câu chuyện này...'}
+                    {errorMsg
+                      ? `⚠️ ${errorMsg}`
+                      : currentSentence || 'Đang chuẩn bị bản đọc truyền cảm cho câu chuyện này...'}
                   </span>
                   <span className="subtitle-quote-icon">”</span>
                 </div>

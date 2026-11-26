@@ -6,7 +6,8 @@ import {
   playNotificationTone,
   stopNotificationTone,
 } from './campfireAudio';
-import { hasUserInteracted, markUserInteracted } from './audio-gesture-guard';
+import { markUserInteracted } from './audio-gesture-guard';
+import { getSharedAudioContext } from './audioCoordinator';
 
 export {
   NOTIFICATION_TONES,
@@ -22,22 +23,9 @@ export {
  * Không phụ thuộc file âm thanh ngoài, hoạt động mượt mà 0ms độ trễ.
  */
 
-let audioCtx = null;
-
-// Khởi tạo AudioContext an toàn sau tương tác người dùng
+// Khởi tạo AudioContext an toàn qua Singleton dùng chung sau tương tác người dùng
 export const getAudioContext = () => {
-  if (typeof window === 'undefined') return null;
-  if (!hasUserInteracted()) return null;
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) return null;
-
-  if (!audioCtx || audioCtx.state === 'closed') {
-    audioCtx = new AudioContextClass();
-  }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => {});
-  }
-  return audioCtx;
+  return getSharedAudioContext();
 };
 
 // Tạo buffer tiếng ồn trắng (White Noise) cho hiệu ứng nổ, pháo hoa, chũm chọe

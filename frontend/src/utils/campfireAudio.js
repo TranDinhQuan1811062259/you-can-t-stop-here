@@ -4,20 +4,10 @@
  * An toàn với chính sách Autoplay của trình duyệt & tự động thu hồi tài nguyên (Quy tắc 3 & 4 GEMINI.md).
  */
 
-import { hasUserInteracted } from './audio-gesture-guard';
-
-let campfireAudioCtx = null;
+import { getSharedAudioContext } from './audioCoordinator';
 
 const getAudioContext = () => {
-  if (typeof window === 'undefined') return null;
-  if (!hasUserInteracted()) return null;
-  const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioCtxClass) return null;
-
-  if (!campfireAudioCtx || campfireAudioCtx.state === 'closed') {
-    campfireAudioCtx = new AudioCtxClass();
-  }
-  return campfireAudioCtx;
+  return getSharedAudioContext();
 };
 
 /**

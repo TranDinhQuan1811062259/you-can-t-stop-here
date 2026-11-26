@@ -12,6 +12,7 @@ import {
   setMasterMute,
 } from '../utils/ambientSoundEngine';
 import { hasUserInteracted, onFirstUserGesture } from '../utils/audio-gesture-guard';
+import { audioCoordinator } from '../utils/audioCoordinator';
 
 const MusicContext = createContext(null);
 
@@ -224,6 +225,18 @@ export const MusicProvider = ({ children }) => {
   const userExplicitPausedRef = useRef(false);
   const isSwitchingTrackRef = useRef(false);
   const waitingTimeoutRef = useRef(null);
+  const ttsDuckFactorRef = useRef(1);
+  const volumeRef = useRef(volume);
+  volumeRef.current = volume;
+  const isMutedRef = useRef(isMuted);
+  isMutedRef.current = isMuted;
+
+  const applyEffectiveMusicVolume = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const raw = isMutedRef.current ? 0 : volumeRef.current * ttsDuckFactorRef.current;
+    audio.volume = Math.max(0, Math.min(1, raw));
+  }, []);
 
   // Dọn dẹp tài nguyên âm thanh khi unmount Provider (Quy tắc 3 GEMINI.md)
   useEffect(() => {
@@ -268,12 +281,10 @@ export const MusicProvider = ({ children }) => {
     return getTrackAudioSrc(track, useWav);
   }, [isWavMaster]);
 
-  // Đồng bộ âm lượng vào audio element
+  // Đồng bộ âm lượng vào audio element (tôn trọng hệ số Auto-Ducking khi TTS đang đọc)
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
-    }
-  }, [volume, isMuted]);
+    applyEffectiveMusicVolume();
+  }, [volume, isMuted, applyEffectiveMusicVolume]);
 
   // Đồng bộ bài hát hiện tại từ audio.src nếu có sự thay đổi ngoại vi
   const syncActiveTrackFromAudio = useCallback((audioEl) => {
@@ -327,6 +338,8 @@ export const MusicProvider = ({ children }) => {
       try {
         sessionStorage.removeItem('freedom_user_explicit_paused');
       } catch (_) {}
+
+      audioCoordinator.activateSystemMusic('system-music');
 
       let targetSrc = '';
       if (selectedTrackSeason === 'winter') {
@@ -407,6 +420,7 @@ export const MusicProvider = ({ children }) => {
     setCurrentTrackIndex(index);
     setSelectedTrackSeason('winter');
     stopEventAmbient();
+    audioCoordinator.activateSystemMusic('system-music');
     userExplicitPausedRef.current = false;
     try {
       sessionStorage.removeItem('freedom_user_explicit_paused');
@@ -692,6 +706,7 @@ export const MusicProvider = ({ children }) => {
           audio.src = targetSrc;
         }
         if (wasPlaying) {
+          audioCoordinator.activateSystemMusic('system-music');
           userExplicitPausedRef.current = false;
           try {
             sessionStorage.removeItem('freedom_user_explicit_paused');
@@ -749,6 +764,7 @@ export const MusicProvider = ({ children }) => {
       }
 
       if (targetUrl) {
+        audioCoordinator.activateSystemMusic('system-music');
         isSwitchingTrackRef.current = true;
         audio.src = targetUrl;
         audio.load();
@@ -765,6 +781,7 @@ export const MusicProvider = ({ children }) => {
             restoreAmbientFromMusic();
           });
       } else {
+        audioCoordinator.activateSystemMusic('system-music');
         if (audio) {
           try { audio.pause(); } catch (_) {}
         }
@@ -800,6 +817,7 @@ export const MusicProvider = ({ children }) => {
 
     const audio = audioRef.current;
     if (audio) {
+      audioCoordinator.activateSystemMusic('system-music');
       isSwitchingTrackRef.current = true;
       audio.src = fileUrl;
       audio.load();
@@ -1193,25 +1211,45 @@ export const MusicProvider = ({ children }) => {
   }, []);
 
   // =========================================================================
-  // ĐỒNG BỘ NGUỒN PHÁT: TẠM DỪNG NHẠC HỆ THỐNG KHI USER PHÁT NHẠC CÁ NHÂN
+  // ĐỒNG BỘ NGUỒN PHÁT QUA AUDIO COORDINATOR: AUTO-DUCK KHI ĐỌC AI (TTS) & EXCLUSIVE PLAYBACK
   // =========================================================================
   useEffect(() => {
-    const handleExternalPause = () => {
+    const pausePlayback = () => {
       const audio = audioRef.current;
       if (audio && !audio.paused) {
         try {
           audio.pause();
         } catch (_) {}
-        setIsPlaying(false);
-        restoreAmbientFromMusic();
       }
+      stopEventAmbient();
+      setIsPlaying(false);
+      restoreAmbientFromMusic();
     };
 
-    window.addEventListener('freedom_pause_system_music', handleExternalPause);
+    const unregister = audioCoordinator.registerChannel('system-music', {
+      pause: pausePlayback,
+      duck: (factor = 0.15) => {
+        ttsDuckFactorRef.current = factor;
+        applyEffectiveMusicVolume();
+        duckAmbientForMusic();
+      },
+      restore: () => {
+        ttsDuckFactorRef.current = 1;
+        applyEffectiveMusicVolume();
+        const audio = audioRef.current;
+        if (!audio || audio.paused) {
+          restoreAmbientFromMusic();
+        }
+      },
+      isPlaying: () => Boolean(audioRef.current && !audioRef.current.paused),
+    });
+
+    window.addEventListener('freedom_pause_system_music', pausePlayback);
     return () => {
-      window.removeEventListener('freedom_pause_system_music', handleExternalPause);
+      unregister();
+      window.removeEventListener('freedom_pause_system_music', pausePlayback);
     };
-  }, []);
+  }, [applyEffectiveMusicVolume]);
 
   const value = {
     // State

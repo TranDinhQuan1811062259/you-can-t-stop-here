@@ -26,13 +26,27 @@ export const PostAudioPlayer = ({ post }) => {
   const [selectedGender, setSelectedGender] = useState(() => post?.voiceGender || 'female');
   const [selectedRegion, setSelectedRegion] = useState(() => post?.voiceRegion || 'north');
   const [speed, setSpeed] = useState(1.0);
+  const [errorMsg, setErrorMsg] = useState('');
   const [isCloningOpen, setIsCloningOpen] = useState(false);
   const [activeVoiceProfile, setActiveVoiceProfile] = useState(() => {
-    if (post?.customVoiceProfile?.pitch) return post.customVoiceProfile;
-    if (user?.customVoiceProfile?.pitch) return user.customVoiceProfile;
+    const sanitizeProfile = (profile) => {
+      if (!profile || !profile.pitch) return null;
+      const rawUrl = profile.sampleAudioUrl || '';
+      return {
+        ...profile,
+        sampleAudioUrl: rawUrl.startsWith('data:audio/') ? rawUrl : '',
+      };
+    };
+    const postProfile = sanitizeProfile(post?.customVoiceProfile);
+    if (postProfile) return postProfile;
+    const userProfile = sanitizeProfile(user?.customVoiceProfile);
+    if (userProfile) return userProfile;
     try {
       const raw = localStorage.getItem('freedom_custom_voice_profile');
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = sanitizeProfile(JSON.parse(raw));
+        if (parsed) return parsed;
+      }
     } catch (e) {}
     return null;
   });
@@ -80,6 +94,7 @@ export const PostAudioPlayer = ({ post }) => {
 
   const handleTogglePlay = () => {
     playClickSound();
+    setErrorMsg('');
 
     if (playbackState === 'playing') {
       aiVoicePlayer.pause();
@@ -114,11 +129,18 @@ export const PostAudioPlayer = ({ post }) => {
         setCurrentSeconds(curSec);
         if (totSec) setTotalDurationSeconds(totSec);
       },
+      onError: (msg) => {
+        setErrorMsg(
+          msg ||
+            'Trình duyệt chưa hỗ trợ giọng đọc Tiếng Việt offline hoặc máy chủ TTS đang khởi động, vui lòng thử lại.'
+        );
+      },
     });
   };
 
   const handleStop = () => {
     playClickSound();
+    setErrorMsg('');
     aiVoicePlayer.stop();
     setProgress(0);
     setCurrentSeconds(0);
@@ -292,6 +314,21 @@ export const PostAudioPlayer = ({ post }) => {
             <span className="eq-bar bar-5" />
           </div>
         </div>
+
+        {/* Thông báo rõ ràng khi TTS gặp sự cố hoặc trình duyệt chưa có gói giọng Việt */}
+        {errorMsg && (
+          <div className="post-audio-error-banner" role="alert">
+            <span>⚠️ {errorMsg}</span>
+            <button
+              type="button"
+              className="post-audio-error-close"
+              onClick={() => setErrorMsg('')}
+              aria-label="Đóng thông báo lỗi đọc bài"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* Đoạn văn đang được đọc nổi bật */}
         {currentSentence && playbackState !== 'idle' && (

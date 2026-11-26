@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { playClickSound } from '../../utils/soundEffects';
+import { audioCoordinator } from '../../utils/audioCoordinator';
 
 /**
  * Trích xuất YouTube Video ID từ nhiều định dạng URL khác nhau
@@ -110,6 +111,17 @@ export const TimeCapsuleMusicPlayer = ({
     }
   };
 
+  // Đăng ký kênh nhạc Hộp Thời Gian với AudioCoordinator để tránh chồng tiếng
+  useEffect(() => {
+    return audioCoordinator.registerChannel('time-capsule', {
+      pause: () => {
+        postToPlayer('pauseVideo');
+        setIsPlaying(false);
+      },
+      isPlaying: () => isPlaying,
+    });
+  }, [isPlaying]);
+
   // Khởi tạo và lắng nghe phản hồi từ YouTube Player
   useEffect(() => {
     const handleMessage = (event) => {
@@ -173,6 +185,7 @@ export const TimeCapsuleMusicPlayer = ({
       postToPlayer('pauseVideo');
       setIsPlaying(false);
     } else {
+      audioCoordinator.activateExclusiveModal('time-capsule');
       postToPlayer('unMute');
       postToPlayer('setVolume', [volume]);
       postToPlayer('playVideo');
@@ -215,6 +228,7 @@ export const TimeCapsuleMusicPlayer = ({
       alert('Vui lòng nhập link YouTube hợp lệ (ví dụ: https://www.youtube.com/watch?v=...)');
       return;
     }
+    audioCoordinator.activateExclusiveModal('time-capsule');
     setActiveVideoId(id);
     setCustomSongName(`Bài nhạc tùy chỉnh (${id})`);
     setShowCustomInput(false);
@@ -235,6 +249,7 @@ export const TimeCapsuleMusicPlayer = ({
   // Chọn chủ đề nhanh
   const handleSelectTheme = (moodId) => {
     playClickSound();
+    audioCoordinator.activateExclusiveModal('time-capsule');
     if (onMoodChange) {
       onMoodChange(moodId);
     }

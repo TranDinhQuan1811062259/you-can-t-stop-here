@@ -9,8 +9,7 @@
  */
 
 import { hasUserInteracted } from './audio-gesture-guard';
-
-let audioCtx = null;
+import { getSharedAudioContext } from './audioCoordinator';
 
 // Gain Nodes quản lý âm lượng độc lập
 let weatherMasterGain = null;
@@ -30,18 +29,7 @@ let activeWeatherSources = [];
 let activeEventSources = [];
 
 const getAudioContext = () => {
-  if (typeof window === 'undefined') return null;
-  if (!hasUserInteracted()) return null;
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) return null;
-
-  if (!audioCtx || audioCtx.state === 'closed') {
-    audioCtx = new AudioContextClass();
-  }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => {});
-  }
-  return audioCtx;
+  return getSharedAudioContext();
 };
 
 // Khởi tạo đồ thị âm thanh (Audio Graph)
@@ -749,8 +737,9 @@ export const stopWeatherAmbient = () => {
     });
     activeWeatherSources = [];
   }
-  if (weatherMasterGain && audioCtx) {
-    weatherMasterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+  const ctx = getAudioContext();
+  if (weatherMasterGain && ctx) {
+    weatherMasterGain.gain.setValueAtTime(0, ctx.currentTime);
   }
   isWeatherSoundActive = false;
   notifyStateChange();
@@ -798,8 +787,9 @@ export function stopEventAmbient() {
     });
     activeEventSources = [];
   }
-  if (eventMasterGain && audioCtx) {
-    eventMasterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+  const ctx = getAudioContext();
+  if (eventMasterGain && ctx) {
+    eventMasterGain.gain.setValueAtTime(0, ctx.currentTime);
   }
   isEventSoundActive = false;
   notifyStateChange();
@@ -950,12 +940,3 @@ export const setMasterMute = (muted) => {
   }
   notifyStateChange();
 };
-
-// Đảm bảo AudioContext tự động phục hồi khi tab chuyển từ ẩn sang hiện
-if (typeof document !== 'undefined') {
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && hasUserInteracted() && audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume().catch(() => {});
-    }
-  });
-}
