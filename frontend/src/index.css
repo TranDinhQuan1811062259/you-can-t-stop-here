@@ -5160,7 +5160,123 @@ body.theme-dark .back-home-btn,
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   font-size: 0.85rem;
+}
+
+.footer-bottom-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.footer-bottom-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.footer-author-credit {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.footer-author-fb-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #e0f2fe;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.footer-author-fb-icon {
+  color: #38bdf8;
+  font-size: 0.86rem;
+  transition: color 0.2s ease;
+}
+
+.footer-author-fb-name {
+  text-decoration: underline;
+  text-decoration-color: rgba(56, 189, 248, 0.4);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.2s ease;
+}
+
+.footer-author-fb-link:hover {
+  background: rgba(24, 119, 242, 0.2);
+  border-color: rgba(96, 165, 250, 0.72);
+  color: #7dd3fc;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(24, 119, 242, 0.24);
+}
+
+.footer-author-fb-link:hover .footer-author-fb-icon {
+  color: #60a5fa;
+}
+
+.footer-author-fb-link:hover .footer-author-fb-name {
+  text-decoration-color: currentColor;
+}
+
+.footer-author-fb-link:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+body.theme-light .footer-bottom,
+[data-theme="light"] .footer-bottom,
+.mode-light .footer-bottom {
+  border-top-color: rgba(148, 163, 184, 0.28);
+}
+
+body.theme-light .footer-author-credit,
+[data-theme="light"] .footer-author-credit,
+.mode-light .footer-author-credit {
+  color: #475569;
+}
+
+body.theme-light .footer-author-fb-link,
+[data-theme="light"] .footer-author-fb-link,
+.mode-light .footer-author-fb-link {
+  background: rgba(255, 255, 255, 0.84);
+  border-color: rgba(125, 211, 252, 0.75);
+  color: #0369a1;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.1);
+}
+
+body.theme-light .footer-author-fb-icon,
+[data-theme="light"] .footer-author-fb-icon,
+.mode-light .footer-author-fb-icon {
+  color: #1877f2;
+}
+
+body.theme-light .footer-author-fb-name,
+[data-theme="light"] .footer-author-fb-name,
+.mode-light .footer-author-fb-name {
+  text-decoration-color: rgba(24, 119, 242, 0.35);
+}
+
+body.theme-light .footer-author-fb-link:hover,
+[data-theme="light"] .footer-author-fb-link:hover,
+.mode-light .footer-author-fb-link:hover {
+  background: rgba(24, 119, 242, 0.1);
+  border-color: #1877f2;
+  color: #1877f2;
+  box-shadow: 0 4px 12px rgba(24, 119, 242, 0.18);
 }
 
 /* ================= UTILITY STATES ================= */
@@ -5311,6 +5427,13 @@ body.theme-dark .back-home-btn,
     flex-direction: column;
     gap: 12px;
     text-align: center;
+  }
+
+  .footer-bottom-meta,
+  .footer-author-credit,
+  .footer-bottom-links {
+    align-items: center;
+    justify-content: center;
   }
 }
 

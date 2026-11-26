@@ -145,14 +145,30 @@ export const Footer = () => {
 
         {/* Footer bottom */}
         <div className="footer-bottom">
-          <p>
-            © {new Date().getFullYear()} YOU CAN'T STOP HERE. Luôn luôn có một lối đi tiếp cho bạn. •{' '}
-            <a href="tel:0931465310" style={{ color: '#38bdf8', textDecoration: 'none' }}>0931465310</a> •{' '}
-            <a href="mailto:Anthonyq012025@gmail.com" style={{ color: '#34d399', textDecoration: 'none' }}>Anthonyq012025@gmail.com</a>
-          </p>
-          <div>
-            <Link to="/" style={{ color: 'var(--text-light)', marginRight: '16px' }}>Trang chủ</Link>
-            <Link to="/music" style={{ color: '#38bdf8', marginRight: '16px', textDecoration: 'none' }}>Không gian nhạc ❄️</Link>
+          <div className="footer-bottom-meta">
+            <p>
+              © {new Date().getFullYear()} YOU CAN'T STOP HERE. Luôn luôn có một lối đi tiếp cho bạn. •{' '}
+              <a href="tel:0931465310" style={{ color: '#38bdf8', textDecoration: 'none' }}>0931465310</a> •{' '}
+              <a href="mailto:Anthonyq012025@gmail.com" style={{ color: '#34d399', textDecoration: 'none' }}>Anthonyq012025@gmail.com</a>
+            </p>
+            <div className="footer-author-credit">
+              <span>Phát triển bởi </span>
+              <a
+                href="https://www.facebook.com/anthony.qill/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="footer-author-fb-link"
+                aria-label="Trang Facebook cá nhân của Trần Đỉnh Quân (Anthony)"
+                title="Mở Facebook cá nhân của Trần Đỉnh Quân (Anthony) ở tab mới"
+              >
+                <i className="fa-brands fa-facebook footer-author-fb-icon" aria-hidden="true"></i>
+                <span className="footer-author-fb-name">Trần Đỉnh Quân (Anthony)</span>
+              </a>
+            </div>
+          </div>
+          <div className="footer-bottom-links">
+            <Link to="/" style={{ color: 'var(--text-light)' }}>Trang chủ</Link>
+            <Link to="/music" style={{ color: '#38bdf8', textDecoration: 'none' }}>Không gian nhạc ❄️</Link>
             <a href="#root" style={{ color: 'var(--primary-color)' }}>Lên đầu trang ↑</a>
           </div>
         </div>
