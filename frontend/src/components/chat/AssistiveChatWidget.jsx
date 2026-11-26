@@ -27,7 +27,7 @@ const STATUS_OPTIONS = [
   { id: 'offline', label: 'Đang off', icon: '⚪', color: '#94a3b8', desc: 'Ngoại tuyến / Tạm ẩn' },
 ];
 
-export const AssistiveChatWidget = () => {
+export const AssistiveChatWidget = ({ onOpenCreatePost } = {}) => {
   const {
     isWidgetOpen,
     toggleWidget,
@@ -496,11 +496,11 @@ export const AssistiveChatWidget = () => {
   return (
     <>
       {/* ======================================================== */}
-      {/* 1. NÚT NỔI ASSISTIVE TOUCH (IPHONE STYLE) DI DỜI TỰ DO & HÍT MÉP */}
+      {/* 1. CỤM QUICK ACTION GÓC PHẢI DƯỚI (VIẾT TÂM SỰ + CHAT HỢP NHẤT) */}
       {/* ======================================================== */}
       <div
         ref={btnRef}
-        className={`assistive-chat-touch-btn ${isWidgetOpen ? 'active' : ''} ${isDragging ? 'is-dragging' : ''}`}
+        className={`assistive-chat-touch-btn ${onOpenCreatePost && !isWidgetOpen ? 'has-quick-dock' : ''} ${isWidgetOpen ? 'active' : ''} ${isDragging ? 'is-dragging' : ''}`}
         style={{
           position: 'fixed',
           left: isDragging ? `${btnPos.x}px` : (!isRightSide ? '24px' : 'auto'),
@@ -516,35 +516,72 @@ export const AssistiveChatWidget = () => {
             ? 'linear-gradient(135deg, #0f766e 0%, #047857 100%)'
             : 'linear-gradient(135deg, #0284c7 0%, #0d9488 100%)',
           color: '#ffffff',
-          border: '2.5px solid #ffffff',
-          boxShadow: '0 10px 26px rgba(2, 132, 199, 0.42), 0 0 0 2px rgba(255, 255, 255, 0.2)',
+          border: '2px solid rgba(255, 255, 255, 0.88)',
+          boxShadow: '0 10px 26px rgba(2, 132, 199, 0.36), 0 0 0 1px rgba(255, 255, 255, 0.14)',
         }}
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
         onClick={handleBtnClick}
-        title={isWidgetOpen ? "Đóng cửa sổ chat" : "Freedom Chat - Nhắn tin & Bạn bè (Giữ và kéo thả để di chuyển góc tùy thích)"}
+        title={isWidgetOpen ? 'Đóng cửa sổ chat' : 'Viết tâm sự & Nhắn tin Freedom (Giữ để kéo di dời)'}
       >
-        <div className="assistive-touch-inner">
-          <span className="assistive-touch-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontSize: '1.5rem', filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))' }}>
-            {isWidgetOpen ? <i className="fa-solid fa-xmark"></i> : <i className="fa-solid fa-comment-dots"></i>}
-          </span>
-
-          {/* Dấu chấm trạng thái của bản thân */}
-          {!isWidgetOpen && (
-            <span
-              className="assistive-my-status-dot"
-              style={{ backgroundColor: currentStatusObj.color }}
-              title={`Trạng thái của bạn: ${currentStatusObj.label}`}
-            />
-          )}
-
-          {/* Huy hiệu đếm số lượng tin nhắn chưa đọc */}
-          {!isWidgetOpen && unreadCount > 0 && (
-            <span className="assistive-unread-counter">
-              {unreadCount > 99 ? '99+' : unreadCount}
+        {onOpenCreatePost && !isWidgetOpen ? (
+          <div className="assistive-dock-row">
+            <button
+              type="button"
+              className="assistive-dock-write-btn"
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                closeWidget();
+                onOpenCreatePost();
+              }}
+              title="Viết tâm sự mới"
+              aria-label="Viết tâm sự mới"
+            >
+              <i className="fa-solid fa-feather-pointed" aria-hidden="true"></i>
+              <span>Viết</span>
+            </button>
+            <span className="assistive-dock-divider" aria-hidden="true" />
+            <div className="assistive-touch-inner assistive-dock-chat-slot">
+              <span className="assistive-touch-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontSize: '1.22rem' }}>
+                <i className="fa-solid fa-comment-dots"></i>
+              </span>
+              <span
+                className="assistive-my-status-dot"
+                style={{ backgroundColor: currentStatusObj.color }}
+                title={`Trạng thái của bạn: ${currentStatusObj.label}`}
+              />
+              {unreadCount > 0 && (
+                <span className="assistive-unread-counter">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="assistive-touch-inner">
+            <span className="assistive-touch-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontSize: '1.5rem', filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))' }}>
+              {isWidgetOpen ? <i className="fa-solid fa-xmark"></i> : <i className="fa-solid fa-comment-dots"></i>}
             </span>
-          )}
-        </div>
+
+            {/* Dấu chấm trạng thái của bản thân */}
+            {!isWidgetOpen && (
+              <span
+                className="assistive-my-status-dot"
+                style={{ backgroundColor: currentStatusObj.color }}
+                title={`Trạng thái của bạn: ${currentStatusObj.label}`}
+              />
+            )}
+
+            {/* Huy hiệu đếm số lượng tin nhắn chưa đọc */}
+            {!isWidgetOpen && unreadCount > 0 && (
+              <span className="assistive-unread-counter">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ======================================================== */}

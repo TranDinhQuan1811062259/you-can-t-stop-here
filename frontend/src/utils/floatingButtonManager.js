@@ -13,7 +13,7 @@
  */
 
 // Tự động reset và đồng bộ toạ độ lề phải chuẩn xác, tránh che lấp vùng Hero Banner
-const FAB_ALIGN_VERSION = 'freedom_fab_aligned_v26';
+const FAB_ALIGN_VERSION = 'freedom_fab_aligned_v27';
 if (typeof window !== 'undefined') {
   try {
     if (localStorage.getItem(FAB_ALIGN_VERSION) !== 'true') {
@@ -27,8 +27,19 @@ if (typeof window !== 'undefined') {
   } catch (_) {}
 }
 
+export const isFloatingWidgetEnabled = (type) => {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (type === 'mascot') return localStorage.getItem('freedom_optin_festive_mascot') === 'true';
+    if (type === 'pet') return localStorage.getItem('freedom_optin_desk_pet') === 'true';
+    if (type === 'pwa') return localStorage.getItem('freedom_optin_pwa_pill') === 'true';
+    if (type === 'write') return false;
+  } catch (_) {}
+  return true;
+};
+
 export const FAB_SIZES = {
-  chat: { width: 56, height: 56 },
+  chat: { width: 118, height: 50 },
   write: { width: 156, height: 44 },
   mascot: { width: 88, height: 74 },
   pwa: { width: 136, height: 40 }, // Chuẩn kích thước mini pill mặc định của thanh PWA
@@ -188,31 +199,31 @@ export const getFabPos = (type) => {
         y: Math.max(MARGIN_TOP, vpHeight - writeH - safeMarginBottom),
       };
     } else if (type === 'chat') {
-      // 2. Nút Chat mặc định: Nằm ngay phía trên nút Viết tâm sự
+      // Cụm Quick Action (Viết tâm sự + Chat) đặt gọn ở góc dưới bên phải; BackToTopButton xếp ngay phía trên
       currentPos = {
         x: Math.max(safeMarginLeft, vpWidth - chatDim.width - safeMarginRight),
-        y: Math.max(MARGIN_TOP, vpHeight - writeH - safeMarginBottom - chatH - stackGap),
+        y: Math.max(MARGIN_TOP, vpHeight - chatH - safeMarginBottom),
       };
     } else if (type === 'mascot') {
-      // 3. Nút Sự kiện lễ hội mặc định: Giữ ở nửa dưới bên phải, không leo lên vùng Hero h1
+      // Nút Sự kiện lễ hội (chỉ hiện khi người dùng bật opt-in): đặt phía trên BackToTop
       currentPos = {
         x: Math.max(safeMarginLeft, vpWidth - mascotDim.width - safeMarginRight),
-        y: Math.max(safeMinLowerY, vpHeight - writeH - safeMarginBottom - chatH - stackGap - mascotH - stackGap),
+        y: Math.max(safeMinLowerY, vpHeight - safeMarginBottom - chatH - 64 - mascotH - stackGap),
       };
     } else if (type === 'pwa') {
-      // 4. Thanh Cài đặt App mặc định
+      // Thanh Cài đặt App (opt-in)
       currentPos = {
         x: Math.max(safeMarginLeft, vpWidth - pwaDim.width - safeMarginRight),
-        y: Math.max(safeMinLowerY, vpHeight - writeH - safeMarginBottom - chatH - stackGap - mascotH - stackGap - pwaH - stackGap),
+        y: Math.max(safeMinLowerY, vpHeight - safeMarginBottom - chatH - 64 - mascotH - stackGap - pwaH - stackGap),
       };
     } else if (type === 'pet') {
-      // 5. Bé Thú Cưng Bàn Làm Việc mặc định: Bám sát mép phải ở nửa dưới màn hình, tránh vùng Hero Banner
+      // Bé Thú Cưng Bàn Làm Việc (opt-in)
       const petH = petDim.height;
       currentPos = {
         x: Math.max(safeMarginLeft, vpWidth - petDim.width - safeMarginRight),
         y: Math.max(
           safeMinLowerY,
-          vpHeight - writeH - safeMarginBottom - chatH - stackGap - mascotH - stackGap - pwaH - stackGap - petH - stackGap
+          vpHeight - safeMarginBottom - chatH - 64 - petH - stackGap
         ),
       };
     } else if (type === 'pref') {
@@ -299,8 +310,8 @@ export const saveFabPos = (type, pos, shouldNotify = false) => {
  *   để các nút luôn luôn giữ nguyên hàng dọc thẳng tắp bám sát lề!
  */
 export const resolveAntiCollision = (movingType, candidatePos, keepOnEdge = false, dynamicWidth = null) => {
-  const allTypes = ['chat', 'write', 'mascot', 'pwa', 'pref', 'radio', 'pet'];
-  const otherTypes = allTypes.filter((t) => t !== movingType);
+  const allTypes = ['chat', 'mascot', 'pwa', 'pref', 'radio', 'pet'];
+  const otherTypes = allTypes.filter((t) => t !== movingType && isFloatingWidgetEnabled(t));
   const baseSize = FAB_SIZES[movingType] || { width: 58, height: 58 };
   const movingSize = {
     width: dynamicWidth || baseSize.width,

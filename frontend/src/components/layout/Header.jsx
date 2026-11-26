@@ -848,158 +848,65 @@ export const Header = () => {
                   <div className="season-popover-footer">
                     💡 Hiệu ứng hoa đào, tuyết rơi hay lá vàng sẽ tự động bay nhẹ nhàng theo mùa bạn chọn!
                   </div>
+
+                  {activeFestiveEvent && (
+                    <button
+                      type="button"
+                      className="season-festive-showcase-btn"
+                      onClick={() => {
+                        playClickSound();
+                        playFestiveEventSound(activeFestiveEvent);
+                        setIsSeasonOpen(false);
+                        setIsShowcaseModalOpen(true);
+                      }}
+                    >
+                      <span>{activeFestiveEvent.icon || activeFestiveEvent.themeIcon || '🎊'}</span>
+                      <span>
+                        Sự kiện: <strong>{activeFestiveEvent.shortName || activeFestiveEvent.name}</strong>
+                      </span>
+                      <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Festive Event Pill (Sự kiện lễ hội đặc biệt đang diễn ra - Rút gọn thông minh chống tràn Header) */}
-            {activeFestiveEvent && (
-              <div
-                className="header-festive-event-pill"
-                role="button"
-                tabIndex={0}
-                onClick={() => {
-                  playClickSound();
-                  playFestiveEventSound(activeFestiveEvent);
-                  setIsShowcaseModalOpen(true);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    playClickSound();
-                    playFestiveEventSound(activeFestiveEvent);
-                    setIsShowcaseModalOpen(true);
-                  }
-                }}
-                title={`${activeFestiveEvent.name} • ${activeFestiveEvent.bannerDesc || ''}. Bấm để xem không gian sự kiện đặc biệt!`}
-              >
-                <span className="festive-pill-icon">{activeFestiveEvent.icon || activeFestiveEvent.themeIcon || '🎊'}</span>
-                <span className="festive-pill-name">
-                  {activeFestiveEvent.shortName || (activeFestiveEvent.name.includes(':') ? activeFestiveEvent.name.split(':')[0].trim() : activeFestiveEvent.name)}
-                </span>
-                {user?.role === 'admin' && (
-                  <span
-                    className="festive-pill-badge"
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsEventManagerOpen(true);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setIsEventManagerOpen(true);
-                      }
-                    }}
-                    title="Cài đặt lịch sự kiện (Admin)"
-                  >
-                    ⚙️
-                  </span>
-                )}
-              </div>
-            )}
+            {/* Cụm Điều Khiển Nhạc Tinh Giản (Play/Pause + Tên bài ngắn + Nút mở bảng chọn) */}
+            <div className="header-ambient-sound-wrap" ref={ambientMenuRef}>
+              <div className={`header-music-mini-pill ${isEffectivePlaying || ambientState.isWeatherSoundActive || ambientState.isEventSoundActive ? 'is-active' : ''}`}>
+                <button
+                  type="button"
+                  className={`header-music-play-btn ${isEffectivePlaying ? 'is-playing' : ''}`}
+                  onClick={handleTogglePlayRecording}
+                  title={isEffectivePlaying ? 'Tạm dừng nhạc (Space)' : 'Phát nhạc (Space)'}
+                  aria-label={isEffectivePlaying ? 'Tạm dừng nhạc' : 'Phát nhạc'}
+                >
+                  <i className={`fa-solid ${isEffectivePlaying ? 'fa-pause' : 'fa-play'}`} aria-hidden="true"></i>
+                </button>
 
-            {/* Cụm Điều Khiển Âm Thanh Môi Trường Duy Trì (Ambient Soundscape Engine) */}
-            <div className="header-ambient-sound-wrap" ref={ambientMenuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {/* Mini Waveform Pill trực tiếp trên Header khi đang phát nhạc (GPU-accelerated Mini Equalizer) */}
-              {isEffectivePlaying && (
-                <div
-                  className="header-live-waveform-pill"
-                  tabIndex={0}
+                <button
+                  type="button"
+                  className="header-music-selector-btn"
                   onClick={() => {
                     playClickSound();
                     setIsAmbientMenuOpen((prev) => !prev);
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      playClickSound();
-                      setIsAmbientMenuOpen((prev) => !prev);
-                    }
-                  }}
-                  title={`Đang phát: ${currentTrackMeta.title} • Phím 'Space' để Play/Pause • 'M' để tắt/bật tiếng`}
-                  role="button"
-                  aria-label={`Đang phát nhạc: ${currentTrackMeta.title}`}
+                  title={`Bài hiện tại: ${currentTrackMeta.title} • Bấm để mở danh sách nhạc & âm thanh môi trường`}
+                  aria-expanded={isAmbientMenuOpen}
+                  aria-label={`Chọn nhạc: ${currentTrackMeta.title}`}
                 >
-                  <span className="live-track-title">
+                  <span className="header-music-track-title">
                     {currentTrackMeta.title}
                   </span>
-                  <HeaderAudioVisualizer
-                    audioRef={recordingAudioRef}
-                    isPlaying={isEffectivePlaying}
-                    barCount={4}
-                    height={13}
-                    barWidth={2.5}
-                    barGap={1.5}
-                    activeColor="#2dd4bf"
-                    variant="equalizer"
-                  />
-                </div>
-              )}
-
-              <button
-                type="button"
-                className={`header-ambient-btn ${ambientState.isWeatherSoundActive || ambientState.isEventSoundActive || isEffectivePlaying ? 'is-active' : ''}`}
-                onClick={() => {
-                  playClickSound();
-                  setIsAmbientMenuOpen((prev) => !prev);
-                }}
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: ambientState.isWeatherSoundActive || ambientState.isEventSoundActive || isEffectivePlaying
-                    ? 'linear-gradient(135deg, #0d9488, #059669)'
-                    : 'rgba(255, 255, 255, 0.08)',
-                  border: ambientState.isWeatherSoundActive || ambientState.isEventSoundActive || isEffectivePlaying
-                    ? '1.5px solid #2dd4bf'
-                    : '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  fontSize: '0.88rem',
-                  position: 'relative',
-                  transition: 'all 0.2s ease',
-                  boxShadow: ambientState.isWeatherSoundActive || ambientState.isEventSoundActive || isEffectivePlaying
-                    ? '0 2px 10px rgba(13, 148, 136, 0.4)'
-                    : 'none',
-                }}
-                title={
-                  isEffectivePlaying
-                    ? `Đang phát bản nhạc: ${currentTrackMeta.title}`
-                    : ambientState.isCombined
-                    ? 'Đang phát Hòa âm Kết hợp (Thời tiết 4 mùa + Sự kiện lễ hội)'
-                    : ambientState.isWeatherSoundActive
-                    ? `Đang phát Âm thanh Thời tiết ${activeSeason.name}`
-                    : ambientState.isEventSoundActive
-                    ? 'Đang phát Âm thanh Sự kiện Lễ hội'
-                    : 'Cài đặt âm thanh môi trường duy trì (Gió mùa đông, sóng biển, tiếng chim hót...)'
-                }
-                aria-label="Âm thanh môi trường duy trì"
-              >
-                <span>
-                  {ambientState.isCombined ? '🎶' : ambientState.isWeatherSoundActive ? activeSeason.icon : ambientState.isEventSoundActive ? '🎊' : isEffectivePlaying ? '🎧' : '🔈'}
-                </span>
-                {(ambientState.isWeatherSoundActive || ambientState.isEventSoundActive || isEffectivePlaying) && (
-                  <span
-                    style={{
-                      position: 'absolute',
-                      top: '-1px',
-                      right: '-1px',
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      background: '#4ade80',
-                      border: '1.5px solid #ffffff',
-                      animation: 'pulseDot 1.2s infinite alternate',
-                    }}
-                  />
-                )}
-              </button>
+                  {(ambientState.isWeatherSoundActive || ambientState.isEventSoundActive || isEffectivePlaying) && (
+                    <span className="header-music-status-dot" aria-hidden="true" />
+                  )}
+                  <i
+                    className={`fa-solid fa-chevron-${isAmbientMenuOpen ? 'up' : 'down'} header-music-chevron`}
+                    aria-hidden="true"
+                  ></i>
+                </button>
+              </div>
 
               {/* Popover Tùy Chọn Âm Thanh Môi Trường & Playlist Thu Âm 4 Mùa */}
               {isAmbientMenuOpen && (
@@ -1054,7 +961,22 @@ export const Header = () => {
                         <span className="playlist-head-icon">🎙️</span>
                         <strong className="playlist-head-title">Bản Thu Âm 4 Mùa Của Bạn</strong>
                       </div>
-                      <span className="playlist-head-badge">100% Chính Chủ</span>
+                      {typeof music.toggleAudioQuality === 'function' ? (
+                        <button
+                          type="button"
+                          className="ambient-quality-toggle-pill"
+                          onClick={() => {
+                            playClickSound();
+                            music.toggleAudioQuality();
+                          }}
+                          title="Chuyển đổi nhanh chất lượng phát (Studio WAV / Stream 4G)"
+                        >
+                          <i className={`fa-solid ${music.isWavMaster ? 'fa-gem' : 'fa-bolt'}`} aria-hidden="true"></i>
+                          <span>{music.isWavMaster ? 'WAV' : 'Stream'}</span>
+                        </button>
+                      ) : (
+                        <span className="playlist-head-badge">100% Chính Chủ</span>
+                      )}
                     </div>
 
                     {/* Hàng Tab chọn mùa cho bản thu */}
@@ -1578,47 +1500,7 @@ export const Header = () => {
                   />
                 </div>
 
-                {/* Huy hiệu ngọn lửa nhỏ (🔥 {streakCount}) */}
-                <button
-                  type="button"
-                  className="header-streak-badge-btn"
-                  onClick={() => openHub('streak')}
-                  title={`Chuỗi ${streakCount || 0} ngày giữ lửa. Bấm để mở Personal Motivation Hub`}
-                >
-                  <span className="header-streak-flame">🔥</span>
-                  <span>{streakCount || 0}</span>
-                </button>
-
-                {/* Lối vào Trang Quản Trị nổi bật dành riêng cho Admin */}
-                {user?.role === 'admin' && (
-                  <button
-                    type="button"
-                    className="header-admin-portal-btn"
-                    onClick={() => {
-                      playClickSound();
-                      navigate('/admin');
-                    }}
-                    title="Mở Trang Quản Trị Hệ Thống (/admin)"
-                  >
-                    <span className="btn-icon">🛡️</span>
-                    <span className="admin-portal-btn-label">Quản Trị</span>
-                  </button>
-                )}
-
-                {/* Nút Quản lý Lễ Hội (Chỉ Admin) */}
-                {user?.role === 'admin' && !activeFestiveEvent && (
-                  <button
-                    type="button"
-                    className="header-festive-btn"
-                    onClick={() => setIsEventManagerOpen(true)}
-                    title="Quản lý sự kiện lễ hội trong năm (30/4, 2/9, 8/3, 1/6, Tết...)"
-                    style={{ padding: '5px 8px', minWidth: '32px' }}
-                  >
-                    <span className="btn-icon">🎊</span>
-                  </button>
-                )}
-
-                {/* Dropdown Avatar: Gộp Trang cá nhân, Motivation Hub, Cài đặt & Đăng xuất */}
+                {/* Dropdown Avatar: Gộp Trang cá nhân, Quản Trị, Streak, Cài đặt & Đăng xuất */}
                 <div className="header-user-menu-wrap" ref={userMenuRef}>
                   <button
                     type="button"
@@ -1715,6 +1597,52 @@ export const Header = () => {
                       >
                         <i className="fa-solid fa-gear" aria-hidden="true"></i>
                         <span>Cài đặt</span>
+                      </button>
+
+                      {user?.role === 'admin' && (
+                        <>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="header-user-dropdown-item"
+                            onClick={() => {
+                              setIsUserMenuOpen(false);
+                              playClickSound();
+                              navigate('/admin');
+                            }}
+                          >
+                            <span aria-hidden="true">🛡️</span>
+                            <span>Trang Quản Trị (/admin)</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="header-user-dropdown-item"
+                            onClick={() => {
+                              setIsUserMenuOpen(false);
+                              playClickSound();
+                              setIsEventManagerOpen(true);
+                            }}
+                          >
+                            <span aria-hidden="true">🎊</span>
+                            <span>Quản lý sự kiện lễ hội</span>
+                          </button>
+                        </>
+                      )}
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="header-user-dropdown-item"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          playClickSound();
+                          window.dispatchEvent(new CustomEvent('freedom_open_install_pwa_modal'));
+                        }}
+                      >
+                        <i className="fa-solid fa-mobile-screen-button" aria-hidden="true"></i>
+                        <span>Cài đặt ứng dụng (PWA)</span>
                       </button>
 
                       <div className="header-user-dropdown-divider" />
@@ -1846,26 +1774,38 @@ export const Header = () => {
                 <span className="item-label">Góc Nhạc</span>
               </NavLink>
 
-              {/* Cụm Trạm Chữa Lành Dropdown - Gom gọn 17 công cụ xả áp lực & chăm sóc tâm lý */}
-              <div className="header-wellness-dropdown-wrapper" ref={wellnessDropdownRef}>
-              <button
-                type="button"
-                className={`dashboard-3d-item tab-wellness-hub ${isWellnessDropdownOpen || isWellnessOpen || isTimeCapsuleOpen || isRadioOpen || isGratitudeJarOpen || isStickyWallOpen || isEmergencyCalmOpen || isCozyCafeOpen || isMoodPixelOpen || isRantAndBurnOpen || isDriftBottleOpen || isMoodRadarOpen || isWhisperWallOpen || isMentalFirstAidOpen || isTeaLoungeOpen || isDeclutterOpen || isMoodWeatherOpen || isFocusCocoonOpen ? 'active' : ''}`}
+              {/* Cụm Trạm Chữa Lành: Link trực tiếp /wellness + nút mở nhanh 17 công cụ */}
+              <div className="header-wellness-dropdown-wrapper header-wellness-split-group" ref={wellnessDropdownRef}>
+              <NavLink
+                to="/wellness"
+                state={{ transitionDirection: 'next', targetSlug: '__wellness__' }}
                 onClick={() => {
                   playClickSound();
-                  setIsWellnessDropdownOpen((prev) => !prev);
+                  setIsWellnessDropdownOpen(false);
                 }}
-                title="Trạm Chữa Lành & Chăm Sóc Tâm Trí: Bấm để mở bảng 17 công cụ xả áp lực"
-                aria-expanded={isWellnessDropdownOpen}
+                className={({ isActive }) => `dashboard-3d-item tab-wellness-hub ${isActive ? 'active' : ''}`}
+                title="Mở trang Trạm Chữa Lành (/wellness)"
               >
                 <span className="healing-icon-pill healing-icon-sage" style={{ width: '28px', height: '28px', fontSize: '0.85rem' }}>
                   🌿
                 </span>
                 <span className="item-label">Trạm Chữa Lành</span>
+              </NavLink>
+              <button
+                type="button"
+                className={`dashboard-3d-item wellness-quick-chevron-btn ${isWellnessDropdownOpen || isWellnessOpen || isTimeCapsuleOpen || isRadioOpen || isGratitudeJarOpen || isStickyWallOpen || isEmergencyCalmOpen || isCozyCafeOpen || isMoodPixelOpen || isRantAndBurnOpen || isDriftBottleOpen || isMoodRadarOpen || isWhisperWallOpen || isMentalFirstAidOpen || isTeaLoungeOpen || isDeclutterOpen || isMoodWeatherOpen || isFocusCocoonOpen ? 'active' : ''}`}
+                onClick={() => {
+                  playClickSound();
+                  setIsWellnessDropdownOpen((prev) => !prev);
+                }}
+                title="Mở nhanh danh sách 17 công cụ chữa lành"
+                aria-label="Mở nhanh danh sách 17 công cụ chữa lành"
+                aria-expanded={isWellnessDropdownOpen}
+              >
                 <span className="wellness-hub-badge">17</span>
                 <i
                   className={`fa-solid fa-chevron-${isWellnessDropdownOpen ? 'up' : 'down'}`}
-                  style={{ fontSize: '0.68rem', opacity: 0.8, marginLeft: '2px', transition: 'transform 0.2s' }}
+                  style={{ fontSize: '0.68rem', opacity: 0.85 }}
                 ></i>
               </button>
 
@@ -2234,6 +2174,16 @@ export const Header = () => {
 
                     <div className="wellness-hub-footer">
                       <span>💡 <em>Mỗi ngày dành 5 phút chăm sóc sức khỏe tinh thần bạn nhé!</em></span>
+                      <Link
+                        to="/wellness"
+                        className="wellness-hub-fullpage-link"
+                        onClick={() => {
+                          playClickSound();
+                          setIsWellnessDropdownOpen(false);
+                        }}
+                      >
+                        Mở trang đầy đủ →
+                      </Link>
                     </div>
                   </div>
                 );

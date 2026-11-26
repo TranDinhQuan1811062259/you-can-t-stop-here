@@ -7,7 +7,7 @@ import {
   ensureInBounds,
 } from '../../utils/floatingButtonManager';
 
-export const PwaInstallPrompt = () => {
+export const PwaInstallPrompt = ({ showFloatingBanner = false } = {}) => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isStandalone, setIsStandalone] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -304,8 +304,8 @@ export const PwaInstallPrompt = () => {
         </div>
       )}
 
-      {/* Floating Pill Banner tiện lợi (Kéo thả di dời tự do khắp màn hình, chống tràn thanh cuộn) */}
-      {showFloatingPill && (
+      {/* Floating Pill Banner tiện lợi (Chỉ hiển thị khi người dùng chủ động bật trong Cài đặt nhanh) */}
+      {showFloatingBanner && showFloatingPill && (
         isMinimized ? (
           /* Dạng thu gọn siêu gọn gàng tinh tế (Mini Jewel Bubble) */
           <div

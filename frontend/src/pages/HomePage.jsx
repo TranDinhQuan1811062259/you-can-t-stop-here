@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { usePosts } from '../hooks/usePosts';
 import { useAuth } from '../context/AuthContext';
 import { CategoryFilter } from '../components/blog/CategoryFilter';
@@ -8,11 +8,8 @@ import { PostList } from '../components/blog/PostList';
 import { PostListSkeleton } from '../components/common/PostListSkeleton';
 import { Pagination } from '../components/common/Pagination';
 import { ErrorMessage } from '../components/common/ErrorMessage';
-import { CommunityMoodWall } from '../components/blog/CommunityMoodWall';
 import { StoryBar } from '../components/story/StoryBar';
 import { IdleWeatherText } from '../components/common/IdleWeatherText';
-import { CommunityResilienceTree } from '../components/wellness/CommunityResilienceTree';
-import { GivingSomeEffortsSection } from '../components/wellness/GivingSomeEffortsSection';
 import { SectionErrorBoundary } from '../components/common/SectionErrorBoundary';
 import {
   useCategoryRegistry,
@@ -46,41 +43,6 @@ const preloadCreatePostModal = () => {
     hasPreloadedCreatePostModal = false;
   });
 };
-
-const QUICK_FEATURE_PILLS = [
-  {
-    id: 'bottle',
-    className: 'quick-pill-bottle',
-    eventName: 'freedom_open_drift_bottle',
-    icon: '🌊',
-    label: 'Chai Thư Nửa Đêm',
-    title: 'Mở Chiếc Máy Đánh Chữ Nửa Đêm & Thả Thư Trôi Sông',
-  },
-  {
-    id: 'radar',
-    className: 'quick-pill-radar',
-    eventName: 'freedom_open_mood_radar',
-    icon: '📡',
-    label: 'Radar Công Sở',
-    title: 'Mở Radar Đo Nhịp Cảm Xúc Công Sở Thời Gian Thực',
-  },
-  {
-    id: 'whisper',
-    className: 'quick-pill-whisper',
-    eventName: 'freedom_open_whisper_wall',
-    icon: '🎙️',
-    label: 'Thì Thầm 10s',
-    title: 'Mở Bức Tường Thì Thầm 10 Giây & Gửi Cái Ôm Âm Thanh',
-  },
-  {
-    id: 'wax',
-    className: 'quick-pill-wax',
-    eventName: 'freedom_open_time_capsule',
-    icon: '📜',
-    label: 'Tiệm Thư Sáp Niêm Phong',
-    title: 'Mở Tiệm Hộp Thời Gian & Đóng Dấu Sáp Niêm Phong',
-  },
-];
 
 export const HomePage = () => {
   const { isAuthenticated, openLoginModal } = useAuth();
@@ -204,65 +166,21 @@ export const HomePage = () => {
 
   const homePrimaryCta = (
     <div className="hero-cta-group">
-      {isAuthenticated ? (
+      <div className="hero-cta-row">
         <button
+          type="button"
           className="hero-btn-primary"
-          onMouseEnter={preloadCreatePostModal}
-          onFocus={preloadCreatePostModal}
-          onClick={() => setIsCreateOpen(true)}
+          onMouseEnter={isAuthenticated ? preloadCreatePostModal : undefined}
+          onFocus={isAuthenticated ? preloadCreatePostModal : undefined}
+          onClick={() => (isAuthenticated ? setIsCreateOpen(true) : openLoginModal())}
         >
-          <i className="fa-solid fa-feather-pointed" style={{ marginRight: '8px' }}></i> Viết tâm sự của bạn hôm nay
+          <i className="fa-solid fa-feather-pointed" style={{ marginRight: '8px' }}></i>
+          Viết tâm sự
         </button>
-      ) : (
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button
-            className="hero-btn-primary"
-            onClick={openLoginModal}
-          >
-            <i className="fa-solid fa-arrow-right-to-bracket" style={{ marginRight: '8px' }}></i> Đăng nhập để chia sẻ &amp; Động viên
-          </button>
-          <a href="#posts-section" className="hero-btn-secondary">
-            Đọc tâm sự của mọi người <i className="fa-solid fa-arrow-down" style={{ marginLeft: '6px' }}></i>
-          </a>
-        </div>
-      )}
-    </div>
-  );
-
-  const homeExtraActions = (
-    <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-      <button
-        type="button"
-        onClick={() => window.dispatchEvent(new CustomEvent('freedom_open_rant_and_burn'))}
-        className="hero-rant-burn-pill"
-        title="Đang bực tức, ức chế hoặc quá tải vì công việc? Bấm vào đây để xả giận và thiêu rụi thành tro bụi!"
-      >
-        <span className="rant-pill-flame-wrap">
-          <span className="rant-pill-flame" aria-hidden="true">🔥</span>
-        </span>
-        <span className="rant-pill-text-wrap">
-          <span className="rant-pill-text">
-            Đang ức chế &amp; quá tải? Ghé <strong className="rant-pill-highlight">Lò Đốt Muộn Phiền</strong> để thiêu rụi
-          </span>
-          <span className="rant-pill-arrow" aria-hidden="true">→</span>
-        </span>
-        <span className="rant-pill-badge">MỚI</span>
-      </button>
-
-      {/* Dải 4 Lối Khám Phá Nhanh */}
-      <div className="hero-new-features-strip">
-        {QUICK_FEATURE_PILLS.map((pill) => (
-          <button
-            key={pill.id}
-            type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent(pill.eventName))}
-            className={`hero-quick-feat-pill ${pill.className}`}
-            title={pill.title}
-          >
-            <span aria-hidden="true">{pill.icon}</span>
-            <span>{pill.label}</span>
-          </button>
-        ))}
+        <Link to="/wellness" className="hero-btn-secondary">
+          <i className="fa-solid fa-spa" style={{ marginRight: '8px' }}></i>
+          Khám phá Trạm Chữa Lành
+        </Link>
       </div>
     </div>
   );
@@ -409,7 +327,7 @@ export const HomePage = () => {
           }
           subtitle="Trút bỏ những áp lực deadline, kiệt sức và bất an nơi công sở. Bạn có thể chậm lại để nghỉ ngơi, nhưng đừng dừng lại. Chúng mình luôn ở đây cùng bạn!"
           actionsContent={homePrimaryCta}
-          extraContent={homeExtraActions}
+          extraContent={null}
         />
       )}
 
@@ -427,19 +345,6 @@ export const HomePage = () => {
             setIsViewStoryOpen(true);
           }}
         />
-
-        {/* 📊 Bức Tường Tâm Trạng Cộng Đồng & Lối vào Trạm Xả Stress */}
-        <CommunityMoodWall
-          onOpenWellness={() => window.dispatchEvent(new Event('freedom_open_wellness'))}
-        />
-
-        {/* 🌳 Cây Hồi Sinh & Tái Tạo Năng Lượng Cộng Đồng (Live Tree of Resilience) */}
-        <CommunityResilienceTree />
-
-        {/* ⚡ Module Truyền Động Lực Tương Tác Thực Thụ: Giving Some Efforts (Tiếp Sức & 2 Nhịp Nhạc Studio WAV) */}
-        <SectionErrorBoundary name="Giving Some Efforts">
-          <GivingSomeEffortsSection />
-        </SectionErrorBoundary>
 
         {/* Bộ lọc danh mục */}
         <CategoryFilter

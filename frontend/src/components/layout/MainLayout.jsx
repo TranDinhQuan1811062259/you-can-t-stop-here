@@ -10,7 +10,6 @@ import { CursorAura } from '../common/CursorAura';
 import { initGlobalSoundEffects, isSoundEnabled, toggleSound, playClickSound } from '../../utils/soundEffects';
 import { getActiveTheme, toggleTheme, applyTheme, getThemeSchedule, initThemeWatcher } from '../../utils/themeUtils';
 import { getActiveSeason } from '../../utils/seasonUtils';
-import { DraggableWritePostButton } from '../blog/DraggableWritePostButton';
 import { GoogleOneTapPrompt } from '../auth/GoogleOneTapPrompt';
 import { FloatingSmsAlert } from '../common/FloatingSmsAlert';
 import { SecurityBellNotification } from '../common/SecurityBellNotification';
@@ -59,11 +58,42 @@ export const MainLayout = () => {
   const [isAiPlayerActive, setIsAiPlayerActive] = useState(false);
   const [isPrefCollapsed, setIsPrefCollapsed] = useState(() => {
     try {
-      return localStorage.getItem('freedom_pref_collapsed') === 'true';
+      return localStorage.getItem('freedom_pref_collapsed') !== 'false';
+    } catch (e) {
+      return true;
+    }
+  });
+  const [showDeskPet, setShowDeskPet] = useState(() => {
+    try {
+      return localStorage.getItem('freedom_optin_desk_pet') === 'true';
     } catch (e) {
       return false;
     }
   });
+  const [showFestiveMascot, setShowFestiveMascot] = useState(() => {
+    try {
+      return localStorage.getItem('freedom_optin_festive_mascot') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+  const [showPwaBanner, setShowPwaBanner] = useState(() => {
+    try {
+      return localStorage.getItem('freedom_optin_pwa_pill') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const handleToggleOptInWidget = (storageKey, setter, currentValue) => {
+    const next = !currentValue;
+    playClickSound();
+    setter(next);
+    try {
+      localStorage.setItem(storageKey, String(next));
+      window.dispatchEvent(new CustomEvent('freedom_fab_pos_changed', { detail: { type: storageKey } }));
+    } catch (e) {}
+  };
 
   // Toạ độ & kéo thả tự do như nút Chat & Viết tâm sự & Sự kiện
   const [prefPos, setPrefPos] = useState(() => {
@@ -373,11 +403,6 @@ export const MainLayout = () => {
 
       <Footer />
 
-      {/* Nút Viết Tâm Sự Nổi Kéo Thả Di Dời Tự Do (Draggable FAB) - Tự động chống va chạm & Đè nút Tin nhắn */}
-      {isAuthenticated && (
-        <DraggableWritePostButton onClick={() => setIsCreateOpen(true)} />
-      )}
-
       {/* Cụm Tiện Ích Tùy Chỉnh Nổi To Rõ Ở Góc Màn Hình (Chế độ Ngày/Đêm, Hẹn Giờ & Âm thanh) */}
       <div
         className={`floating-quick-preferences ${isAiPlayerActive ? 'player-active' : ''} ${isPrefCollapsed ? 'is-collapsed' : ''}`}
@@ -521,6 +546,40 @@ export const MainLayout = () => {
               </span>
             </button>
 
+            {/* Các widget trang trí / thông báo nổi (Mặc định TẮT - Opt-in tại Quick Preferences) */}
+            <button
+              type="button"
+              className={`quick-pref-btn ${showDeskPet ? 'sound-on' : 'sound-off'}`}
+              onClick={() => handleToggleOptInWidget('freedom_optin_desk_pet', setShowDeskPet, showDeskPet)}
+              title="Bật/tắt bé Thú cưng bàn làm việc (Desk Companion Pet)"
+              aria-pressed={showDeskPet}
+            >
+              <span className="pref-icon" aria-hidden="true">🐱</span>
+              <span className="pref-label">{showDeskPet ? 'Thú cưng: Bật' : 'Thú cưng'}</span>
+            </button>
+
+            <button
+              type="button"
+              className={`quick-pref-btn ${showFestiveMascot ? 'sound-on' : 'sound-off'}`}
+              onClick={() => handleToggleOptInWidget('freedom_optin_festive_mascot', setShowFestiveMascot, showFestiveMascot)}
+              title="Bật/tắt linh vật lễ hội góc màn hình"
+              aria-pressed={showFestiveMascot}
+            >
+              <span className="pref-icon" aria-hidden="true">🎊</span>
+              <span className="pref-label">{showFestiveMascot ? 'Linh vật: Bật' : 'Linh vật'}</span>
+            </button>
+
+            <button
+              type="button"
+              className={`quick-pref-btn ${showPwaBanner ? 'sound-on' : 'sound-off'}`}
+              onClick={() => handleToggleOptInWidget('freedom_optin_pwa_pill', setShowPwaBanner, showPwaBanner)}
+              title="Bật/tắt nút nổi gợi ý cài đặt ứng dụng PWA"
+              aria-pressed={showPwaBanner}
+            >
+              <span className="pref-icon" aria-hidden="true">📲</span>
+              <span className="pref-label">{showPwaBanner ? 'Banner App: Bật' : 'Banner App'}</span>
+            </button>
+
             {/* Nút Thu Gọn Tiện Ích */}
             <button
               type="button"
@@ -584,21 +643,25 @@ export const MainLayout = () => {
       {/* Floating AI Audio Player (Bản đọc A.I cảm xúc & nhân bản giọng nói chính chủ) */}
       <FloatingAiAudioPlayer />
 
-      {/* Floating Festive Mascot Widget (Lá cờ 30/4 bay dẻo dẻo, 2/9, 8/3 góc màn hình) */}
-      <FloatingFestiveMascot
-        onOpenShowcase={(ev) =>
-          window.dispatchEvent(new CustomEvent('freedom_open_festive_showcase', { detail: ev }))
-        }
-      />
+      {/* Floating Festive Mascot Widget (Chỉ hiện khi người dùng bật Opt-in) */}
+      {showFestiveMascot && (
+        <FloatingFestiveMascot
+          onOpenShowcase={(ev) =>
+            window.dispatchEvent(new CustomEvent('freedom_open_festive_showcase', { detail: ev }))
+          }
+        />
+      )}
 
-      {/* AssistiveTouch Floating Chat Widget (Không lấn layout, hiển thị gọn gàng ở góc màn hình) */}
-      {isAuthenticated && <AssistiveChatWidget />}
+      {/* Quick Action Dock góc phải dưới (Hợp nhất Viết tâm sự + Chat) */}
+      {isAuthenticated && (
+        <AssistiveChatWidget onOpenCreatePost={() => setIsCreateOpen(true)} />
+      )}
 
-      {/* PWA App Install Banner & Modal (Cho Smartphone, Tablet, PC, Mac) */}
-      <PwaInstallPrompt />
+      {/* PWA App Install Banner (Banner nổi mặc định TẮT, Modal hướng dẫn vẫn mở khi bấm từ menu) */}
+      <PwaInstallPrompt showFloatingBanner={showPwaBanner} />
 
-      {/* Bé Thú Cưng Bàn Làm Việc (Desk Companion Pet Therapy 🐱) */}
-      <DeskCompanionPet />
+      {/* Bé Thú Cưng Bàn Làm Việc (Chỉ hiện khi người dùng bật Opt-in) */}
+      {showDeskPet && <DeskCompanionPet />}
 
       {/* Nút Cuộn Nhanh Lên Đầu Trang (Back to Top) */}
       <BackToTopButton />

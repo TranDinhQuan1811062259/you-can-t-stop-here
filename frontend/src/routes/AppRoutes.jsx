@@ -9,6 +9,7 @@ import { MusicPage } from '../pages/MusicPage';
 
 // Tối ưu Code-Splitting cho các trang phụ, giữ HomePage, CategoryPage & MusicPage tải sẵn chống nháy Suspense
 const PostDetailPage = lazy(() => import('../pages/PostDetailPage').then((m) => ({ default: m.PostDetailPage })));
+const WellnessPage = lazy(() => import('../pages/WellnessPage').then((m) => ({ default: m.WellnessPage })));
 const UserProfilePage = lazy(() => import('../pages/UserProfilePage').then((m) => ({ default: m.UserProfilePage })));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
 const AdminSecurityConsolePage = lazy(() => import('../pages/AdminSecurityConsolePage').then((m) => ({ default: m.AdminSecurityConsolePage })));
@@ -40,6 +41,7 @@ export const AppRoutes = () => {
         <Route path="/admin-portal" element={<AdminSecurityConsolePage />} />
         <Route path="/" element={<MainLayout />}>
           <Route index element={<HomePage />} />
+          <Route path="wellness" element={<WellnessPage />} />
           <Route path="music" element={<MusicPage />} />
           <Route path="music/:themeId" element={<MusicPage />} />
           <Route path="post/:slug" element={<PostDetailPage />} />
