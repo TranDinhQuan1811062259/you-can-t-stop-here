@@ -17,7 +17,7 @@ import { SecurityBellNotification } from '../common/SecurityBellNotification';
 import { FloatingAiAudioPlayer } from '../blog/FloatingAiAudioPlayer';
 import { FloatingFestiveMascot } from '../common/FloatingFestiveMascot';
 import { BackToTopButton } from '../common/BackToTopButton';
-import { WinterSnowAtmosphere } from '../music/WinterSnowAtmosphere';
+import { WinterSnowOverlay } from '../common/WinterSnowOverlay';
 import { PageTransitionWrapper } from '../common/PageTransitionWrapper';
 
 // Tối ưu Code-Splitting: Lazy load các modal toàn cục để giảm kích thước bundle MainLayout
@@ -389,14 +389,12 @@ export const MainLayout = () => {
       {/* Hiệu ứng hạt ánh sáng & cực quang động linh hoạt phía sau */}
       <AmbientBackground />
 
-      {/* Hiệu ứng mùa đông tuyết rơi lãng mạn nhẹ nhàng (Tự giảm tải trên mobile & tôn trọng reduced-motion) */}
-      {activeSeason.id === 'winter' && (
-        <WinterSnowAtmosphere density={30} speed={0.55} enabled={true} />
-      )}
+      {/* Hiệu ứng Đông Ấm Áp: Bông tuyết li ti 60fps & sương mùa đông nhẹ (Ẩn khi reduced-motion) */}
+      {activeSeason.id === 'winter' && <WinterSnowOverlay enabled={true} />}
 
       <Header />
 
-      <main style={{ flexGrow: 1, position: 'relative', zIndex: 1, overflowX: 'clip' }}>
+      <main style={{ flexGrow: 1, position: 'relative', overflowX: 'clip' }}>
         <PageTransitionWrapper>
           <Suspense fallback={<RouteLoadingFallback />}>
             <Outlet />

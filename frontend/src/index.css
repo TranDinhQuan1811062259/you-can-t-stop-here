@@ -25954,5 +25954,288 @@ body.theme-light .hero-quick-feat-pill.quick-pill-wax:hover,
   }
 }
 
+/* ========================================================
+   11. WINTER COZY ATMOSPHERE ("ĐÔNG ẤM ÁP") & 60FPS SNOWFALL
+   - Chế độ Ngày: Đỉnh trời sương giá (#dbeafe -> #e0f2fe) + tuyết ấm (#f8fafc -> #fffaf3) + hổ phách dịu
+   - Chế độ Đêm: Đêm đông sâu (#070b16 -> #0f172a -> #172038) + quầng lửa hổ phách từ chân Hero
+   ======================================================== */
+
+/* Nền trang tổng thể Đông Ấm Áp */
+body.theme-light .app-root-layout.season-winter:not(.user-theme-custom),
+.app-root-layout.mode-light.season-winter:not(.user-theme-custom),
+[data-theme="light"] .app-root-layout.season-winter:not(.user-theme-custom) {
+  background:
+    radial-gradient(ellipse 78% 40% at 50% 0%, rgba(219, 234, 254, 0.78) 0%, transparent 66%),
+    radial-gradient(ellipse 58% 36% at 50% 16%, rgba(251, 191, 36, 0.1) 0%, transparent 64%),
+    linear-gradient(180deg, #dbeafe 0%, #e0f2fe 16%, #f8fafc 46%, #fffaf3 100%) !important;
+}
+
+body.theme-dark .app-root-layout.season-winter:not(.user-theme-custom),
+.app-root-layout.mode-dark.season-winter:not(.user-theme-custom),
+[data-theme="dark"] .app-root-layout.season-winter:not(.user-theme-custom) {
+  background:
+    radial-gradient(ellipse 76% 42% at 50% 0%, rgba(56, 189, 248, 0.08) 0%, transparent 64%),
+    radial-gradient(ellipse 62% 36% at 50% 24%, rgba(245, 158, 11, 0.07) 0%, transparent 65%),
+    linear-gradient(180deg, #070b16 0%, #0f172a 48%, #172038 100%) !important;
+}
+
+/* Chế Độ Ngày — Hero Banner & Trang Chủ Đông Ấm Áp */
+body.theme-light .season-winter .hero-banner,
+.app-root-layout.mode-light.season-winter .hero-banner,
+[data-theme="light"] .season-winter .hero-banner,
+body.theme-light .season-winter .hero-banner.category-hero-banner.topic-home,
+.app-root-layout.mode-light.season-winter .hero-banner.category-hero-banner.topic-home,
+[data-theme="light"] .season-winter .hero-banner.category-hero-banner.topic-home {
+  background:
+    radial-gradient(ellipse 56% 52% at 50% 48%, rgba(251, 191, 36, 0.16) 0%, transparent 66%),
+    radial-gradient(ellipse 46% 42% at 58% 42%, rgba(244, 114, 182, 0.06) 0%, transparent 64%),
+    linear-gradient(180deg, #dbeafe 0%, #e0f2fe 28%, #f8fafc 68%, #fffaf3 100%) !important;
+  border-top: 1px solid rgba(186, 230, 253, 0.65) !important;
+  border-bottom: 1px solid rgba(186, 230, 253, 0.72) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.94),
+    0 14px 34px -14px rgba(14, 165, 233, 0.14) !important;
+}
+
+/* Chế Độ Ngày — Độ tương phản chữ & kính mờ viền sáng Đông Ấm Áp */
+body.theme-light .season-winter .hero-banner .hero-title,
+.app-root-layout.mode-light.season-winter .hero-banner .hero-title,
+[data-theme="light"] .season-winter .hero-banner .hero-title {
+  color: #0c4a6e !important;
+  -webkit-text-fill-color: #0c4a6e !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9) !important;
+}
+
+body.theme-light .season-winter .hero-banner .hero-title .hero-title-accent,
+.app-root-layout.mode-light.season-winter .hero-banner .hero-title .hero-title-accent,
+[data-theme="light"] .season-winter .hero-banner .hero-title .hero-title-accent {
+  color: #0284c7 !important;
+  -webkit-text-fill-color: #0284c7 !important;
+}
+
+body.theme-light .season-winter .hero-banner .hero-subtitle,
+.app-root-layout.mode-light.season-winter .hero-banner .hero-subtitle,
+[data-theme="light"] .season-winter .hero-banner .hero-subtitle {
+  color: #334155 !important;
+}
+
+body.theme-light .season-winter .header-dashboard-bar,
+.app-root-layout.mode-light.season-winter .header-dashboard-bar,
+[data-theme="light"] .season-winter .header-dashboard-bar {
+  background: rgba(248, 250, 252, 0.84) !important;
+  border-bottom-color: rgba(186, 230, 253, 0.7) !important;
+}
+
+body.theme-light .season-winter .dashboard-3d-item,
+.app-root-layout.mode-light.season-winter .dashboard-3d-item,
+[data-theme="light"] .season-winter .dashboard-3d-item,
+body.theme-light .season-winter .hero-banner.category-hero-banner.topic-home .hero-tag-pill,
+.app-root-layout.mode-light.season-winter .hero-banner.category-hero-banner.topic-home .hero-tag-pill,
+[data-theme="light"] .season-winter .hero-banner.category-hero-banner.topic-home .hero-tag-pill,
+body.theme-light .season-winter .hero-banner .category-spatial-rail,
+.app-root-layout.mode-light.season-winter .hero-banner .category-spatial-rail,
+[data-theme="light"] .season-winter .hero-banner .category-spatial-rail,
+body.theme-light .season-winter .hero-banner .hero-btn-secondary,
+.app-root-layout.mode-light.season-winter .hero-banner .hero-btn-secondary,
+[data-theme="light"] .season-winter .hero-banner .hero-btn-secondary {
+  background: rgba(255, 255, 255, 0.78) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(186, 230, 253, 0.7) !important;
+  color: #0f172a;
+}
+
+body.theme-light .season-winter .hero-banner.category-hero-banner.topic-home .hero-tag-pill,
+.app-root-layout.mode-light.season-winter .hero-banner.category-hero-banner.topic-home .hero-tag-pill,
+[data-theme="light"] .season-winter .hero-banner.category-hero-banner.topic-home .hero-tag-pill {
+  color: #0369a1 !important;
+}
+
+body.theme-light .season-winter .post-card:not(.has-atmosphere-card),
+.app-root-layout.mode-light.season-winter .post-card:not(.has-atmosphere-card),
+[data-theme="light"] .season-winter .post-card:not(.has-atmosphere-card) {
+  background: rgba(255, 255, 255, 0.78) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(186, 230, 253, 0.7) !important;
+  box-shadow:
+    0 10px 26px -8px rgba(14, 165, 233, 0.11),
+    0 4px 12px rgba(251, 191, 36, 0.05) !important;
+}
+
+body.theme-light .season-winter .post-card:not(.has-atmosphere-card) .card-content,
+.app-root-layout.mode-light.season-winter .post-card:not(.has-atmosphere-card) .card-content,
+[data-theme="light"] .season-winter .post-card:not(.has-atmosphere-card) .card-content {
+  background: transparent !important;
+}
+
+/* Chế Độ Đêm — Hero Banner & Không Gian Lò Sưởi Mùa Đông */
+body.theme-dark .season-winter .hero-banner,
+.app-root-layout.mode-dark.season-winter .hero-banner,
+[data-theme="dark"] .season-winter .hero-banner,
+body.theme-dark .season-winter .hero-banner.category-hero-banner,
+.app-root-layout.mode-dark.season-winter .hero-banner.category-hero-banner,
+[data-theme="dark"] .season-winter .hero-banner.category-hero-banner {
+  background:
+    radial-gradient(ellipse 68% 60% at 50% 100%, rgba(245, 158, 11, 0.12) 0%, transparent 68%),
+    radial-gradient(ellipse 52% 46% at 50% 48%, rgba(245, 158, 11, 0.07) 0%, transparent 65%),
+    radial-gradient(ellipse 72% 40% at 50% 0%, rgba(56, 189, 248, 0.08) 0%, transparent 64%),
+    linear-gradient(180deg, #070b16 0%, #0f172a 54%, #172038 100%) !important;
+  border-top: 1px solid rgba(148, 163, 184, 0.14) !important;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.24) !important;
+  box-shadow:
+    0 14px 36px rgba(3, 7, 18, 0.55),
+    inset 0 1px 0 rgba(224, 242, 254, 0.08),
+    inset 0 -14px 34px -18px rgba(245, 158, 11, 0.15) !important;
+}
+
+body.theme-dark .season-winter .hero-banner .hero-title,
+.app-root-layout.mode-dark.season-winter .hero-banner .hero-title,
+[data-theme="dark"] .season-winter .hero-banner .hero-title {
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.5) !important;
+}
+
+body.theme-dark .season-winter .hero-banner .hero-title .hero-title-accent,
+.app-root-layout.mode-dark.season-winter .hero-banner .hero-title .hero-title-accent,
+[data-theme="dark"] .season-winter .hero-banner .hero-title .hero-title-accent {
+  color: #38bdf8 !important;
+  -webkit-text-fill-color: #38bdf8 !important;
+}
+
+body.theme-dark .season-winter .hero-banner .hero-subtitle,
+.app-root-layout.mode-dark.season-winter .hero-banner .hero-subtitle,
+[data-theme="dark"] .season-winter .hero-banner .hero-subtitle {
+  color: #cbd5e1 !important;
+}
+
+body.theme-dark .season-winter .post-card:not(.has-atmosphere-card),
+.app-root-layout.mode-dark.season-winter .post-card:not(.has-atmosphere-card),
+[data-theme="dark"] .season-winter .post-card:not(.has-atmosphere-card) {
+  background: rgba(20, 30, 48, 0.84) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(148, 163, 184, 0.18) !important;
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.48) !important;
+}
+
+body.theme-dark .season-winter .post-card:not(.has-atmosphere-card) .card-content,
+.app-root-layout.mode-dark.season-winter .post-card:not(.has-atmosphere-card) .card-content,
+[data-theme="dark"] .season-winter .post-card:not(.has-atmosphere-card) .card-content {
+  background: transparent !important;
+}
+
+/* Lớp phủ bông tuyết li ti & sương mùa đông 60fps (GPU transform3d) */
+.winter-snow-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+  user-select: none;
+}
+
+.winter-mist-veil {
+  position: absolute;
+  top: 0;
+  left: -6%;
+  right: -6%;
+  height: 44vh;
+  pointer-events: none;
+  will-change: transform;
+  animation: winterMistFloat 26s ease-in-out infinite alternate;
+}
+
+body.theme-light .winter-mist-veil,
+.mode-light .winter-mist-veil,
+[data-theme="light"] .winter-mist-veil {
+  background:
+    radial-gradient(ellipse 70% 55% at 28% 8%, rgba(224, 242, 254, 0.42) 0%, transparent 72%),
+    radial-gradient(ellipse 65% 50% at 74% 12%, rgba(255, 250, 243, 0.35) 0%, transparent 74%);
+}
+
+body.theme-dark .winter-mist-veil,
+.mode-dark .winter-mist-veil,
+[data-theme="dark"] .winter-mist-veil {
+  background:
+    radial-gradient(ellipse 70% 55% at 30% 6%, rgba(186, 230, 253, 0.06) 0%, transparent 72%),
+    radial-gradient(ellipse 60% 48% at 72% 14%, rgba(245, 158, 11, 0.04) 0%, transparent 74%);
+}
+
+.winter-snow-flake {
+  position: absolute;
+  top: -14px;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform, opacity;
+  opacity: var(--flake-opacity, 0.55);
+  animation-name: winterSnowFall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.winter-snow-flake.is-soft-flake {
+  filter: blur(0.4px);
+}
+
+/* Chế Độ Ngày: Bông tuyết trắng ngọc / xanh băng nhạt có bóng đổ mờ nhẹ để rõ trên nền sáng */
+body.theme-light .winter-snow-flake,
+.mode-light .winter-snow-flake,
+[data-theme="light"] .winter-snow-flake {
+  background: radial-gradient(circle, #ffffff 0%, #dbeafe 68%, rgba(147, 197, 253, 0.25) 100%);
+  box-shadow:
+    0 1px 4px rgba(14, 116, 144, 0.26),
+    0 0 2px rgba(59, 130, 246, 0.22);
+}
+
+/* Chế Độ Đêm: Bông tuyết trắng phát sáng dịu (opacity 0.35–0.75) */
+body.theme-dark .winter-snow-flake,
+.mode-dark .winter-snow-flake,
+[data-theme="dark"] .winter-snow-flake {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.96) 0%, rgba(224, 242, 254, 0.72) 65%, rgba(224, 242, 254, 0) 100%);
+  box-shadow: 0 0 6px rgba(224, 242, 254, 0.45);
+}
+
+@keyframes winterSnowFall {
+  0% {
+    transform: translate3d(var(--drift-start, 0px), -12px, 0) scale(0.9);
+    opacity: 0;
+  }
+  8% {
+    opacity: var(--flake-opacity, 0.55);
+  }
+  50% {
+    transform: translate3d(var(--drift-mid, 16px), 52vh, 0) scale(1);
+    opacity: var(--flake-opacity, 0.55);
+  }
+  92% {
+    opacity: var(--flake-opacity, 0.55);
+  }
+  100% {
+    transform: translate3d(var(--drift-end, -8px), 106vh, 0) scale(0.85);
+    opacity: 0;
+  }
+}
+
+@keyframes winterMistFloat {
+  0% {
+    transform: translate3d(-1.5%, 0, 0);
+  }
+  100% {
+    transform: translate3d(1.5%, 6px, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .winter-snow-overlay,
+  .winter-snow-flake,
+  .winter-mist-veil {
+    display: none !important;
+    animation: none !important;
+  }
+}
+
+
 
 

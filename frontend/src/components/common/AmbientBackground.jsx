@@ -130,6 +130,8 @@ export const AmbientBackground = ({ profileLayout }) => {
     });
   }, [activeSeason.id, activeFestiveEvent?.id, activeFestiveEvent?.particles, isBursting]);
 
+  const shouldRenderSeasonalFlakes = Boolean(activeFestiveEvent) || activeSeason.id !== 'winter';
+
   if (effect === 'none') return null;
 
   return (
@@ -144,8 +146,9 @@ export const AmbientBackground = ({ profileLayout }) => {
       <div className="ambient-orb orb-4"></div>
       <div className="ambient-mesh-glow"></div>
 
-      {/* Hiệu ứng hạt rơi sự kiện lễ hội hoặc 4 mùa thời tiết tự nhiên (Chuyển đổi chậm rãi êm dịu) */}
-      <div className={`seasonal-particles-wrap ${isCrossFading ? 'is-cross-fading' : ''}`}>
+      {/* Hiệu ứng hạt rơi sự kiện lễ hội hoặc Xuân/Hạ/Thu (Đông Ấm Áp dùng WinterSnowOverlay GPU chuyên biệt) */}
+      {shouldRenderSeasonalFlakes && (
+        <div className={`seasonal-particles-wrap ${isCrossFading ? 'is-cross-fading' : ''}`}>
         {seasonalFlakes.map((flake) => (
           <span
             key={flake.id}
@@ -169,7 +172,8 @@ export const AmbientBackground = ({ profileLayout }) => {
             )}
           </span>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
