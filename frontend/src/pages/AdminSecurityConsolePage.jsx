@@ -1,8 +1,32 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { playClickSound } from '../utils/soundEffects';
+
+const readStoredAdminToken = () => {
+  try {
+    return sessionStorage.getItem('adminToken') || sessionStorage.getItem('freedom_admin_token') || '';
+  } catch (_) {
+    return '';
+  }
+};
+
+const writeStoredAdminToken = (token) => {
+  try {
+    if (token) {
+      sessionStorage.setItem('adminToken', token);
+      sessionStorage.setItem('freedom_admin_token', token);
+    }
+  } catch (_) {}
+};
+
+const clearStoredAdminToken = () => {
+  try {
+    sessionStorage.removeItem('adminToken');
+    sessionStorage.removeItem('freedom_admin_token');
+  } catch (_) {}
+};
 
 export const AdminSecurityConsolePage = () => {
   const navigate = useNavigate();
@@ -18,20 +42,56 @@ export const AdminSecurityConsolePage = () => {
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [logsError, setLogsError] = useState('');
 
-  // Trạng thái mở khóa Mã PIN Quản Trị (x-admin-token lưu trong sessionStorage)
-  const [adminToken, setAdminToken] = useState(() => {
-    try {
-      return sessionStorage.getItem('freedom_admin_token') || '';
-    } catch (_) {
-      return '';
-    }
-  });
+  // Trạng thái mở khóa 2 lớp: PIN (Lớp 1) -> Email OTP (Lớp 2) -> adminToken (2h)
+  const [adminToken, setAdminToken] = useState(() => readStoredAdminToken());
+  const [gateStep, setGateStep] = useState('pin'); // 'pin' | 'otp'
   const [pinInput, setPinInput] = useState('');
+  const [verifiedPin, setVerifiedPin] = useState('');
   const [isVerifyingPin, setIsVerifyingPin] = useState(false);
   const [pinError, setPinError] = useState('');
 
+  const [otpInput, setOtpInput] = useState('');
+  const [otpEmail, setOtpEmail] = useState('');
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isResendingOtp, setIsResendingOtp] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [otpError, setOtpError] = useState('');
+  const [otpNotice, setOtpNotice] = useState('');
+  const [unlockToast, setUnlockToast] = useState('');
+
+  const otpInputRef = useRef(null);
+  const unlockToastTimerRef = useRef(null);
+
   const isAdminAuthenticated = Boolean(user && user.role === 'admin');
   const isPinUnlocked = Boolean(isAdminAuthenticated && adminToken);
+
+  useEffect(() => {
+    return () => {
+      if (unlockToastTimerRef.current) {
+        clearTimeout(unlockToastTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Đếm ngược cooldown nút Gửi lại mã OTP (Bước 2)
+  useEffect(() => {
+    if (resendCooldown <= 0) return undefined;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  // Focus tự động vào ô OTP khi chuyển sang Bước 2
+  useEffect(() => {
+    if (gateStep === 'otp' && !isPinUnlocked) {
+      const raf = requestAnimationFrame(() => {
+        otpInputRef.current?.focus();
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+    return undefined;
+  }, [gateStep, isPinUnlocked]);
 
   // Ghi nhận âm thầm Telemetry lượt truy cập vào /admin-portal
   useEffect(() => {
@@ -42,15 +102,18 @@ export const AdminSecurityConsolePage = () => {
     } catch (_) {}
   }, []);
 
-  // Lắng nghe sự kiện Backend yêu cầu mở khóa lại Mã PIN Quản Trị (403 requireAdminPin)
+  // Lắng nghe sự kiện Backend yêu cầu mở khóa lại Cổng Admin 2 lớp (403 requireAdminPin)
   useEffect(() => {
     const handlePinRequired = (e) => {
-      try {
-        sessionStorage.removeItem('freedom_admin_token');
-      } catch (_) {}
+      clearStoredAdminToken();
       setAdminToken('');
+      setGateStep('pin');
+      setVerifiedPin('');
+      setOtpInput('');
+      setOtpError('');
+      setOtpNotice('');
       setLogs([]);
-      setPinError(e?.detail?.message || 'Phiên mở khóa PIN đã hết hạn. Vui lòng nhập lại Mã PIN Quản Trị!');
+      setPinError(e?.detail?.message || 'Phiên mở khóa Admin đã hết hạn. Vui lòng xác thực lại Mã PIN Quản Trị!');
     };
     window.addEventListener('freedom_admin_pin_required', handlePinRequired);
     return () => window.removeEventListener('freedom_admin_pin_required', handlePinRequired);
@@ -60,12 +123,19 @@ export const AdminSecurityConsolePage = () => {
   useEffect(() => {
     if (!isAdminAuthenticated) {
       setAdminToken('');
+      setGateStep('pin');
       setPinInput('');
+      setVerifiedPin('');
       setPinError('');
+      setOtpInput('');
+      setOtpEmail('');
+      setOtpError('');
+      setOtpNotice('');
+      setResendCooldown(0);
     }
   }, [isAdminAuthenticated]);
 
-  // Tải danh sách Audit Logs nếu đã đăng nhập Admin & đã mở khóa PIN (có x-admin-token)
+  // Tải danh sách Audit Logs nếu đã đăng nhập Admin & đã mở khóa 2 lớp (có x-admin-token)
   const fetchSecurityLogs = useCallback(async () => {
     if (!isPinUnlocked) return;
     setIsLoadingLogs(true);
@@ -77,11 +147,10 @@ export const AdminSecurityConsolePage = () => {
     } catch (err) {
       console.warn('Lỗi lấy Security Logs:', err);
       if (err?.requireAdminPin) {
-        try {
-          sessionStorage.removeItem('freedom_admin_token');
-        } catch (_) {}
+        clearStoredAdminToken();
         setAdminToken('');
-        setPinError(err.message || 'Vui lòng xác thực Mã PIN Quản Trị!');
+        setGateStep('pin');
+        setPinError(err.message || 'Vui lòng xác thực lại Cổng Quản Trị 2 lớp!');
       } else {
         setLogsError(err.response?.data?.message || err.message || 'Không thể tải nhật ký an ninh do lỗi kết nối mạng.');
       }
@@ -96,7 +165,7 @@ export const AdminSecurityConsolePage = () => {
     }
   }, [isPinUnlocked, fetchSecurityLogs]);
 
-  // Xác thực Mã PIN Quản Trị -> nhận adminToken (2h) lưu vào sessionStorage
+  // Lớp 1: Xác thực Mã PIN Quản Trị -> gửi Email OTP 6 số
   const handleVerifyPin = async (e) => {
     e.preventDefault();
     const cleanPin = pinInput.trim();
@@ -104,18 +173,30 @@ export const AdminSecurityConsolePage = () => {
 
     setIsVerifyingPin(true);
     setPinError('');
+    setOtpError('');
+    setOtpNotice('');
     playClickSound();
 
     try {
       const res = await apiClient.post('/admin/verify-pin', { pin: cleanPin });
-      const receivedAdminToken = res?.adminToken || res?.data?.adminToken || '';
-      if (!receivedAdminToken) {
-        throw new Error(res?.message || 'Không nhận được adminToken từ máy chủ.');
+      const targetEmail = res?.email || res?.data?.email || user?.email || '';
+      if (res?.requireOtp || res?.data?.requireOtp) {
+        setVerifiedPin(cleanPin);
+        setOtpEmail(targetEmail);
+        setOtpInput('');
+        setGateStep('otp');
+        setResendCooldown(45);
+        setOtpNotice(res?.message || `Đã gửi mã OTP 6 số đến ${targetEmail}`);
+        return;
       }
-      sessionStorage.setItem('freedom_admin_token', receivedAdminToken);
-      setAdminToken(receivedAdminToken);
+
+      const directToken = res?.adminToken || res?.data?.adminToken || '';
+      if (!directToken) {
+        throw new Error(res?.message || 'Không nhận được phản hồi OTP từ máy chủ.');
+      }
+      writeStoredAdminToken(directToken);
+      setAdminToken(directToken);
       setPinInput('');
-      setPinError('');
     } catch (err) {
       setPinError(err?.response?.data?.message || err?.message || 'Mã PIN Quản Trị không chính xác!');
     } finally {
@@ -123,13 +204,127 @@ export const AdminSecurityConsolePage = () => {
     }
   };
 
+  // Lớp 2: Xác thực Mã OTP 6 số từ Email -> nhận adminToken (2h)
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    const cleanOtp = otpInput.replace(/\s+/g, '').trim();
+    if (cleanOtp.length !== 6 || isVerifyingOtp) {
+      setOtpError('Vui lòng nhập đầy đủ 6 chữ số OTP.');
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    setOtpError('');
+    setOtpNotice('');
+    playClickSound();
+
+    try {
+      const res = await apiClient.post('/admin/verify-admin-otp', { otp: cleanOtp });
+      const receivedAdminToken = res?.adminToken || res?.data?.adminToken || '';
+      if (!receivedAdminToken) {
+        throw new Error(res?.message || 'Không nhận được adminToken từ máy chủ.');
+      }
+
+      writeStoredAdminToken(receivedAdminToken);
+      setAdminToken(receivedAdminToken);
+      setPinInput('');
+      setVerifiedPin('');
+      setOtpInput('');
+      setOtpError('');
+      setOtpNotice('');
+      setGateStep('pin');
+      setResendCooldown(0);
+
+      setUnlockToast('Mở khóa Quản Trị thành công');
+      if (unlockToastTimerRef.current) clearTimeout(unlockToastTimerRef.current);
+      unlockToastTimerRef.current = setTimeout(() => {
+        setUnlockToast('');
+        unlockToastTimerRef.current = null;
+      }, 4000);
+    } catch (err) {
+      setOtpError(err?.response?.data?.message || err?.message || 'Mã OTP không chính xác hoặc đã hết hạn!');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  const handlePasteOtp = async () => {
+    playClickSound();
+    setOtpError('');
+    try {
+      if (navigator?.clipboard?.readText) {
+        const clipText = await navigator.clipboard.readText();
+        const digits = String(clipText || '').replace(/\D/g, '').slice(0, 6);
+        if (digits) {
+          setOtpInput(digits);
+          setOtpNotice('Đã dán mã OTP từ khay nhớ tạm.');
+          otpInputRef.current?.focus();
+          return;
+        }
+      }
+      setOtpNotice('Không tìm thấy mã 6 số trong khay nhớ tạm — vui lòng nhấn Ctrl+V vào ô OTP.');
+      otpInputRef.current?.focus();
+    } catch (_) {
+      setOtpNotice('Trình duyệt chặn đọc clipboard tự động — vui lòng bấm Ctrl+V vào ô OTP.');
+      otpInputRef.current?.focus();
+    }
+  };
+
+  const handleResendAdminOtp = async () => {
+    if (isResendingOtp || resendCooldown > 0) return;
+    if (!verifiedPin) {
+      setGateStep('pin');
+      setPinError('Vui lòng nhập lại Mã PIN để gửi mã OTP mới.');
+      return;
+    }
+
+    setIsResendingOtp(true);
+    setOtpError('');
+    setOtpNotice('');
+    playClickSound();
+
+    try {
+      const res = await apiClient.post('/admin/verify-pin', { pin: verifiedPin });
+      const targetEmail = res?.email || res?.data?.email || otpEmail || user?.email || '';
+      setOtpEmail(targetEmail);
+      setOtpInput('');
+      setResendCooldown(45);
+      setOtpNotice(`Đã gửi lại mã OTP 6 số mới tới ${targetEmail}.`);
+      otpInputRef.current?.focus();
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Không thể gửi lại mã OTP lúc này.';
+      setOtpError(msg);
+      if (err?.status === 401 || err?.status === 429) {
+        setGateStep('pin');
+        setVerifiedPin('');
+        setPinError(msg);
+      }
+    } finally {
+      setIsResendingOtp(false);
+    }
+  };
+
+  const handleBackToPinStep = () => {
+    playClickSound();
+    setGateStep('pin');
+    setVerifiedPin('');
+    setOtpInput('');
+    setOtpError('');
+    setOtpNotice('');
+    setResendCooldown(0);
+  };
+
   const handleLockAdminPin = () => {
     playClickSound();
-    try {
-      sessionStorage.removeItem('freedom_admin_token');
-    } catch (_) {}
+    clearStoredAdminToken();
     setAdminToken('');
+    setGateStep('pin');
     setPinInput('');
+    setVerifiedPin('');
+    setOtpInput('');
+    setOtpError('');
+    setOtpNotice('');
+    setUnlockToast('');
     setLogs([]);
   };
 
@@ -159,7 +354,7 @@ export const AdminSecurityConsolePage = () => {
         if (typeof setToken === 'function') setToken(data.token);
         if (typeof setUser === 'function') setUser(adminObj);
 
-        setSuccessMessage('✓ Đăng nhập Console thành công! Đang tải nhật ký...');
+        setSuccessMessage('✓ Đăng nhập Console thành công! Tiếp tục mở khóa 2 lớp...');
         setTimeout(() => {
           setSuccessMessage('');
         }, 1500);
@@ -198,6 +393,34 @@ export const AdminSecurityConsolePage = () => {
         padding: '2rem 1.5rem',
       }}
     >
+      {unlockToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            zIndex: 99999,
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.96), rgba(5, 150, 105, 0.96))',
+            color: '#ffffff',
+            padding: '12px 18px',
+            borderRadius: '12px',
+            border: '1px solid rgba(110, 231, 183, 0.65)',
+            boxShadow: '0 14px 32px rgba(0, 0, 0, 0.45)',
+            fontSize: '0.86rem',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          <span>✓</span>
+          <span>{unlockToast}</span>
+        </div>
+      )}
+
       <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
         {/* Header Console */}
         <div
@@ -219,7 +442,7 @@ export const AdminSecurityConsolePage = () => {
                 SECURITY CONSOLE &bull; ADMIN ISOLATION
               </h1>
               <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#94a3b8' }}>
-                Hệ thống giám sát Telemetry, bẫy bảo mật Brevo &amp; cô lập cổng Quản Trị Viên
+                Hệ thống giám sát Telemetry, bẫy bảo mật Brevo &amp; cổng Quản Trị 2 lớp (PIN + Email OTP)
               </p>
             </div>
           </div>
@@ -259,7 +482,7 @@ export const AdminSecurityConsolePage = () => {
                   cursor: 'pointer',
                 }}
               >
-                🔒 Khóa PIN
+                🔒 Khóa Cổng
               </button>
             )}
 
@@ -268,9 +491,7 @@ export const AdminSecurityConsolePage = () => {
                 type="button"
                 onClick={() => {
                   playClickSound();
-                  try {
-                    sessionStorage.removeItem('freedom_admin_token');
-                  } catch (_) {}
+                  clearStoredAdminToken();
                   logout();
                 }}
                 style={{
@@ -435,11 +656,11 @@ export const AdminSecurityConsolePage = () => {
             </div>
           </div>
         ) : !isPinUnlocked ? (
-          /* Đã đăng nhập role Admin -> Yêu cầu xác thực Mã PIN Quản Trị để nhận adminToken (2h) */
+          /* Đã đăng nhập Admin -> Cổng Mở Khóa 2 Lớp: Bước 1 PIN -> Bước 2 Email OTP */
           <div
             style={{
-              maxWidth: '420px',
-              margin: '3rem auto',
+              maxWidth: '450px',
+              margin: '2.5rem auto',
               background: '#0f172a',
               border: '1px solid rgba(45, 212, 191, 0.35)',
               borderRadius: '18px',
@@ -447,119 +668,360 @@ export const AdminSecurityConsolePage = () => {
               boxShadow: '0 24px 60px rgba(0, 0, 0, 0.65), 0 0 36px rgba(13, 148, 136, 0.14)',
             }}
           >
-            <div style={{ textAlign: 'center', marginBottom: '1.4rem' }}>
+            {/* Thanh tiến trình 2 bước */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.4rem' }}>
               <div
                 style={{
-                  width: '54px',
-                  height: '54px',
-                  borderRadius: '50%',
-                  background: 'rgba(13, 148, 136, 0.16)',
-                  border: '1.5px solid rgba(45, 212, 191, 0.45)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 12px',
-                  fontSize: '1.5rem',
-                }}
-              >
-                🔐
-              </div>
-              <div
-                style={{
-                  display: 'inline-block',
-                  background: 'rgba(45, 212, 191, 0.12)',
-                  color: '#5eead4',
-                  border: '1px solid rgba(45, 212, 191, 0.3)',
-                  padding: '3px 10px',
-                  borderRadius: '999px',
-                  fontSize: '0.7rem',
-                  fontWeight: 800,
-                  letterSpacing: '0.8px',
-                  marginBottom: '8px',
-                }}
-              >
-                ADMIN PIN GATE • 2H TOKEN
-              </div>
-              <h2 style={{ margin: 0, fontSize: '1.22rem', color: '#f8fafc' }}>Nhập Mã PIN Quản Trị</h2>
-              <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5 }}>
-                Tài khoản <strong style={{ color: '#e2e8f0' }}>{user?.email}</strong> đã xác thực. Vui lòng nhập Mã PIN Quản Trị để mở khóa API quản trị.
-              </p>
-            </div>
-
-            {pinError && (
-              <div
-                role="alert"
-                style={{
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  border: '1px solid rgba(239, 68, 68, 0.4)',
-                  color: '#f87171',
-                  padding: '10px 12px',
+                  flex: 1,
+                  padding: '6px 10px',
                   borderRadius: '10px',
-                  fontSize: '0.82rem',
-                  marginBottom: '1rem',
-                  fontWeight: 600,
-                }}
-              >
-                ⚠️ {pinError}
-              </div>
-            )}
-
-            <form onSubmit={handleVerifyPin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', color: '#cbd5e1', marginBottom: '6px', fontWeight: 600 }}>
-                  Mã PIN Bảo Mật
-                </label>
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  value={pinInput}
-                  onChange={(e) => {
-                    setPinInput(e.target.value);
-                    setPinError('');
-                  }}
-                  placeholder="••••••"
-                  autoFocus
-                  required
-                  style={{
-                    width: '100%',
-                    background: '#1e293b',
-                    border: pinError ? '1.5px solid #ef4444' : '1.5px solid rgba(45, 212, 191, 0.4)',
-                    borderRadius: '10px',
-                    padding: '12px 14px',
-                    color: '#f8fafc',
-                    fontSize: '1.2rem',
-                    letterSpacing: '6px',
-                    textAlign: 'center',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isVerifyingPin || !pinInput.trim()}
-                style={{
-                  background: 'linear-gradient(135deg, #0d9488 0%, #0284c7 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '12px',
-                  fontSize: '0.9rem',
+                  fontSize: '0.72rem',
                   fontWeight: 700,
-                  cursor: isVerifyingPin || !pinInput.trim() ? 'not-allowed' : 'pointer',
-                  opacity: isVerifyingPin || !pinInput.trim() ? 0.65 : 1,
-                  boxShadow: '0 6px 18px rgba(13, 148, 136, 0.35)',
+                  textAlign: 'center',
+                  background: gateStep === 'pin' ? 'rgba(45, 212, 191, 0.16)' : 'rgba(34, 197, 94, 0.14)',
+                  border: gateStep === 'pin' ? '1px solid rgba(45, 212, 191, 0.45)' : '1px solid rgba(34, 197, 94, 0.4)',
+                  color: gateStep === 'pin' ? '#5eead4' : '#4ade80',
                 }}
               >
-                {isVerifyingPin ? 'Đang kiểm tra PIN...' : 'Mở Khóa Trang Quản Trị 🔓'}
-              </button>
-            </form>
-
-            <div style={{ marginTop: '1.2rem', textAlign: 'center', fontSize: '0.72rem', color: '#64748b' }}>
-              Giới hạn tối đa 5 lần nhập sai / 15 phút. Token tự hết hạn sau 2 giờ.
+                {gateStep === 'pin' ? '1. Mã PIN Bí Mật' : '✓ 1. Mã PIN'}
+              </div>
+              <span style={{ color: '#475569', fontSize: '0.8rem' }}>&rarr;</span>
+              <div
+                style={{
+                  flex: 1,
+                  padding: '6px 10px',
+                  borderRadius: '10px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  textAlign: 'center',
+                  background: gateStep === 'otp' ? 'rgba(56, 189, 248, 0.18)' : 'rgba(255, 255, 255, 0.04)',
+                  border: gateStep === 'otp' ? '1px solid rgba(56, 189, 248, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                  color: gateStep === 'otp' ? '#7dd3fc' : '#64748b',
+                }}
+              >
+                2. Email OTP (6 số)
+              </div>
             </div>
+
+            {gateStep === 'pin' ? (
+              <>
+                <div style={{ textAlign: 'center', marginBottom: '1.4rem' }}>
+                  <div
+                    style={{
+                      width: '54px',
+                      height: '54px',
+                      borderRadius: '50%',
+                      background: 'rgba(13, 148, 136, 0.16)',
+                      border: '1.5px solid rgba(45, 212, 191, 0.45)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      margin: '0 auto 12px',
+                      fontSize: '1.5rem',
+                    }}
+                  >
+                    🔐
+                  </div>
+                  <div
+                    style={{
+                      display: 'inline-block',
+                      background: 'rgba(45, 212, 191, 0.12)',
+                      color: '#5eead4',
+                      border: '1px solid rgba(45, 212, 191, 0.3)',
+                      padding: '3px 10px',
+                      borderRadius: '999px',
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                      letterSpacing: '0.8px',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    LỚP 1 / 2 • MÃ PIN BÍ MẬT
+                  </div>
+                  <h2 style={{ margin: 0, fontSize: '1.22rem', color: '#f8fafc' }}>Nhập Mã PIN Quản Trị</h2>
+                  <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5 }}>
+                    Tài khoản <strong style={{ color: '#e2e8f0' }}>{user?.email}</strong> đã xác thực. Nhập Mã PIN để nhận OTP 6 số qua Email.
+                  </p>
+                </div>
+
+                {pinError && (
+                  <div
+                    role="alert"
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.16)',
+                      border: '1px solid rgba(239, 68, 68, 0.45)',
+                      color: '#fca5a5',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      fontSize: '0.82rem',
+                      marginBottom: '1rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    ⚠️ {pinError}
+                  </div>
+                )}
+
+                <form onSubmit={handleVerifyPin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: '#cbd5e1', marginBottom: '6px', fontWeight: 600 }}>
+                      Mã PIN Bảo Mật (Lớp 1)
+                    </label>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      value={pinInput}
+                      onChange={(e) => {
+                        setPinInput(e.target.value);
+                        setPinError('');
+                      }}
+                      placeholder="••••••"
+                      autoFocus
+                      required
+                      style={{
+                        width: '100%',
+                        background: '#1e293b',
+                        border: pinError ? '1.5px solid #ef4444' : '1.5px solid rgba(45, 212, 191, 0.4)',
+                        borderRadius: '10px',
+                        padding: '12px 14px',
+                        color: '#f8fafc',
+                        fontSize: '1.2rem',
+                        letterSpacing: '6px',
+                        textAlign: 'center',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isVerifyingPin || !pinInput.trim()}
+                    style={{
+                      background: 'linear-gradient(135deg, #0d9488 0%, #0284c7 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '12px',
+                      fontSize: '0.9rem',
+                      fontWeight: 700,
+                      cursor: isVerifyingPin || !pinInput.trim() ? 'not-allowed' : 'pointer',
+                      opacity: isVerifyingPin || !pinInput.trim() ? 0.65 : 1,
+                      boxShadow: '0 6px 18px rgba(13, 148, 136, 0.35)',
+                    }}
+                  >
+                    {isVerifyingPin ? 'Đang kiểm tra PIN & gửi OTP...' : 'Xác nhận PIN & Gửi OTP Email'}
+                  </button>
+                </form>
+
+                <div style={{ marginTop: '1.2rem', textAlign: 'center', fontSize: '0.72rem', color: '#64748b' }}>
+                  Giới hạn tối đa 5 lần nhập sai PIN / 15 phút. Sau Bước 1 sẽ yêu cầu OTP Email.
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ textAlign: 'center', marginBottom: '1.35rem' }}>
+                  <div
+                    style={{
+                      width: '54px',
+                      height: '54px',
+                      borderRadius: '50%',
+                      background: 'rgba(14, 165, 233, 0.16)',
+                      border: '1.5px solid rgba(56, 189, 248, 0.45)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      margin: '0 auto 12px',
+                      fontSize: '1.5rem',
+                    }}
+                  >
+                    ✉️
+                  </div>
+                  <div
+                    style={{
+                      display: 'inline-block',
+                      background: 'rgba(56, 189, 248, 0.14)',
+                      color: '#7dd3fc',
+                      border: '1px solid rgba(56, 189, 248, 0.35)',
+                      padding: '3px 10px',
+                      borderRadius: '999px',
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                      letterSpacing: '0.8px',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    LỚP 2 / 2 • XÁC THỰC EMAIL OTP
+                  </div>
+                  <h2 style={{ margin: 0, fontSize: '1.22rem', color: '#f8fafc' }}>Nhập Mã OTP 6 Số</h2>
+                  <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.55 }}>
+                    Mã xác thực có hiệu lực 5 phút đã được gửi tới hòm thư:{' '}
+                    <strong style={{ color: '#38bdf8', wordBreak: 'break-all' }}>{otpEmail || user?.email}</strong>
+                  </p>
+                </div>
+
+                {otpNotice && (
+                  <div
+                    role="status"
+                    style={{
+                      background: 'rgba(16, 185, 129, 0.14)',
+                      border: '1px solid rgba(52, 211, 153, 0.4)',
+                      color: '#6ee7b7',
+                      padding: '9px 12px',
+                      borderRadius: '10px',
+                      fontSize: '0.8rem',
+                      marginBottom: '0.85rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    ✓ {otpNotice}
+                  </div>
+                )}
+
+                {otpError && (
+                  <div
+                    role="alert"
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.16)',
+                      border: '1px solid rgba(239, 68, 68, 0.45)',
+                      color: '#fca5a5',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      fontSize: '0.82rem',
+                      marginBottom: '1rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    ⚠️ {otpError}
+                  </div>
+                )}
+
+                <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '0.78rem', color: '#cbd5e1', fontWeight: 600 }}>
+                        Mã OTP 6 số từ Email
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handlePasteOtp}
+                        style={{
+                          background: 'rgba(56, 189, 248, 0.12)',
+                          border: '1px solid rgba(56, 189, 248, 0.35)',
+                          color: '#7dd3fc',
+                          padding: '3px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        📋 Dán mã
+                      </button>
+                    </div>
+
+                    <input
+                      ref={otpInputRef}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      value={otpInput}
+                      onChange={(e) => {
+                        const clean = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        setOtpInput(clean);
+                        setOtpError('');
+                      }}
+                      placeholder="000000"
+                      required
+                      style={{
+                        width: '100%',
+                        background: '#1e293b',
+                        border: otpError ? '1.5px solid #ef4444' : '1.5px solid rgba(56, 189, 248, 0.45)',
+                        borderRadius: '10px',
+                        padding: '12px 14px',
+                        color: '#f8fafc',
+                        fontSize: '1.35rem',
+                        letterSpacing: '8px',
+                        textAlign: 'center',
+                        fontWeight: 800,
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isVerifyingOtp || otpInput.length !== 6}
+                    style={{
+                      background: 'linear-gradient(135deg, #0284c7 0%, #0d9488 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '12px',
+                      fontSize: '0.9rem',
+                      fontWeight: 700,
+                      cursor: isVerifyingOtp || otpInput.length !== 6 ? 'not-allowed' : 'pointer',
+                      opacity: isVerifyingOtp || otpInput.length !== 6 ? 0.65 : 1,
+                      boxShadow: '0 6px 18px rgba(2, 132, 199, 0.35)',
+                    }}
+                  >
+                    {isVerifyingOtp ? 'Đang xác thực OTP...' : 'Xác thực OTP & Mở khóa 🔓'}
+                  </button>
+                </form>
+
+                <div
+                  style={{
+                    marginTop: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '10px',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={handleBackToPinStep}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#94a3b8',
+                      fontSize: '0.76rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: '4px 0',
+                    }}
+                  >
+                    &larr; Nhập lại Mã PIN
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleResendAdminOtp}
+                    disabled={isResendingOtp || resendCooldown > 0}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.06)',
+                      border: '1px solid rgba(148, 163, 184, 0.25)',
+                      color: resendCooldown > 0 ? '#64748b' : '#e2e8f0',
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      cursor: isResendingOtp || resendCooldown > 0 ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {isResendingOtp
+                      ? 'Đang gửi lại...'
+                      : resendCooldown > 0
+                      ? `Gửi lại mã (${resendCooldown}s)`
+                      : 'Gửi lại mã'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         ) : (
           /* Đã đăng nhập Admin & Mở khóa PIN: Bảng Giám Sát Security Logs */

@@ -25955,8 +25955,8 @@ body.theme-light .hero-quick-feat-pill.quick-pill-wax:hover,
 }
 
 /* ========================================================
-   11. WINTER COZY ATMOSPHERE ("ĐÔNG ẤM ÁP") & 60FPS SNOWFALL
-   - Chế độ Ngày: Đỉnh trời sương giá (#dbeafe -> #e0f2fe) + tuyết ấm (#f8fafc -> #fffaf3) + hổ phách dịu
+   11. WINTER COZY ATMOSPHERE ("ĐÔNG ẤM ÁP" - ICY FROST BLUE) & 60FPS SNOWFALL
+   - Chế độ Ngày: Đỉnh trời xanh sương tuyết (#bae6fd -> #e0f2fe -> #eff6ff -> #f8fafc) + sương băng + điểm ấm tại tâm Hero
    - Chế độ Đêm: Đêm đông sâu (#070b16 -> #0f172a -> #172038) + quầng lửa hổ phách từ chân Hero
    ======================================================== */
 
@@ -25965,9 +25965,9 @@ body.theme-light .app-root-layout.season-winter:not(.user-theme-custom),
 .app-root-layout.mode-light.season-winter:not(.user-theme-custom),
 [data-theme="light"] .app-root-layout.season-winter:not(.user-theme-custom) {
   background:
-    radial-gradient(ellipse 78% 40% at 50% 0%, rgba(219, 234, 254, 0.78) 0%, transparent 66%),
-    radial-gradient(ellipse 58% 36% at 50% 16%, rgba(251, 191, 36, 0.1) 0%, transparent 64%),
-    linear-gradient(180deg, #dbeafe 0%, #e0f2fe 16%, #f8fafc 46%, #fffaf3 100%) !important;
+    radial-gradient(circle at 20% 8%, rgba(125, 211, 252, 0.25), transparent 55%),
+    radial-gradient(circle at 80% 18%, rgba(147, 197, 253, 0.22), transparent 50%),
+    linear-gradient(180deg, #bae6fd 0%, #e0f2fe 38%, #eff6ff 72%, #f8fafc 100%) !important;
 }
 
 body.theme-dark .app-root-layout.season-winter:not(.user-theme-custom),
@@ -25979,7 +25979,7 @@ body.theme-dark .app-root-layout.season-winter:not(.user-theme-custom),
     linear-gradient(180deg, #070b16 0%, #0f172a 48%, #172038 100%) !important;
 }
 
-/* Chế Độ Ngày — Hero Banner & Trang Chủ Đông Ấm Áp */
+/* Chế Độ Ngày — Hero Banner & Trang Chủ Icy Frost Blue */
 body.theme-light .season-winter .hero-banner,
 .app-root-layout.mode-light.season-winter .hero-banner,
 [data-theme="light"] .season-winter .hero-banner,
@@ -25987,14 +25987,15 @@ body.theme-light .season-winter .hero-banner.category-hero-banner.topic-home,
 .app-root-layout.mode-light.season-winter .hero-banner.category-hero-banner.topic-home,
 [data-theme="light"] .season-winter .hero-banner.category-hero-banner.topic-home {
   background:
-    radial-gradient(ellipse 56% 52% at 50% 48%, rgba(251, 191, 36, 0.16) 0%, transparent 66%),
-    radial-gradient(ellipse 46% 42% at 58% 42%, rgba(244, 114, 182, 0.06) 0%, transparent 64%),
-    linear-gradient(180deg, #dbeafe 0%, #e0f2fe 28%, #f8fafc 68%, #fffaf3 100%) !important;
-  border-top: 1px solid rgba(186, 230, 253, 0.65) !important;
-  border-bottom: 1px solid rgba(186, 230, 253, 0.72) !important;
+    radial-gradient(ellipse 36% 34% at 50% 42%, rgba(251, 191, 36, 0.11) 0%, transparent 62%),
+    radial-gradient(circle at 20% 20%, rgba(125, 211, 252, 0.25), transparent 55%),
+    radial-gradient(circle at 80% 30%, rgba(147, 197, 253, 0.22), transparent 50%),
+    linear-gradient(180deg, #bae6fd 0%, #e0f2fe 38%, #eff6ff 72%, #f8fafc 100%) !important;
+  border-top: 1px solid rgba(186, 230, 253, 0.72) !important;
+  border-bottom: 1px solid rgba(125, 211, 252, 0.65) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.94),
-    0 14px 34px -14px rgba(14, 165, 233, 0.14) !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 14px 34px -14px rgba(14, 165, 233, 0.18) !important;
 }
 
 /* Chế Độ Ngày — Độ tương phản chữ & kính mờ viền sáng Đông Ấm Áp */
@@ -26151,8 +26152,8 @@ body.theme-light .winter-mist-veil,
 .mode-light .winter-mist-veil,
 [data-theme="light"] .winter-mist-veil {
   background:
-    radial-gradient(ellipse 70% 55% at 28% 8%, rgba(224, 242, 254, 0.42) 0%, transparent 72%),
-    radial-gradient(ellipse 65% 50% at 74% 12%, rgba(255, 250, 243, 0.35) 0%, transparent 74%);
+    radial-gradient(ellipse 68% 55% at 24% 8%, rgba(125, 211, 252, 0.28) 0%, transparent 70%),
+    radial-gradient(ellipse 64% 50% at 78% 14%, rgba(147, 197, 253, 0.24) 0%, transparent 72%);
 }
 
 body.theme-dark .winter-mist-veil,
@@ -26179,14 +26180,15 @@ body.theme-dark .winter-mist-veil,
   filter: blur(0.4px);
 }
 
-/* Chế Độ Ngày: Bông tuyết trắng ngọc / xanh băng nhạt có bóng đổ mờ nhẹ để rõ trên nền sáng */
+/* Chế Độ Ngày: Bông tuyết trắng ngọc có viền & bóng ánh xanh băng (rgba(186, 230, 253, 0.85)) để nổi bật trên nền sáng */
 body.theme-light .winter-snow-flake,
 .mode-light .winter-snow-flake,
 [data-theme="light"] .winter-snow-flake {
-  background: radial-gradient(circle, #ffffff 0%, #dbeafe 68%, rgba(147, 197, 253, 0.25) 100%);
+  background: radial-gradient(circle, #ffffff 0%, #e0f2fe 62%, rgba(186, 230, 253, 0.85) 100%);
+  border: 0.5px solid rgba(186, 230, 253, 0.85);
   box-shadow:
-    0 1px 4px rgba(14, 116, 144, 0.26),
-    0 0 2px rgba(59, 130, 246, 0.22);
+    0 0 6px rgba(186, 230, 253, 0.85),
+    0 1px 3px rgba(2, 132, 199, 0.22);
 }
 
 /* Chế Độ Đêm: Bông tuyết trắng phát sáng dịu (opacity 0.35–0.75) */

@@ -286,8 +286,17 @@ export const sendRegistrationOtp = async (toEmail, otpCode) => {
  */
 export const sendOtpEmail = async (toEmail, otpCode, purpose = 'register') => {
   const isRegister = purpose === 'register';
-  const actionText = isRegister ? 'kích hoạt tài khoản mới' : (purpose === 'forgot_password' ? 'đặt lại mật khẩu' : 'đăng nhập');
-  const subject = `[${otpCode}] là mã xác nhận ${actionText} của bạn - You Can't Stop Here`;
+  const isAdminGate = purpose === 'admin_gate';
+  const actionText = isAdminGate
+    ? 'mở khóa khu vực Quản Trị (Lớp 2)'
+    : isRegister
+    ? 'kích hoạt tài khoản mới'
+    : purpose === 'forgot_password'
+    ? 'đặt lại mật khẩu'
+    : 'đăng nhập';
+  const subject = isAdminGate
+    ? `Mã Xác Thực Mở Khóa Quản Trị (Lớp 2): [${otpCode}] - You Can't Stop Here`
+    : `[${otpCode}] là mã xác nhận ${actionText} của bạn - You Can't Stop Here`;
   const textContent = `Mã xác thực của bạn là: ${otpCode}. Mã có hiệu lực trong vòng 5 phút. Vui lòng không chia sẻ mã này với bất kỳ ai.`;
   const htmlContent = generateOtpEmailTemplate(toEmail, otpCode, actionText);
 

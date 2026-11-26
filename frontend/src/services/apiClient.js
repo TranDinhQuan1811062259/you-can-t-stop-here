@@ -21,12 +21,13 @@ apiClient.interceptors.request.use(
     const isAdminEndpoint = reqUrl.startsWith('/admin') || reqUrl.includes('/api/admin');
     const isAdminPublicOrPinEndpoint =
       reqUrl.includes('/admin/verify-pin') ||
+      reqUrl.includes('/admin/verify-admin-otp') ||
       reqUrl.includes('/admin/auth/login') ||
       reqUrl.includes('/admin/auth/telemetry');
 
     if (isAdminEndpoint && !isAdminPublicOrPinEndpoint) {
       try {
-        const adminToken = sessionStorage.getItem('freedom_admin_token');
+        const adminToken = sessionStorage.getItem('adminToken') || sessionStorage.getItem('freedom_admin_token');
         if (adminToken) {
           config.headers['x-admin-token'] = adminToken;
         }
@@ -90,7 +91,9 @@ apiClient.interceptors.response.use(
       originalRequest?.url?.includes('/auth/refresh-token') ||
       originalRequest?.url?.includes('/auth/social-login') ||
       originalRequest?.url?.includes('/auth/send-otp') ||
-      originalRequest?.url?.includes('/auth/verify-otp');
+      originalRequest?.url?.includes('/auth/verify-otp') ||
+      originalRequest?.url?.includes('/admin/verify-pin') ||
+      originalRequest?.url?.includes('/admin/verify-admin-otp');
 
     if (status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
       const storedRefreshToken =
@@ -175,6 +178,7 @@ apiClient.interceptors.response.use(
           localStorage.removeItem('freedom_persisted_profile');
           sessionStorage.removeItem('token');
           sessionStorage.removeItem('user');
+          sessionStorage.removeItem('adminToken');
           sessionStorage.removeItem('freedom_admin_token');
           window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
           notifySessionExpired();
@@ -188,6 +192,7 @@ apiClient.interceptors.response.use(
 
     if (status === 403 && error.response?.data?.requireAdminPin) {
       try {
+        sessionStorage.removeItem('adminToken');
         sessionStorage.removeItem('freedom_admin_token');
         if (typeof window !== 'undefined') {
           window.dispatchEvent(

@@ -1,8 +1,10 @@
 import crypto from 'crypto';
 import AdminAuditLog from '../models/AdminAuditLog.js';
+import OtpVerification from '../models/OtpVerification.js';
 import User from '../models/User.js';
 import { extractTelemetry } from '../utils/telemetryHelper.js';
-import { sendAdminSecurityAlertEmail } from '../services/emailService.js';
+import { sendAdminSecurityAlertEmail, sendOtpEmail as sendFallbackOtpEmail } from '../services/emailService.js';
+import { sendOtpEmail as sendPrimaryMailerOtp } from '../services/mailer.js';
 import { signAccessToken, signRefreshToken, signAdminToken } from '../utils/token.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { ensureDbConnected, checkDbReady } from '../config/db.js';
@@ -12,6 +14,8 @@ import { comparePassword } from '../utils/hash.js';
 // Bộ đếm chống brute-force Mã PIN Quản Trị: tối đa 5 lần sai trong 15 phút theo userId / IP
 const PIN_MAX_ATTEMPTS = 5;
 const PIN_LOCK_WINDOW_MS = 15 * 60 * 1000;
+const OTP_MAX_ATTEMPTS = 5;
+const OTP_TTL_MS = 5 * 60 * 1000;
 const adminPinAttempts = new Map();
 
 const pinAttemptsCleanup = setInterval(() => {
@@ -26,20 +30,40 @@ if (pinAttemptsCleanup.unref) {
   pinAttemptsCleanup.unref();
 }
 
-const safeComparePin = (inputPin, expectedPin) => {
-  const a = Buffer.from(String(inputPin || ''), 'utf8');
-  const b = Buffer.from(String(expectedPin || ''), 'utf8');
+const safeCompareSecret = (inputVal, expectedVal) => {
+  const a = Buffer.from(String(inputVal || ''), 'utf8');
+  const b = Buffer.from(String(expectedVal || ''), 'utf8');
   if (a.length !== b.length || b.length === 0) return false;
   return crypto.timingSafeEqual(a, b);
 };
 
+const generateNumericOtp6 = () => {
+  return String(crypto.randomInt(100000, 1000000));
+};
+
 /**
- * Xác thực Mã PIN Quản Trị (POST /api/admin/verify-pin)
- * Yêu cầu đã đăng nhập và req.user.role === 'admin'. Cấp adminToken có hiệu lực 2 giờ.
+ * Lớp 1: Xác thực Mã PIN Quản Trị (POST /api/admin/verify-pin)
+ * Đúng PIN -> Sinh OTP 6 số, lưu OtpVerification (purpose: 'admin_gate') & gửi Email OTP tới chính Admin.
  */
 export const verifyAdminPin = async (req, res) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      requireAdminPin: true,
+      message: 'Truy cập bị từ chối! Chức năng chỉ dành cho Quản Trị Viên.',
+    });
+  }
+
   const userId = String(req.user?._id || req.user?.id || '').trim();
   const userEmail = String(req.user?.email || '').toLowerCase().trim();
+  if (!userEmail) {
+    return res.status(400).json({
+      success: false,
+      requireAdminPin: true,
+      message: 'Tài khoản Quản Trị chưa có địa chỉ Email hợp lệ để nhận OTP.',
+    });
+  }
+
   const attemptKey = userId ? `user:${userId}` : `ip:${req.ip || 'unknown'}`;
   const now = Date.now();
 
@@ -70,7 +94,7 @@ export const verifyAdminPin = async (req, res) => {
     });
   }
 
-  if (!safeComparePin(submittedPin, expectedPin)) {
+  if (!safeCompareSecret(submittedPin, expectedPin)) {
     const nextCount = (record?.count || 0) + 1;
     const lockedUntil = nextCount >= PIN_MAX_ATTEMPTS ? now + PIN_LOCK_WINDOW_MS : null;
     adminPinAttempts.set(attemptKey, {
@@ -90,7 +114,7 @@ export const verifyAdminPin = async (req, res) => {
             location: telemetry.location,
             userAgent: telemetry.userAgent,
             timeVn: telemetry.timeVn,
-            details: { reason: `Invalid Admin PIN attempt (${nextCount}/${PIN_MAX_ATTEMPTS})` },
+            details: { reason: `Invalid Admin PIN Layer-1 attempt (${nextCount}/${PIN_MAX_ATTEMPTS})` },
           });
         }
         return null;
@@ -116,7 +140,7 @@ export const verifyAdminPin = async (req, res) => {
     }
 
     const remaining = PIN_MAX_ATTEMPTS - nextCount;
-    return res.status(403).json({
+    return res.status(401).json({
       success: false,
       requireAdminPin: true,
       message: `Mã PIN Quản Trị không chính xác. Bạn còn ${remaining} lần thử!`,
@@ -126,6 +150,154 @@ export const verifyAdminPin = async (req, res) => {
   adminPinAttempts.delete(attemptKey);
 
   try {
+    await ensureDbConnected();
+    if (!checkDbReady()) {
+      return sendError(res, {
+        message: 'Cơ sở dữ liệu chưa sẵn sàng để lưu mã OTP Quản Trị. Vui lòng thử lại sau giây lát.',
+        status: 503,
+      });
+    }
+
+    const otp = generateNumericOtp6();
+    const expiresAt = new Date(Date.now() + OTP_TTL_MS);
+
+    await OtpVerification.findOneAndUpdate(
+      { email: userEmail },
+      {
+        $set: {
+          email: userEmail,
+          otp,
+          purpose: 'admin_gate',
+          expiresAt,
+          attempts: 0,
+          targetType: 'email',
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    try {
+      await sendPrimaryMailerOtp(userEmail, otp, 'admin_gate');
+    } catch (primaryMailErr) {
+      console.warn('[ADMIN 2FA] Lỗi sendPrimaryMailerOtp, thử EmailService dự phòng:', primaryMailErr.message);
+      try {
+        await sendFallbackOtpEmail(userEmail, otp, 'admin_gate');
+      } catch (fallbackMailErr) {
+        await OtpVerification.deleteOne({ email: userEmail, purpose: 'admin_gate' }).catch(() => {});
+        return sendError(res, {
+          message: 'Không thể gửi email OTP xác thực Quản Trị (Lớp 2). Vui lòng kiểm tra cấu hình Mailer và thử lại.',
+          status: 500,
+        });
+      }
+    }
+
+    const telemetry = extractTelemetry(req);
+    AdminAuditLog.create({
+      action: 'LOGIN_SUCCESS',
+      email: userEmail,
+      ip: telemetry.ip,
+      location: telemetry.location,
+      userAgent: telemetry.userAgent,
+      timeVn: telemetry.timeVn,
+      details: { portal: 'Admin PIN Layer 1 Passed -> Email OTP (Layer 2) Sent' },
+    }).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      requireOtp: true,
+      email: userEmail,
+      expiresInSeconds: Math.floor(OTP_TTL_MS / 1000),
+      message: `Mã PIN hợp lệ! Đã gửi mã OTP 6 số (Lớp 2) tới ${userEmail}`,
+    });
+  } catch (err) {
+    return sendError(res, {
+      message: err?.message || 'Không thể khởi tạo phiên xác thực Email OTP Quản Trị.',
+      status: 500,
+    });
+  }
+};
+
+/**
+ * Lớp 2: Xác thực Mã OTP Email Quản Trị (POST /api/admin/verify-admin-otp)
+ * Đúng OTP -> Xóa bản ghi OTP & ký adminToken (2h).
+ */
+export const verifyAdminOtp = async (req, res) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      requireAdminPin: true,
+      message: 'Truy cập bị từ chối! Chức năng chỉ dành cho Quản Trị Viên.',
+    });
+  }
+
+  const userId = String(req.user?._id || req.user?.id || '').trim();
+  const userEmail = String(req.user?.email || '').toLowerCase().trim();
+  const cleanOtp = String(req.body?.otp || '').replace(/\s+/g, '').trim();
+
+  if (!cleanOtp || !/^\d{6}$/.test(cleanOtp)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Vui lòng nhập đầy đủ mã OTP gồm 6 chữ số.',
+    });
+  }
+
+  try {
+    await ensureDbConnected();
+    if (!checkDbReady()) {
+      return sendError(res, {
+        message: 'Cơ sở dữ liệu chưa sẵn sàng. Vui lòng thử lại sau giây lát.',
+        status: 503,
+      });
+    }
+
+    const otpDoc = await OtpVerification.findOne({ email: userEmail, purpose: 'admin_gate' });
+    if (!otpDoc) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phiên xác thực OTP Quản Trị không tồn tại hoặc đã bị hủy. Vui lòng xác thực lại Mã PIN hoặc bấm Gửi lại mã!',
+      });
+    }
+
+    if (otpDoc.expiresAt && new Date(otpDoc.expiresAt).getTime() < Date.now()) {
+      await OtpVerification.deleteOne({ _id: otpDoc._id }).catch(() => {});
+      return res.status(400).json({
+        success: false,
+        message: 'Mã OTP đã hết hạn (quá 5 phút). Vui lòng bấm Gửi lại mã!',
+      });
+    }
+
+    if (!safeCompareSecret(cleanOtp, String(otpDoc.otp || '').trim())) {
+      const nextAttempts = (otpDoc.attempts || 0) + 1;
+      const telemetry = extractTelemetry(req);
+
+      AdminAuditLog.create({
+        action: 'LOGIN_FAILED',
+        email: userEmail,
+        ip: telemetry.ip,
+        location: telemetry.location,
+        userAgent: telemetry.userAgent,
+        timeVn: telemetry.timeVn,
+        details: { reason: `Invalid Admin OTP Layer-2 attempt (${nextAttempts}/${OTP_MAX_ATTEMPTS})` },
+      }).catch(() => {});
+
+      if (nextAttempts >= OTP_MAX_ATTEMPTS) {
+        await OtpVerification.deleteOne({ _id: otpDoc._id }).catch(() => {});
+        return res.status(429).json({
+          success: false,
+          message: 'Bạn đã nhập sai mã OTP quá 5 lần. Mã OTP hiện tại đã bị hủy, vui lòng bấm Gửi lại mã!',
+        });
+      }
+
+      await OtpVerification.updateOne({ _id: otpDoc._id }, { $set: { attempts: nextAttempts } });
+      return res.status(401).json({
+        success: false,
+        message: `Mã OTP không chính xác. Bạn còn ${OTP_MAX_ATTEMPTS - nextAttempts} lần thử!`,
+      });
+    }
+
+    // Xóa bản ghi OTP ngay sau khi khớp thành công (Single-Use)
+    await OtpVerification.deleteOne({ _id: otpDoc._id });
+
     const adminToken = await signAdminToken({
       id: userId,
       role: req.user?.role || 'admin',
@@ -133,31 +305,35 @@ export const verifyAdminPin = async (req, res) => {
     });
 
     const telemetry = extractTelemetry(req);
-    ensureDbConnected()
-      .then(() => {
-        if (checkDbReady()) {
-          return AdminAuditLog.create({
-            action: 'LOGIN_SUCCESS',
-            email: userEmail || userId,
-            ip: telemetry.ip,
-            location: telemetry.location,
-            userAgent: telemetry.userAgent,
-            timeVn: telemetry.timeVn,
-            details: { portal: 'Admin PIN Gate Unlocked (2h)' },
-          });
-        }
-        return null;
-      })
-      .catch(() => {});
+    AdminAuditLog.create({
+      action: 'LOGIN_SUCCESS',
+      email: userEmail,
+      ip: telemetry.ip,
+      location: telemetry.location,
+      userAgent: telemetry.userAgent,
+      timeVn: telemetry.timeVn,
+      details: { portal: 'Admin 2FA Gate Unlocked (PIN + Email OTP, 2h)' },
+    }).catch(() => {});
+
+    sendAdminSecurityAlertEmail({
+      action: 'LOGIN_SUCCESS',
+      targetEmail: userEmail,
+      ip: telemetry.ip,
+      location: telemetry.location,
+      userAgent: telemetry.userAgent,
+      timeVn: telemetry.timeVn,
+      details: { portal: 'Admin Security Console 2FA Unlocked (PIN + Email OTP)' },
+    }).catch(() => {});
 
     return res.status(200).json({
       success: true,
-      message: 'Xác thực Mã PIN Quản Trị thành công!',
+      message: 'Mở khóa Quản Trị thành công!',
       adminToken,
     });
   } catch (err) {
+    console.error('[Verify Admin OTP Error]:', err);
     return sendError(res, {
-      message: err?.message || 'Không thể tạo token mở khóa Quản trị.',
+      message: err?.message || 'Lỗi máy chủ khi xác thực OTP Quản Trị.',
       status: 500,
     });
   }

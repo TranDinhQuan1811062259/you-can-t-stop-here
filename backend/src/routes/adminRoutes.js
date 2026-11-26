@@ -1,6 +1,6 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { adminLogin, adminTelemetry, getSecurityLogs, verifyAdminPin } from '../controllers/adminAuthController.js';
+import { adminLogin, adminTelemetry, getSecurityLogs, verifyAdminPin, verifyAdminOtp } from '../controllers/adminAuthController.js';
 import { authenticateToken, adminOnly, verifyAdminGate } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
@@ -21,8 +21,9 @@ const adminLoginLimiter = rateLimit({
 router.post('/auth/login', adminLoginLimiter, adminLogin);
 router.post('/auth/telemetry', adminTelemetry);
 
-// 2. Xác thực Mã PIN Quản Trị -> Cấp adminToken (2h) — Yêu cầu đã đăng nhập role Admin
+// 2. Xác thực 2 lớp Admin Gate: Lớp 1 (PIN -> gửi Email OTP) -> Lớp 2 (OTP -> cấp adminToken 2h)
 router.post('/verify-pin', authenticateToken, adminOnly, verifyAdminPin);
+router.post('/verify-admin-otp', authenticateToken, adminOnly, verifyAdminOtp);
 
 // 3. Khóa cứng toàn bộ các route /api/admin/* phía dưới bằng JWT + Admin Role + verifyAdminGate (x-admin-token)
 router.use(authenticateToken, adminOnly, verifyAdminGate);

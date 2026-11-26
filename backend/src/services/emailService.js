@@ -228,8 +228,15 @@ const buildOtpEmailHtml = (toEmail, otpCode, actionText) => `
  */
 export const sendOtpEmail = async (toEmail, otpCode, type = 'login') => {
   const isRegister = type === 'register';
-  const actionText = isRegister ? 'tạo tài khoản mới' : 'đăng nhập tài khoản';
-  const subject = `[${otpCode}] là mã xác thực ${actionText} của bạn - You Can't Stop Here`;
+  const isAdminGate = type === 'admin_gate';
+  const actionText = isAdminGate
+    ? 'mở khóa khu vực Quản Trị (Lớp 2)'
+    : isRegister
+    ? 'tạo tài khoản mới'
+    : 'đăng nhập tài khoản';
+  const subject = isAdminGate
+    ? `Mã Xác Thực Mở Khóa Quản Trị (Lớp 2): [${otpCode}] - You Can't Stop Here`
+    : `[${otpCode}] là mã xác thực ${actionText} của bạn - You Can't Stop Here`;
   const textContent = `Mã xác thực của bạn là: ${otpCode}. Mã có hiệu lực trong 5 phút. Vui lòng không chia sẻ mã này với bất kỳ ai.`;
   const htmlContent = buildOtpEmailHtml(toEmail, otpCode, actionText);
 
