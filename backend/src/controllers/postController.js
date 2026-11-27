@@ -1255,8 +1255,13 @@ export const updatePost = async (req, res) => {
     if (checkDbReady()) {
       try {
         const mongoQuery = String(id).match(/^[0-9a-fA-F]{24}$/) ? { _id: id } : { slug: id };
-        dbPost = await Post.findOne(mongoQuery);
-      } catch (err) {}
+        dbPost = await Post.findOne(mongoQuery).populate(
+          'user',
+          'name email avatar jobTitle bio socialLinks streakCount role'
+        );
+      } catch (err) {
+        console.warn('Lỗi tìm bài viết MongoDB trong updatePost:', err.message);
+      }
     }
 
     const targetPost = dbPost || postInStore;
@@ -1307,45 +1312,50 @@ export const updatePost = async (req, res) => {
       });
     }
 
-    let updatedPostObj = null;
+    const finalTitle = title !== undefined ? maskSensitiveText(title.trim()) : targetPost.title;
+    const finalSummary = summary !== undefined ? maskSensitiveText(summary.trim()) : targetPost.summary;
+    const finalContent = content !== undefined ? maskSensitiveText(content) : targetPost.content;
+    const finalTags = parsedTags !== undefined
+      ? parsedTags.map((t) => maskSensitiveText(t))
+      : (Array.isArray(targetPost.tags) ? targetPost.tags : []);
+    const safety = analyzeContentSafety(finalTitle, finalSummary, finalContent, finalTags);
 
+    let nextSlug = targetPost.slug;
+    if (title && title.trim() && title.trim() !== targetPost.title) {
+      const baseSlug = slugify(title);
+      nextSlug = baseSlug;
+      let counter = 1;
+      while (store.posts.some((p, i) => i !== idx && p.slug === nextSlug)) {
+        nextSlug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+      if (dbPost && checkDbReady()) {
+        try {
+          while (await Post.exists({ slug: nextSlug, _id: { $ne: dbPost._id } })) {
+            nextSlug = `${baseSlug}-${counter}`;
+            counter++;
+          }
+        } catch (_) {}
+      }
+    }
+
+    const resolvedCat = category ? await resolveCategory(category) : null;
+    const finalMediaUrls = req.body.mediaUrls !== undefined
+      ? (Array.isArray(req.body.mediaUrls) ? req.body.mediaUrls.filter(Boolean) : [])
+      : (Array.isArray(targetPost.mediaUrls) ? targetPost.mediaUrls : []);
+
+    let updatedStorePost = null;
     if (idx !== -1) {
       const existing = store.posts[idx];
-      let newSlug = existing.slug;
-      if (title && title.trim() && title.trim() !== existing.title) {
-        newSlug = slugify(title);
-        let counter = 1;
-        while (store.posts.some((p, i) => i !== idx && p.slug === newSlug)) {
-          newSlug = `${slugify(title)}-${counter}`;
-          counter++;
-        }
-      }
-
-      let updatedCategory = existing.category;
-      if (category) {
-        updatedCategory = await resolveCategory(category);
-      }
-
-      const finalTitle = title !== undefined ? maskSensitiveText(title.trim()) : existing.title;
-      const finalSummary = summary !== undefined ? maskSensitiveText(summary.trim()) : existing.summary;
-      const finalContent = content !== undefined ? maskSensitiveText(content) : existing.content;
-      const finalTags = parsedTags !== undefined ? parsedTags.map((t) => maskSensitiveText(t)) : existing.tags;
-
-      const safety = analyzeContentSafety(finalTitle, finalSummary, finalContent, finalTags);
-
-      const finalMediaUrls = req.body.mediaUrls !== undefined
-        ? (Array.isArray(req.body.mediaUrls) ? req.body.mediaUrls.filter(Boolean) : [])
-        : (existing.mediaUrls || []);
-
-      updatedPostObj = {
+      updatedStorePost = {
         ...existing,
         postType: effectivePostType,
         mediaUrls: finalMediaUrls,
         title: finalTitle,
-        slug: newSlug,
+        slug: nextSlug,
         summary: finalSummary,
         content: finalContent,
-        category: updatedCategory,
+        category: resolvedCat || existing.category,
         coverImage: coverImage !== undefined ? coverImage : existing.coverImage,
         tags: finalTags,
         author: author !== undefined ? author.trim() : existing.author,
@@ -1375,56 +1385,81 @@ export const updatePost = async (req, res) => {
         updatedAt: new Date().toISOString(),
       };
 
-      store.posts[idx] = updatedPostObj;
+      store.posts[idx] = updatedStorePost;
       saveStore(store);
     }
 
-    // Đồng thời cập nhật trong MongoDB nếu database đang online
-    if (checkDbReady()) {
+    // Đồng thời cập nhật trong MongoDB nếu database đang online và bài viết tồn tại trên MongoDB
+    let updatedMongoPost = null;
+    let mongoUpdateError = null;
+    if (dbPost && checkDbReady()) {
       try {
-        const mongoQuery = String(id).match(/^[0-9a-fA-F]{24}$/) ? { _id: id } : { slug: id };
-        const post = await Post.findOne(mongoQuery);
-        if (post) {
-          if (title && title.trim()) {
-            post.title = title.trim();
-            post.slug = updatedPostObj?.slug || slugify(title);
-          }
-          if (summary !== undefined) post.summary = summary.trim();
-          if (content !== undefined) post.content = content;
-          if (category) {
-            const resCat = await resolveCategory(category);
-            const catDoc = await Category.findOne({ slug: resCat.slug });
-            if (catDoc) post.category = catDoc._id;
-          }
-          if (coverImage) post.coverImage = coverImage;
-          post.postType = effectivePostType;
-          if (req.body.mediaUrls !== undefined && Array.isArray(req.body.mediaUrls)) {
-            post.mediaUrls = req.body.mediaUrls.filter(Boolean);
-          }
-          if (parsedTags !== undefined) post.tags = parsedTags;
-          if (author) post.author = author.trim();
-          if (authorJob !== undefined) post.authorJob = authorJob.trim();
-          if (views !== undefined && !isNaN(views)) post.views = Math.max(0, parseInt(views, 10));
-          if (isPublished !== undefined) post.isPublished = Boolean(isPublished);
-          if (showReactionCount !== undefined) post.showReactionCount = Boolean(showReactionCount);
-          if (allowComments !== undefined) post.allowComments = Boolean(allowComments);
-          if (audioMood !== undefined) post.audioMood = audioMood;
-          if (voiceGender !== undefined) post.voiceGender = voiceGender;
-          if (voiceRegion !== undefined) post.voiceRegion = voiceRegion;
-          if (atmosphere !== undefined) post.atmosphere = atmosphere;
-          if (req.body.personalMusic !== undefined) post.personalMusic = req.body.personalMusic;
-          await post.save();
+        if (title && title.trim()) {
+          dbPost.title = finalTitle;
+          dbPost.slug = nextSlug;
         }
+        if (summary !== undefined) dbPost.summary = finalSummary;
+        if (content !== undefined) dbPost.content = finalContent;
+        if (resolvedCat) {
+          const catDoc = await Category.findOne({ slug: resolvedCat.slug });
+          if (catDoc) dbPost.category = catDoc._id;
+        }
+        if (coverImage !== undefined) dbPost.coverImage = coverImage;
+        dbPost.postType = effectivePostType;
+        if (req.body.mediaUrls !== undefined && Array.isArray(req.body.mediaUrls)) {
+          dbPost.mediaUrls = finalMediaUrls;
+        }
+        if (parsedTags !== undefined) dbPost.tags = finalTags;
+        if (author !== undefined && author.trim()) dbPost.author = author.trim();
+        if (authorJob !== undefined) dbPost.authorJob = authorJob.trim();
+        if (views !== undefined && !isNaN(views)) dbPost.views = Math.max(0, parseInt(views, 10));
+        if (isPublished !== undefined) dbPost.isPublished = Boolean(isPublished);
+        if (showReactionCount !== undefined) dbPost.showReactionCount = Boolean(showReactionCount);
+        if (allowComments !== undefined) dbPost.allowComments = Boolean(allowComments);
+        if (audioMood !== undefined) dbPost.audioMood = audioMood;
+        if (voiceGender !== undefined) dbPost.voiceGender = voiceGender;
+        if (voiceRegion !== undefined) dbPost.voiceRegion = voiceRegion;
+        if (customVoiceProfile !== undefined) dbPost.customVoiceProfile = customVoiceProfile;
+        if (atmosphere !== undefined) dbPost.atmosphere = atmosphere;
+        if (req.body.personalMusic !== undefined) dbPost.personalMusic = req.body.personalMusic;
+        if (req.body.visibility !== undefined) {
+          dbPost.visibility = req.body.visibility === 'friends' ? 'friends' : 'public';
+        }
+        dbPost.isFlagged = safety.isFlagged;
+        dbPost.flagReason = safety.reason || '';
+        dbPost.moderationStatus = safety.isFlagged ? 'flagged' : 'approved';
+
+        await dbPost.save();
+        await dbPost.populate([
+          { path: 'category', select: 'name slug description' },
+          { path: 'user', select: 'name avatar jobTitle bio socialLinks streakCount' },
+        ]);
+
+        const mongoObj = dbPost.toObject();
+        updatedMongoPost = {
+          ...mongoObj,
+          author: mongoObj.user?.name || sanitizeAuthorName(mongoObj),
+          authorJob: mongoObj.authorJob || mongoObj.user?.jobTitle,
+          authorAvatar: mongoObj.user?.avatar || mongoObj.authorAvatar,
+          authorSocialLinks: mongoObj.user?.socialLinks || mongoObj.authorSocialLinks,
+          authorStreakCount: mongoObj.user?.streakCount || mongoObj.authorStreakCount || 0,
+        };
       } catch (dbErr) {
+        mongoUpdateError = dbErr;
         console.warn('Lỗi cập nhật MongoDB trong updatePost:', dbErr.message);
       }
     }
 
-    if (updatedPostObj) {
+    const finalUpdatedPost = updatedMongoPost || updatedStorePost;
+    if (finalUpdatedPost) {
       return sendSuccess(res, {
-        message: 'Đã cập nhật bài viết thành công! (Dữ liệu đã lưu bền vững trên ổ cứng)',
-        data: updatedPostObj,
+        message: 'Đã cập nhật bài viết thành công!',
+        data: finalUpdatedPost,
       });
+    }
+
+    if (mongoUpdateError) {
+      return sendError(res, { message: mongoUpdateError.message || 'Không thể cập nhật bài viết', status: 500 });
     }
 
     return sendError(res, { message: 'Không tìm thấy bài viết để cập nhật', status: 404 });

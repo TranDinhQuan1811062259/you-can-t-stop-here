@@ -347,8 +347,11 @@ export const PostDetailPage = () => {
   };
 
   const handlePostUpdated = (updatedPost) => {
-    setPost(updatedPost);
-    setCheers(updatedPost.cheersCount || 0);
+    if (!updatedPost || typeof updatedPost !== 'object') return;
+    setPost((prev) => ({ ...(prev || {}), ...updatedPost }));
+    if (updatedPost.cheersCount !== undefined) {
+      setCheers(updatedPost.cheersCount || 0);
+    }
     if (updatedPost.slug && updatedPost.slug !== slug) {
       navigate(`/post/${updatedPost.slug}`, { replace: true });
     }
@@ -505,13 +508,38 @@ export const PostDetailPage = () => {
     return { name: 'Tâm Sự & Cảm Xúc', icon: '🌿', slug: 'tam-su' };
   })();
 
+  const isHexLight = (hex) => {
+    if (!hex || typeof hex !== 'string') return false;
+    const clean = hex.trim().replace('#', '');
+    if (!/^[0-9a-fA-F]{6}$/.test(clean)) return false;
+    const r = parseInt(clean.slice(0, 2), 16);
+    const g = parseInt(clean.slice(2, 4), 16);
+    const b = parseInt(clean.slice(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62;
+  };
+
   let customArticleStyle = {};
-  const isCustomBg = postAtmosphere.bgPreset !== 'default' || postAtmosphere.customColor || postAtmosphere.customBgGradient;
+  const isCustomBg = Boolean(
+    postAtmosphere.bgPreset !== 'default' ||
+    postAtmosphere.customColor ||
+    postAtmosphere.customBgGradient
+  );
+  const isLightCustomBg = Boolean(
+    isCustomBg &&
+    (postAtmosphere.bgPreset === 'joy_sunset' ||
+      postAtmosphere.bgPreset === 'pastel_dream' ||
+      (postAtmosphere.bgPreset === 'custom' &&
+        !postAtmosphere.customBgGradient &&
+        isHexLight(postAtmosphere.customColor)))
+  );
+  const isDarkCustomBg = Boolean(isCustomBg && !isLightCustomBg);
+
   if (postAtmosphere.bgPreset === 'custom') {
     if (postAtmosphere.customBgGradient) {
       customArticleStyle.background = postAtmosphere.customBgGradient;
     } else if (postAtmosphere.customColor) {
       customArticleStyle.backgroundColor = postAtmosphere.customColor;
+      customArticleStyle.color = isLightCustomBg ? '#0f172a' : '#f8fafc';
     }
   } else if (postAtmosphere.bgPreset !== 'default') {
     customArticleStyle.background = bgPresetMeta.previewBg;
@@ -603,7 +631,7 @@ export const PostDetailPage = () => {
           {/* Main Content Area */}
           <div>
             <article
-              className={`post-main-content ${isCustomBg ? 'has-custom-atmosphere-bg' : ''} ${postAtmosphere.particleEffect !== 'none' ? `has-particle-${postAtmosphere.particleEffect}` : ''}`}
+              className={`post-main-content ${isCustomBg ? 'has-custom-atmosphere-bg' : ''} ${isLightCustomBg ? 'is-light-atmosphere-bg' : ''} atmosphere-theme-${postAtmosphere.theme || 'default'} ${postAtmosphere.particleEffect !== 'none' ? `has-particle-${postAtmosphere.particleEffect}` : ''}`}
               style={customArticleStyle}
             >
               {/* Particle Overlays Trực Quan */}
@@ -691,15 +719,27 @@ export const PostDetailPage = () => {
                     whiteSpace: 'nowrap',
                     flexShrink: 0,
                     maxWidth: '100%',
-                    background: isCustomBg ? 'rgba(255, 255, 255, 0.22)' : 'rgba(13, 148, 136, 0.12)',
-                    color: isCustomBg ? '#ffffff' : 'var(--primary-hover)',
-                    border: isCustomBg ? '1.5px solid rgba(255, 255, 255, 0.4)' : '1px solid rgba(13, 148, 136, 0.25)',
+                    background: isDarkCustomBg
+                      ? 'rgba(255, 255, 255, 0.22)'
+                      : isLightCustomBg
+                      ? 'rgba(255, 255, 255, 0.72)'
+                      : 'rgba(13, 148, 136, 0.12)',
+                    color: isDarkCustomBg
+                      ? '#ffffff'
+                      : isLightCustomBg
+                      ? '#0f172a'
+                      : 'var(--primary-hover)',
+                    border: isDarkCustomBg
+                      ? '1.5px solid rgba(255, 255, 255, 0.4)'
+                      : isLightCustomBg
+                      ? '1.5px solid rgba(15, 23, 42, 0.18)'
+                      : '1px solid rgba(13, 148, 136, 0.25)',
                     padding: '4px 14px',
                     borderRadius: '999px',
                     fontWeight: 800,
                     fontSize: '0.82rem',
-                    textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
-                    boxShadow: isCustomBg ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
+                    textShadow: isDarkCustomBg ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+                    boxShadow: isCustomBg ? '0 2px 8px rgba(0,0,0,0.12)' : 'none',
                     backdropFilter: isCustomBg ? 'blur(8px)' : 'none',
                   }}
                   title={`Thể loại: ${categoryData.name} (Xem các bài viết liên quan)`}
@@ -759,20 +799,26 @@ export const PostDetailPage = () => {
                     gap: '6px',
                     whiteSpace: 'nowrap',
                     flexShrink: 0,
-                    background: isCustomBg
+                    background: isDarkCustomBg
                       ? (post.visibility === 'friends' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.22)')
+                      : isLightCustomBg
+                      ? (post.visibility === 'friends' ? 'rgba(254, 243, 199, 0.9)' : 'rgba(255, 255, 255, 0.72)')
                       : undefined,
-                    color: isCustomBg
+                    color: isDarkCustomBg
                       ? (post.visibility === 'friends' ? '#fef08a' : '#ffffff')
+                      : isLightCustomBg
+                      ? (post.visibility === 'friends' ? '#92400e' : '#0f172a')
                       : undefined,
-                    border: isCustomBg
+                    border: isDarkCustomBg
                       ? (post.visibility === 'friends' ? '1.5px solid rgba(245, 158, 11, 0.5)' : '1.5px solid rgba(255, 255, 255, 0.4)')
+                      : isLightCustomBg
+                      ? (post.visibility === 'friends' ? '1.5px solid rgba(217, 119, 6, 0.45)' : '1.5px solid rgba(15, 23, 42, 0.18)')
                       : undefined,
                     padding: '4px 14px',
                     borderRadius: '999px',
                     fontWeight: 800,
                     fontSize: '0.8rem',
-                    textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+                    textShadow: isDarkCustomBg ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
                     backdropFilter: isCustomBg ? 'blur(8px)' : 'none',
                   }}
                   title={post.visibility === 'friends' ? 'Chế độ: Chỉ bạn bè mới xem được' : 'Chế độ: Công khai cho tất cả'}
@@ -801,10 +847,22 @@ export const PostDetailPage = () => {
                       borderRadius: '999px',
                       fontSize: '0.8rem',
                       fontWeight: 800,
-                      background: isCustomBg ? 'rgba(255, 255, 255, 0.22)' : `${themeMeta.accentColor}25`,
-                      color: isCustomBg ? '#ffffff' : themeMeta.accentColor,
-                      border: isCustomBg ? '1.5px solid rgba(255, 255, 255, 0.4)' : `1px solid ${themeMeta.accentColor}60`,
-                      textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+                      background: isDarkCustomBg
+                        ? 'rgba(255, 255, 255, 0.22)'
+                        : isLightCustomBg
+                        ? 'rgba(255, 255, 255, 0.72)'
+                        : `${themeMeta.accentColor}25`,
+                      color: isDarkCustomBg
+                        ? '#ffffff'
+                        : isLightCustomBg
+                        ? '#0f172a'
+                        : themeMeta.accentColor,
+                      border: isDarkCustomBg
+                        ? '1.5px solid rgba(255, 255, 255, 0.4)'
+                        : isLightCustomBg
+                        ? '1.5px solid rgba(15, 23, 42, 0.18)'
+                        : `1px solid ${themeMeta.accentColor}60`,
+                      textShadow: isDarkCustomBg ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
                       backdropFilter: isCustomBg ? 'blur(8px)' : 'none',
                     }}
                   >
@@ -816,10 +874,16 @@ export const PostDetailPage = () => {
 
               <h1
                 className="post-full-title"
-                style={{
-                  color: isCustomBg ? '#ffffff' : undefined,
-                  textShadow: isCustomBg ? '0 2px 10px rgba(0,0,0,0.55)' : undefined,
-                }}
+                style={
+                  isCustomBg
+                    ? {
+                        color: isLightCustomBg ? (customArticleStyle.color || '#1e293b') : '#f8fafc',
+                        textShadow: isLightCustomBg
+                          ? '0 1px 1px rgba(255, 255, 255, 0.4)'
+                          : '0 2px 10px rgba(0, 0, 0, 0.45)',
+                      }
+                    : undefined
+                }
               >
                 <IdleWeatherText>{post.title}</IdleWeatherText>
               </h1>
@@ -853,8 +917,8 @@ export const PostDetailPage = () => {
                         <h4
                           className="post-author-name"
                           style={{
-                            color: isCustomBg ? '#ffffff' : undefined,
-                            textShadow: isCustomBg ? '0 1px 4px rgba(0,0,0,0.5)' : undefined,
+                            color: isDarkCustomBg ? '#ffffff' : isLightCustomBg ? (customArticleStyle.color || '#0f172a') : undefined,
+                            textShadow: isDarkCustomBg ? '0 1px 4px rgba(0,0,0,0.5)' : undefined,
                           }}
                         >
                           {authorName}
@@ -889,7 +953,7 @@ export const PostDetailPage = () => {
                       <span
                         className="post-author-job"
                         style={{
-                          color: isCustomBg ? 'rgba(255, 255, 255, 0.9)' : undefined,
+                          color: isDarkCustomBg ? 'rgba(255, 255, 255, 0.9)' : isLightCustomBg ? '#334155' : undefined,
                         }}
                       >
                         {authorJob}
@@ -953,8 +1017,16 @@ export const PostDetailPage = () => {
                   <div
                     className="post-stats-pill"
                     style={{
-                      background: isCustomBg ? 'rgba(0, 0, 0, 0.35)' : undefined,
-                      border: isCustomBg ? '1px solid rgba(255, 255, 255, 0.28)' : undefined,
+                      background: isDarkCustomBg
+                        ? 'rgba(0, 0, 0, 0.35)'
+                        : isLightCustomBg
+                        ? 'rgba(255, 255, 255, 0.72)'
+                        : undefined,
+                      border: isDarkCustomBg
+                        ? '1px solid rgba(255, 255, 255, 0.28)'
+                        : isLightCustomBg
+                        ? '1px solid rgba(15, 23, 42, 0.16)'
+                        : undefined,
                       backdropFilter: isCustomBg ? 'blur(8px)' : undefined,
                       flexShrink: 0,
                     }}
@@ -962,9 +1034,9 @@ export const PostDetailPage = () => {
                     <span
                       className="post-stat-item"
                       style={{
-                        color: isCustomBg ? '#ffffff' : undefined,
+                        color: isDarkCustomBg ? '#ffffff' : isLightCustomBg ? '#0f172a' : undefined,
                         fontWeight: isCustomBg ? 700 : undefined,
-                        textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
+                        textShadow: isDarkCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
                       }}
                     >
                       <span>🗓️</span>
@@ -973,9 +1045,9 @@ export const PostDetailPage = () => {
                     <span
                       className="post-stat-item"
                       style={{
-                        color: isCustomBg ? '#ffffff' : undefined,
+                        color: isDarkCustomBg ? '#ffffff' : isLightCustomBg ? '#0f172a' : undefined,
                         fontWeight: isCustomBg ? 700 : undefined,
-                        textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
+                        textShadow: isDarkCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
                       }}
                     >
                       <span>👁️</span>
@@ -984,9 +1056,9 @@ export const PostDetailPage = () => {
                     <span
                       className="post-stat-item"
                       style={{
-                        color: isCustomBg ? '#fef08a' : '#d97706',
+                        color: isDarkCustomBg ? '#fef08a' : isLightCustomBg ? '#9a3412' : '#d97706',
                         fontWeight: 700,
-                        textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
+                        textShadow: isDarkCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
                       }}
                       title="Thời gian đọc ước tính"
                     >
@@ -1011,9 +1083,17 @@ export const PostDetailPage = () => {
                       onClick={() => setIsShareOpen(true)}
                       title="Chia sẻ bài viết lên trang cá nhân hoặc mạng xã hội"
                       style={{
-                        background: isCustomBg ? 'rgba(255, 255, 255, 0.22)' : 'rgba(13, 148, 136, 0.15)',
-                        border: isCustomBg ? '1.5px solid rgba(255, 255, 255, 0.45)' : '1px solid #0d9488',
-                        color: isCustomBg ? '#ffffff' : '#0d9488',
+                        background: isDarkCustomBg
+                          ? 'rgba(255, 255, 255, 0.22)'
+                          : isLightCustomBg
+                          ? 'rgba(255, 255, 255, 0.78)'
+                          : 'rgba(13, 148, 136, 0.15)',
+                        border: isDarkCustomBg
+                          ? '1.5px solid rgba(255, 255, 255, 0.45)'
+                          : isLightCustomBg
+                          ? '1.5px solid rgba(15, 23, 42, 0.2)'
+                          : '1px solid #0d9488',
+                        color: isDarkCustomBg ? '#ffffff' : isLightCustomBg ? '#0f172a' : '#0d9488',
                         padding: '5px 12px',
                         borderRadius: '6px',
                         fontWeight: 800,
@@ -1024,7 +1104,7 @@ export const PostDetailPage = () => {
                         gap: '5px',
                         whiteSpace: 'nowrap',
                         flexShrink: 0,
-                        textShadow: isCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
+                        textShadow: isDarkCustomBg ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
                         backdropFilter: isCustomBg ? 'blur(6px)' : undefined,
                       }}
                     >
@@ -1051,9 +1131,9 @@ export const PostDetailPage = () => {
                         onClick={handleAuthorDelete}
                         className="author-delete-post-btn"
                         style={{
-                          background: isCustomBg ? 'rgba(239, 68, 68, 0.32)' : 'rgba(239, 68, 68, 0.12)',
-                          color: isCustomBg ? '#ffffff' : '#ef4444',
-                          border: isCustomBg ? '1px solid rgba(255, 255, 255, 0.45)' : '1px solid rgba(239, 68, 68, 0.35)',
+                          background: isDarkCustomBg ? 'rgba(239, 68, 68, 0.32)' : 'rgba(239, 68, 68, 0.12)',
+                          color: isDarkCustomBg ? '#ffffff' : '#dc2626',
+                          border: isDarkCustomBg ? '1px solid rgba(255, 255, 255, 0.45)' : '1px solid rgba(239, 68, 68, 0.35)',
                           padding: '5px 12px',
                           borderRadius: '6px',
                           fontWeight: 700,
@@ -1072,8 +1152,8 @@ export const PostDetailPage = () => {
                           e.currentTarget.style.color = '#ffffff';
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = isCustomBg ? 'rgba(239, 68, 68, 0.32)' : 'rgba(239, 68, 68, 0.12)';
-                          e.currentTarget.style.color = isCustomBg ? '#ffffff' : '#ef4444';
+                          e.currentTarget.style.background = isDarkCustomBg ? 'rgba(239, 68, 68, 0.32)' : 'rgba(239, 68, 68, 0.12)';
+                          e.currentTarget.style.color = isDarkCustomBg ? '#ffffff' : '#dc2626';
                         }}
                         title="Xóa vĩnh viễn bài tâm sự này của bạn"
                       >
@@ -1389,7 +1469,15 @@ export const PostDetailPage = () => {
               <h3 className="widget-title">Người Chia Sẻ</h3>
               <Link
                 to={authorProfileUrl}
-                style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px', textDecoration: 'none' }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  marginBottom: '14px',
+                  textDecoration: 'none',
+                  minWidth: 0,
+                  maxWidth: '100%',
+                }}
                 title={`Bấm để xem trang cá nhân của ${authorName}`}
                 onMouseEnter={() => scheduleAuthorProfilePrefetch(false)}
                 onMouseLeave={cancelAuthorProfilePrefetch}
@@ -1401,14 +1489,32 @@ export const PostDetailPage = () => {
                   className={`frame-${authorFrame}`}
                   style={{ width: '64px', height: '64px', minWidth: '64px', maxWidth: '64px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
                 />
-                <div>
+                <div style={{ flex: 1, minWidth: 0, maxWidth: '100%' }}>
                   <h4 className="post-sidebar-author-name">{authorName}</h4>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--primary-color)', fontWeight: 600 }}>
+                  <span
+                    style={{
+                      display: 'block',
+                      fontSize: '0.82rem',
+                      color: 'var(--primary-color)',
+                      fontWeight: 600,
+                      overflowWrap: 'break-word',
+                      wordBreak: 'break-word',
+                    }}
+                  >
                     {authorJob}
                   </span>
                 </div>
               </Link>
-              <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
+              <p
+                style={{
+                  fontSize: '0.88rem',
+                  color: 'var(--text-muted)',
+                  lineHeight: '1.6',
+                  overflowWrap: 'break-word',
+                  wordBreak: 'break-word',
+                  maxWidth: '100%',
+                }}
+              >
                 {authorBio}
               </p>
               <Link
@@ -1420,6 +1526,9 @@ export const PostDetailPage = () => {
                   fontWeight: 700,
                   color: 'var(--primary-color)',
                   textDecoration: 'none',
+                  maxWidth: '100%',
+                  overflowWrap: 'break-word',
+                  wordBreak: 'break-word',
                 }}
                 onMouseEnter={() => scheduleAuthorProfilePrefetch(false)}
                 onMouseLeave={cancelAuthorProfilePrefetch}
@@ -1429,7 +1538,7 @@ export const PostDetailPage = () => {
               </Link>
 
               {/* Các liên kết Mạng xã hội của tác giả */}
-              {authorSocial && (authorSocial.facebook || authorSocial.instagram || authorSocial.tiktok || authorSocial.x || authorSocial.linkedin || authorSocial.website) && (
+              {authorSocial && (authorSocial.facebook || authorSocial.instagram || authorSocial.tiktok || authorSocial.x || authorSocial.linkedin || authorSocial.github || authorSocial.website) && (
                 <div className="author-social-links-box">
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '8px' }}>
                     Kết Nối Mạng Xã Hội

@@ -515,7 +515,9 @@ body.theme-light .weather-season-winter .idle-weather-inner-text,
 .seasonal-logo-text .idle-weather-text-wrap,
 .seasonal-logo-text .idle-weather-inner-text,
 .hero-title .idle-weather-text-wrap,
-.hero-title .idle-weather-inner-text {
+.hero-title .idle-weather-inner-text,
+.post-full-title .idle-weather-text-wrap,
+.post-full-title .idle-weather-inner-text {
   will-change: auto !important;
   backface-visibility: visible !important;
   -webkit-backface-visibility: visible !important;
@@ -523,14 +525,21 @@ body.theme-light .weather-season-winter .idle-weather-inner-text,
 }
 
 .hero-title .weather-season-winter .idle-weather-inner-text,
-.hero-title .idle-weather-inner-text {
+.hero-title .idle-weather-inner-text,
+.post-full-title .weather-season-winter .idle-weather-inner-text,
+.post-full-title .idle-weather-inner-text {
   background: none !important;
   -webkit-background-clip: border-box !important;
   background-clip: border-box !important;
   color: inherit !important;
   -webkit-text-fill-color: currentColor !important;
+  -webkit-text-stroke: 0 !important;
   filter: none !important;
   text-shadow: inherit !important;
+}
+
+.post-full-title .idle-weather-inner-text {
+  display: inline !important;
 }
 
 .seasonal-logo-text .snow-cap-accumulation {

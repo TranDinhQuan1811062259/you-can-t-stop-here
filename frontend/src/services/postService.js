@@ -516,11 +516,33 @@ export const postService = {
   },
 
   // Cập nhật bài viết
-  updatePost: (id, postData) =>
-    apiClient.put(`/posts/${id}`, postData).then((res) => {
-      invalidatePostsCache();
-      return res;
-    }),
+  updatePost: async (id, postData) => {
+    const res = await apiClient.put(`/posts/${id}`, postData);
+    const updatedPost = res?.data?.post || res?.data?.data || res?.post || res?.data || res;
+
+    // Đồng bộ an toàn cache localStorage nếu có (không ném lỗi nếu không có trong cache phụ)
+    try {
+      if (updatedPost && typeof updatedPost === 'object') {
+        const mergeUpdatedItem = (list) =>
+          Array.isArray(list)
+            ? list.map((p) =>
+                String(p?._id) === String(id) || (p?.slug && p.slug === id)
+                  ? { ...p, ...updatedPost }
+                  : p
+              )
+            : [];
+        saveCachedPosts(mergeUpdatedItem(getCachedPosts()));
+        saveOfflineCreatedPosts(mergeUpdatedItem(getOfflineCreatedPosts()));
+      }
+    } catch (_) {}
+
+    invalidatePostsCache();
+    return {
+      ...(res && typeof res === 'object' ? res : {}),
+      success: true,
+      data: updatedPost,
+    };
+  },
 
   // Xóa bài viết (hoặc Admin xóa ngang bài vi phạm)
   deletePost: (id) =>

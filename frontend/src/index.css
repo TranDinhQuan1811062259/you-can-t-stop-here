@@ -2869,8 +2869,13 @@ body.theme-dark .hero-rant-burn-pill:hover .rant-pill-arrow {
 
 .post-detail-layout {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 340px);
   gap: 40px;
+}
+
+.post-detail-layout > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .post-main-content {
@@ -4879,6 +4884,9 @@ body.theme-dark .social-quote-author,
   display: flex;
   flex-direction: column;
   gap: 30px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .sidebar-widget {
@@ -4887,6 +4895,20 @@ body.theme-dark .social-quote-author,
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.post-sidebar-author-name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .widget-title {
@@ -5853,7 +5875,7 @@ body.theme-light .footer-author-social-badge.is-github:hover .footer-author-soci
 
 @media (max-width: 900px) {
   .post-detail-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -7162,7 +7184,10 @@ body.theme-light .post-body h4 {
   border-top: 1px dashed var(--border-color);
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .author-chat-btn {
@@ -7258,12 +7283,17 @@ body.theme-light .post-body h4 {
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px dashed var(--border-color);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .social-badges-flex {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .social-badge-btn {
@@ -7276,6 +7306,11 @@ body.theme-light .post-body h4 {
   font-weight: 600;
   text-decoration: none;
   transition: var(--transition);
+  max-width: 100%;
+  box-sizing: border-box;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  flex: 0 1 auto;
 }
 
 .social-badge-btn.fb {
@@ -7329,6 +7364,17 @@ body.theme-light .post-body h4 {
 }
 .social-badge-btn.linkedin:hover {
   background: #0284c7;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.social-badge-btn.github {
+  background: #f1f5f9;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
+}
+.social-badge-btn.github:hover {
+  background: #1e293b;
   color: #ffffff;
   transform: translateY(-1px);
 }
@@ -17306,7 +17352,6 @@ body.theme-light .card-share-btn:hover,
 
 /* 1. Đồng bộ Font chữ tựa đề hiện đại, siêu rõ nét, tối ưu tiếng Việt (Be Vietnam Pro) */
 .card-title,
-.post-full-title,
 .hero-title,
 .section-title,
 .widget-title,
@@ -17345,9 +17390,6 @@ a:has(> .card-title),
 body.theme-dark .card-title,
 [data-theme="dark"] .card-title,
 .mode-dark .card-title,
-body.theme-dark .post-full-title,
-[data-theme="dark"] .post-full-title,
-.mode-dark .post-full-title,
 body.theme-dark .section-title,
 [data-theme="dark"] .section-title,
 .mode-dark .section-title,
@@ -17369,9 +17411,6 @@ body.theme-dark .post-body h3,
 body.theme-light .card-title,
 [data-theme="light"] .card-title,
 .mode-light .card-title,
-body.theme-light .post-full-title,
-[data-theme="light"] .post-full-title,
-.mode-light .post-full-title,
 body.theme-light .section-title,
 [data-theme="light"] .section-title,
 .mode-light .section-title,
@@ -17390,7 +17429,6 @@ body.theme-light .post-body h3,
 
 /* 4. HIỆU ỨNG TỎA SÁNG & NỔI BẬT 3D KHI DÍ CHUỘT (HOVER - KHÔNG CHẠY TRỐN CON TRỎ CHUỘT GÂY GIẬT) */
 .card-title,
-.post-full-title,
 .section-title,
 .hero-title,
 .title-3d-floating {
@@ -17400,7 +17438,6 @@ body.theme-light .post-body h3,
 
 .card-title:hover,
 .post-card:hover .card-title,
-.post-full-title:hover,
 .section-title:hover,
 .hero-title:hover,
 .title-3d-floating:hover {
@@ -17414,8 +17451,6 @@ body.theme-dark .card-title:hover,
 body.theme-dark .post-card:hover .card-title,
 .mode-dark .card-title:hover,
 .mode-dark .post-card:hover .card-title,
-body.theme-dark .post-full-title:hover,
-.mode-dark .post-full-title:hover,
 body.theme-dark .section-title:hover,
 .mode-dark .section-title:hover,
 .mode-dark .title-3d-floating:hover {
@@ -17433,8 +17468,6 @@ body.theme-light .card-title:hover,
 body.theme-light .post-card:hover .card-title,
 .mode-light .card-title:hover,
 .mode-light .post-card:hover .card-title,
-body.theme-light .post-full-title:hover,
-.mode-light .post-full-title:hover,
 body.theme-light .section-title:hover,
 .mode-light .section-title:hover,
 .mode-light .title-3d-floating:hover {
@@ -17449,7 +17482,6 @@ body.theme-light .section-title:hover,
 /* 5. HIỆU ỨNG NHẤN XUỐNG VẬT LÝ 3D (TACTILE PRESS) KHI CLICK CHUỘT (ACTIVE) */
 .card-title:active,
 .post-card a:active .card-title,
-.post-full-title:active,
 .section-title:active,
 .hero-title:active,
 .title-3d-floating:active {
@@ -17460,8 +17492,6 @@ body.theme-light .section-title:hover,
 
 body.theme-dark .card-title:active,
 .mode-dark .card-title:active,
-body.theme-dark .post-full-title:active,
-.mode-dark .post-full-title:active,
 .mode-dark .title-3d-floating:active {
   text-shadow:
     0 1px 1px rgba(0, 0, 0, 0.8),
@@ -17470,8 +17500,6 @@ body.theme-dark .post-full-title:active,
 
 body.theme-light .card-title:active,
 .mode-light .card-title:active,
-body.theme-light .post-full-title:active,
-.mode-light .post-full-title:active,
 .mode-light .title-3d-floating:active {
   text-shadow:
     0 1px 0 rgba(255, 255, 255, 0.8),
@@ -17538,13 +17566,48 @@ body.theme-light .card-title,
     0 2px 4px rgba(15, 23, 42, 0.12) !important;
 }
 
-/* Post full title dark mode */
-.mode-dark .post-full-title,
-body.theme-dark .post-full-title,
-[data-theme="dark"] .post-full-title {
+/* Post full title - Typography sắc nét chuẩn dấu tiếng Việt trên mọi nền Ngày/Đêm & Atmosphere */
+.post-main-content .post-full-title {
+  font-family: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', 'Lora', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-weight: 800 !important;
+  line-height: 1.38 !important;
+  letter-spacing: 0.005em !important;
+  -webkit-text-stroke: 0 !important;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  cursor: default !important;
+  display: block;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: normal;
+  transform: none !important;
+  filter: none !important;
+  transition: color 0.2s ease !important;
+}
+
+.post-main-content .post-full-title:hover,
+.post-main-content .post-full-title:active {
+  transform: none !important;
+  filter: none !important;
+}
+
+body.theme-light .post-main-content:not(.has-custom-atmosphere-bg) .post-full-title,
+[data-theme="light"] .post-main-content:not(.has-custom-atmosphere-bg) .post-full-title,
+.mode-light .post-main-content:not(.has-custom-atmosphere-bg) .post-full-title {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85) !important;
+}
+
+body.theme-dark .post-main-content:not(.has-custom-atmosphere-bg) .post-full-title,
+[data-theme="dark"] .post-main-content:not(.has-custom-atmosphere-bg) .post-full-title,
+.mode-dark .post-main-content:not(.has-custom-atmosphere-bg) .post-full-title,
+.app-root-layout.theme-aurora .post-main-content:not(.has-custom-atmosphere-bg) .post-full-title,
+.app-root-layout.theme-cyberpunk .post-main-content:not(.has-custom-atmosphere-bg) .post-full-title {
   color: #f8fafc !important;
   -webkit-text-fill-color: #f8fafc !important;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+  text-shadow: 0 2px 10px rgba(2, 6, 23, 0.45) !important;
 }
 
 /* Section title - sáng rõ */
@@ -21947,7 +22010,7 @@ body.theme-light .mini-radio-action-btn {
    Ngăn chặn hoàn toàn các rule Light Mode ép màu chữ đen/tối (#0f172a, #0d9488) lên nền tối
    ========================================================================= */
 
-/* 1. Tựa đề bài viết */
+/* 1. Tựa đề bài viết (Chữ đặc sắc nét, không rỗng ruột/nhòe dấu trên nền tối & sáng) */
 .post-main-content.has-custom-atmosphere-bg .post-full-title,
 body.theme-light .post-main-content.has-custom-atmosphere-bg .post-full-title,
 [data-theme="light"] .post-main-content.has-custom-atmosphere-bg .post-full-title,
@@ -21955,9 +22018,36 @@ body.theme-light .post-main-content.has-custom-atmosphere-bg .post-full-title,
 body.theme-dark .post-main-content.has-custom-atmosphere-bg .post-full-title,
 [data-theme="dark"] .post-main-content.has-custom-atmosphere-bg .post-full-title,
 .mode-dark .post-main-content.has-custom-atmosphere-bg .post-full-title {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55) !important;
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
+  -webkit-text-stroke: 0 !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45) !important;
+}
+
+.post-main-content.has-custom-atmosphere-bg.atmosphere-theme-horror .post-full-title,
+body.theme-light .post-main-content.has-custom-atmosphere-bg.atmosphere-theme-horror .post-full-title,
+[data-theme="light"] .post-main-content.has-custom-atmosphere-bg.atmosphere-theme-horror .post-full-title,
+.mode-light .post-main-content.has-custom-atmosphere-bg.atmosphere-theme-horror .post-full-title,
+body.theme-dark .post-main-content.has-custom-atmosphere-bg.atmosphere-theme-horror .post-full-title,
+[data-theme="dark"] .post-main-content.has-custom-atmosphere-bg.atmosphere-theme-horror .post-full-title,
+.mode-dark .post-main-content.has-custom-atmosphere-bg.atmosphere-theme-horror .post-full-title {
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
+  -webkit-text-stroke: 0 !important;
+  text-shadow: 0 2px 12px rgba(9, 4, 24, 0.65), 0 1px 2px rgba(0, 0, 0, 0.55) !important;
+}
+
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-full-title,
+body.theme-light .post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-full-title,
+[data-theme="light"] .post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-full-title,
+.mode-light .post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-full-title,
+body.theme-dark .post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-full-title,
+[data-theme="dark"] .post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-full-title,
+.mode-dark .post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-full-title {
+  color: #1e293b !important;
+  -webkit-text-fill-color: #1e293b !important;
+  -webkit-text-stroke: 0 !important;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.4) !important;
 }
 
 /* 2. Tên tác giả */
@@ -22129,6 +22219,78 @@ body.theme-light .post-main-content.has-custom-atmosphere-bg .post-body blockquo
   background: rgba(255, 255, 255, 0.28) !important;
   color: #5eead4 !important;
   border-color: #5eead4 !important;
+}
+
+/* Ghi đè tương phản đậm nét cho Atmosphere nền sáng (joy_sunset, pastel_dream, custom sáng) */
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-author-name,
+body.theme-dark .post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-author-name,
+[data-theme="dark"] .post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-author-name,
+.mode-dark .post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-author-name {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  text-shadow: none !important;
+}
+
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-author-job,
+body.theme-dark .post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-author-job,
+[data-theme="dark"] .post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-author-job,
+.mode-dark .post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-author-job {
+  color: #334155 !important;
+  text-shadow: none !important;
+}
+
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body,
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body p,
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body span,
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body li,
+body.theme-dark .post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body,
+body.theme-dark .post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body p,
+[data-theme="dark"] .post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body p,
+.mode-dark .post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body p {
+  color: #1e293b !important;
+  text-shadow: none !important;
+}
+
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body h1,
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body h2,
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body h3,
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body h4 {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  text-shadow: none !important;
+}
+
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body strong,
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body b {
+  color: #7c2d12 !important;
+}
+
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body p:hover,
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg p:hover {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  background: rgba(255, 255, 255, 0.55) !important;
+  border-left-color: #d97706 !important;
+  text-shadow: none !important;
+}
+
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body blockquote,
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-body blockquote p {
+  background: rgba(255, 255, 255, 0.65) !important;
+  border-left: 4px solid #d97706 !important;
+  color: #1e293b !important;
+  -webkit-text-fill-color: #1e293b !important;
+}
+
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-tags-row,
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-tag {
+  color: #0f172a !important;
+  text-shadow: none !important;
+}
+
+.post-main-content.has-custom-atmosphere-bg.is-light-atmosphere-bg .post-tag {
+  background: rgba(255, 255, 255, 0.72) !important;
+  border-color: rgba(15, 23, 42, 0.18) !important;
 }
 
 /* Huy hiệu chế độ xem mặc định ở Chế độ Ngày (Chỉ áp dụng khi KHÔNG có custom atmosphere) */

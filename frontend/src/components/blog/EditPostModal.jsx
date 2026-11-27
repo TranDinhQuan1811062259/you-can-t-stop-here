@@ -302,18 +302,24 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
         ? formData.tags.split(',').map((t) => maskSensitiveText(t.trim().replace(/^#/, ''))).filter(Boolean)
         : [];
 
+      const nextMediaUrls =
+        postFormat === 'photo' && (!post?.mediaUrls || post.mediaUrls.length <= 1)
+          ? (formData.coverImage ? [formData.coverImage] : [])
+          : (post?.mediaUrls || (formData.coverImage ? [formData.coverImage] : []));
+
       const payload = {
         postType: postFormat,
-        mediaUrls: post?.mediaUrls || (formData.coverImage ? [formData.coverImage] : []),
+        mediaUrls: nextMediaUrls,
         title: cleanTitle,
         author: formData.author.trim(),
         authorJob: formData.authorJob.trim(),
         summary: cleanSummary,
         content: cleanContent,
         category: formData.category || undefined,
-        coverImage: formData.coverImage || undefined,
+        coverImage: formData.coverImage || '',
         tags: cleanTags,
         views: parseInt(formData.views, 10) || 1,
+        visibility: formData.visibility || 'public',
         showReactionCount: formData.showReactionCount,
         allowComments: formData.allowComments,
         audioMood: formData.audioMood || 'auto',
@@ -323,9 +329,10 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
         atmosphere: formData.atmosphere,
       };
 
-      const res = await postService.updatePost(post._id, payload);
-      if (onPostUpdated) {
-        onPostUpdated(res.data);
+      const res = await postService.updatePost(post._id || post.slug, payload);
+      const updatedPost = res?.data?.post || res?.data?.data || res?.post || res?.data || res;
+      if (onPostUpdated && updatedPost && typeof updatedPost === 'object') {
+        onPostUpdated(updatedPost);
       }
       window.dispatchEvent(new Event('post_updated'));
       handleModalClose();
