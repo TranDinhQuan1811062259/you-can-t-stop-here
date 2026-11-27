@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { postService } from '../../services/postService';
 import { categoryService } from '../../services/categoryService';
@@ -102,16 +102,23 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
         });
         setErrorMsg('');
       }
+    } else {
+      setIsCoverCameraOpen(false);
     }
   }, [isOpen, post]);
+
+  const handleModalClose = useCallback(() => {
+    setIsCoverCameraOpen(false);
+    if (onClose) onClose();
+  }, [onClose]);
 
   // Khóa cuộn trang nền và hỗ trợ đóng modal bằng phím Escape
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        onClose();
+      if (e.key === 'Escape' && !isCoverCameraOpen) {
+        handleModalClose();
       }
     };
 
@@ -123,7 +130,7 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
       document.body.style.overflow = originalOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, isCoverCameraOpen, handleModalClose]);
 
   if (!isOpen || !post) return null;
 
@@ -321,7 +328,7 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
         onPostUpdated(res.data);
       }
       window.dispatchEvent(new Event('post_updated'));
-      onClose();
+      handleModalClose();
     } catch (err) {
       setErrorMsg(err.message || 'Không thể cập nhật bài viết lúc này. Vui lòng thử lại!');
     } finally {
@@ -332,7 +339,7 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
   const modalContent = (
     <div
       className="modal-backdrop edit-post-modal-backdrop"
-      onClick={onClose}
+      onClick={handleModalClose}
       style={{
         position: 'fixed',
         top: 0,
@@ -368,7 +375,7 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
       >
         <button
           className="modal-close-btn"
-          onClick={onClose}
+          onClick={handleModalClose}
           type="button"
           title="Đóng cửa sổ chỉnh sửa (Esc hoặc click ra ngoài)"
         >
@@ -1007,7 +1014,7 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
               type="button"
               className="page-btn"
               style={{ flex: 1 }}
-              onClick={onClose}
+              onClick={handleModalClose}
             >
               Hủy
             </button>
@@ -1024,11 +1031,13 @@ export const EditPostModal = ({ isOpen, onClose, post, onPostUpdated }) => {
       </div>
 
       {/* Modal Camera / Webcam chụp ảnh bìa trực tiếp */}
-      <MediaCameraCaptureModal
-        isOpen={isCoverCameraOpen}
-        onClose={() => setIsCoverCameraOpen(false)}
-        onMediaCaptured={handleCoverCameraCaptured}
-      />
+      {isCoverCameraOpen && (
+        <MediaCameraCaptureModal
+          isOpen={isCoverCameraOpen}
+          onClose={() => setIsCoverCameraOpen(false)}
+          onMediaCaptured={handleCoverCameraCaptured}
+        />
+      )}
     </div>
   );
 

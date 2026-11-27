@@ -935,11 +935,13 @@ export const RichVisualEditor = ({ value, onChange, placeholder = 'Hãy thoải 
       {/* ========================================================
           MODAL CAMERA & WEBCAM CHỤP ẢNH / QUAY VIDEO TRỰC TIẾP
           ======================================================== */}
-      <MediaCameraCaptureModal
-        isOpen={isCameraModalOpen}
-        onClose={() => setIsCameraModalOpen(false)}
-        onMediaCaptured={handleMediaCaptured}
-      />
+      {isCameraModalOpen && (
+        <MediaCameraCaptureModal
+          isOpen={isCameraModalOpen}
+          onClose={() => setIsCameraModalOpen(false)}
+          onMediaCaptured={handleMediaCaptured}
+        />
+      )}
 
       {/* ========================================================
           BẢNG GỢI Ý HASHTAG INLINE - Hiển thị ngay dưới editor

@@ -261,6 +261,12 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
     return () => clearTimeout(timer);
   }, [isOpen, formData.title, formData.summary, formData.content, formData.category, formData.tags, postFormat, videoUrlInput]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setIsCoverCameraOpen(false);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleClearDraft = () => {
@@ -1715,11 +1721,13 @@ export const CreatePostModal = ({ isOpen, onClose, onPostCreated }) => {
       </div>
 
       {/* Modal Camera / Webcam chụp ảnh bìa trực tiếp */}
-      <MediaCameraCaptureModal
-        isOpen={isCoverCameraOpen}
-        onClose={() => setIsCoverCameraOpen(false)}
-        onMediaCaptured={handleCoverCameraCaptured}
-      />
+      {isCoverCameraOpen && (
+        <MediaCameraCaptureModal
+          isOpen={isCoverCameraOpen}
+          onClose={() => setIsCoverCameraOpen(false)}
+          onMediaCaptured={handleCoverCameraCaptured}
+        />
+      )}
 
       {/* Hiệu ứng Đăng Bài Viết hoành tráng theo Sự kiện Lễ Hội & 4 Mùa Thời Tiết */}
       {submitEffect && (

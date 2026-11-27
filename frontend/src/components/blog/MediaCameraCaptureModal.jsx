@@ -47,6 +47,8 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
     }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       try {
+        mediaRecorderRef.current.ondataavailable = null;
+        mediaRecorderRef.current.onstop = null;
         mediaRecorderRef.current.stop();
       } catch (_) {}
     }
@@ -58,18 +60,27 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
       });
       cameraStreamRef.current = null;
     }
-    setCameraStream(null);
     if (videoRef.current) {
+      const attachedStream = videoRef.current.srcObject;
+      if (attachedStream && typeof attachedStream.getTracks === 'function') {
+        attachedStream.getTracks().forEach((track) => {
+          try {
+            track.stop();
+          } catch (_) {}
+        });
+      }
       try {
         videoRef.current.pause();
       } catch (_) {}
       videoRef.current.srcObject = null;
     }
+    setCameraStream(null);
   }, []);
 
-  // Khởi động Camera / Webcam khi mở Modal
+  // Khởi động Camera / Webcam khi mở Modal (chỉ chạy khi isOpen === true)
   const startCamera = useCallback(async (mode = facingMode) => {
     stopCamera();
+    if (isOpenRef.current !== true) return;
     setCameraError('');
     const requestId = ++cameraRequestIdRef.current;
 
@@ -90,7 +101,7 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
       // Nếu người dùng đã đóng modal hoặc chuyển chế độ trong lúc chờ quyền camera -> tắt stream ngay
-      if (!isOpenRef.current || requestId !== cameraRequestIdRef.current) {
+      if (isOpenRef.current !== true || requestId !== cameraRequestIdRef.current) {
         stream.getTracks().forEach((track) => {
           try {
             track.stop();
@@ -107,7 +118,7 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
         videoRef.current.play().catch((err) => console.warn('Video play warning:', err));
       }
     } catch (err) {
-      if (!isOpenRef.current || requestId !== cameraRequestIdRef.current) return;
+      if (isOpenRef.current !== true || requestId !== cameraRequestIdRef.current) return;
       console.warn('Lỗi mở Camera/Webcam:', err);
       let msg = 'Không thể mở Camera/Webcam. Vui lòng cho phép quyền truy cập Camera trên trình duyệt của bạn!';
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
@@ -121,7 +132,7 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
 
   // Gắn chắc chắn srcObject vào thẻ <video> mỗi khi stream hoặc khung live video được mount lại
   useEffect(() => {
-    if (!isOpen || capturedPhoto || recordedVideoUrl || !cameraStream) return;
+    if (isOpen !== true || capturedPhoto || recordedVideoUrl || !cameraStream) return;
     const videoEl = videoRef.current;
     if (videoEl && videoEl.srcObject !== cameraStream) {
       videoEl.srcObject = cameraStream;
@@ -130,7 +141,7 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
   }, [isOpen, cameraStream, capturedPhoto, recordedVideoUrl]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen === true) {
       setCapturedPhoto(null);
       revokeRecordedVideoUrl();
       setRecordedVideoBlob(null);
@@ -161,14 +172,34 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
     if (onClose) onClose();
   }, [onClose, revokeRecordedVideoUrl, stopCamera]);
 
-  if (!isOpen) return null;
+  // Đóng riêng modal Camera khi nhấn Escape để không đóng nhầm EditPostModal bên dưới
+  useEffect(() => {
+    if (isOpen !== true) return;
+
+    const handleEscapeKey = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') {
+          e.stopImmediatePropagation();
+        }
+        handleClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscapeKey, true);
+    return () => {
+      window.removeEventListener('keydown', handleEscapeKey, true);
+    };
+  }, [isOpen, handleClose]);
+
+  if (isOpen !== true) return null;
 
   // Đổi Camera Trước / Sau (cho điện thoại)
   const handleToggleFacingMode = () => {
     playClickSound();
     const nextMode = facingMode === 'user' ? 'environment' : 'user';
     setFacingMode(nextMode);
-    startCamera(nextMode);
   };
 
   // ==========================================
@@ -266,6 +297,7 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
         recordedVideoUrlRef.current = url;
         setRecordedVideoBlob(blob);
         setRecordedVideoUrl(url);
+        stopCamera();
       };
 
       recorder.start(500); // chunk every 500ms
@@ -301,7 +333,7 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
 
   const handleConfirmInsertVideo = () => {
     playClickSound();
-    if (!recordedVideoBlob && !recordedVideoUrl) return;
+    if (!recordedVideoBlob) return;
 
     // Chuyển đổi sang base64 dataUrl hoặc truyền URL blob
     const reader = new FileReader();
@@ -318,6 +350,9 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
       stopCamera();
       revokeRecordedVideoUrl();
       if (onClose) onClose();
+    };
+    reader.onerror = () => {
+      alert('Không thể đọc dữ liệu video vừa quay. Vui lòng thử lại.');
     };
     reader.readAsDataURL(recordedVideoBlob);
   };
@@ -355,7 +390,7 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 10050,
+        zIndex: 200000,
         background: 'rgba(9, 13, 22, 0.78)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
@@ -364,11 +399,16 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
         justifyContent: 'center',
         padding: '16px',
         boxSizing: 'border-box',
+        opacity: 1,
+        visibility: 'visible',
       }}
       onClick={handleClose}
     >
       <div
         className="modal-box media-capture-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={activeTab === 'photo' ? 'Chụp Ảnh Từ Camera / Webcam' : 'Quay Video Từ Camera / Webcam'}
         style={{
           position: 'relative',
           maxWidth: '680px',
@@ -377,8 +417,10 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
           overflowY: 'auto',
           overflowX: 'hidden',
           padding: '20px 24px',
-          zIndex: 10051,
+          zIndex: 200001,
           boxSizing: 'border-box',
+          opacity: 1,
+          visibility: 'visible',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -387,7 +429,7 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
         </button>
 
         {/* Tiêu đề & Chọn Chế Độ Chụp Ảnh / Quay Video */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', paddingRight: '36px', flexWrap: 'wrap', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '1.5rem' }}>{activeTab === 'photo' ? '📸' : '🎥'}</span>
             <h3 className="modal-heading" style={{ margin: 0, fontSize: '1.25rem' }}>
