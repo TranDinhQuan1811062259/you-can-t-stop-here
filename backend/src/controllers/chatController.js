@@ -7,6 +7,11 @@ import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { loadStore, saveStore } from '../utils/persistentStore.js';
 import { maskSensitiveText } from '../utils/sensitiveFilter.js';
 import { createNotification } from '../services/notificationService.js';
+import {
+  registerChatSseClient,
+  pushNewChatMessage,
+  emitChatEventToUser,
+} from '../utils/chat-sse-manager.js';
 
 /**
  * Helper: Tìm thông tin người dùng từ persistent store hoặc MongoDB Atlas
@@ -402,6 +407,9 @@ export const getMessages = async (req, res) => {
 
     if (updated) {
       saveStore(store);
+      try {
+        emitChatEventToUser(currentUserId, 'unread_sync', { conversationId });
+      } catch (_) {}
     }
 
     // Sắp xếp tin nhắn theo thời gian tăng dần
@@ -416,6 +424,14 @@ export const getMessages = async (req, res) => {
   } catch (error) {
     return sendError(res, { message: error.message, status: 500 });
   }
+};
+
+/**
+ * Mở luồng Server-Sent Events (SSE) realtime cho người dùng đã đăng nhập
+ */
+export const streamChatEvents = (req, res) => {
+  const currentUserId = (req.user?._id || req.user?.id || '').toString().trim();
+  return registerChatSseClient({ userId: currentUserId, req, res });
 };
 
 /**
@@ -593,6 +609,16 @@ export const sendMessage = async (req, res) => {
     store.messages.push(newMsg);
     saveStore(store);
 
+    // Đẩy tin nhắn realtime tới người nhận & các tab khác của người gửi qua SSE
+    try {
+      pushNewChatMessage({
+        message: newMsg,
+        senderId: currentUserId,
+        receiverId: targetUserId,
+        conversation: conv,
+      });
+    } catch (_) {}
+
     // Bắn thông báo tin nhắn mới tới người nhận
     try {
       await createNotification({
@@ -637,6 +663,10 @@ export const acceptConversation = async (req, res) => {
       conv.status = 'accepted';
       conv.isStranger = false;
       saveStore(store);
+      try {
+        const currentUserId = (req.user?._id || req.user?.id || '').toString();
+        if (currentUserId) emitChatEventToUser(currentUserId, 'unread_sync', { conversationId });
+      } catch (_) {}
     }
 
     return sendSuccess(res, {
@@ -668,6 +698,10 @@ export const declineConversation = async (req, res) => {
     if (conv) {
       conv.status = 'rejected';
       saveStore(store);
+      try {
+        const currentUserId = (req.user?._id || req.user?.id || '').toString();
+        if (currentUserId) emitChatEventToUser(currentUserId, 'unread_sync', { conversationId });
+      } catch (_) {}
     }
 
     return sendSuccess(res, {

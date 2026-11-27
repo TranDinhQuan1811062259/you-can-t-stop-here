@@ -27929,6 +27929,98 @@ body.theme-light .wellness-tool-icon,
   }
 }
 
+/* ========================================================
+   11. REALTIME CHAT SSE STATUS DOT (DAY & NIGHT + MOBILE SAFE)
+   ======================================================== */
+.assistive-realtime-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.06);
+  color: #334155;
+}
+
+.assistive-realtime-pill.is-online {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #047857;
+}
+
+.assistive-realtime-pill.is-reconnecting {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #b45309;
+}
+
+.assistive-realtime-pill .realtime-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.assistive-realtime-pill.is-online .realtime-dot {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.75);
+}
+
+.assistive-realtime-pill.is-reconnecting .realtime-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.75);
+  animation: pulseDot 1.1s infinite alternate;
+}
+
+.assistive-room-status-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+body.theme-dark .assistive-realtime-pill,
+[data-theme="dark"] .assistive-realtime-pill,
+.mode-dark .assistive-realtime-pill {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #e2e8f0;
+}
+
+body.theme-dark .assistive-realtime-pill.is-online,
+[data-theme="dark"] .assistive-realtime-pill.is-online,
+.mode-dark .assistive-realtime-pill.is-online {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(52, 211, 153, 0.45);
+  color: #6ee7b7;
+}
+
+body.theme-dark .assistive-realtime-pill.is-reconnecting,
+[data-theme="dark"] .assistive-realtime-pill.is-reconnecting,
+.mode-dark .assistive-realtime-pill.is-reconnecting {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(251, 191, 36, 0.45);
+  color: #fde047;
+}
+
+@media (max-width: 430px) {
+  .assistive-realtime-pill .realtime-label {
+    display: none;
+  }
+
+  .assistive-realtime-pill {
+    padding: 4px;
+  }
+}
+
 
 
 

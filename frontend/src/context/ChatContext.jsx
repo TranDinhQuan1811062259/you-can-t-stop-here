@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { chatService } from '../services/chatService';
+import { createChatSseClient } from '../utils/chat-sse-client';
 
 const ChatContext = createContext(null);
 
@@ -16,6 +17,16 @@ export const ChatProvider = ({ children }) => {
   const [allowStrangerNotifications, setAllowStrangerNotifications] = useState(true);
   const [friendsList, setFriendsList] = useState([]);
   const [newIncomingNotice, setNewIncomingNotice] = useState(null);
+  const [sseStatus, setSseStatus] = useState('disconnected'); // 'connecting' | 'connected' | 'reconnecting' | 'fallback' | 'disconnected'
+
+  const userRef = useRef(user);
+  userRef.current = user;
+  const activeConversationRef = useRef(activeConversation);
+  activeConversationRef.current = activeConversation;
+  const isWidgetOpenRef = useRef(isWidgetOpen);
+  isWidgetOpenRef.current = isWidgetOpen;
+  const allowStrangerRef = useRef(allowStrangerNotifications);
+  allowStrangerRef.current = allowStrangerNotifications;
 
   useEffect(() => {
     if (user?.chatStatus) {
@@ -59,44 +70,80 @@ export const ChatProvider = ({ children }) => {
       .catch((err) => console.warn('Lỗi tải danh bạ:', err));
   }, [isAuthenticated]);
 
+  // Kết nối Server-Sent Events (SSE) realtime cho Chat khi đã đăng nhập
   useEffect(() => {
-    if (isAuthenticated) {
-      let lastUnreadCheckAt = Date.now();
-      fetchUnread();
-      fetchFriends();
-
-      // Polling kiểm tra tin nhắn mới mỗi 45 giây (tạm dừng khi tab ẩn)
-      const interval = setInterval(() => {
-        if (typeof document !== 'undefined' && document.hidden) return;
-        lastUnreadCheckAt = Date.now();
-        fetchUnread();
-      }, 45000);
-
-      const handleVisibilityChange = () => {
-        if (typeof document !== 'undefined' && !document.hidden) {
-          if (Date.now() - lastUnreadCheckAt >= 30000) {
-            lastUnreadCheckAt = Date.now();
-            fetchUnread();
-          }
-        }
-      };
-
-      if (typeof document !== 'undefined') {
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-      }
-
-      return () => {
-        clearInterval(interval);
-        if (typeof document !== 'undefined') {
-          document.removeEventListener('visibilitychange', handleVisibilityChange);
-        }
-      };
-    } else {
+    if (!isAuthenticated) {
       setUnreadCount(0);
       setActiveConversation(null);
       setIsWidgetOpen(false);
+      setSseStatus('disconnected');
+      return;
     }
+
+    fetchUnread();
+    fetchFriends();
+
+    const sseClient = createChatSseClient({
+      onStatusChange: (status) => {
+        setSseStatus(status);
+      },
+      onReconnect: () => {
+        fetchUnread();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('freedom_chat_sse_reconnected'));
+        }
+      },
+      onEvent: (eventName, payload) => {
+        if (eventName === 'new_message' && payload?.message) {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('freedom_chat_sse_message', { detail: payload })
+            );
+          }
+
+          const myId = String(userRef.current?._id || userRef.current?.id || '').trim();
+          const senderId = String(payload.senderId || payload.message.sender?._id || '').trim();
+          const convId = String(payload.conversationId || payload.message.conversation || '').trim();
+          const activeConv = activeConversationRef.current;
+          const activeOtherId = String(activeConv?.otherUser?._id || activeConv?.otherUser?.id || '').trim();
+
+          const isViewingConversation = Boolean(
+            isWidgetOpenRef.current &&
+              activeConv &&
+              (typeof document === 'undefined' || !document.hidden) &&
+              (String(activeConv._id || '') === convId || (activeOtherId && activeOtherId === senderId))
+          );
+
+          if (senderId && senderId !== myId && !isViewingConversation) {
+            const shouldNotify =
+              payload.conversationStatus !== 'rejected' &&
+              (!payload.isStranger || allowStrangerRef.current);
+            if (shouldNotify) {
+              setUnreadCount((prev) => prev + 1);
+            }
+          }
+        } else if (eventName === 'unread_sync') {
+          fetchUnread();
+        }
+      },
+    });
+
+    return () => {
+      sseClient.stop();
+    };
   }, [isAuthenticated, fetchUnread, fetchFriends]);
+
+  // Fallback polling nhẹ 15 giây CHỈ KHI SSE chưa ở trạng thái connected (tạm dừng khi tab ẩn)
+  useEffect(() => {
+    if (!isAuthenticated || sseStatus === 'connected') return;
+
+    const fallbackInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      fetchUnread();
+    }, 15000);
+
+    return () => clearInterval(fallbackInterval);
+  }, [isAuthenticated, sseStatus, fetchUnread]);
 
   // Mở chat trực tiếp với một người dùng (từ bình luận, bài viết hoặc danh bạ)
   const openChatWithUser = async (targetUser) => {
@@ -210,6 +257,7 @@ export const ChatProvider = ({ children }) => {
         handleRemoveFriend,
         myChatStatus,
         changeMyStatus,
+        sseStatus,
       }}
     >
       {children}

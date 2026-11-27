@@ -13,12 +13,16 @@ import {
   updateChatSettings,
   getUnreadCount,
   updateChatStatus,
+  streamChatEvents,
 } from '../controllers/chatController.js';
 
 const router = express.Router();
 
-// Tất cả các route chat đều yêu cầu đăng nhập
+// Tất cả các route chat đều yêu cầu đăng nhập (Header Authorization Bearer)
 router.use(protect);
+
+// Kết nối Realtime SSE Stream cho Chat
+router.get('/stream', streamChatEvents);
 
 // Trạng thái hoạt động (Online, Busy, Offline)
 router.put('/status', updateChatStatus);

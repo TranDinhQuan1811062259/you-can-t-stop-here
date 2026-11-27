@@ -50,6 +50,7 @@ export const AssistiveChatWidget = ({ onOpenCreatePost } = {}) => {
     handleRemoveFriend,
     myChatStatus,
     changeMyStatus,
+    sseStatus,
   } = useChat();
 
   const { user, isAuthenticated } = useAuth();
@@ -288,21 +289,148 @@ export const AssistiveChatWidget = ({ onOpenCreatePost } = {}) => {
       .catch((err) => console.warn('Lỗi tin nhắn:', err));
   };
 
+  const activeConvRef = useRef(activeConversation);
+  activeConvRef.current = activeConversation;
+  const isWidgetOpenRef = useRef(isWidgetOpen);
+  isWidgetOpenRef.current = isWidgetOpen;
+  const userRef = useRef(user);
+  userRef.current = user;
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+  const conversationsRef = useRef(conversations);
+  conversationsRef.current = conversations;
+
+  // Khi mở một cuộc trò chuyện cụ thể: nạp tin nhắn ban đầu & đồng bộ lại khi SSE khôi phục kết nối
+  useEffect(() => {
+    if (!isAuthenticated || !activeConversation) return;
+    setConvStatus(activeConversation.status || 'accepted');
+    setIsStranger(Boolean(activeConversation.isStranger));
+    setIsFriendState(Boolean(activeConversation.otherUser?.isFriend));
+    fetchActiveMessages();
+
+    const handleSseReconnect = () => {
+      fetchActiveMessages();
+    };
+    window.addEventListener('freedom_chat_sse_reconnected', handleSseReconnect);
+    return () => {
+      window.removeEventListener('freedom_chat_sse_reconnected', handleSseReconnect);
+    };
+  }, [isAuthenticated, activeConversation]);
+
+  // Fallback polling nhẹ 15s CHỈ CHẠY khi SSE đang mất kết nối hoặc bị chặn
+  useEffect(() => {
+    if (!isAuthenticated || !activeConversation || sseStatus === 'connected') return;
+
+    const timer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      fetchActiveMessages();
+    }, 15000);
+
+    return () => clearInterval(timer);
+  }, [isAuthenticated, activeConversation, sseStatus]);
+
+  // Lắng nghe tin nhắn mới realtime từ SSE (cập nhật ngay khung chat & danh sách hội thoại)
   useEffect(() => {
     if (!isAuthenticated) return;
-    if (activeConversation) {
-      setConvStatus(activeConversation.status || 'accepted');
-      setIsStranger(Boolean(activeConversation.isStranger));
-      setIsFriendState(Boolean(activeConversation.otherUser?.isFriend));
-      fetchActiveMessages();
 
-      const timer = setInterval(() => {
-        fetchActiveMessages();
-      }, 3000);
+    const handleSseMessage = (e) => {
+      const payload = e?.detail;
+      const incomingMsg = payload?.message;
+      if (!incomingMsg) return;
 
-      return () => clearInterval(timer);
-    }
-  }, [isAuthenticated, activeConversation]);
+      const myId = String(userRef.current?._id || userRef.current?.id || '').trim();
+      const senderId = String(payload.senderId || incomingMsg.sender?._id || '').trim();
+      const receiverId = String(payload.receiverId || incomingMsg.receiver?._id || '').trim();
+      const convId = String(payload.conversationId || incomingMsg.conversation || '').trim();
+
+      const currentConv = activeConvRef.current;
+      const activeOtherId = String(currentConv?.otherUser?._id || currentConv?.otherUser?.id || '').trim();
+      const matchesOpenRoom = Boolean(
+        currentConv &&
+          (String(currentConv._id || '') === convId ||
+            (activeOtherId &&
+              ((senderId === activeOtherId && receiverId === myId) ||
+                (senderId === myId && receiverId === activeOtherId))))
+      );
+
+      if (matchesOpenRoom) {
+        setMessages((prev) => {
+          if (incomingMsg._id && prev.some((m) => String(m._id) === String(incomingMsg._id))) {
+            return prev;
+          }
+          return [...prev, incomingMsg];
+        });
+        if (payload.conversationStatus) {
+          setConvStatus(payload.conversationStatus);
+        }
+        if (payload.isStranger !== undefined) {
+          setIsStranger(Boolean(payload.isStranger));
+        }
+        if (senderId && senderId !== myId && isWidgetOpenRef.current && currentConv?._id) {
+          chatService
+            .getMessages(currentConv._id)
+            .then(() => fetchUnread())
+            .catch(() => {});
+        }
+      }
+
+      const matchesConversationItem = (c) => {
+        const cid = String(c._id || '');
+        const oid = String(c.otherUser?._id || c.otherUser?.id || '');
+        return (
+          (convId && cid === convId) ||
+          (oid && ((oid === senderId && receiverId === myId) || (senderId === myId && oid === receiverId)))
+        );
+      };
+
+      const existsInList = (conversationsRef.current || []).some(matchesConversationItem);
+      if (existsInList) {
+        setConversations((prev) => {
+          const idx = prev.findIndex(matchesConversationItem);
+          if (idx === -1) return prev;
+          const target = prev[idx];
+          const isViewingTarget = Boolean(
+            isWidgetOpenRef.current &&
+              currentConv &&
+              String(currentConv._id || '') === String(target._id || '')
+          );
+          const updatedConv = {
+            ...target,
+            lastMessage: {
+              _id: incomingMsg._id,
+              content: incomingMsg.content,
+              sender: incomingMsg.sender,
+              createdAt: incomingMsg.createdAt,
+            },
+            updatedAt: incomingMsg.createdAt,
+            status: payload.conversationStatus || target.status,
+            isStranger:
+              payload.isStranger !== undefined ? Boolean(payload.isStranger) : target.isStranger,
+            unreadCount:
+              senderId !== myId && !isViewingTarget
+                ? (target.unreadCount || 0) + 1
+                : isViewingTarget
+                ? 0
+                : target.unreadCount || 0,
+          };
+          const rest = prev.filter((_, i) => i !== idx);
+          return [updatedConv, ...rest];
+        });
+      } else if (isWidgetOpenRef.current && !currentConv && activeTabRef.current === 'messages') {
+        chatService
+          .getConversations({ sortBy, q: searchQuery })
+          .then((res) => {
+            if (res?.data) setConversations(res.data);
+          })
+          .catch(() => {});
+      }
+    };
+
+    window.addEventListener('freedom_chat_sse_message', handleSseMessage);
+    return () => {
+      window.removeEventListener('freedom_chat_sse_message', handleSseMessage);
+    };
+  }, [isAuthenticated, fetchUnread, sortBy, searchQuery]);
 
   // Tự động cuộn xuống tin nhắn mới nhất
   useEffect(() => {
@@ -644,8 +772,24 @@ export const AssistiveChatWidget = ({ onOpenCreatePost } = {}) => {
                   )}
                 </div>
 
-                {/* Right controls: Stranger notification toggle & Close */}
+                {/* Right controls: Realtime status, Stranger notification toggle & Close */}
                 <div className="assistive-header-controls">
+                  <span
+                    className={`assistive-realtime-pill ${
+                      sseStatus === 'connected' ? 'is-online' : 'is-reconnecting'
+                    }`}
+                    title={
+                      sseStatus === 'connected'
+                        ? 'Kết nối chat thời gian thực (SSE)'
+                        : 'Đang kết nối lại chat thời gian thực...'
+                    }
+                    aria-live="polite"
+                  >
+                    <span className="realtime-dot" aria-hidden="true" />
+                    <span className="realtime-label">
+                      {sseStatus === 'connected' ? 'Realtime' : 'Đang kết nối lại...'}
+                    </span>
+                  </span>
                   <button
                     type="button"
                     className={`assistive-stranger-notif-btn ${allowStrangerNotifications ? 'on' : 'off'}`}
@@ -886,19 +1030,36 @@ export const AssistiveChatWidget = ({ onOpenCreatePost } = {}) => {
                       }`}
                     />
                   </div>
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <h4 className="assistive-room-user-name">
                       {activeConversation.otherUser?.name}
                     </h4>
-                    <span
-                      className="assistive-room-status-txt"
-                      style={{
-                        color: getStatusBadge(activeConversation.otherUser?.chatStatus).color,
-                      }}
-                    >
-                      {getStatusBadge(activeConversation.otherUser?.chatStatus).icon}{' '}
-                      {getStatusBadge(activeConversation.otherUser?.chatStatus).label}
-                    </span>
+                    <div className="assistive-room-status-row">
+                      <span
+                        className="assistive-room-status-txt"
+                        style={{
+                          color: getStatusBadge(activeConversation.otherUser?.chatStatus).color,
+                        }}
+                      >
+                        {getStatusBadge(activeConversation.otherUser?.chatStatus).icon}{' '}
+                        {getStatusBadge(activeConversation.otherUser?.chatStatus).label}
+                      </span>
+                      <span
+                        className={`assistive-realtime-pill ${
+                          sseStatus === 'connected' ? 'is-online' : 'is-reconnecting'
+                        }`}
+                        title={
+                          sseStatus === 'connected'
+                            ? 'Kết nối chat thời gian thực (SSE)'
+                            : 'Đang kết nối lại chat thời gian thực...'
+                        }
+                      >
+                        <span className="realtime-dot" aria-hidden="true" />
+                        <span className="realtime-label">
+                          {sseStatus === 'connected' ? 'Realtime' : 'Đang kết nối lại...'}
+                        </span>
+                      </span>
+                    </div>
                   </div>
                 </div>
 
