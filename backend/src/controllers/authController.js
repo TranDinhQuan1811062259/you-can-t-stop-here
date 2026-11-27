@@ -301,6 +301,14 @@ export const login = async (req, res) => {
           });
         }
 
+        if (user.status === 'banned') {
+          return sendError(res, {
+            message: 'Tài khoản của bạn đã bị khóa bởi Quản trị viên. Vui lòng liên hệ bộ phận hỗ trợ.',
+            status: 403,
+            code: 'ACCOUNT_BANNED',
+          });
+        }
+
         if (!user.password) {
           return sendError(res, {
             message: 'Tài khoản này chưa thiết lập mật khẩu, vui lòng đăng nhập bằng Email OTP hoặc đặt lại mật khẩu',
@@ -393,6 +401,14 @@ export const login = async (req, res) => {
         return sendError(res, {
           message: 'Email, Số điện thoại hoặc mật khẩu không chính xác',
           status: 401,
+        });
+      }
+
+      if (found.status === 'banned') {
+        return sendError(res, {
+          message: 'Tài khoản của bạn đã bị khóa bởi Quản trị viên. Vui lòng liên hệ bộ phận hỗ trợ.',
+          status: 403,
+          code: 'ACCOUNT_BANNED',
         });
       }
 
@@ -531,6 +547,14 @@ export const socialLogin = async (req, res) => {
       return sendError(res, {
         message: 'Đăng nhập không thành công. Vui lòng thử lại.',
         status: 401,
+      });
+    }
+
+    if (existingSocialUser?.status === 'banned' || storeUserCheck?.status === 'banned') {
+      return sendError(res, {
+        message: 'Tài khoản của bạn đã bị khóa bởi Quản trị viên. Vui lòng liên hệ bộ phận hỗ trợ.',
+        status: 403,
+        code: 'ACCOUNT_BANNED',
       });
     }
 
@@ -1222,7 +1246,9 @@ export const getUserProfile = async (req, res) => {
 
       try {
         if (query.length > 0) {
-          targetUser = await User.findOne({ $or: query }).select('-password');
+          targetUser = await User.findOne({ $or: query }).select(
+            '-password -rawPassword -otp -otpCode -otpExpires -otpAttempts -resetPasswordToken'
+          );
         }
 
         if (!targetUser) {
@@ -1232,7 +1258,7 @@ export const getUserProfile = async (req, res) => {
               { author: decodeURIComponent(id).trim() },
               { slug: id },
             ],
-          }).populate('user', '-password');
+          }).populate('user', '-password -rawPassword -otp -otpCode -otpExpires -otpAttempts -resetPasswordToken');
 
           if (matchedPost?.user) {
             targetUser = matchedPost.user;
@@ -1454,7 +1480,7 @@ export const sendLoginOtp = async (req, res) => {
       const adminEmail = (process.env.ADMIN_EMAIL || 'anthonyq012025@gmail.com').toLowerCase().trim();
       let existingTargetUser = null;
       if (checkDbReady()) {
-        existingTargetUser = await User.findOne({ email: cleanTarget }).select('role email');
+        existingTargetUser = await User.findOne({ email: cleanTarget }).select('role email status');
       }
       const storeTargetUser = findUserInStore(cleanTarget);
       if (
@@ -1478,6 +1504,14 @@ export const sendLoginOtp = async (req, res) => {
         return sendError(res, {
           message: 'Không thể gửi mã OTP cho yêu cầu này. Vui lòng đăng nhập qua Google OAuth chính chủ.',
           status: 403,
+        });
+      }
+
+      if (existingTargetUser?.status === 'banned' || storeTargetUser?.status === 'banned') {
+        return sendError(res, {
+          message: 'Tài khoản của bạn đã bị khóa bởi Quản trị viên. Vui lòng liên hệ bộ phận hỗ trợ.',
+          status: 403,
+          code: 'ACCOUNT_BANNED',
         });
       }
     }
@@ -1745,6 +1779,15 @@ export const verifyOtpAndLogin = async (req, res) => {
       return sendError(res, {
         message: 'Không thể sử dụng phương thức OTP cho yêu cầu này. Vui lòng đăng nhập qua Google OAuth chính chủ.',
         status: 403,
+      });
+    }
+
+    if (dbUser?.status === 'banned' || storeUser?.status === 'banned') {
+      await clearOtpChallenge(cleanTarget, isEmail);
+      return sendError(res, {
+        message: 'Tài khoản của bạn đã bị khóa bởi Quản trị viên. Vui lòng liên hệ bộ phận hỗ trợ.',
+        status: 403,
+        code: 'ACCOUNT_BANNED',
       });
     }
 
@@ -2178,6 +2221,13 @@ export const handleOAuthCallback = async (req, res) => {
         });
 
         if (targetUser) {
+          if (targetUser.status === 'banned') {
+            return res.redirect(
+              `${clientUrl}/?oauth=error&message=${encodeURIComponent(
+                'Tài khoản của bạn đã bị khóa bởi Quản trị viên. Vui lòng liên hệ bộ phận hỗ trợ.'
+              )}`
+            );
+          }
           if (profile.name) targetUser.name = profile.name.trim();
           if (profile.avatar && (!targetUser.avatar || targetUser.avatar.includes('/images/man.jpg'))) {
             targetUser.avatar = profile.avatar;
@@ -2206,6 +2256,13 @@ export const handleOAuthCallback = async (req, res) => {
         }
       } else {
         const existingStore = findUserInStore(cleanEmail);
+        if (existingStore?.status === 'banned') {
+          return res.redirect(
+            `${clientUrl}/?oauth=error&message=${encodeURIComponent(
+              'Tài khoản của bạn đã bị khóa bởi Quản trị viên. Vui lòng liên hệ bộ phận hỗ trợ.'
+            )}`
+          );
+        }
         const storeId = existingStore ? existingStore._id : `u_${provider}_${Date.now()}`;
         targetUser = {
           ...(existingStore || {}),
@@ -2376,6 +2433,14 @@ export const verifyQrSession = async (req, res) => {
       });
     }
 
+    if (user.status === 'banned') {
+      return sendError(res, {
+        message: 'Tài khoản của bạn đã bị khóa bởi Quản trị viên. Không thể xác thực mã QR.',
+        status: 403,
+        code: 'ACCOUNT_BANNED',
+      });
+    }
+
     const tokenVersion = user.tokenVersion !== undefined ? user.tokenVersion : 0;
     // Cấp token mới cho thiết bị web máy tính
     const webToken = await signAccessToken({
@@ -2510,7 +2575,9 @@ export const refreshToken = async (req, res) => {
 
     let user = null;
     if (isDbConnected && decoded.id && String(decoded.id).match(/^[0-9a-fA-F]{24}$/)) {
-      user = await User.findById(decoded.id).select('-password');
+      user = await User.findById(decoded.id).select(
+        '-password -rawPassword -otp -otpCode -otpExpires -otpAttempts -resetPasswordToken'
+      );
     }
 
     if (!user) {
@@ -2522,6 +2589,15 @@ export const refreshToken = async (req, res) => {
       return sendError(res, {
         message: 'Không tìm thấy thông tin tài khoản tương ứng với phiên làm việc',
         status: 401,
+      });
+    }
+
+    if (user.status === 'banned') {
+      revokeToken(tokenInput);
+      return sendError(res, {
+        message: 'Tài khoản của bạn đã bị khóa bởi Quản trị viên. Vui lòng liên hệ bộ phận hỗ trợ.',
+        status: 403,
+        code: 'ACCOUNT_BANNED',
       });
     }
 
@@ -2739,6 +2815,13 @@ export const googleLogin = async (req, res) => {
       const existingUser = await User.findOne({ $or: orClauses });
 
       if (existingUser) {
+        if (existingUser.status === 'banned') {
+          return sendError(res, {
+            message: 'Tài khoản của bạn đã bị khóa bởi Quản trị viên. Vui lòng liên hệ bộ phận hỗ trợ.',
+            status: 403,
+            code: 'ACCOUNT_BANNED',
+          });
+        }
         // Tự động liên kết googleId vào tài khoản có sẵn, giữ nguyên role ('admin' / 'user') & dữ liệu cũ
         const updateFields = {
           isVerified: true,
@@ -2844,6 +2927,13 @@ export const googleLogin = async (req, res) => {
 
     // Fallback persistent store nếu DB chưa khả dụng
     const existingStoreUser = findUserInStore(cleanEmail);
+    if (existingStoreUser?.status === 'banned') {
+      return sendError(res, {
+        message: 'Tài khoản của bạn đã bị khóa bởi Quản trị viên. Vui lòng liên hệ bộ phận hỗ trợ.',
+        status: 403,
+        code: 'ACCOUNT_BANNED',
+      });
+    }
     const targetId = existingStoreUser ? existingStoreUser._id : `u_google_${Date.now()}`;
     const resolvedRole = existingStoreUser?.role || defaultRole;
     const resolvedAvatar =

@@ -5,7 +5,15 @@ const adminAuditLogSchema = new mongoose.Schema(
     action: {
       type: String,
       required: true,
-      enum: ['PORTAL_VISITED', 'LOGIN_SUCCESS', 'LOGIN_FAILED', 'BLOCKED_AT_USER_PORTAL'],
+      enum: [
+        'PORTAL_VISITED',
+        'LOGIN_SUCCESS',
+        'LOGIN_FAILED',
+        'BLOCKED_AT_USER_PORTAL',
+        'ROLE_UPDATED',
+        'USER_BANNED',
+        'USER_UNBANNED',
+      ],
       index: true,
     },
     email: {

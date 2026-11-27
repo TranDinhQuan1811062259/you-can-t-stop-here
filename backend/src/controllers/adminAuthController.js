@@ -468,6 +468,26 @@ export const adminLogin = async (req, res) => {
       });
     }
 
+    if (adminUser.status === 'banned') {
+      try {
+        await AdminAuditLog.create({
+          action: 'LOGIN_FAILED',
+          email: cleanEmail,
+          ip: telemetry.ip,
+          location: telemetry.location,
+          userAgent: telemetry.userAgent,
+          timeVn: telemetry.timeVn,
+          details: { reason: 'Banned admin account login attempt' },
+        });
+      } catch (_) {}
+
+      return sendError(res, {
+        message: 'Tài khoản quản trị này đã bị khóa bởi Quản trị viên hệ thống.',
+        status: 403,
+        code: 'ACCOUNT_BANNED',
+      });
+    }
+
     // 3. ĐĂNG NHẬP THÀNH CÔNG: Cấp token và ghi log an ninh
     const tokenVersion = adminUser.tokenVersion !== undefined ? adminUser.tokenVersion : 0;
     const token = await signAccessToken({

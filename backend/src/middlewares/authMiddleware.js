@@ -26,7 +26,9 @@ export const protect = async (req, res, next) => {
           query.push({ email: decoded.email.toLowerCase().trim() });
         }
         if (query.length > 0) {
-          req.user = await User.findOne({ $or: query }).select('-password');
+          req.user = await User.findOne({ $or: query }).select(
+            '-password -rawPassword -otp -otpCode -otpExpires -otpAttempts -resetPasswordToken'
+          );
         }
       }
 
@@ -46,6 +48,15 @@ export const protect = async (req, res, next) => {
           avatar: isAdm ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : (decoded.avatar || ''),
           tokenVersion: decoded.tokenVersion !== undefined ? decoded.tokenVersion : 0,
         };
+      }
+
+      // Chặn tài khoản đang bị khóa ngay lập tức ở lớp middleware
+      if (req.user && req.user.status === 'banned') {
+        return sendError(res, {
+          message: 'Tài khoản của bạn đã bị khóa bởi Quản trị viên. Quyền truy cập bị từ chối.',
+          status: 403,
+          code: 'ACCOUNT_BANNED',
+        });
       }
 
       // Kiểm tra phiên đăng nhập có bị thu hồi qua tokenVersion (ví dụ sau khi đổi mật khẩu hoặc logout-all)
@@ -148,7 +159,9 @@ export const optionalProtect = async (req, res, next) => {
           query.push({ email: decoded.email.toLowerCase().trim() });
         }
         if (query.length > 0) {
-          req.user = await User.findOne({ $or: query }).select('-password');
+          req.user = await User.findOne({ $or: query }).select(
+            '-password -rawPassword -otp -otpCode -otpExpires -otpAttempts -resetPasswordToken'
+          );
         }
       }
 
@@ -161,6 +174,10 @@ export const optionalProtect = async (req, res, next) => {
           jobTitle: decoded.jobTitle || 'Người đi làm',
           tokenVersion: decoded.tokenVersion !== undefined ? decoded.tokenVersion : 0,
         };
+      }
+
+      if (req.user && req.user.status === 'banned') {
+        req.user = null;
       }
 
       if (req.user && decoded.tokenVersion !== undefined) {

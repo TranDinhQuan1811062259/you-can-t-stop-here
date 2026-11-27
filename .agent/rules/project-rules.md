@@ -61,9 +61,9 @@ freedom-web/
 
 ---
 
-## ⛔ 2. Năm Quy Tắc Bất Khả Xâm Phạm Cho Mọi AI Agent
+## ⛔ 2. Sáu Quy Tắc Bất Khả Xâm Phạm Cho Mọi AI Agent
 
-Bất kỳ AI Agent nào (Planner, Builder, Reviewer, UI-Polish, Audio-Engineer, Debugger, Ideator) khi thao tác trên repository đều phải tuân thủ nghiêm ngặt 5 quy tắc sau:
+Bất kỳ AI Agent nào (Planner, Builder, Reviewer, UI-Polish, Audio-Engineer, Debugger, Ideator) khi thao tác trên repository đều phải tuân thủ nghiêm ngặt 6 quy tắc sau:
 
 ### Quy tắc 1: Chuẩn Đặt Tên & Đường Dẫn File Linux / Vercel (100% Case-Sensitivity)
 - **Tên file & thư mục mới**:
@@ -121,6 +121,16 @@ Bất kỳ AI Agent nào (Planner, Builder, Reviewer, UI-Polish, Audio-Engineer,
 - **Ranh giới an toàn tuyệt đối (Strict Non-Destructive Boundary)**:
   - Toàn bộ các phát hiện và ý tưởng bổ sung **chỉ dừng lại ở mức đề xuất, phân tích và gợi ý giải pháp**.
   - ❌ **Tuyệt đối cấm**: Tự ý chỉnh sửa code, xóa file, cài thêm package hoặc thay đổi logic ngoài phạm vi yêu cầu cụ thể của phiên làm việc khi chưa có sự xác nhận/phê duyệt rõ ràng từ người dùng.
+
+### Quy tắc 6: Ranh Giới Dữ Liệu & Bảo Mật (Backend Database Source of Truth)
+- **CSDL Backend (MongoDB) là nguồn sự thật duy nhất**:
+  - Toàn bộ dữ liệu nhạy cảm & nghiệp vụ cốt lõi (tài khoản, phân quyền `role`/RBAC, trạng thái khóa `status`, nhật ký an ninh, bài viết, bình luận, tin nhắn) bắt buộc phải đọc/ghi trực tiếp qua API Backend và lưu trữ trong MongoDB.
+- **Cấm đưa dữ liệu tài khoản & phân quyền ra Frontend**:
+  - ❌ **Tuyệt đối cấm** lưu danh sách tài khoản, quyền quản trị (`role`), mã PIN, mật khẩu hay dữ liệu người dùng vào `localStorage`/`sessionStorage` (ngoại trừ token phiên như JWT / `x-admin-token`) hoặc tạo file mock/seed tài khoản trong `frontend/src/`.
+  - ❌ **Tuyệt đối cấm** tự ý viết fallback sang `localStorage`/dữ liệu giả lập khi API lỗi đối với luồng tài khoản, đăng nhập, phân quyền và quản trị (chỉ hiển thị thông báo lỗi UI rõ ràng).
+  - ❌ **Tuyệt đối cấm** hardcode tên cá nhân, email Admin, mã PIN, `JWT_SECRET` hay thông tin xác thực trong mã nguồn.
+- **Projection sạch (Clean Data Projection)**:
+  - Mọi API trả về thông tin user bắt buộc loại bỏ trường nhạy cảm (`.select('-password -rawPassword -otp -otpExpires -resetPasswordToken')`).
 
 ---
 

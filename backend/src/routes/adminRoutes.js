@@ -1,6 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { adminLogin, adminTelemetry, getSecurityLogs, verifyAdminPin, verifyAdminOtp } from '../controllers/adminAuthController.js';
+import { getUsers, updateUserRole, updateUserStatus } from '../controllers/adminController.js';
 import { authenticateToken, adminOnly, verifyAdminGate } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
@@ -30,5 +31,10 @@ router.use(authenticateToken, adminOnly, verifyAdminGate);
 
 // 4. Lấy 50 Security Logs mới nhất
 router.get('/security-logs', getSecurityLogs);
+
+// 5. Quản Lý Tài Khoản & Phân Quyền RBAC (100% MongoDB Source of Truth)
+router.get('/users', getUsers);
+router.patch('/users/:id/role', updateUserRole);
+router.patch('/users/:id/status', updateUserStatus);
 
 export default router;

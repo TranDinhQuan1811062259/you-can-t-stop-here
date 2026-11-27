@@ -27,8 +27,14 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['user', 'admin'],
+      enum: ['user', 'moderator', 'admin'],
       default: 'user',
+    },
+    status: {
+      type: String,
+      enum: ['active', 'banned'],
+      default: 'active',
+      index: true,
     },
     // Trạng thái kích hoạt và mã OTP cho luồng đăng ký / đăng nhập bằng email
     isVerified: {
