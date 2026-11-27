@@ -528,7 +528,12 @@ export const HomePage = () => {
           <CreatePostModal
             isOpen={isCreateOpen}
             onClose={() => setIsCreateOpen(false)}
-            onPostCreated={() => window.location.reload()}
+            onPostCreated={() => {
+              setIsCreateOpen(false);
+              setSortBy('newest');
+              setCurrentPage(1);
+              window.dispatchEvent(new Event('post_updated'));
+            }}
           />
         </Suspense>
       )}

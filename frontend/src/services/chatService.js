@@ -32,8 +32,18 @@ export const chatService = {
   // Hủy kết bạn
   removeFriend: (targetUserId) => apiClient.post('/chat/friends/remove', { targetUserId }),
 
-  // Lấy số lượng tin nhắn chưa đọc
-  getUnreadCount: () => apiClient.get('/chat/unread-count'),
+  // Lấy số lượng tin nhắn chưa đọc (chống gọi trùng đồng thời)
+  getUnreadCount: (() => {
+    let unreadInFlight = null;
+    return () => {
+      if (unreadInFlight) return unreadInFlight;
+      const req = apiClient.get('/chat/unread-count').finally(() => {
+        if (unreadInFlight === req) unreadInFlight = null;
+      });
+      unreadInFlight = req;
+      return req;
+    };
+  })(),
 
   // Cập nhật cài đặt nhận thông báo người lạ
   updateSettings: (allowStrangerNotifications) =>

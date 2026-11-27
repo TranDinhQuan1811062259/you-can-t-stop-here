@@ -61,15 +61,36 @@ export const ChatProvider = ({ children }) => {
 
   useEffect(() => {
     if (isAuthenticated) {
+      let lastUnreadCheckAt = Date.now();
       fetchUnread();
       fetchFriends();
 
-      // Polling kiểm tra tin nhắn mới mỗi 5 giây
+      // Polling kiểm tra tin nhắn mới mỗi 45 giây (tạm dừng khi tab ẩn)
       const interval = setInterval(() => {
+        if (typeof document !== 'undefined' && document.hidden) return;
+        lastUnreadCheckAt = Date.now();
         fetchUnread();
-      }, 5000);
+      }, 45000);
 
-      return () => clearInterval(interval);
+      const handleVisibilityChange = () => {
+        if (typeof document !== 'undefined' && !document.hidden) {
+          if (Date.now() - lastUnreadCheckAt >= 30000) {
+            lastUnreadCheckAt = Date.now();
+            fetchUnread();
+          }
+        }
+      };
+
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+      }
+
+      return () => {
+        clearInterval(interval);
+        if (typeof document !== 'undefined') {
+          document.removeEventListener('visibilitychange', handleVisibilityChange);
+        }
+      };
     } else {
       setUnreadCount(0);
       setActiveConversation(null);

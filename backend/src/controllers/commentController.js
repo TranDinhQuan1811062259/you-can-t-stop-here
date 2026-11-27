@@ -298,22 +298,38 @@ export const likeComment = async (req, res) => {
 export const deleteComment = async (req, res) => {
   try {
     const { id } = req.params;
+    const store = loadStore();
+    const localComment = (store.comments || []).find((c) => String(c._id) === String(id));
+    let dbComment = null;
 
     if (checkDbReady()) {
-      const comment = await Comment.findById(id);
-      if (comment) {
-        if (req.user?.role !== 'admin' && comment.user?.toString() !== req.user?._id?.toString()) {
-          return sendError(res, {
-            message: 'Bạn không có quyền xóa bình luận này!',
-            status: 403,
-          });
-        }
-        await Comment.deleteMany({ $or: [{ _id: id }, { parentComment: id }] });
-      }
+      try {
+        dbComment = await Comment.findById(id);
+      } catch (_) {}
     }
 
-    const store = loadStore();
-    store.comments = (store.comments || []).filter((c) => c._id !== id && c.parentComment !== id);
+    const targetComment = dbComment || localComment;
+    if (!targetComment) {
+      return sendError(res, { message: 'Không tìm thấy bình luận cần xóa!', status: 404 });
+    }
+
+    const targetUserId = targetComment.user?._id || targetComment.user;
+    const currentUserId = req.user?._id ? String(req.user._id) : '';
+    const isAdmin = req.user?.role === 'admin';
+    const isOwner = Boolean(currentUserId && targetUserId && String(targetUserId) === currentUserId);
+
+    if (!isAdmin && !isOwner) {
+      return sendError(res, {
+        message: 'Bạn không có quyền xóa bình luận này!',
+        status: 403,
+      });
+    }
+
+    if (dbComment) {
+      await Comment.deleteMany({ $or: [{ _id: id }, { parentComment: id }] });
+    }
+
+    store.comments = (store.comments || []).filter((c) => String(c._id) !== String(id) && String(c.parentComment) !== String(id));
     saveStore(store);
 
     return sendSuccess(res, { message: 'Xóa bình luận thành công', data: { id } });

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { playClickSound } from '../../utils/soundEffects';
 
 export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) => {
@@ -22,21 +23,55 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
   const recordedChunksRef = useRef([]);
   const timerIntervalRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const cameraStreamRef = useRef(null);
+  const recordedVideoUrlRef = useRef(null);
+  const isOpenRef = useRef(isOpen);
+  const cameraRequestIdRef = useRef(0);
 
-  const stopCamera = () => {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach((track) => track.stop());
-      setCameraStream(null);
+  isOpenRef.current = isOpen;
+
+  const revokeRecordedVideoUrl = useCallback(() => {
+    if (recordedVideoUrlRef.current && recordedVideoUrlRef.current.startsWith('blob:')) {
+      try {
+        URL.revokeObjectURL(recordedVideoUrlRef.current);
+      } catch (_) {}
     }
+    recordedVideoUrlRef.current = null;
+  }, []);
+
+  const stopCamera = useCallback(() => {
+    cameraRequestIdRef.current += 1;
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (_) {}
+    }
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch (_) {}
+      });
+      cameraStreamRef.current = null;
+    }
+    setCameraStream(null);
     if (videoRef.current) {
+      try {
+        videoRef.current.pause();
+      } catch (_) {}
       videoRef.current.srcObject = null;
     }
-  };
+  }, []);
 
   // Khởi động Camera / Webcam khi mở Modal
-  const startCamera = async (mode = facingMode) => {
+  const startCamera = useCallback(async (mode = facingMode) => {
     stopCamera();
     setCameraError('');
+    const requestId = ++cameraRequestIdRef.current;
 
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -53,6 +88,18 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      // Nếu người dùng đã đóng modal hoặc chuyển chế độ trong lúc chờ quyền camera -> tắt stream ngay
+      if (!isOpenRef.current || requestId !== cameraRequestIdRef.current) {
+        stream.getTracks().forEach((track) => {
+          try {
+            track.stop();
+          } catch (_) {}
+        });
+        return;
+      }
+
+      cameraStreamRef.current = stream;
       setCameraStream(stream);
 
       if (videoRef.current) {
@@ -60,6 +107,7 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
         videoRef.current.play().catch((err) => console.warn('Video play warning:', err));
       }
     } catch (err) {
+      if (!isOpenRef.current || requestId !== cameraRequestIdRef.current) return;
       console.warn('Lỗi mở Camera/Webcam:', err);
       let msg = 'Không thể mở Camera/Webcam. Vui lòng cho phép quyền truy cập Camera trên trình duyệt của bạn!';
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
@@ -69,11 +117,22 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
       }
       setCameraError(msg);
     }
-  };
+  }, [activeTab, facingMode, stopCamera]);
+
+  // Gắn chắc chắn srcObject vào thẻ <video> mỗi khi stream hoặc khung live video được mount lại
+  useEffect(() => {
+    if (!isOpen || capturedPhoto || recordedVideoUrl || !cameraStream) return;
+    const videoEl = videoRef.current;
+    if (videoEl && videoEl.srcObject !== cameraStream) {
+      videoEl.srcObject = cameraStream;
+      videoEl.play().catch((err) => console.warn('Video play warning:', err));
+    }
+  }, [isOpen, cameraStream, capturedPhoto, recordedVideoUrl]);
 
   useEffect(() => {
     if (isOpen) {
       setCapturedPhoto(null);
+      revokeRecordedVideoUrl();
       setRecordedVideoBlob(null);
       setRecordedVideoUrl(null);
       setIsRecording(false);
@@ -81,14 +140,26 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
       startCamera(facingMode);
     } else {
       stopCamera();
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      revokeRecordedVideoUrl();
     }
 
     return () => {
       stopCamera();
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      revokeRecordedVideoUrl();
     };
-  }, [isOpen, activeTab, facingMode]);
+  }, [isOpen, activeTab, facingMode, startCamera, stopCamera, revokeRecordedVideoUrl]);
+
+  const handleClose = useCallback(() => {
+    playClickSound();
+    stopCamera();
+    revokeRecordedVideoUrl();
+    setCapturedPhoto(null);
+    setRecordedVideoBlob(null);
+    setRecordedVideoUrl(null);
+    setIsRecording(false);
+    setRecordingSeconds(0);
+    if (onClose) onClose();
+  }, [onClose, revokeRecordedVideoUrl, stopCamera]);
 
   if (!isOpen) return null;
 
@@ -122,6 +193,7 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
       setCapturedPhoto(dataUrl);
+      stopCamera();
     }
   };
 
@@ -142,7 +214,8 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
         source: 'camera',
       });
     }
-    onClose();
+    stopCamera();
+    if (onClose) onClose();
   };
 
   // ==========================================
@@ -163,9 +236,11 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
 
   const handleStartRecording = () => {
     playClickSound();
-    if (!cameraStream) return;
+    const activeStream = cameraStreamRef.current || cameraStream;
+    if (!activeStream) return;
 
     recordedChunksRef.current = [];
+    revokeRecordedVideoUrl();
     setRecordedVideoBlob(null);
     setRecordedVideoUrl(null);
 
@@ -173,9 +248,9 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
       const options = { mimeType: 'video/webm;codecs=vp9,opus' };
       let recorder;
       try {
-        recorder = new MediaRecorder(cameraStream, options);
+        recorder = new MediaRecorder(activeStream, options);
       } catch (e) {
-        recorder = new MediaRecorder(cameraStream);
+        recorder = new MediaRecorder(activeStream);
       }
 
       recorder.ondataavailable = (event) => {
@@ -187,6 +262,8 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
       recorder.onstop = () => {
         const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
+        revokeRecordedVideoUrl();
+        recordedVideoUrlRef.current = url;
         setRecordedVideoBlob(blob);
         setRecordedVideoUrl(url);
       };
@@ -214,6 +291,7 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
 
   const handleRetakeVideo = () => {
     playClickSound();
+    revokeRecordedVideoUrl();
     setRecordedVideoBlob(null);
     setRecordedVideoUrl(null);
     setIsRecording(false);
@@ -237,7 +315,9 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
           source: 'camera',
         });
       }
-      onClose();
+      stopCamera();
+      revokeRecordedVideoUrl();
+      if (onClose) onClose();
     };
     reader.readAsDataURL(recordedVideoBlob);
   };
@@ -257,7 +337,8 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
           source: 'camera_fallback',
         });
       }
-      onClose();
+      stopCamera();
+      if (onClose) onClose();
     };
     reader.readAsDataURL(file);
   };
@@ -268,14 +349,40 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  return (
-    <div className="modal-backdrop media-capture-backdrop" onClick={onClose}>
+  const modalContent = (
+    <div
+      className="modal-backdrop media-capture-backdrop"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 10050,
+        background: 'rgba(9, 13, 22, 0.78)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        boxSizing: 'border-box',
+      }}
+      onClick={handleClose}
+    >
       <div
         className="modal-box media-capture-modal"
-        style={{ maxWidth: '680px', width: '95%', padding: '20px 24px', overflow: 'hidden' }}
+        style={{
+          position: 'relative',
+          maxWidth: '680px',
+          width: '95%',
+          maxHeight: '92vh',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          padding: '20px 24px',
+          zIndex: 10051,
+          boxSizing: 'border-box',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <button type="button" className="modal-close-btn" onClick={onClose} title="Đóng">
+        <button type="button" className="modal-close-btn" onClick={handleClose} title="Đóng" aria-label="Đóng camera">
           ✕
         </button>
 
@@ -559,12 +666,12 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
             </>
           ) : activeTab === 'photo' ? (
             /* Nút Chụp Ảnh Trực Tiếp */
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '16px', alignItems: 'center' }}>
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 className="page-btn"
-                onClick={onClose}
-                style={{ padding: '8px 16px', fontSize: '0.84rem' }}
+                onClick={handleClose}
+                style={{ padding: '9px 18px', fontSize: '0.86rem' }}
               >
                 Hủy
               </button>
@@ -574,37 +681,36 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
                 onClick={handleCapturePhoto}
                 disabled={Boolean(cameraError)}
                 style={{
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '50%',
+                  padding: '10px 22px',
+                  borderRadius: '999px',
                   background: 'linear-gradient(135deg, #0d9488, #059669)',
-                  border: '4px solid #ffffff',
+                  border: '2px solid #ffffff',
                   boxShadow: '0 6px 20px rgba(13, 148, 136, 0.5)',
-                  cursor: 'pointer',
-                  display: 'flex',
+                  cursor: cameraError ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '1.6rem',
+                  gap: '8px',
+                  fontSize: '0.94rem',
+                  fontWeight: 800,
                   color: '#ffffff',
                   transition: 'transform 0.15s ease',
                 }}
-                title="Bấm để chụp ảnh"
+                title="Chụp ảnh"
+                aria-label="Chụp ảnh"
               >
-                📸
+                <span aria-hidden="true">📸</span>
+                <span>Chụp ảnh</span>
               </button>
-
-              <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                Bấm nút tròn để chụp
-              </span>
             </div>
           ) : (
             /* Nút Quay Video Trực Tiếp */
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '16px', alignItems: 'center' }}>
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 className="page-btn"
-                onClick={onClose}
-                style={{ padding: '8px 16px', fontSize: '0.84rem' }}
+                onClick={handleClose}
+                style={{ padding: '9px 18px', fontSize: '0.86rem' }}
               >
                 Hủy
               </button>
@@ -637,33 +743,42 @@ export const MediaCameraCaptureModal = ({ isOpen, onClose, onMediaCaptured }) =>
                   onClick={handleStartRecording}
                   disabled={Boolean(cameraError)}
                   style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '50%',
+                    padding: '10px 22px',
+                    borderRadius: '999px',
                     background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                    border: '4px solid #ffffff',
+                    border: '2px solid #ffffff',
                     boxShadow: '0 6px 20px rgba(239, 68, 68, 0.5)',
-                    cursor: 'pointer',
-                    display: 'flex',
+                    cursor: cameraError ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '1.6rem',
+                    gap: '8px',
+                    fontSize: '0.94rem',
+                    fontWeight: 800,
                     color: '#ffffff',
                     transition: 'transform 0.15s ease',
                   }}
-                  title="Bấm để bắt đầu quay video"
+                  title="Bắt đầu quay video"
+                  aria-label="Bắt đầu quay video"
                 >
-                  🔴
+                  <span aria-hidden="true">🔴</span>
+                  <span>Quay video</span>
                 </button>
               )}
 
-              <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                {isRecording ? 'Đang quay video...' : 'Bấm nút đỏ để quay'}
-              </span>
+              {isRecording && (
+                <span style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: 700 }}>
+                  Đang quay...
+                </span>
+              )}
             </div>
           )}
         </div>
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };

@@ -55,16 +55,16 @@ export const NotificationDropdown = ({
   };
 
   useEffect(() => {
+    if (!isOpen) return;
+    fetchList(activeTab);
     fetchCounts();
-    const interval = setInterval(fetchCounts, 6000);
-    return () => clearInterval(interval);
-  }, []);
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchList(activeTab);
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       fetchCounts();
-    }
+    }, 45000);
+
+    return () => clearInterval(interval);
   }, [isOpen, activeTab]);
 
   // Click outside để đóng

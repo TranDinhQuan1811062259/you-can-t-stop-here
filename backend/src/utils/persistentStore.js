@@ -321,7 +321,7 @@ const initialData = {
       tags: ['Impostor Syndrome', 'Tự tin', 'Tâm lý làm việc'],
       cheersCount: 68,
       views: 1,
-      createdAt: new Date().toISOString(),
+      createdAt: '2026-11-05T08:15:00.000Z',
     },
     {
       _id: 'post_3',
@@ -341,7 +341,7 @@ const initialData = {
       tags: ['Chuyển ngành', 'Can đảm', 'Bắt đầu lại'],
       cheersCount: 95,
       views: 1,
-      createdAt: new Date().toISOString(),
+      createdAt: '2026-11-05T09:30:00.000Z',
     },
     {
       _id: 'post_4',
@@ -361,7 +361,7 @@ const initialData = {
       tags: ['Ranh giới', 'Sức khỏe tinh thần', 'Small Win'],
       cheersCount: 120,
       views: 1,
-      createdAt: new Date().toISOString(),
+      createdAt: '2026-11-05T10:45:00.000Z',
     },
   ],
   comments: [
@@ -371,7 +371,7 @@ const initialData = {
       content: 'Gửi bạn một cái ôm thật chặt 🫂! Mình từng làm đến 4h sáng và sau đó phải nhập viện vì kiệt sức. Sức khỏe luôn là số một bạn nhé!',
       cheerType: 'hug',
       user: { _id: 'u_nam', name: 'Thành Nam', avatar: '/images/2.jpg', jobTitle: 'Product Manager' },
-      createdAt: new Date().toISOString(),
+      createdAt: '2026-11-05T08:00:00.000Z',
       replies: [],
     },
     {
@@ -380,7 +380,7 @@ const initialData = {
       content: 'Cố lên bạn ơi 💪! Ngày mai thức dậy uống một ly nước ấm, hít thở khí trời một chút rồi tính tiếp. Bạn đã làm rất tốt rồi!',
       cheerType: 'encourage',
       user: { _id: 'u_ly', name: 'Hương Ly', avatar: '/images/img2.jpg', jobTitle: 'UI/UX Designer' },
-      createdAt: new Date().toISOString(),
+      createdAt: '2026-11-05T08:30:00.000Z',
       replies: [],
     },
     {
@@ -389,7 +389,7 @@ const initialData = {
       content: 'Mình cũng y hệt bạn! Đọc bài của bạn làm mình thấy bớt cô độc hẳn. Cảm ơn bạn rất nhiều vì đã chia sẻ!',
       cheerType: 'general',
       user: { _id: 'u_huy', name: 'Đức Huy', avatar: '/images/3.jpg', jobTitle: 'Junior Developer' },
-      createdAt: new Date().toISOString(),
+      createdAt: '2026-11-05T09:00:00.000Z',
       replies: [],
     },
   ],
@@ -450,8 +450,24 @@ export const loadStore = () => {
           needsSave = true;
         } else {
           // Lọc bỏ triệt để các bài post_effort blog bị tạo nhầm trước đó khỏi db_store.json
+          // và chuẩn hóa mốc thời gian lịch sử cố định cho 4 bài mẫu mặc định để không chèn lên bài mới đăng
+          const sampleCreatedAtMap = {
+            post_1: '2026-11-05T07:39:52.748Z',
+            post_2: '2026-11-05T08:15:00.000Z',
+            post_3: '2026-11-05T09:30:00.000Z',
+            post_4: '2026-11-05T10:45:00.000Z',
+          };
           const prevLen = parsed.posts.length;
-          parsed.posts = parsed.posts.filter((p) => p && !String(p._id).startsWith('post_effort'));
+          parsed.posts = parsed.posts
+            .filter((p) => p && !String(p._id).startsWith('post_effort'))
+            .map((p) => {
+              const seedDate = sampleCreatedAtMap[String(p._id)];
+              if (seedDate && (!p.createdAt || new Date(p.createdAt).getTime() > new Date('2026-11-06T00:00:00.000Z').getTime())) {
+                needsSave = true;
+                return { ...p, createdAt: seedDate };
+              }
+              return p;
+            });
           if (parsed.posts.length !== prevLen) {
             needsSave = true;
           }

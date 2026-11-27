@@ -50,6 +50,16 @@ export const VoiceCloningModal = ({ isOpen, onClose, onVoiceSaved }) => {
     }
     return () => {
       revokeTemporaryBlobUrl();
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        try {
+          mediaRecorderRef.current.stop();
+        } catch (_) {}
+      }
+      aiVoicePlayer.stop();
     };
   }, [isOpen]);
 

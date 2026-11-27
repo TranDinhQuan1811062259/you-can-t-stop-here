@@ -204,11 +204,13 @@ export const getPosts = async (req, res) => {
             if (!map.has(key)) {
               map.set(key, enrichedDb);
             } else {
+              const existingLocal = map.get(key);
               map.set(key, {
                 ...enrichedDb,
-                ...map.get(key),
-                views: Math.max(map.get(key).views || 0, enrichedDb.views || 0),
-                cheersCount: Math.max(map.get(key).cheersCount || 0, enrichedDb.cheersCount || 0),
+                ...existingLocal,
+                createdAt: enrichedDb.createdAt || existingLocal.createdAt,
+                views: Math.max(existingLocal.views || 0, enrichedDb.views || 0),
+                cheersCount: Math.max(existingLocal.cheersCount || 0, enrichedDb.cheersCount || 0),
               });
             }
           });
@@ -336,8 +338,12 @@ export const getPosts = async (req, res) => {
         return scoreA - scoreB;
       });
     } else {
-      // Mặc định: Mới nhất lên đầu
-      filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      // Mặc định (newest): Mới nhất lên đầu (cố định ổn định theo mốc thời gian)
+      filtered.sort((a, b) => {
+        const diff = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        if (Number.isFinite(diff) && diff !== 0) return diff;
+        return String(b._id || '').localeCompare(String(a._id || ''));
+      });
     }
 
     const total = filtered.length;
@@ -1622,8 +1628,8 @@ export const addHashtag = async (req, res) => {
     }
 
     const clean = tag.trim().replace(/^#/, '').toLowerCase();
-    if (!clean) {
-      return sendError(res, { message: 'Hashtag rỗng', status: 400 });
+    if (!clean || clean.length > 40) {
+      return sendError(res, { message: 'Hashtag không hợp lệ hoặc quá dài (tối đa 40 ký tự)', status: 400 });
     }
 
     const store = loadStore();

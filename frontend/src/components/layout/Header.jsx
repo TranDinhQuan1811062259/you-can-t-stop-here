@@ -508,10 +508,16 @@ export const Header = () => {
     return () => window.removeEventListener('freedom_ambient_sound_changed', handleAmbientChange);
   }, []);
 
-  // Polling liên tục số lượng thông báo mới (Lời mời kết bạn, tin nhắn, tương tác)
+  // Polling số lượng thông báo mới mỗi 45 giây (tạm dừng khi tab ẩn để giảm tải server)
   useEffect(() => {
     if (!isAuthenticated && !user) return;
-    const fetchNotifCount = async () => {
+    let lastFetchedAt = 0;
+
+    const fetchNotifCount = async (force = false) => {
+      if (!force && typeof document !== 'undefined' && document.hidden) return;
+      const now = Date.now();
+      if (!force && now - lastFetchedAt < 30000) return;
+      lastFetchedAt = now;
       try {
         const res = await notificationService.getUnreadCount();
         if (res?.data?.unreadCount !== undefined) {
@@ -519,12 +525,28 @@ export const Header = () => {
         }
       } catch (_) {}
     };
-    fetchNotifCount();
-    const interval = setInterval(fetchNotifCount, 4000);
-    window.addEventListener('notification_updated', fetchNotifCount);
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        fetchNotifCount(false);
+      }
+    };
+
+    const handleManualUpdate = () => fetchNotifCount(true);
+
+    fetchNotifCount(true);
+    const interval = setInterval(() => fetchNotifCount(false), 45000);
+    window.addEventListener('notification_updated', handleManualUpdate);
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+
     return () => {
       clearInterval(interval);
-      window.removeEventListener('notification_updated', fetchNotifCount);
+      window.removeEventListener('notification_updated', handleManualUpdate);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
     };
   }, [isAuthenticated, user]);
 

@@ -23,7 +23,7 @@ const router = express.Router();
 
 // Danh sách hashtags gợi ý
 router.get('/hashtags/list', getHashtags);
-router.post('/hashtags/register', addHashtag);
+router.post('/hashtags/register', protect, addHashtag);
 
 // Công khai (Khách và Thành viên đều xem được)
 router.get('/', getPosts);
