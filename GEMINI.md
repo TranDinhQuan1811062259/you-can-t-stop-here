@@ -127,7 +127,7 @@ Bất kỳ AI Agent nào (Planner, Builder, Reviewer, UI-Polish, Audio-Engineer,
   - Toàn bộ dữ liệu nhạy cảm & nghiệp vụ cốt lõi (tài khoản, phân quyền `role`/RBAC, trạng thái khóa `status`, nhật ký an ninh, bài viết, bình luận, tin nhắn) bắt buộc phải đọc/ghi trực tiếp qua API Backend và lưu trữ trong MongoDB.
 - **Cấm đưa dữ liệu tài khoản & phân quyền ra Frontend**:
   - ❌ **Tuyệt đối cấm** lưu danh sách tài khoản, quyền quản trị (`role`), mã PIN, mật khẩu hay dữ liệu người dùng vào `localStorage`/`sessionStorage` (ngoại trừ token phiên như JWT / `x-admin-token`) hoặc tạo file mock/seed tài khoản trong `frontend/src/`.
-  - ❌ **Tuyệt đối cấm** tự ý viết fallback sang `localStorage`/dữ liệu giả lập khi API lỗi đối với luồng tài khoản, đăng nhập, phân quyền và quản trị (chỉ hiển thị thông báo lỗi UI rõ ràng).
+  - ❌ **Tuyệt đối cấm** tự ý viết fallback sang `localStorage`/dữ liệu giả lập khi API lỗi đối với luồng tài khoản, đăng nhập, phân quyền, quản trị và danh sách bài viết (chỉ hiển thị Loading Skeleton hoặc thông báo lỗi UI rõ ràng).
   - ❌ **Tuyệt đối cấm** hardcode tên cá nhân, email Admin, mã PIN, `JWT_SECRET` hay thông tin xác thực trong mã nguồn.
 - **Projection sạch (Clean Data Projection)**:
   - Mọi API trả về thông tin user bắt buộc loại bỏ trường nhạy cảm (`.select('-password -rawPassword -otp -otpExpires -resetPasswordToken')`).

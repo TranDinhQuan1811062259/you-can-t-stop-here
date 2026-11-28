@@ -50,7 +50,7 @@ export const CategoryPage = () => {
     };
   }, []);
 
-  const { posts, pagination, loading, error } = usePosts({
+  const { posts, pagination, loading, isSlowLoading, error, refetch } = usePosts({
     category: categorySlug,
     sort: sortBy,
     visibility: visibilityFilter,
@@ -185,12 +185,24 @@ export const CategoryPage = () => {
           </div>
         </div>
 
-        {error && !loading && !isCommitSwitching && posts.length === 0 && (
-          <ErrorMessage message={error} />
-        )}
-
         {loading || isCommitSwitching ? (
-          <PostListSkeleton count={6} label="Đang tải các bài viết trong chủ đề này..." />
+          <PostListSkeleton
+            count={6}
+            label="Đang tải các bài viết trong chủ đề này..."
+            slowMessage={isSlowLoading ? 'Đang đánh thức máy chủ, vui lòng chờ trong giây lát...' : ''}
+          />
+        ) : error && posts.length === 0 ? (
+          <ErrorMessage message={error} onRetry={refetch} retryLabel="Thử lại" />
+        ) : posts.length === 0 ? (
+          <div className="posts-empty-state-card">
+            <div className="posts-state-icon" aria-hidden="true">
+              🏷️
+            </div>
+            <h3 className="posts-state-title">Chưa có bài viết nào trong chủ đề này</h3>
+            <p className="posts-state-desc">
+              Hãy quay lại sau hoặc thử xem các chủ đề khác để lắng nghe thêm nhiều câu chuyện mới!
+            </p>
+          </div>
         ) : (
           <>
             <PostList posts={posts} />

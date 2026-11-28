@@ -2,7 +2,7 @@ import Post from '../models/Post.js';
 import Category from '../models/Category.js';
 import User from '../models/User.js';
 import { recordMutualInteraction } from '../utils/mutualBondHelper.js';
-import { checkDbReady } from '../config/db.js';
+import { ensureDbConnected, checkDbReady } from '../config/db.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 import { slugify } from '../utils/slugify.js';
 import { loadStore, saveStore } from '../utils/persistentStore.js';
@@ -163,68 +163,36 @@ const resolveCategory = async (catInput) => {
 };
 
 /**
- * Lấy danh sách bài viết (Hỗ trợ phân trang, tìm kiếm, lọc theo category/tag)
- * ĐỒNG BỘ 2 CHIỀU GIỮA Ổ CỨNG VÀ DATABASE: Không bao giờ bị mất bài khi CCleaner dọn máy
+ * Lấy danh sách bài viết (100% dữ liệu thật từ MongoDB, tuyệt đối không trộn bài mẫu tĩnh)
  */
 export const getPosts = async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.max(1, parseInt(req.query.limit) || 6);
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit, 10) || 6);
     const { category, tag, q, sort = 'newest', visibility = 'all', postType = 'all' } = req.query;
 
-    const store = loadStore();
-    let allPosts = [...(store.posts || [])];
-
-    // Nếu MongoDB đang sẵn sàng, hợp nhất dữ liệu hai chiều
-    if (checkDbReady()) {
-      try {
-        const dbPosts = await Post.find({ isPublished: true })
-          .populate('category', 'name slug')
-          .populate('user', 'name avatar jobTitle bio streakCount')
-          .sort({ createdAt: -1 })
-          .lean();
-
-        if (dbPosts && dbPosts.length > 0) {
-          const map = new Map();
-          // Nạp các bài từ store trước
-          allPosts.forEach((p) => {
-            const key = p.slug || String(p._id);
-            map.set(key, p);
-          });
-          // Hợp nhất bài từ MongoDB
-          dbPosts.forEach((dbP) => {
-            const key = dbP.slug || String(dbP._id);
-            const enrichedDb = {
-              ...dbP,
-              author: dbP.user?.name || dbP.author,
-              authorJob: dbP.user?.jobTitle || dbP.authorJob,
-              authorAvatar: dbP.user?.avatar || dbP.authorAvatar || '',
-              authorStreakCount: dbP.user?.streakCount || dbP.authorStreakCount || 0,
-            };
-            if (!map.has(key)) {
-              map.set(key, enrichedDb);
-            } else {
-              const existingLocal = map.get(key);
-              map.set(key, {
-                ...enrichedDb,
-                ...existingLocal,
-                createdAt: enrichedDb.createdAt || existingLocal.createdAt,
-                views: Math.max(existingLocal.views || 0, enrichedDb.views || 0),
-                cheersCount: Math.max(existingLocal.cheersCount || 0, enrichedDb.cheersCount || 0),
-              });
-            }
-          });
-
-          allPosts = Array.from(map.values()).map((item) => ({
-            ...item,
-            author: sanitizeAuthorName(item),
-            views: getBufferedViews(item),
-          }));
-        }
-      } catch (err) {
-        console.warn('Lỗi đồng bộ MongoDB trong getPosts, dùng local store:', err.message);
-      }
+    await ensureDbConnected().catch(() => false);
+    if (!checkDbReady()) {
+      return sendError(res, {
+        message: 'Cơ sở dữ liệu MongoDB đang khởi động hoặc chưa sẵn sàng. Vui lòng thử lại sau giây lát.',
+        status: 503,
+      });
     }
+
+    const dbPosts = await Post.find({ isPublished: true })
+      .populate('category', 'name slug')
+      .populate('user', 'name avatar jobTitle bio streakCount')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const allPosts = (dbPosts || []).map((dbP) => ({
+      ...dbP,
+      author: dbP.user?.name ? dbP.user.name : sanitizeAuthorName(dbP),
+      authorJob: dbP.user?.jobTitle || dbP.authorJob,
+      authorAvatar: dbP.user?.avatar || dbP.authorAvatar || '',
+      authorStreakCount: dbP.user?.streakCount || dbP.authorStreakCount || 0,
+      views: getBufferedViews(dbP),
+    }));
 
     let filtered = allPosts;
 
@@ -233,7 +201,7 @@ export const getPosts = async (req, res) => {
       filtered = filtered.filter(
         (p) =>
           p.category?.slug === category ||
-          p.category?._id === category ||
+          String(p.category?._id || '') === String(category) ||
           p.category?.name?.toLowerCase() === lowerCat ||
           (typeof p.category === 'string' && (p.category === category || p.category.toLowerCase() === lowerCat))
       );
@@ -242,7 +210,7 @@ export const getPosts = async (req, res) => {
     if (tag) {
       const cleanTag = tag.replace(/^#/, '').trim().toLowerCase();
       filtered = filtered.filter((p) =>
-        (p.tags || []).some((t) => t.toLowerCase() === cleanTag)
+        (p.tags || []).some((t) => String(t).toLowerCase() === cleanTag)
       );
     }
 
@@ -259,7 +227,6 @@ export const getPosts = async (req, res) => {
         const catSlug = (p.category?.slug || '').toLowerCase();
         const tags = (p.tags || []).map((t) => String(t).toLowerCase());
 
-        // 1. Kiểm tra khớp trực tiếp (chuẩn xác có dấu)
         if (
           title.includes(lowerQ) ||
           summary.includes(lowerQ) ||
@@ -272,7 +239,6 @@ export const getPosts = async (req, res) => {
           return true;
         }
 
-        // 2. Kiểm tra khớp không dấu (đảm bảo gõ "ap luc" vẫn tìm ra bài viết "áp lực")
         if (cleanQ) {
           if (
             removeVietnameseTones(title).includes(cleanQ) ||
@@ -290,19 +256,16 @@ export const getPosts = async (req, res) => {
       });
     }
 
-    // Lọc theo chế độ hiển thị (visibility: 'public' | 'friends')
     if (visibility === 'public') {
       filtered = filtered.filter((p) => !p.visibility || p.visibility === 'public');
     } else if (visibility === 'friends') {
       filtered = filtered.filter((p) => p.visibility === 'friends');
     }
 
-    // Lọc theo định dạng bài viết (postType: 'all' | 'article' | 'photo' | 'video')
     if (postType && postType !== 'all') {
       filtered = filtered.filter((p) => (p.postType || 'article') === postType);
     }
 
-    // Sắp xếp bài viết linh hoạt theo yêu cầu người dùng
     if (sort === 'oldest') {
       filtered.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
     } else if (sort === 'az') {
@@ -338,7 +301,6 @@ export const getPosts = async (req, res) => {
         return scoreA - scoreB;
       });
     } else {
-      // Mặc định (newest): Mới nhất lên đầu (cố định ổn định theo mốc thời gian)
       filtered.sort((a, b) => {
         const diff = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
         if (Number.isFinite(diff) && diff !== 0) return diff;
@@ -351,7 +313,7 @@ export const getPosts = async (req, res) => {
     const paginated = filtered.slice((page - 1) * limit, page * limit);
 
     return sendSuccess(res, {
-      message: 'Lấy bài viết thành công (Dữ liệu lưu trữ bền vững)',
+      message: 'Lấy danh sách bài viết từ MongoDB thành công',
       data: paginated,
       pagination: {
         total,
@@ -363,108 +325,99 @@ export const getPosts = async (req, res) => {
       },
     });
   } catch (error) {
-    const store = loadStore();
-    return sendSuccess(res, {
-      message: 'Lấy bài viết thành công',
-      data: (store.posts || []).slice(0, 6),
-      pagination: { total: store.posts?.length || 0, page: 1, limit: 6, totalPages: 1 },
+    console.error('[postController] Lỗi getPosts MongoDB:', error.message);
+    return sendError(res, {
+      message: error.message || 'Không thể tải danh sách bài viết từ cơ sở dữ liệu.',
+      status: 500,
     });
   }
 };
 
 /**
- * Lấy chi tiết bài viết theo Slug (Tự động tăng số lượt đọc thực tế)
+ * Lấy chi tiết bài viết theo Slug (100% từ MongoDB)
  */
 export const getPostBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
 
-    if (checkDbReady()) {
-      const post = await Post.findOne({ slug, isPublished: true })
-        .populate('category', 'name slug description')
-        .populate('user', 'name avatar jobTitle bio socialLinks streakCount')
-        .lean();
-
-      if (post) {
-        const nextViews = (post.views || 0) + 1;
-        const normalizedPost = {
-          ...post,
-          author: post.user?.name ? post.user.name : sanitizeAuthorName(post),
-          authorJob: post.user?.jobTitle || post.authorJob,
-          authorAvatar: post.user?.avatar || post.authorAvatar,
-          authorSocialLinks: post.user?.socialLinks || post.authorSocialLinks,
-          authorStreakCount: post.user?.streakCount || post.authorStreakCount || 0,
-          views: nextViews,
-        };
-
-        // Cập nhật lượt đọc bất đồng bộ trong MongoDB & gom batch ghi store định kỳ
-        Post.updateOne({ _id: post._id }, { $inc: { views: 1 } }).catch((err) => {
-          console.warn('[postController] Lỗi tăng lượt đọc MongoDB:', err.message);
-        });
-        bufferPostView(post._id || post.slug || slug);
-
-        return sendSuccess(res, {
-          message: 'Lấy thông tin bài viết thành công',
-          data: normalizedPost,
-        });
-      }
-    }
-
-    // Đọc từ persistentStore (Không ghi đồng bộ db_store.json khi chỉ đọc bài viết)
-    const store = loadStore();
-    const post = (store.posts || []).find(
-      (p) => p.slug === slug || String(p._id) === String(slug)
-    );
-    if (post) {
-      bufferPostView(post._id || post.slug || slug);
-      const responsePost = {
-        ...post,
-        author: sanitizeAuthorName(post),
-        views: getBufferedViews(post),
-      };
-
-      return sendSuccess(res, {
-        message: 'Lấy thông tin bài viết thành công',
-        data: responsePost,
+    await ensureDbConnected().catch(() => false);
+    if (!checkDbReady()) {
+      return sendError(res, {
+        message: 'Cơ sở dữ liệu MongoDB đang khởi động hoặc chưa sẵn sàng. Vui lòng thử lại sau giây lát.',
+        status: 503,
       });
     }
 
-    return sendError(res, { message: 'Không tìm thấy bài viết', status: 404 });
+    const post = await Post.findOne({ slug, isPublished: true })
+      .populate('category', 'name slug description')
+      .populate('user', 'name avatar jobTitle bio socialLinks streakCount')
+      .lean();
+
+    if (!post) {
+      return sendError(res, { message: 'Không tìm thấy bài viết', status: 404 });
+    }
+
+    const nextViews = (post.views || 0) + 1;
+    const normalizedPost = {
+      ...post,
+      author: post.user?.name ? post.user.name : sanitizeAuthorName(post),
+      authorJob: post.user?.jobTitle || post.authorJob,
+      authorAvatar: post.user?.avatar || post.authorAvatar,
+      authorSocialLinks: post.user?.socialLinks || post.authorSocialLinks,
+      authorStreakCount: post.user?.streakCount || post.authorStreakCount || 0,
+      views: nextViews,
+    };
+
+    Post.updateOne({ _id: post._id }, { $inc: { views: 1 } }).catch((err) => {
+      console.warn('[postController] Lỗi tăng lượt đọc MongoDB:', err.message);
+    });
+    bufferPostView(post._id || post.slug || slug);
+
+    return sendSuccess(res, {
+      message: 'Lấy thông tin bài viết thành công',
+      data: normalizedPost,
+    });
   } catch (error) {
-    const store = loadStore();
-    const post = (store.posts || []).find((p) => p.slug === req.params.slug);
-    if (post) {
-      return sendSuccess(res, {
-        data: {
-          ...post,
-          author: sanitizeAuthorName(post),
-          views: getBufferedViews(post),
-        },
-      });
-    }
-    return sendError(res, { message: error.message, status: 500 });
+    console.error('[postController] Lỗi getPostBySlug MongoDB:', error.message);
+    return sendError(res, { message: error.message || 'Không thể tải chi tiết bài viết', status: 500 });
   }
 };
 
 /**
- * Lấy chi tiết bài viết theo ID
+ * Lấy chi tiết bài viết theo ID (100% từ MongoDB)
  */
 export const getPostById = async (req, res) => {
   try {
     const { id } = req.params;
-    if (checkDbReady()) {
-      try {
-        const query = String(id).match(/^[0-9a-fA-F]{24}$/) ? { _id: id } : { slug: id };
-        const post = await Post.findOne(query).populate('category', 'name slug');
-        if (post) return sendSuccess(res, { data: post });
-      } catch (_) {}
+
+    await ensureDbConnected().catch(() => false);
+    if (!checkDbReady()) {
+      return sendError(res, {
+        message: 'Cơ sở dữ liệu MongoDB đang khởi động hoặc chưa sẵn sàng. Vui lòng thử lại sau giây lát.',
+        status: 503,
+      });
     }
-    const store = loadStore();
-    const post = (store.posts || []).find((p) => String(p._id) === String(id) || p.slug === id);
-    if (post) return sendSuccess(res, { data: post });
-    return sendError(res, { message: 'Không tìm thấy bài viết', status: 404 });
+
+    const query = String(id).match(/^[0-9a-fA-F]{24}$/) ? { _id: id } : { slug: id };
+    const post = await Post.findOne(query)
+      .populate('category', 'name slug')
+      .populate('user', 'name avatar jobTitle bio socialLinks streakCount')
+      .lean();
+
+    if (!post) {
+      return sendError(res, { message: 'Không tìm thấy bài viết', status: 404 });
+    }
+
+    return sendSuccess(res, {
+      data: {
+        ...post,
+        author: post.user?.name ? post.user.name : sanitizeAuthorName(post),
+        authorJob: post.user?.jobTitle || post.authorJob,
+        authorAvatar: post.user?.avatar || post.authorAvatar,
+      },
+    });
   } catch (error) {
-    return sendError(res, { message: error.message, status: 500 });
+    return sendError(res, { message: error.message || 'Không thể tải bài viết', status: 500 });
   }
 };
 
@@ -1051,10 +1004,12 @@ export const createPost = async (req, res) => {
       }
     }
 
+    await ensureDbConnected().catch(() => false);
+
     let baseSlug = slugify(finalTitle || `post-${Date.now()}`);
     let uniqueSlug = baseSlug;
 
-    // Đảm bảo slug là duy nhất
+    // Đảm bảo slug là duy nhất trên cả MongoDB lẫn store cục bộ
     const store = loadStore();
     store.posts = store.posts || [];
 
@@ -1062,6 +1017,14 @@ export const createPost = async (req, res) => {
     while (store.posts.some((p) => p.slug === uniqueSlug)) {
       uniqueSlug = `${baseSlug}-${counter}`;
       counter++;
+    }
+    if (checkDbReady()) {
+      try {
+        while (await Post.exists({ slug: uniqueSlug })) {
+          uniqueSlug = `${baseSlug}-${counter}`;
+          counter++;
+        }
+      } catch (_) {}
     }
 
     const resolvedCategory = await resolveCategory(category);
@@ -1547,40 +1510,41 @@ export const moderatePost = async (req, res) => {
       return sendError(res, { message: 'Chỉ Quản trị viên (Admin) mới có quyền kiểm duyệt bài viết', status: 403 });
     }
 
+    await ensureDbConnected().catch(() => false);
+    const mongoQuery = String(id).match(/^[0-9a-fA-F]{24}$/) ? { _id: id } : { slug: id };
+    const dbPost = checkDbReady() ? await Post.findOne(mongoQuery) : null;
+
     const store = loadStore();
-    const post = (store.posts || []).find((p) => String(p._id) === String(id) || p.slug === id);
-    if (!post) {
+    const storePost = (store.posts || []).find((p) => String(p._id) === String(id) || p.slug === id);
+    const target = dbPost || storePost;
+
+    if (!target) {
       return sendError(res, { message: 'Không tìm thấy bài viết để kiểm duyệt', status: 404 });
     }
 
-    if (action === 'approve') {
-      post.isFlagged = false;
-      post.flagReason = '';
-      post.moderationStatus = 'approved';
-    } else {
-      post.isFlagged = true;
-      post.flagReason = reason || 'Bài viết bị Admin gắn cờ kiểm duyệt';
-      post.moderationStatus = 'flagged';
+    const nextFlagged = action !== 'approve';
+    const nextReason = nextFlagged ? reason || 'Bài viết bị Admin gắn cờ kiểm duyệt' : '';
+    const nextStatus = nextFlagged ? 'flagged' : 'approved';
+
+    if (storePost) {
+      storePost.isFlagged = nextFlagged;
+      storePost.flagReason = nextReason;
+      storePost.moderationStatus = nextStatus;
+      saveStore(store);
     }
 
-    saveStore(store);
-
-    if (checkDbReady()) {
-      try {
-        const mongoQuery = String(id).match(/^[0-9a-fA-F]{24}$/) ? { _id: id } : { slug: id };
-        await Post.updateOne(mongoQuery, {
-          isFlagged: post.isFlagged,
-          flagReason: post.flagReason,
-          moderationStatus: post.moderationStatus,
-        });
-      } catch (dbErr) {
-        console.warn('Lỗi cập nhật MongoDB trong moderatePost:', dbErr.message);
-      }
+    let responseData = storePost || null;
+    if (dbPost && checkDbReady()) {
+      dbPost.isFlagged = nextFlagged;
+      dbPost.flagReason = nextReason;
+      dbPost.moderationStatus = nextStatus;
+      await dbPost.save();
+      responseData = dbPost.toObject();
     }
 
     return sendSuccess(res, {
       message: action === 'approve' ? 'Đã phê duyệt an toàn cho bài viết!' : 'Đã gắn cờ kiểm duyệt bài viết!',
-      data: post,
+      data: responseData,
     });
   } catch (error) {
     return sendError(res, { message: error.message, status: 500 });
@@ -1588,30 +1552,52 @@ export const moderatePost = async (req, res) => {
 };
 
 /**
- * Lấy các bài viết gần đây nhất (Sidebar)
+ * Lấy các bài viết gần đây nhất (Sidebar - 100% từ MongoDB)
  */
 export const getRecentPosts = async (req, res) => {
   try {
     const limit = Math.max(1, parseInt(req.query.limit, 10) || 4);
-    const store = loadStore();
-    const sorted = [...(store.posts || [])].sort(
-      (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
-    );
+
+    await ensureDbConnected().catch(() => false);
+    if (!checkDbReady()) {
+      return sendError(res, {
+        message: 'Cơ sở dữ liệu MongoDB chưa sẵn sàng. Vui lòng thử lại sau giây lát.',
+        status: 503,
+      });
+    }
+
+    const dbRecent = await Post.find({ isPublished: true })
+      .populate('category', 'name slug')
+      .populate('user', 'name avatar jobTitle')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    const formatted = (dbRecent || []).map((dbP) => ({
+      ...dbP,
+      author: dbP.user?.name ? dbP.user.name : sanitizeAuthorName(dbP),
+      authorJob: dbP.user?.jobTitle || dbP.authorJob,
+      authorAvatar: dbP.user?.avatar || dbP.authorAvatar || '',
+    }));
+
     return sendSuccess(res, {
       message: 'Lấy bài viết gần đây thành công',
-      data: sorted.slice(0, limit),
+      data: formatted,
     });
   } catch (error) {
-    const store = loadStore();
-    return sendSuccess(res, { data: (store.posts || []).slice(0, 4) });
+    return sendError(res, {
+      message: error.message || 'Không thể tải bài viết gần đây từ cơ sở dữ liệu.',
+      status: 500,
+    });
   }
 };
 
 /**
- * Lấy danh sách các Hashtag gợi ý hệ thống (tổng hợp từ posts + custom store)
+ * Lấy danh sách các Hashtag gợi ý hệ thống (tổng hợp từ MongoDB posts + custom store)
  */
 export const getHashtags = async (req, res) => {
   try {
+    await ensureDbConnected().catch(() => false);
     const store = loadStore();
     const defaultTags = [
       'burnout', 'smallwins', 'chuyennghe', 'tamsu', 'congso',
@@ -1621,17 +1607,19 @@ export const getHashtags = async (req, res) => {
 
     const tagSet = new Set(defaultTags);
 
-    // Bổ sung các tags từ bài viết
-    (store.posts || []).forEach((p) => {
-      if (Array.isArray(p.tags)) {
-        p.tags.forEach((t) => {
-          if (t && typeof t === 'string') {
-            const clean = t.trim().replace(/^#/, '').toLowerCase();
-            if (clean) tagSet.add(clean);
-          }
-        });
-      }
-    });
+    if (checkDbReady()) {
+      const dbTagRows = await Post.find({ isPublished: true }).select('tags').lean();
+      (dbTagRows || []).forEach((p) => {
+        if (Array.isArray(p.tags)) {
+          p.tags.forEach((t) => {
+            if (t && typeof t === 'string') {
+              const clean = t.trim().replace(/^#/, '').toLowerCase();
+              if (clean) tagSet.add(clean);
+            }
+          });
+        }
+      });
+    }
 
     // Bổ sung các custom hashtags đã lưu
     if (Array.isArray(store.customHashtags)) {

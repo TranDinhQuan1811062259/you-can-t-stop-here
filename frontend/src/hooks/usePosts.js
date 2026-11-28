@@ -6,6 +6,8 @@ import {
   invalidatePostsCache,
 } from '../services/postService';
 
+const COLD_START_HINT_DELAY_MS = 3000;
+
 const extractPostsPayload = (res, limit) => {
   const raw = res?.data?.posts || res?.data || [];
   const list = Array.isArray(raw) ? raw : [];
@@ -17,8 +19,8 @@ const extractPostsPayload = (res, limit) => {
 };
 
 export const usePosts = (queryParams = {}) => {
-  const limit = Math.max(1, parseInt(queryParams.limit) || 6);
-  const page = Math.max(1, parseInt(queryParams.page) || 1);
+  const limit = Math.max(1, parseInt(queryParams.limit, 10) || 6);
+  const page = Math.max(1, parseInt(queryParams.page, 10) || 1);
 
   const mergedParams = {
     category: queryParams.category || '',
@@ -35,41 +37,17 @@ export const usePosts = (queryParams = {}) => {
   };
 
   const currentQueryKey = buildPostsCacheKey(mergedParams);
-  const isDefaultHomeFeed =
-    !mergedParams.category &&
-    !mergedParams.tag &&
-    !mergedParams.q &&
-    !mergedParams.postType &&
-    mergedParams.visibility === 'all' &&
-    mergedParams.sort === 'newest' &&
-    page === 1;
 
-  // Đọc đồng bộ từ Predictive Warm-Cache (0ms nếu đã được prefetch khi kéo banner hoặc hover header pill)
+  // Đọc đồng bộ từ Predictive Warm-Cache trong RAM (0ms nếu đã được prefetch trong phiên)
   const warmHit = getWarmCachedPosts(mergedParams);
   const activeWarmPayload = warmHit ? extractPostsPayload(warmHit, limit) : null;
+  const hasWarmHit = Boolean(activeWarmPayload);
 
-  const [posts, setPosts] = useState(() => {
-    if (activeWarmPayload) return activeWarmPayload.paginatedList;
-    if (!isDefaultHomeFeed) return [];
-    try {
-      const cached = localStorage.getItem('freedom_cached_posts');
-      const list = cached ? JSON.parse(cached) : [];
-      return Array.isArray(list) ? list.slice(0, limit) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-  const [pagination, setPagination] = useState(() =>
-    activeWarmPayload ? activeWarmPayload.pagination : null
-  );
-  const [settledQueryKey, setSettledQueryKey] = useState(() => {
-    if (activeWarmPayload) return currentQueryKey;
-    return isDefaultHomeFeed && posts.length > 0 ? currentQueryKey : '';
-  });
-  const [loading, setLoading] = useState(() => {
-    if (activeWarmPayload) return false;
-    return !(isDefaultHomeFeed && posts.length > 0);
-  });
+  const [posts, setPosts] = useState(() => (activeWarmPayload ? activeWarmPayload.paginatedList : []));
+  const [pagination, setPagination] = useState(() => (activeWarmPayload ? activeWarmPayload.pagination : null));
+  const [settledQueryKey, setSettledQueryKey] = useState(() => (activeWarmPayload ? currentQueryKey : ''));
+  const [loading, setLoading] = useState(() => !hasWarmHit);
+  const [isSlowLoading, setIsSlowLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const latestQueryKeyRef = useRef(currentQueryKey);
@@ -103,6 +81,7 @@ export const usePosts = (queryParams = {}) => {
           setSettledQueryKey(requestKey);
           setError(null);
           setLoading(false);
+          setIsSlowLoading(false);
           return () => {
             isSubscribed = false;
           };
@@ -110,6 +89,8 @@ export const usePosts = (queryParams = {}) => {
       }
 
       setLoading(true);
+      setError(null);
+      setIsSlowLoading(false);
 
       postService
         .getPosts(reqParams, { force })
@@ -120,47 +101,18 @@ export const usePosts = (queryParams = {}) => {
           setPagination(parsed.pagination);
           setSettledQueryKey(requestKey);
           setError(null);
-          try {
-            if (parsed.list.length > 0 && !reqParams.q && !reqParams.category && !reqParams.tag) {
-              localStorage.setItem('freedom_cached_posts', JSON.stringify(parsed.list));
-            }
-          } catch (e) {}
         })
         .catch((err) => {
           if (!isSubscribed || latestQueryKeyRef.current !== requestKey) return;
-          // Nếu đã có bài viết trong cache khi mất mạng, lọc lại an toàn theo tham số hiện hành
-          try {
-            const cached = localStorage.getItem('freedom_cached_posts');
-            if (cached && !reqParams.category && !reqParams.tag && !reqParams.q) {
-              const list = JSON.parse(cached);
-              if (Array.isArray(list) && list.length > 0) {
-                const total = list.length;
-                const totalPages = Math.ceil(total / limit) || 1;
-                const sliced = list.slice((page - 1) * limit, page * limit);
-                setPosts(sliced);
-                setPagination({
-                  total,
-                  totalPages,
-                  page,
-                  limit,
-                  hasPrevPage: page > 1,
-                  hasNextPage: page < totalPages,
-                });
-                setSettledQueryKey(requestKey);
-                setError(null);
-                return;
-              }
-            }
-          } catch (e) {}
-
           setPosts([]);
           setPagination(null);
           setSettledQueryKey(requestKey);
-          setError(err.message || 'Lỗi khi tải dữ liệu bài viết');
+          setError(err?.message || 'Không thể tải dữ liệu bài viết từ máy chủ. Vui lòng thử lại.');
         })
         .finally(() => {
           if (isSubscribed && latestQueryKeyRef.current === requestKey) {
             setLoading(false);
+            setIsSlowLoading(false);
           }
         });
 
@@ -180,6 +132,19 @@ export const usePosts = (queryParams = {}) => {
       queryParams.postType,
     ]
   );
+
+  // Theo dõi ngưỡng chờ > 3 giây để hiển thị thông báo đánh thức máy chủ Render Cold Start
+  useEffect(() => {
+    const activeLoading = !hasWarmHit && (loading || currentQueryKey !== settledQueryKey);
+    if (!activeLoading) {
+      setIsSlowLoading(false);
+      return undefined;
+    }
+    const slowTimer = setTimeout(() => {
+      setIsSlowLoading(true);
+    }, COLD_START_HINT_DELAY_MS);
+    return () => clearTimeout(slowTimer);
+  }, [hasWarmHit, loading, currentQueryKey, settledQueryKey]);
 
   useEffect(() => {
     const cleanup = fetchPosts();
@@ -209,6 +174,7 @@ export const usePosts = (queryParams = {}) => {
     pagination: activeWarmPayload ? activeWarmPayload.pagination : (isSwitching ? null : pagination),
     loading: activeWarmPayload ? false : (loading || isSwitching),
     isSwitching,
+    isSlowLoading: activeWarmPayload ? false : isSlowLoading,
     error: activeWarmPayload ? null : (isSwitching ? null : error),
     refetch: () => fetchPosts({ force: true }),
   };

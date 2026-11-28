@@ -1,8 +1,7 @@
 import apiClient from './apiClient';
 
-const POSTS_CACHE_KEY = 'freedom_cached_posts_v3';
-const LOCAL_POSTS_KEY = 'freedom_offline_created_posts_v2';
-const WARM_CACHE_TTL_MS = 45 * 1000; // 45 giây TTL cho warm-cache chuyển chủ đề 0ms
+const POSTS_REQUEST_TIMEOUT_MS = 45000; // 45s chịu tải Render Cold Start
+const WARM_CACHE_TTL_MS = 45 * 1000; // 45 giây TTL cho warm-cache chuyển chủ đề 0ms trong RAM phiên hiện tại
 const WARM_CACHE_MAX_ENTRIES = 20;   // Giới hạn LRU tối đa 20 query gần nhất
 
 // LRU Warm-Cache trong RAM (cách ly theo auth scope) & In-Flight Request Deduplication
@@ -87,7 +86,7 @@ export const getWarmCachedPosts = (params = {}) => {
 };
 
 const setWarmCachedPosts = (key, response) => {
-  if (!response || response.fromCache) return;
+  if (!response) return;
   if (warmPostsCache.has(key)) {
     warmPostsCache.delete(key);
   } else if (warmPostsCache.size >= WARM_CACHE_MAX_ENTRIES) {
@@ -128,7 +127,7 @@ export const getWarmCachedPostBySlug = (slug) => {
 };
 
 const setWarmCachedPostBySlug = (key, response) => {
-  if (!response || response.fromCache) return;
+  if (!response) return;
   if (warmPostDetailCache.has(key)) {
     warmPostDetailCache.delete(key);
   } else if (warmPostDetailCache.size >= WARM_CACHE_MAX_ENTRIES) {
@@ -171,42 +170,8 @@ export const removeVietnameseTones = (str) => {
     .trim();
 };
 
-export const getCachedPosts = () => {
-  try {
-    const raw = localStorage.getItem(POSTS_CACHE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (e) {}
-  return [];
-};
-
-export const saveCachedPosts = (posts) => {
-  try {
-    localStorage.setItem(POSTS_CACHE_KEY, JSON.stringify(posts || []));
-  } catch (e) {}
-};
-
-export const getOfflineCreatedPosts = () => {
-  try {
-    const raw = localStorage.getItem(LOCAL_POSTS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch (e) {}
-  return [];
-};
-
-export const saveOfflineCreatedPosts = (posts) => {
-  try {
-    localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(posts || []));
-  } catch (e) {}
-};
-
 export const postService = {
-  // Lấy danh sách bài viết (hỗ trợ Warm-Cache 45s & In-Flight Request Deduplication)
+  // Lấy 100% danh sách bài viết thật từ MongoDB Backend (kèm 45s timeout + Cold Start retry trên apiClient)
   getPosts: async (params = {}, options = {}) => {
     const force = Boolean(options?.force);
     const normalized = normalizePostsQueryParams(params);
@@ -228,110 +193,20 @@ export const postService = {
     const requestParams = toBackendRequestParams(normalized);
 
     const requestPromise = (async () => {
-      try {
-        const res = await apiClient.get('/posts', { params: requestParams });
-        if (res && res.data) {
-          // Lưu cache offline cho các lần mất mạng hoặc khi backend chưa bật
-          if (Array.isArray(res.data)) {
-            saveCachedPosts(res.data);
-          } else if (res.data.posts && Array.isArray(res.data.posts)) {
-            saveCachedPosts(res.data.posts);
-          }
-          // Chỉ ghi vào Warm-Cache nếu không có mutation/invalidation xảy ra trong lúc chờ API
-          if (requestEpoch === warmCacheEpoch) {
-            setWarmCachedPosts(cacheKey, res);
-          }
-          return res;
-        }
-      } catch (err) {
-        console.warn('Backend chưa sẵn sàng, trả về bài viết đã lưu từ bộ nhớ đệm:', err?.message);
-        const cached = getCachedPosts();
-        const offline = getOfflineCreatedPosts();
-        const combined = [...offline, ...cached.filter((c) => !offline.some((o) => o._id === c._id))];
-        if (combined.length > 0) {
-          let filtered = combined;
+      const res = await apiClient.get('/posts', {
+        params: requestParams,
+        timeout: POSTS_REQUEST_TIMEOUT_MS,
+      });
 
-          if (normalized.category) {
-            const lowerCat = normalized.category.toLowerCase();
-            filtered = filtered.filter(
-              (p) =>
-                p.category?.slug === normalized.category ||
-                p.category?._id === normalized.category ||
-                p.category?.name?.toLowerCase() === lowerCat ||
-                (typeof p.category === 'string' && (p.category === normalized.category || p.category.toLowerCase() === lowerCat))
-            );
-          }
-
-          if (normalized.postType) {
-            filtered = filtered.filter((p) => (p.postType || 'article') === normalized.postType);
-          }
-
-          if (normalized.tag) {
-            const cleanTag = normalized.tag.replace(/^#/, '').trim().toLowerCase();
-            filtered = filtered.filter((p) => (p.tags || []).some((t) => t.toLowerCase() === cleanTag));
-          }
-
-          if (normalized.q) {
-            const lowerQ = normalized.q.toLowerCase().trim();
-            const cleanQ = removeVietnameseTones(lowerQ);
-
-            filtered = filtered.filter((p) => {
-              const title = (p.title || '').toLowerCase();
-              const summary = (p.summary || '').toLowerCase();
-              const content = (p.content || '').toLowerCase();
-              const author = (p.author || p.user?.name || '').toLowerCase();
-              const catName = (typeof p.category === 'string' ? p.category : p.category?.name || '').toLowerCase();
-              const tags = (p.tags || []).map((t) => String(t).toLowerCase());
-
-              if (
-                title.includes(lowerQ) ||
-                summary.includes(lowerQ) ||
-                content.includes(lowerQ) ||
-                author.includes(lowerQ) ||
-                catName.includes(lowerQ) ||
-                tags.some((t) => t.includes(lowerQ))
-              ) {
-                return true;
-              }
-
-              if (cleanQ) {
-                return (
-                  removeVietnameseTones(title).includes(cleanQ) ||
-                  removeVietnameseTones(summary).includes(cleanQ) ||
-                  removeVietnameseTones(content).includes(cleanQ) ||
-                  removeVietnameseTones(author).includes(cleanQ) ||
-                  removeVietnameseTones(catName).includes(cleanQ) ||
-                  tags.some((t) => removeVietnameseTones(t).includes(cleanQ))
-                );
-              }
-
-              return false;
-            });
-          }
-
-          const page = normalized.page;
-          const limit = normalized.limit;
-          const total = filtered.length;
-          const totalPages = Math.ceil(total / limit) || 1;
-          const paginated = filtered.slice((page - 1) * limit, page * limit);
-
-          return {
-            data: paginated,
-            pagination: {
-              total,
-              totalPages,
-              page,
-              limit,
-              hasPrevPage: page > 1,
-              hasNextPage: page < totalPages,
-            },
-            success: true,
-            fromCache: true,
-          };
-        }
-        throw err;
+      if (!res || !Array.isArray(res?.data?.posts || res?.data)) {
+        throw new Error(res?.message || 'Dữ liệu bài viết trả về từ máy chủ không hợp lệ.');
       }
-      return { data: [], success: false };
+
+      // Chỉ ghi vào Warm-Cache trong RAM nếu không có mutation/invalidation xảy ra trong lúc chờ API
+      if (requestEpoch === warmCacheEpoch) {
+        setWarmCachedPosts(cacheKey, res);
+      }
+      return res;
     })();
 
     if (!force) {
@@ -347,7 +222,7 @@ export const postService = {
     }
   },
 
-  // Lấy chi tiết bài viết theo slug (hỗ trợ Warm-Cache 45s & In-Flight Request Deduplication)
+  // Lấy chi tiết bài viết theo slug trực tiếp từ MongoDB Backend (timeout 45s cho Render Cold Start)
   getPostBySlug: async (slug, options = {}) => {
     if (!slug) throw new Error('Slug bài viết không hợp lệ');
     const force = Boolean(options?.force);
@@ -369,23 +244,16 @@ export const postService = {
     const requestEpoch = warmCacheEpoch;
 
     const requestPromise = (async () => {
-      try {
-        const res = await apiClient.get(`/posts/slug/${encodeURIComponent(normalizedSlug)}`);
-        if (res && res.data) {
-          if (requestEpoch === warmCacheEpoch) {
-            setWarmCachedPostBySlug(cacheKey, res);
-          }
-          return res;
-        }
-      } catch (err) {
-        const cached = [...getOfflineCreatedPosts(), ...getCachedPosts()];
-        const found = cached.find((p) => p.slug === normalizedSlug || p._id === normalizedSlug);
-        if (found) {
-          return { data: found, success: true, fromCache: true };
-        }
-        throw err;
+      const res = await apiClient.get(`/posts/slug/${encodeURIComponent(normalizedSlug)}`, {
+        timeout: POSTS_REQUEST_TIMEOUT_MS,
+      });
+      if (!res?.data) {
+        throw new Error(res?.message || 'Không tìm thấy bài viết.');
       }
-      return { data: null, success: false };
+      if (requestEpoch === warmCacheEpoch) {
+        setWarmCachedPostBySlug(cacheKey, res);
+      }
+      return res;
     })();
 
     if (!force) {
@@ -401,18 +269,11 @@ export const postService = {
     }
   },
 
-  // Lấy chi tiết bài viết theo id
+  // Lấy chi tiết bài viết theo id trực tiếp từ MongoDB Backend
   getPostById: async (id) => {
-    try {
-      return await apiClient.get(`/posts/${id}`);
-    } catch (err) {
-      const cached = [...getOfflineCreatedPosts(), ...getCachedPosts()];
-      const found = cached.find((p) => p._id === id);
-      if (found) {
-        return { data: found, success: true, fromCache: true };
-      }
-      throw err;
-    }
+    return apiClient.get(`/posts/${encodeURIComponent(id)}`, {
+      timeout: POSTS_REQUEST_TIMEOUT_MS,
+    });
   },
 
   // Gửi lời động viên (Cheer - legacy)
@@ -469,72 +330,30 @@ export const postService = {
       return res;
     }),
 
-  // Lấy danh sách bài viết mới nhất (widget sidebar)
+  // Lấy danh sách bài viết mới nhất từ MongoDB Backend (widget sidebar)
   getRecentPosts: async (limit = 4) => {
-    try {
-      return await apiClient.get('/posts/recent', { params: { limit } });
-    } catch (err) {
-      const cached = [...getOfflineCreatedPosts(), ...getCachedPosts()];
-      return { data: cached.slice(0, limit), success: true, fromCache: true };
-    }
+    return apiClient.get('/posts/recent', {
+      params: { limit },
+      timeout: POSTS_REQUEST_TIMEOUT_MS,
+    });
   },
 
-  // Tạo mới bài viết
+  // Tạo mới bài viết trực tiếp trên Backend MongoDB (không tạo bài giả lập local)
   createPost: async (postData) => {
-    try {
-      const res = await apiClient.post('/posts', postData);
-      const created = res?.data || res;
-      if (created) {
-        invalidatePostsCache();
-        return { data: created, success: true };
-      }
-    } catch (err) {
-      console.warn('Backend chưa nhận được bài viết, lưu an toàn tại máy cục bộ:', err?.message);
-      // Tạo đối tượng post cục bộ hoàn chỉnh
-      const localPost = {
-        _id: `post_local_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-        ...postData,
-        slug: (postData.title || 'bai-viet-moi')
-          .toLowerCase()
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/(^-|-$)+/g, '') + `-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        reactions: { sympathy: 0, stop: 0, love: 1, encourage: 0 },
-        reactionsCount: 1,
-        commentsCount: 0,
-        cheerCount: 0,
-        isLocalFallback: true,
-      };
-
-      const offline = getOfflineCreatedPosts();
-      saveOfflineCreatedPosts([localPost, ...offline]);
-      invalidatePostsCache();
-      return { data: localPost, success: true, fromLocal: true };
-    }
+    const res = await apiClient.post('/posts', postData, {
+      timeout: POSTS_REQUEST_TIMEOUT_MS,
+    });
+    const created = res?.data || res;
+    invalidatePostsCache();
+    return { data: created, success: true };
   },
 
   // Cập nhật bài viết
   updatePost: async (id, postData) => {
-    const res = await apiClient.put(`/posts/${id}`, postData);
+    const res = await apiClient.put(`/posts/${id}`, postData, {
+      timeout: POSTS_REQUEST_TIMEOUT_MS,
+    });
     const updatedPost = res?.data?.post || res?.data?.data || res?.post || res?.data || res;
-
-    // Đồng bộ an toàn cache localStorage nếu có (không ném lỗi nếu không có trong cache phụ)
-    try {
-      if (updatedPost && typeof updatedPost === 'object') {
-        const mergeUpdatedItem = (list) =>
-          Array.isArray(list)
-            ? list.map((p) =>
-                String(p?._id) === String(id) || (p?.slug && p.slug === id)
-                  ? { ...p, ...updatedPost }
-                  : p
-              )
-            : [];
-        saveCachedPosts(mergeUpdatedItem(getCachedPosts()));
-        saveOfflineCreatedPosts(mergeUpdatedItem(getOfflineCreatedPosts()));
-      }
-    } catch (_) {}
 
     invalidatePostsCache();
     return {

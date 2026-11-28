@@ -104,7 +104,7 @@ export const HomePage = () => {
     setCurrentPage(1);
   }, [selectedTag, searchQuery, sortBy, visibilityFilter, selectedCategory, selectedPostType]);
 
-  const { posts, pagination, loading, error } = usePosts({
+  const { posts, pagination, loading, isSlowLoading, error, refetch } = usePosts({
     category: selectedCategory,
     tag: selectedTag,
     q: searchQuery,
@@ -114,6 +114,27 @@ export const HomePage = () => {
     page: currentPage,
     limit: 6,
   });
+
+  const hasActiveFilters = Boolean(
+    selectedCategory ||
+      selectedTag ||
+      searchQuery ||
+      selectedPostType !== 'all' ||
+      visibilityFilter !== 'all'
+  );
+
+  const handleResetAllFilters = () => {
+    setSelectedCategory('');
+    setSelectedPostType('all');
+    setVisibilityFilter('all');
+    setSortBy('newest');
+    setCurrentPage(1);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('category');
+    nextParams.delete('tag');
+    nextParams.delete('q');
+    setSearchParams(nextParams);
+  };
 
   const matchedTopic = selectedCategory
     ? categories.find((t) => t.slug === selectedCategory || t._id === selectedCategory) ||
@@ -485,12 +506,49 @@ export const HomePage = () => {
           </div>
         </div>
 
-        {/* Chỉ hiển thị lỗi khi hoàn toàn không có bài viết nào */}
-        {error && !loading && !isCommitSwitching && posts.length === 0 && <ErrorMessage message={error} />}
-
-        <SectionErrorBoundary name="Danh sách bài viết tâm sự" onRetry={() => handlePageChange(pagination?.page || 1)}>
+        <SectionErrorBoundary name="Danh sách bài viết tâm sự" onRetry={() => refetch()}>
           {loading || isCommitSwitching ? (
-            <PostListSkeleton count={6} label="Đang tải những câu chuyện mới nhất..." />
+            <PostListSkeleton
+              count={6}
+              label="Đang tải những câu chuyện mới nhất..."
+              slowMessage={isSlowLoading ? 'Đang đánh thức máy chủ, vui lòng chờ trong giây lát...' : ''}
+            />
+          ) : error && posts.length === 0 ? (
+            <ErrorMessage message={error} onRetry={refetch} retryLabel="Thử lại" />
+          ) : posts.length === 0 ? (
+            <div className="posts-empty-state-card">
+              <div className="posts-state-icon" aria-hidden="true">
+                {hasActiveFilters ? '🔍' : '✍️'}
+              </div>
+              <h3 className="posts-state-title">
+                {hasActiveFilters ? 'Chưa tìm thấy bài viết phù hợp' : 'Chưa có bài viết nào trong cộng đồng'}
+              </h3>
+              <p className="posts-state-desc">
+                {hasActiveFilters
+                  ? 'Hiện chưa có tâm sự nào khớp với bộ lọc đang chọn. Bạn có thể xem tất cả hoặc viết bài chia sẻ đầu tiên cho chủ đề này!'
+                  : 'Cơ sở dữ liệu hiện chưa có bài viết nào. Hãy trở thành người đầu tiên sẻ chia câu chuyện và truyền cảm hứng cho mọi người!'}
+              </p>
+              <div className="posts-state-actions">
+                <button
+                  type="button"
+                  className="posts-state-btn posts-state-btn-primary"
+                  onMouseEnter={isAuthenticated ? preloadCreatePostModal : undefined}
+                  onClick={() => (isAuthenticated ? setIsCreateOpen(true) : openLoginModal())}
+                >
+                  <i className="fa-solid fa-feather-pointed" aria-hidden="true"></i>
+                  <span>{hasActiveFilters ? 'Viết bài chia sẻ' : 'Viết bài đầu tiên'}</span>
+                </button>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    className="posts-state-btn posts-state-btn-secondary"
+                    onClick={handleResetAllFilters}
+                  >
+                    Xem tất cả bài viết
+                  </button>
+                )}
+              </div>
+            </div>
           ) : (
             <>
               <PostList posts={posts} />

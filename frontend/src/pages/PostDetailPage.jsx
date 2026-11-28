@@ -36,6 +36,7 @@ export const PostDetailPage = () => {
   const [post, setPost] = useState(() => warmHit?.data || null);
   const [recentPosts, setRecentPosts] = useState([]);
   const [loading, setLoading] = useState(() => !warmHit?.data);
+  const [isSlowLoading, setIsSlowLoading] = useState(false);
   const [error, setError] = useState(null);
   const [cheers, setCheers] = useState(() => warmHit?.data?.cheersCount || warmHit?.data?.reactionsCount || 0);
   const [hasCheered, setHasCheered] = useState(false);
@@ -258,22 +259,7 @@ export const PostDetailPage = () => {
       })
       .catch((err) => {
         if (!isMountedRef.current || activeSlugRef.current !== currentSlug) return;
-        // Dự phòng tải bài viết từ Cache trình duyệt nếu mất kết nối backend tạm thời
-        try {
-          const cached = localStorage.getItem('freedom_cached_posts');
-          if (cached) {
-            const list = JSON.parse(cached);
-            const found = list.find((p) => p.slug === currentSlug || p._id === currentSlug);
-            if (found) {
-              setPost(found);
-              setCheers(found.cheersCount || found.reactionsCount || found.reactionCounts?.total || 0);
-              setError(null);
-              return;
-            }
-          }
-        } catch (e) {}
-
-        setError(err.message || 'Không tìm thấy bài viết.');
+        setError(err?.message || 'Không thể tải bài viết từ máy chủ. Vui lòng thử lại.');
       })
       .finally(() => {
         if (isMountedRef.current && activeSlugRef.current === currentSlug) {
@@ -302,17 +288,11 @@ export const PostDetailPage = () => {
       .getRecentPosts(4)
       .then((res) => {
         if (!isMountedRef.current || activeSlugRef.current !== currentSlug) return;
-        setRecentPosts(res.data || []);
+        setRecentPosts(Array.isArray(res?.data) ? res.data : []);
       })
-      .catch((err) => {
+      .catch(() => {
         if (!isMountedRef.current || activeSlugRef.current !== currentSlug) return;
-        try {
-          const cached = localStorage.getItem('freedom_cached_posts');
-          if (cached) {
-            const list = JSON.parse(cached);
-            setRecentPosts(list.slice(0, 4));
-          }
-        } catch (e) {}
+        setRecentPosts([]);
       });
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -333,6 +313,18 @@ export const PostDetailPage = () => {
       window.removeEventListener('freedom_auth_changed', handleRefresh);
     };
   }, [slug, fetchPostDetail]);
+
+  // Theo dõi ngưỡng chờ > 3s khi đánh thức máy chủ Render (Cold Start)
+  useEffect(() => {
+    if (!loading) {
+      setIsSlowLoading(false);
+      return undefined;
+    }
+    const slowTimer = setTimeout(() => {
+      setIsSlowLoading(true);
+    }, 3000);
+    return () => clearTimeout(slowTimer);
+  }, [loading]);
 
   const handleCheer = async () => {
     if (hasCheered || !post) return;
@@ -373,8 +365,14 @@ export const PostDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="container" style={{ padding: '80px 0' }}>
+      <div className="container" style={{ padding: '80px 0', textAlign: 'center' }}>
         <LoadingSpinner message="Đang tải tâm sự..." />
+        {isSlowLoading && (
+          <div className="cold-start-hint" role="status" style={{ marginTop: '16px' }}>
+            <span className="cold-start-hint-spinner" aria-hidden="true" />
+            <span>Đang đánh thức máy chủ, vui lòng chờ trong giây lát...</span>
+          </div>
+        )}
       </div>
     );
   }
@@ -390,7 +388,7 @@ export const PostDetailPage = () => {
               playClickSound();
               setLoading(true);
               setError(null);
-              fetchPostDetail();
+              fetchPostDetail(slug, { force: true });
             }}
             className="post-copy-link-btn"
             style={{ padding: '8px 18px', borderRadius: '12px', fontSize: '0.9rem' }}

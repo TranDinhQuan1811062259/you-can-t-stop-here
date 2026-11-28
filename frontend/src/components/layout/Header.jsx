@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { Link, NavLink, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { postService, getCachedPosts, prefetchPosts, removeVietnameseTones } from '../../services/postService';
+import { postService, prefetchPosts } from '../../services/postService';
 import { eventService } from '../../services/eventService';
 import { isSoundEnabled, toggleSound, playClickSound, playFestiveEventSound } from '../../utils/soundEffects';
 import { getActiveSeason, setActiveSeason, SEASONS } from '../../utils/seasonUtils';
@@ -303,23 +303,7 @@ export const Header = () => {
           setLiveResults(Array.isArray(raw) ? raw.slice(0, 5) : []);
         })
         .catch(() => {
-          try {
-            const cached = getCachedPosts();
-            const cleanQ = removeVietnameseTones(trimmed.toLowerCase());
-            const matched = cached.filter((p) => {
-              const title = (p.title || '').toLowerCase();
-              const summary = (p.summary || '').toLowerCase();
-              return (
-                title.includes(trimmed.toLowerCase()) ||
-                summary.includes(trimmed.toLowerCase()) ||
-                removeVietnameseTones(title).includes(cleanQ) ||
-                removeVietnameseTones(summary).includes(cleanQ)
-              );
-            });
-            setLiveResults(matched.slice(0, 5));
-          } catch (_) {
-            setLiveResults([]);
-          }
+          setLiveResults([]);
         })
         .finally(() => setIsSearchingLive(false));
     }, 200);

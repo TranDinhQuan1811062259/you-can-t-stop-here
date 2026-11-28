@@ -1,6 +1,10 @@
 import React from 'react';
 
-export const PostListSkeleton = ({ count = 6, label = 'Đang chuyển không gian bài viết...' }) => {
+export const PostListSkeleton = ({
+  count = 6,
+  label = 'Đang chuyển không gian bài viết...',
+  slowMessage = '',
+}) => {
   const items = Array.from({ length: Math.max(1, count) });
 
   return (
@@ -10,6 +14,13 @@ export const PostListSkeleton = ({ count = 6, label = 'Đang chuyển không gia
       aria-live="polite"
       aria-label={label}
     >
+      {slowMessage && (
+        <div className="cold-start-hint" role="status">
+          <span className="cold-start-hint-spinner" aria-hidden="true" />
+          <span>{slowMessage}</span>
+        </div>
+      )}
+
       <div className="posts-grid">
         {items.map((_, index) => (
           <div key={index} className="post-card post-card-skeleton" aria-hidden="true">

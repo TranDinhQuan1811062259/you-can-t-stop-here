@@ -28206,6 +28206,182 @@ body.theme-dark .assistive-realtime-pill.is-reconnecting,
   }
 }
 
+/* ================= COLD START HINT, ERROR RETRY & EMPTY STATE (DAY & NIGHT) ================= */
+.cold-start-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0 auto 18px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.45;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #7dd3fc;
+  animation: fadeIn 0.25s ease;
+}
+
+.post-list-skeleton-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.cold-start-hint-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(56, 189, 248, 0.25);
+  border-top-color: #38bdf8;
+  animation: spin 0.85s linear infinite;
+  flex-shrink: 0;
+}
+
+.posts-fetch-error-card,
+.posts-empty-state-card {
+  margin: 24px auto 32px;
+  padding: 36px 24px;
+  border-radius: 18px;
+  text-align: center;
+  max-width: 640px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  color: #f8fafc;
+  box-shadow: 0 14px 36px rgba(2, 6, 23, 0.32);
+}
+
+.posts-fetch-error-card {
+  border-color: rgba(248, 113, 113, 0.42);
+  background: rgba(127, 29, 29, 0.24);
+}
+
+.posts-state-icon {
+  font-size: 2.3rem;
+  margin-bottom: 12px;
+  line-height: 1;
+}
+
+.posts-state-title {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.posts-state-desc {
+  margin: 0 auto 20px;
+  max-width: 480px;
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
+.posts-state-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.posts-state-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.18s ease;
+}
+
+.posts-state-btn:hover {
+  transform: translateY(-1px);
+}
+
+.posts-state-btn-primary {
+  background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(2, 132, 199, 0.28);
+}
+
+.posts-state-btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(148, 163, 184, 0.35);
+  color: #e2e8f0;
+}
+
+/* Chế Độ Ngày (Day Mode) High-Contrast Overrides */
+body.theme-light .cold-start-hint,
+[data-theme="light"] .cold-start-hint,
+.mode-light .cold-start-hint {
+  background: rgba(2, 132, 199, 0.1);
+  border-color: rgba(2, 132, 199, 0.32);
+  color: #0369a1;
+}
+
+body.theme-light .cold-start-hint-spinner,
+[data-theme="light"] .cold-start-hint-spinner,
+.mode-light .cold-start-hint-spinner {
+  border-color: rgba(2, 132, 199, 0.22);
+  border-top-color: #0284c7;
+}
+
+body.theme-light .posts-empty-state-card,
+[data-theme="light"] .posts-empty-state-card,
+.mode-light .posts-empty-state-card {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
+}
+
+body.theme-light .posts-fetch-error-card,
+[data-theme="light"] .posts-fetch-error-card,
+.mode-light .posts-fetch-error-card {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+  box-shadow: 0 10px 24px rgba(185, 28, 28, 0.08);
+}
+
+body.theme-light .posts-state-title,
+[data-theme="light"] .posts-state-title,
+.mode-light .posts-state-title {
+  color: #0f172a;
+}
+
+body.theme-light .posts-fetch-error-card .posts-state-title,
+[data-theme="light"] .posts-fetch-error-card .posts-state-title,
+.mode-light .posts-fetch-error-card .posts-state-title {
+  color: #991b1b;
+}
+
+body.theme-light .posts-state-desc,
+[data-theme="light"] .posts-state-desc,
+.mode-light .posts-state-desc {
+  color: #475569;
+}
+
+body.theme-light .posts-fetch-error-card .posts-state-desc,
+[data-theme="light"] .posts-fetch-error-card .posts-state-desc,
+.mode-light .posts-fetch-error-card .posts-state-desc {
+  color: #7f1d1d;
+}
+
+body.theme-light .posts-state-btn-secondary,
+[data-theme="light"] .posts-state-btn-secondary,
+.mode-light .posts-state-btn-secondary {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
 
 
 
