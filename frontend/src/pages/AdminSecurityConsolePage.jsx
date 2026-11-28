@@ -833,7 +833,7 @@ export const AdminSecurityConsolePage = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@cantstophere.com"
+                  placeholder="admin@domain.com"
                   required
                 />
               </div>

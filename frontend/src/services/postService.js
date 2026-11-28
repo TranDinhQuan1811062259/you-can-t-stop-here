@@ -16,13 +16,6 @@ const getAuthCacheScope = () => {
   try {
     const token = localStorage.getItem('token') || localStorage.getItem('freedom_token') || '';
     if (!token) return 'guest';
-    const rawUser = localStorage.getItem('user');
-    if (rawUser) {
-      const parsed = JSON.parse(rawUser);
-      if (parsed?._id || parsed?.id) {
-        return `user:${parsed._id || parsed.id}`;
-      }
-    }
     return `auth:${token.slice(-12)}`;
   } catch (_) {
     return 'guest';

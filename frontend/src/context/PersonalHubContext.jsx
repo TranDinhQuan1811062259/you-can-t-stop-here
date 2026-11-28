@@ -355,15 +355,8 @@ export const PersonalHubProvider = ({ children }) => {
         if (res?.success || updatedUser) {
           const nextProfile = updatedUser || profileData;
           try {
-            const currentSaved = JSON.parse(localStorage.getItem('user') || '{}');
-            const merged = { ...currentSaved, ...nextProfile };
             if (typeof updateUserProfile === 'function') {
-              updateUserProfile(merged);
-            } else {
-              localStorage.setItem('user', JSON.stringify(merged));
-              localStorage.setItem('freedom_persisted_profile', JSON.stringify(merged));
-              window.dispatchEvent(new Event('profile_updated'));
-              window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: merged }));
+              updateUserProfile(nextProfile);
             }
           } catch (_) {}
           return { success: true, user: nextProfile };

@@ -1,57 +1,53 @@
 import User from '../models/User.js';
 import { ensureDbConnected, checkDbReady } from '../config/db.js';
 import { verifyToken, verifyAdminToken } from '../utils/token.js';
+import { USER_SAFE_PROJECTION, normalizeVietnamPhone } from '../utils/identifier-helper.js';
 import { sendError } from '../utils/apiResponse.js';
-import { findUserInStore } from '../utils/persistentStore.js';
+
+const buildUserQueryFromDecoded = (decoded) => {
+  const query = [];
+  if (decoded?.id && String(decoded.id).match(/^[0-9a-fA-F]{24}$/)) {
+    query.push({ _id: decoded.id });
+  }
+  if (decoded?.email && typeof decoded.email === 'string' && decoded.email.trim()) {
+    query.push({ email: decoded.email.toLowerCase().trim() });
+  }
+  if (decoded?.phone && typeof decoded.phone === 'string' && decoded.phone.trim()) {
+    const cleanPhone = normalizeVietnamPhone(decoded.phone) || decoded.phone.trim();
+    query.push({ phone: cleanPhone });
+  }
+  return query;
+};
 
 export const protect = async (req, res, next) => {
   let token;
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
       token = req.headers.authorization.split(' ')[1];
       const decoded = await verifyToken(token);
 
       await ensureDbConnected().catch(() => false);
-
-      if (checkDbReady()) {
-        const query = [];
-        if (decoded.id && String(decoded.id).match(/^[0-9a-fA-F]{24}$/)) {
-          query.push({ _id: decoded.id });
-        }
-        if (decoded.email) {
-          query.push({ email: decoded.email.toLowerCase().trim() });
-        }
-        if (query.length > 0) {
-          req.user = await User.findOne({ $or: query }).select(
-            '-password -rawPassword -otp -otpCode -otpExpires -otpAttempts -resetPasswordToken'
-          );
-        }
+      if (!checkDbReady()) {
+        return sendError(res, {
+          message: 'Cơ sở dữ liệu MongoDB đang khởi động hoặc chưa sẵn sàng. Vui lòng thử lại sau giây lát!',
+          status: 503,
+        });
       }
 
-      if (!req.user && decoded) {
-        const storedUser = decoded.email ? findUserInStore(decoded.email) : null;
-        const isAdm =
-          decoded.role === 'admin' ||
-          decoded.email === 'anthonyq012025@gmail.com' ||
-          String(decoded.id) === '6aec5b46ee112662b33c0e32';
-
-        req.user = storedUser || {
-          _id: decoded.id,
-          name: decoded.name || (isAdm ? 'Quản Trị Viên' : 'Thành viên cộng đồng'),
-          email: decoded.email || (isAdm ? 'anthonyq012025@gmail.com' : ''),
-          role: isAdm ? 'admin' : (decoded.role || 'user'),
-          jobTitle: decoded.jobTitle || (isAdm ? 'System Admin & Lead Dev' : 'Người đi làm'),
-          avatar: isAdm ? '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg' : (decoded.avatar || ''),
-          tokenVersion: decoded.tokenVersion !== undefined ? decoded.tokenVersion : 0,
-        };
+      const query = buildUserQueryFromDecoded(decoded);
+      if (query.length > 0) {
+        req.user = await User.findOne({ $or: query }).select(USER_SAFE_PROJECTION);
       }
 
-      // Chặn tài khoản đang bị khóa ngay lập tức ở lớp middleware
-      if (req.user && req.user.status === 'banned') {
+      if (!req.user) {
+        return sendError(res, {
+          message: 'Không tìm thấy thông tin tài khoản hợp lệ. Vui lòng đăng nhập lại!',
+          status: 401,
+        });
+      }
+
+      if (req.user.status === 'banned') {
         return sendError(res, {
           message: 'Tài khoản của bạn đã bị khóa bởi Quản trị viên. Quyền truy cập bị từ chối.',
           status: 403,
@@ -59,8 +55,7 @@ export const protect = async (req, res, next) => {
         });
       }
 
-      // Kiểm tra phiên đăng nhập có bị thu hồi qua tokenVersion (ví dụ sau khi đổi mật khẩu hoặc logout-all)
-      if (req.user && decoded.tokenVersion !== undefined) {
+      if (decoded.tokenVersion !== undefined) {
         const currentVersion = req.user.tokenVersion !== undefined ? req.user.tokenVersion : 0;
         if (decoded.tokenVersion !== currentVersion) {
           return sendError(res, {
@@ -88,26 +83,24 @@ export const protect = async (req, res, next) => {
 };
 
 /**
- * Middleware chỉ cho phép Admin
+ * Middleware phân quyền dành riêng cho Quản trị viên (Admin Role Isolation)
  */
 export const adminOnly = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
-    return next();
+  if (!req.user || req.user.role !== 'admin') {
+    return sendError(res, {
+      message: 'Truy cập bị từ chối. Quyền hạn Quản trị viên (Admin) được yêu cầu!',
+      status: 403,
+    });
   }
-  return sendError(res, {
-    message: 'Truy cập bị từ chối! Thao tác này chỉ dành cho Quản Trị Viên (Admin).',
-    status: 403,
-  });
+  return next();
 };
 
 /**
- * Middleware khóa cứng cổng Quản Trị bằng x-admin-token (sau khi đã mở khóa Mã PIN 2h)
+ * Middleware xác thực Cổng Admin 2 lớp thông qua header x-admin-token
  */
 export const verifyAdminGate = async (req, res, next) => {
-  const rawToken = req.headers['x-admin-token'];
-  const adminToken = typeof rawToken === 'string' ? rawToken.trim() : '';
-
-  if (!adminToken) {
+  const adminToken = req.headers['x-admin-token'];
+  if (!adminToken || typeof adminToken !== 'string') {
     return res.status(403).json({
       success: false,
       requireAdminPin: true,
@@ -117,15 +110,21 @@ export const verifyAdminGate = async (req, res, next) => {
 
   try {
     const decoded = await verifyAdminToken(adminToken);
-    const reqUserId = String(req.user?._id || req.user?.id || '').trim();
-    if (!decoded || decoded.isAdminUnlocked !== true || (reqUserId && String(decoded.id) !== reqUserId)) {
+    if (!decoded || !decoded.isAdminPinVerified) {
       return res.status(403).json({
         success: false,
         requireAdminPin: true,
         message: 'Vui lòng xác thực mã PIN quản trị',
       });
     }
-    req.adminGate = decoded;
+    if (decoded.adminId && req.user?._id && String(decoded.adminId) !== String(req.user._id)) {
+      return res.status(403).json({
+        success: false,
+        requireAdminPin: true,
+        message: 'Phiên mở khóa PIN không khớp với tài khoản Admin hiện tại',
+      });
+    }
+    req.adminPinPayload = decoded;
     return next();
   } catch (err) {
     return res.status(403).json({
@@ -137,43 +136,24 @@ export const verifyAdminGate = async (req, res, next) => {
 };
 
 /**
- * Middleware xác thực tùy chọn (Không bắt buộc đăng nhập, nhưng nếu có token sẽ giải mã user)
+ * Middleware xác thực tùy chọn (Không bắt buộc đăng nhập, nhưng nếu có token hợp lệ từ MongoDB sẽ gắn user)
  */
 export const optionalProtect = async (req, res, next) => {
   let token;
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
       token = req.headers.authorization.split(' ')[1];
       const decoded = await verifyToken(token);
 
       await ensureDbConnected().catch(() => false);
-      if (checkDbReady()) {
-        const query = [];
-        if (decoded.id && String(decoded.id).match(/^[0-9a-fA-F]{24}$/)) {
-          query.push({ _id: decoded.id });
-        }
-        if (decoded.email) {
-          query.push({ email: decoded.email.toLowerCase().trim() });
-        }
-        if (query.length > 0) {
-          req.user = await User.findOne({ $or: query }).select(
-            '-password -rawPassword -otp -otpCode -otpExpires -otpAttempts -resetPasswordToken'
-          );
-        }
+      if (!checkDbReady()) {
+        req.user = null;
+        return next();
       }
 
-      if (!req.user && decoded) {
-        req.user = {
-          _id: decoded.id,
-          name: decoded.name || 'Thành viên cộng đồng',
-          email: decoded.email || '',
-          role: decoded.role || 'user',
-          jobTitle: decoded.jobTitle || 'Người đi làm',
-          tokenVersion: decoded.tokenVersion !== undefined ? decoded.tokenVersion : 0,
-        };
+      const query = buildUserQueryFromDecoded(decoded);
+      if (query.length > 0) {
+        req.user = await User.findOne({ $or: query }).select(USER_SAFE_PROJECTION);
       }
 
       if (req.user && req.user.status === 'banned') {
@@ -187,15 +167,11 @@ export const optionalProtect = async (req, res, next) => {
         }
       }
     } catch (e) {
-      // Bỏ qua lỗi token cho route tùy chọn
+      req.user = null;
     }
   }
   return next();
 };
 
-/**
- * Bí danh (Aliases) để tương thích ngược và nhất quán giữa các module
- */
 export const authenticateToken = protect;
 export const requireAdmin = adminOnly;
-

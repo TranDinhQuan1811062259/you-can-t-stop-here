@@ -1,5 +1,6 @@
 import rateLimit from 'express-rate-limit';
 import { sendError } from '../utils/apiResponse.js';
+import { normalizeVietnamPhone } from '../utils/identifier-helper.js';
 
 /**
  * =========================================================================
@@ -80,9 +81,11 @@ export const otpTargetCooldownLimiter = (req, res, next) => {
     return next();
   }
 
-  const cleanTarget = rawTarget.includes('@')
-    ? rawTarget.toLowerCase().trim()
-    : rawTarget.replace(/\s+/g, '');
+  const rawTrimmed = rawTarget.trim();
+  const normalizedPhone = !rawTrimmed.includes('@') ? normalizeVietnamPhone(rawTrimmed) : null;
+  const cleanTarget = rawTrimmed.includes('@')
+    ? rawTrimmed.toLowerCase()
+    : normalizedPhone || rawTrimmed.replace(/[\s.\-()]/g, '');
 
   const now = Date.now();
   const COOLDOWN_MS = 60 * 1000; // 60 giây giữa 2 lần gửi

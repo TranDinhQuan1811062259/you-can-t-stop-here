@@ -1,705 +1,422 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { authService } from '../services/authService';
-import { notifySessionExpired } from '../services/apiClient';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import {
+  authService,
+  clearStoredSessionTokens,
+  invalidateUserProfileCache,
+} from '../services/authService';
+import { applyTheme } from '../utils/themeUtils';
 
-const AuthContext = createContext(null);
-
-const ADMIN_AVATAR = '/uploads/1793903034671-886587470_122145020103357128_3735488146127846733_n.jpg';
-
-// Kênh BroadcastChannel đồng bộ phiên đăng nhập / đăng xuất giữa các tab
-const authBroadcastChannel =
-  typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined'
-    ? new BroadcastChannel('freedom_auth_sync_channel')
-    : null;
+const AuthContext = createContext();
 
 /**
- * Đảm bảo tài khoản Quản trị viên luôn giữ nguyên quyền Admin và hình đại diện chuẩn
+ * Chuẩn hóa đối tượng user trả về từ MongoDB Backend.
+ * Bảo toàn chính xác role ('admin' | 'moderator' | 'user') do server cấp,
+ * tuyệt đối không nâng quyền hay suy diễn role ở phía Frontend.
  */
-export const ensureAdminPrivileges = (userData) => {
-  if (!userData) return userData;
-  const email = (userData.email || '').toLowerCase().trim();
+export const normalizeSessionUser = (userData) => {
+  if (!userData || typeof userData !== 'object') return null;
 
-  // Giữ nguyên role: 'admin' do Backend xác thực hoặc khớp email Quản trị viên chính thức
-  const isAdmin =
-    userData.role === 'admin' ||
-    userData.isAdmin === true ||
-    email === 'anthonyq012025@gmail.com' ||
-    email === 'admin@cantstophere.com';
-
-  if (isAdmin) {
-    const rawAvatar = userData.avatar || '';
-    const isBadAvatar =
-      !rawAvatar ||
-      rawAvatar.includes('/images/man.jpg') ||
-      rawAvatar.includes('google_avatar');
-    const isPrimaryOwner = email === 'anthonyq012025@gmail.com';
-
-    return {
-      ...userData,
-      role: 'admin',
-      isAdmin: true,
-      jobTitle: userData.jobTitle || 'System Admin & Lead Dev',
-      avatar: isBadAvatar ? (isPrimaryOwner ? ADMIN_AVATAR : '') : rawAvatar,
-    };
-  }
-
-  // Đối với tài khoản người dùng bình thường: Làm sạch triệt để avatar man.jpg / google_avatar cũ còn sót trong localStorage
-  const rawAvatar = userData.avatar || '';
-  const isBadAvatar =
+  const validRoles = ['admin', 'moderator', 'user'];
+  const role = validRoles.includes(userData.role) ? userData.role : 'user';
+  const rawAvatar = typeof userData.avatar === 'string' ? userData.avatar : '';
+  const cleanAvatar =
+    !rawAvatar ||
     rawAvatar.includes('/images/man.jpg') ||
-    rawAvatar.includes('google_avatar');
+    rawAvatar.includes('google_avatar.jpg')
+      ? ''
+      : rawAvatar;
 
   return {
     ...userData,
-    role: 'user',
-    isAdmin: false,
-    jobTitle: userData.jobTitle || 'Thành viên cộng đồng',
-    avatar: isBadAvatar ? '' : rawAvatar,
+    email: typeof userData.email === 'string' ? userData.email.trim().toLowerCase() : '',
+    phone: typeof userData.phone === 'string' ? userData.phone.trim() : '',
+    role,
+    isVerified: Boolean(userData.isVerified),
+    status: userData.status === 'banned' ? 'banned' : 'active',
+    avatar: cleanAvatar,
   };
 };
 
-/**
- * Lưu đồng bộ toàn bộ session vào các khóa localStorage
- */
-const syncAuthStorage = (user, token, refreshToken) => {
+// Alias tương thích ngược (không chứa logic hardcode nâng quyền)
+export const ensureAdminPrivileges = normalizeSessionUser;
+
+const persistSessionTokensOnly = (tokenVal, refreshTokenVal) => {
   try {
-    if (user) {
-      const safeUser = ensureAdminPrivileges(user);
-      const strUser = JSON.stringify(safeUser);
-      localStorage.setItem('user', strUser);
-      localStorage.setItem('freedom_persisted_profile', strUser);
-    } else {
-      localStorage.removeItem('user');
-      localStorage.removeItem('freedom_persisted_profile');
-    }
+    localStorage.removeItem('user');
+    localStorage.removeItem('freedom_persisted_profile');
+    localStorage.removeItem('saved_google_accounts');
 
-    if (token) {
-      localStorage.setItem('token', token);
-      localStorage.setItem('freedom_token', token);
-    } else {
-      localStorage.removeItem('token');
-      localStorage.removeItem('freedom_token');
+    if (tokenVal && typeof tokenVal === 'string') {
+      localStorage.setItem('token', tokenVal);
+      localStorage.setItem('freedom_token', tokenVal);
     }
+    if (refreshTokenVal && typeof refreshTokenVal === 'string') {
+      localStorage.setItem('refreshToken', refreshTokenVal);
+      localStorage.setItem('freedom_refresh_token', refreshTokenVal);
+    }
+  } catch (_) {}
+};
 
-    if (refreshToken) {
-      localStorage.setItem('refreshToken', refreshToken);
-      localStorage.setItem('freedom_refresh_token', refreshToken);
-    } else if (refreshToken === null || user === null) {
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('freedom_refresh_token');
-    }
-  } catch (e) {
-    console.warn('[Auth] Lỗi lưu storage:', e);
+const readStoredToken = () => {
+  try {
+    const raw = localStorage.getItem('token') || localStorage.getItem('freedom_token') || '';
+    const trimmed = String(raw).trim();
+    if (!trimmed || ['null', 'undefined', 'false'].includes(trimmed)) return null;
+    if (trimmed.split('.').length !== 3) return null;
+    return trimmed;
+  } catch (_) {
+    return null;
   }
 };
 
 export const AuthProvider = ({ children }) => {
-  // Khởi tạo state an toàn từ token và profile đã lưu
-  const [token, setToken] = useState(() => {
-    return localStorage.getItem('token') || localStorage.getItem('freedom_token') || null;
-  });
-
-  const [user, setUser] = useState(() => {
-    try {
-      const activeToken = localStorage.getItem('token') || localStorage.getItem('freedom_token');
-      // 🛡️ NẾU KHÔNG CÓ TOKEN HỢP LỆ: Tuyệt đối KHÔNG nạp snapshot profile mồ côi!
-      // Dọn sạch snapshot cũ để tránh tài khoản khách bị hiển thị nhầm thông tin/avatar của Admin
-      if (!activeToken) {
-        localStorage.removeItem('user');
-        localStorage.removeItem('freedom_persisted_profile');
-        return null;
-      }
-      const saved = localStorage.getItem('user') || localStorage.getItem('freedom_persisted_profile');
-      if (saved) {
-        return ensureAdminPrivileges(JSON.parse(saved));
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  });
-
-  const [loading, setLoading] = useState(true);
-
-  // Trạng thái mở popup Đăng nhập / Đăng ký
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(() => readStoredToken());
+  const [loading, setLoading] = useState(() => Boolean(readStoredToken()));
+  const [authInitError, setAuthInitError] = useState('');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState('login'); // 'login' hoặc 'register'
-
-  // Trạng thái mở popup Chỉnh sửa tài khoản cá nhân & tab đang chọn
+  const [authMode, setAuthMode] = useState('login');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [profileModalTab, setProfileModalTab] = useState('info');
 
-  // Lắng nghe callback OAuth từ URL (nếu có chuyển hướng máy chủ OAuth)
-  useEffect(() => {
+  const clearAuthSession = useCallback(() => {
+    clearStoredSessionTokens();
+    setToken(null);
+    setUser(null);
+    setAuthInitError('');
     try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const oauthStatus = urlParams.get('oauth');
-      const oauthToken = urlParams.get('token');
-      const oauthRefreshToken = urlParams.get('refreshToken');
-      const oauthProvider = urlParams.get('provider');
-      const oauthName = urlParams.get('name');
-      const oauthEmail = urlParams.get('email');
-      const oauthAvatar = urlParams.get('avatar');
-
-      if (oauthStatus === 'success' && oauthToken) {
-        const isGoogle = oauthProvider === 'google';
-        const isFbOrGh = oauthProvider === 'facebook' || oauthProvider === 'github';
-        const defaultGhAvatar = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=80';
-        const decodedAvatar = oauthAvatar ? decodeURIComponent(oauthAvatar) : '';
-        const isAdm = oauthEmail === 'anthonyq012025@gmail.com' || (oauthEmail && oauthEmail.startsWith('admin@'));
-
-        const rawUser = {
-          _id: `u_${oauthProvider || 'oauth'}_${Date.now()}`,
-          name: oauthName ? decodeURIComponent(oauthName) : (isGoogle ? 'Thành viên Google' : 'Thành viên cộng đồng'),
-          email: oauthEmail ? decodeURIComponent(oauthEmail) : '',
-          role: isAdm ? 'admin' : 'user',
-          isAdmin: isAdm,
-          avatar: decodedAvatar || (isAdm ? ADMIN_AVATAR : (oauthProvider === 'github' ? defaultGhAvatar : '')),
-          jobTitle: oauthProvider === 'github' ? 'Senior Software Engineer' : (oauthProvider === 'facebook' ? 'Content Creator & Connect' : (isAdm ? 'System Admin & Lead Dev' : 'Người đi làm')),
-          authProvider: oauthProvider || 'oauth',
-        };
-        const safeUser = ensureAdminPrivileges(rawUser);
-
-        setToken(oauthToken);
-        setUser(safeUser);
-        syncAuthStorage(safeUser, oauthToken, oauthRefreshToken);
-
-        window.dispatchEvent(new Event('profile_updated'));
-        window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
-
-        // Làm sạch URL mà không reload trang
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    } catch (e) {}
+      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
+    } catch (_) {}
   }, []);
 
-  // 🛡️ Đồng bộ đăng nhập & đăng xuất đa tab / đa phiên (Cross-Tab Synchronization)
+  const applyAuthenticatedSession = useCallback((payload) => {
+    const nextToken = payload?.token || payload?.accessToken || readStoredToken();
+    const nextRefresh = payload?.refreshToken || '';
+    const rawUserObj = payload?.user || payload;
+    const normalizedUser = normalizeSessionUser(rawUserObj);
+
+    if (nextToken) {
+      persistSessionTokensOnly(nextToken, nextRefresh);
+      setToken(nextToken);
+    }
+    if (normalizedUser) {
+      setUser(normalizedUser);
+      setAuthInitError('');
+      invalidateUserProfileCache();
+      try {
+        window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: normalizedUser }));
+      } catch (_) {}
+    }
+    return normalizedUser;
+  }, []);
+
+  // Khởi tạo & đồng bộ phiên từ MongoDB thông qua /api/auth/me (Cấm đọc user giả từ localStorage)
   useEffect(() => {
-    const applyLogoutState = () => {
-      setUser(null);
-      setToken(null);
-      syncAuthStorage(null, null, null);
+    let isCancelled = false;
+
+    const bootstrapAuth = async () => {
+      // Dọn sạch tàn dư cache profile cũ nếu có trên trình duyệt người dùng
       try {
         localStorage.removeItem('user');
-        localStorage.removeItem('token');
-        localStorage.removeItem('freedom_token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('freedom_refresh_token');
         localStorage.removeItem('freedom_persisted_profile');
-        sessionStorage.removeItem('token');
-        sessionStorage.removeItem('user');
-        sessionStorage.removeItem('freedom_otp_resend_until');
-        sessionStorage.removeItem('adminToken');
-        sessionStorage.removeItem('freedom_admin_token');
+        localStorage.removeItem('saved_google_accounts');
       } catch (_) {}
-      window.dispatchEvent(new Event('profile_updated'));
-      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
-    };
 
-    const applyLoginState = (userData, userToken, userRefreshToken) => {
-      if (userData && userToken) {
-        const safe = ensureAdminPrivileges(userData);
-        setUser(safe);
-        setToken(userToken);
-        syncAuthStorage(safe, userToken, userRefreshToken);
-        window.dispatchEvent(new Event('profile_updated'));
-        window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safe }));
+      // Xử lý callback OAuth redirect qua query string
+      const params = new URLSearchParams(window.location.search);
+      const oauthStatus = params.get('oauth');
+      const oauthToken = params.get('token');
+      const oauthRefreshToken = params.get('refreshToken');
+
+      if (oauthStatus === 'success' && oauthToken) {
+        persistSessionTokensOnly(oauthToken, oauthRefreshToken);
+        setToken(oauthToken);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (oauthStatus === 'error') {
+        const oauthMsg = params.get('message') || 'Đăng nhập OAuth thất bại.';
+        if (!isCancelled) setAuthInitError(oauthMsg);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
+      const activeToken = oauthStatus === 'success' && oauthToken ? oauthToken : readStoredToken();
+      if (!activeToken) {
+        if (!isCancelled) {
+          setUser(null);
+          setToken(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      if (!isCancelled) setLoading(true);
+      try {
+        const res = await authService.getMe();
+        if (isCancelled) return;
+        const freshUser = res?.data;
+        if (freshUser?._id) {
+          const normalized = normalizeSessionUser(freshUser);
+          setUser(normalized);
+          setToken(readStoredToken() || activeToken);
+          setAuthInitError('');
+          try {
+            window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: normalized }));
+          } catch (_) {}
+        } else {
+          clearAuthSession();
+        }
+      } catch (err) {
+        if (isCancelled) return;
+        const status = err?.response?.status;
+        if (status === 401 || status === 403 || status === 404) {
+          clearAuthSession();
+          setAuthInitError(err?.response?.data?.message || '');
+        } else {
+          // Lỗi mạng / Cold start: không tự ý rơi về localStorage giả lập
+          setUser(null);
+          setAuthInitError('Không thể xác minh phiên đăng nhập do mất kết nối máy chủ.');
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     };
 
-    const handleAuthChanged = (e) => {
-      const newUser = e?.detail;
-      if (!newUser) {
-        applyLogoutState();
-      } else if (typeof newUser === 'object') {
-        const currentStoredToken =
-          localStorage.getItem('token') || localStorage.getItem('freedom_token');
-        const currentStoredRt =
-          localStorage.getItem('refreshToken') || localStorage.getItem('freedom_refresh_token');
-        setUser((prev) => {
-          const merged = ensureAdminPrivileges({ ...(prev || {}), ...newUser });
-          syncAuthStorage(merged, currentStoredToken, currentStoredRt);
-          return merged;
-        });
+    bootstrapAuth();
+
+    const handleSessionExpired = () => {
+      clearAuthSession();
+      setIsAuthModalOpen(true);
+    };
+
+    const handleAuthTokenUpdated = () => {
+      const updatedToken = readStoredToken();
+      if (updatedToken) setToken(updatedToken);
+    };
+
+    const handleStorageChange = (e) => {
+      if (e.key === 'token' || e.key === 'freedom_token') {
+        if (!e.newValue) {
+          clearAuthSession();
+        } else {
+          setToken(e.newValue);
+        }
       }
     };
 
-    const handleStorageEvent = (e) => {
-      if (e.key === 'freedom_logout_signal') {
-        applyLogoutState();
-      } else if (e.key === 'freedom_login_signal') {
-        try {
-          const rawUser = localStorage.getItem('user');
-          const storedToken = localStorage.getItem('token') || localStorage.getItem('freedom_token');
-          const storedRt = localStorage.getItem('refreshToken');
-          if (rawUser && storedToken) {
-            applyLoginState(JSON.parse(rawUser), storedToken, storedRt);
-          }
-        } catch (_) {}
-      }
-    };
-
-    const handleBroadcastMessage = (event) => {
-      const msg = event?.data;
-      if (msg?.type === 'LOGOUT') {
-        applyLogoutState();
-      } else if (msg?.type === 'LOGIN') {
-        applyLoginState(msg.user, msg.token, msg.refreshToken);
-      }
-    };
-
-    window.addEventListener('freedom_auth_changed', handleAuthChanged);
-    window.addEventListener('storage', handleStorageEvent);
-
-    if (authBroadcastChannel) {
-      authBroadcastChannel.addEventListener('message', handleBroadcastMessage);
-    }
-
+    window.addEventListener('auth:session_expired', handleSessionExpired);
+    window.addEventListener('auth:token_refreshed', handleAuthTokenUpdated);
+    window.addEventListener('storage', handleStorageChange);
     return () => {
-      window.removeEventListener('freedom_auth_changed', handleAuthChanged);
-      window.removeEventListener('storage', handleStorageEvent);
-      if (authBroadcastChannel) {
-        authBroadcastChannel.removeEventListener('message', handleBroadcastMessage);
-      }
+      isCancelled = true;
+      window.removeEventListener('auth:session_expired', handleSessionExpired);
+      window.removeEventListener('auth:token_refreshed', handleAuthTokenUpdated);
+      window.removeEventListener('storage', handleStorageChange);
     };
-  }, []);
+  }, [clearAuthSession]);
 
-  /**
-   * Đăng xuất an toàn và triệt để, đồng thời thu hồi phiên Refresh Token tại máy chủ
-   */
-  const logout = async (callApi = true) => {
-    const activeRefreshToken =
-      localStorage.getItem('refreshToken') || localStorage.getItem('freedom_refresh_token');
-
-    if (callApi && activeRefreshToken) {
+  const refreshUser = useCallback(async () => {
+    const activeToken = readStoredToken();
+    if (!activeToken) {
+      setUser(null);
+      return null;
+    }
+    const res = await authService.getMe();
+    const freshUser = normalizeSessionUser(res?.data);
+    if (freshUser) {
+      setUser(freshUser);
+      setToken(activeToken);
+      setAuthInitError('');
       try {
-        await authService.logout({ refreshToken: activeRefreshToken });
+        window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: freshUser }));
       } catch (_) {}
     }
+    return freshUser;
+  }, []);
 
-    setUser(null);
-    setToken(null);
-    syncAuthStorage(null, null, null);
-    try {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      localStorage.removeItem('freedom_token');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('freedom_refresh_token');
-      localStorage.removeItem('freedom_persisted_profile');
-      sessionStorage.removeItem('token');
-      sessionStorage.removeItem('user');
-      sessionStorage.removeItem('freedom_otp_resend_until');
-      sessionStorage.removeItem('adminToken');
-      sessionStorage.removeItem('freedom_admin_token');
-      // Chống gợi ý Google One Tap bật lên ngay khi vừa chủ động đăng xuất
-      sessionStorage.setItem('google_onetap_dismissed', 'true');
-    } catch (_) {}
-    // 🛡️ PHÁT TÍN HIỆU ĐỒNG BỘ ĐĂNG XUẤT TỚI TẤT CẢ CÁC TAB / CỬA SỔ
-    authBroadcastChannel?.postMessage({ type: 'LOGOUT', timestamp: Date.now() });
-    try {
-      localStorage.setItem('freedom_logout_signal', String(Date.now()));
-    } catch (_) {}
-
-    window.dispatchEvent(new Event('profile_updated'));
-    window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
-  };
-
-  // Chỉ xác thực token 1 LẦN DUY NHẤT lúc ứng dụng khởi động (Initial Mount)
-  // TUYỆT ĐỐI KHÔNG gọi lại và xóa session của user mỗi khi hàm login vừa chạy!
-  const hasInitializedAuthRef = useRef(false);
-
-  useEffect(() => {
-    if (hasInitializedAuthRef.current) return;
-    hasInitializedAuthRef.current = true;
-
-    const initialToken = localStorage.getItem('token') || localStorage.getItem('freedom_token');
-    const rawStoredUser = localStorage.getItem('user') || localStorage.getItem('freedom_persisted_profile');
-    const hasRealToken = Boolean(
-      initialToken &&
-      !['null', 'undefined', 'false', ''].includes(initialToken.trim()) &&
-      initialToken.trim().length >= 16
-    );
-    const hasStoredUserProfile = Boolean(
-      rawStoredUser && !['null', 'undefined', 'false', '{}', ''].includes(rawStoredUser.trim())
-    );
-
-    if (hasRealToken) {
-      authService
-        .getMe()
-        .then((res) => {
-          const profile = res?.data?.data || res?.data;
-          if (profile && profile._id) {
-            setUser(() => {
-              const safeProfile = ensureAdminPrivileges(profile);
-              syncAuthStorage(safeProfile, initialToken);
-              return safeProfile;
-            });
-          }
-        })
-        .catch((err) => {
-          // Nếu server trả về 401 Unauthorized thì xóa phiên hết hạn, chỉ báo toast khi thực sự từng đăng nhập hợp lệ
-          if (err?.status === 401 || err?.response?.status === 401) {
-            console.warn('[Auth] Token máy chủ hết hạn lúc khởi động, thực hiện đăng xuất an toàn');
-            logout(false);
-            if (hasStoredUserProfile) {
-              notifySessionExpired();
-            }
-          } else {
-            console.log('[Auth] Máy chủ offline hoặc lỗi mạng, giữ nguyên phiên làm việc hiện tại');
-          }
-        })
-        .finally(() => setLoading(false));
-    } else {
-      if (initialToken) {
-        logout(false);
+  const logout = useCallback(
+    async (callApi = true) => {
+      if (callApi) {
+        await authService.logout();
       } else {
-        setUser(null);
+        clearStoredSessionTokens();
       }
-      setLoading(false);
-    }
-  }, []);
+      setToken(null);
+      setUser(null);
+      setAuthInitError('');
 
-  /**
-   * Đăng nhập bằng Email/SĐT và Mật khẩu (Trực tiếp, An toàn & Bền vững)
-   */
-  const login = async (credentials) => {
-    try {
-      const res = await authService.login(credentials);
-      const rawData = res?.data?.data || res?.data || {};
-      const receivedToken = rawData.token || res?.token || null;
-
-      if (!receivedToken) {
-        throw new Error(res?.data?.message || 'Không nhận được mã xác thực token từ máy chủ!');
-      }
-
-      const receivedRefreshToken = rawData.refreshToken || res?.refreshToken || null;
-      const { token: _t, refreshToken: _rt, ...extractedUser } = rawData;
-      const safeUser = ensureAdminPrivileges(extractedUser);
-
-      setToken(receivedToken);
-      setUser(safeUser);
-      syncAuthStorage(safeUser, receivedToken, receivedRefreshToken);
-      setIsAuthModalOpen(false);
-
-      // Đồng bộ đăng nhập sang các tab khác qua BroadcastChannel & Storage
-      authBroadcastChannel?.postMessage({
-        type: 'LOGIN',
-        user: safeUser,
-        token: receivedToken,
-        refreshToken: receivedRefreshToken,
-      });
       try {
-        localStorage.setItem('freedom_login_signal', String(Date.now()));
+        localStorage.removeItem('adminToken');
+        sessionStorage.removeItem('google_onetap_dismissed');
+        window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: null }));
+        window.dispatchEvent(new Event('profile_updated'));
       } catch (_) {}
 
-      window.dispatchEvent(new Event('profile_updated'));
-      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
-      return { data: { token: receivedToken, refreshToken: receivedRefreshToken, ...safeUser } };
-    } catch (err) {
-      console.error('[Auth] Đăng nhập backend thất bại:', err);
-      // 🛡️ BẢO MẬT: Tuyệt đối KHÔNG tự sinh session/token giả mạo khi xác thực thất bại
-      throw err;
-    }
-  };
+      const currentSavedTheme = localStorage.getItem('freedom_theme_mode') || 'dark';
+      applyTheme(currentSavedTheme);
+    },
+    []
+  );
 
-  /**
-   * Đăng nhập / hoàn tất đăng ký bằng mã OTP (Email hoặc SMS)
-   */
-  const loginWithOtp = async ({
-    email,
-    identifier,
-    phone,
-    otpCode,
-    purpose,
-    name,
-    password,
-    jobTitle,
-    remember = true,
-    autoClose = true,
-  }) => {
-    const rawTarget = String(email || identifier || phone || '').trim();
-    const target = rawTarget.includes('@') ? rawTarget.toLowerCase() : rawTarget.replace(/\s+/g, '');
-    const cleanOtp = String(otpCode || '').replace(/\s+/g, '').trim();
-
+  const logoutAll = useCallback(async () => {
+    await authService.logoutAll();
+    clearAuthSession();
     try {
-      const res = await authService.verifyOtp({
-        ...(target.includes('@') ? { email: target } : {}),
-        ...(phone ? { phone: target } : {}),
-        identifier: target,
-        otpCode: cleanOtp,
-        otp: cleanOtp,
-        ...(purpose ? { purpose } : {}),
-        ...(name ? { name: String(name).trim() } : {}),
-        ...(password ? { password } : {}),
-        ...(jobTitle ? { jobTitle: String(jobTitle).trim() } : {}),
-      });
-      const rawData = res?.data?.data || res?.data || res || {};
-      const receivedToken = res?.token || rawData.token || null;
+      localStorage.removeItem('adminToken');
+    } catch (_) {}
+    applyTheme(localStorage.getItem('freedom_theme_mode') || 'dark');
+  }, [clearAuthSession]);
 
-      if (!receivedToken) {
-        throw new Error(res?.message || res?.data?.message || 'Mã xác nhận OTP không chính xác hoặc đã hết hạn!');
-      }
-
-      const receivedRefreshToken = res?.refreshToken || rawData.refreshToken || null;
-      const userCandidate = res?.user || rawData.user || rawData;
-      const { token: _t, refreshToken: _rt, alertSms, user: _u, success: _s, message: _m, data: _d, ...extractedUser } = userCandidate;
-      const safeUser = ensureAdminPrivileges(extractedUser);
-
-      setToken(receivedToken);
-      setUser(safeUser);
-      syncAuthStorage(safeUser, receivedToken, receivedRefreshToken);
-      if (autoClose) {
-        setIsAuthModalOpen(false);
-      }
-
-      // Đồng bộ đăng nhập sang các tab khác qua BroadcastChannel & Storage
-      authBroadcastChannel?.postMessage({
-        type: 'LOGIN',
-        user: safeUser,
-        token: receivedToken,
-        refreshToken: receivedRefreshToken,
-      });
-      try {
-        localStorage.setItem('freedom_login_signal', String(Date.now()));
-      } catch (_) {}
-
-      window.dispatchEvent(new Event('profile_updated'));
-      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
-      return { data: { token: receivedToken, refreshToken: receivedRefreshToken, ...safeUser } };
-    } catch (err) {
-      console.error('[Auth] Xác thực OTP thất bại:', err);
-      // 🛡️ BẢO MẬT: Bắt buộc ném lỗi để giao diện AuthModal hiển thị thông báo chính xác cho người dùng!
-      throw err;
-    }
-  };
-
-  /**
-   * Đăng ký tài khoản mới
-   */
-  const register = async (userData) => {
-    try {
-      const res = await authService.register(userData);
-      const rawData = res?.data?.data || res?.data || {};
-      const receivedToken = rawData.token || res?.token || null;
-
-      if (!receivedToken) {
-        throw new Error(res?.data?.message || 'Đăng ký tài khoản không thành công!');
-      }
-
-      const receivedRefreshToken = rawData.refreshToken || res?.refreshToken || null;
-      const { token: _t, ...extractedUser } = rawData;
-      const safeUser = ensureAdminPrivileges(extractedUser);
-
-      setToken(receivedToken);
-      setUser(safeUser);
-      syncAuthStorage(safeUser, receivedToken, receivedRefreshToken);
-      setIsAuthModalOpen(false);
-
-      // Đồng bộ đăng ký/đăng nhập sang các tab khác qua BroadcastChannel & Storage
-      authBroadcastChannel?.postMessage({
-        type: 'LOGIN',
-        user: safeUser,
-        token: receivedToken,
-        refreshToken: receivedRefreshToken,
-      });
-      try {
-        localStorage.setItem('freedom_login_signal', String(Date.now()));
-      } catch (_) {}
-
-      window.dispatchEvent(new Event('profile_updated'));
-      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
-      return { data: { token: receivedToken, refreshToken: receivedRefreshToken, ...safeUser } };
-    } catch (err) {
-      console.error('[Auth] Đăng ký backend thất bại:', err);
-      throw err;
-    }
-  };
-
-  /**
-   * Đăng nhập qua mạng xã hội (Google, Facebook, X, TikTok, LinkedIn, GitHub)
-   */
-  const socialLogin = async (socialData) => {
-    try {
-      const res = await authService.socialLogin(socialData);
-      const rawData = res?.data?.data || res?.data || {};
-
-      // Nếu backend yêu cầu xác thực OTP bảo mật (đặc biệt khi đăng nhập bằng Google hoặc tài khoản Admin)
-      if (rawData.requiresOtp) {
-        return { requiresOtp: true, ...rawData };
-      }
-
-      const receivedToken = rawData.token || res?.token || null;
-      if (!receivedToken) {
-        throw new Error(res?.data?.message || 'Không nhận được mã xác thực token từ máy chủ!');
-      }
-
-      const receivedRefreshToken = rawData.refreshToken || res?.refreshToken || null;
-      const { token: _t, refreshToken: _rt, ...extractedUser } = rawData;
-      const safeUser = ensureAdminPrivileges(extractedUser);
-
-      setToken(receivedToken);
-      setUser(safeUser);
-      syncAuthStorage(safeUser, receivedToken, receivedRefreshToken);
-      setIsAuthModalOpen(false);
-
-      // Đồng bộ đăng nhập sang các tab khác qua BroadcastChannel & Storage
-      authBroadcastChannel?.postMessage({
-        type: 'LOGIN',
-        user: safeUser,
-        token: receivedToken,
-        refreshToken: receivedRefreshToken,
-      });
-      try {
-        localStorage.setItem('freedom_login_signal', String(Date.now()));
-      } catch (_) {}
-
-      window.dispatchEvent(new Event('profile_updated'));
-      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
-      return { data: { token: receivedToken, refreshToken: receivedRefreshToken, ...safeUser } };
-    } catch (err) {
-      console.error('[Auth] Social login backend thất bại:', err);
-
-      // Nếu có yêu cầu mã OTP từ phía backend
-      if (err?.response?.data?.data?.requiresOtp || err?.requiresOtp) {
-        return { requiresOtp: true, ...(err?.response?.data?.data || {}) };
-      }
-
-      // Ném lỗi để thông báo lên giao diện thay vì tự sinh session giả
-      throw err;
-    }
-  };
-
-  /**
-   * Đăng nhập qua Google Identity Services (Client-side ID Token Verification)
-   */
-  const loginWithGoogle = async (credential, options = {}) => {
-    const { autoClose = true } = options || {};
-    try {
-      const res = await authService.googleLogin(credential);
-      const rawData = res?.data?.data || res?.data || res || {};
-
-      const receivedToken = res?.token || rawData.token || null;
-      if (!receivedToken) {
-        throw new Error(res?.message || res?.data?.message || 'Không nhận được mã xác thực token từ máy chủ!');
-      }
-
-      const receivedRefreshToken = res?.refreshToken || rawData.refreshToken || null;
-      const userCandidate = res?.user || rawData.user || rawData;
-      const { token: _t, refreshToken: _rt, user: _u, success: _s, message: _m, data: _d, ...extractedUser } = userCandidate;
-      const safeUser = ensureAdminPrivileges(extractedUser);
-
-      setToken(receivedToken);
-      setUser(safeUser);
-      syncAuthStorage(safeUser, receivedToken, receivedRefreshToken);
-      if (autoClose) {
-        setIsAuthModalOpen(false);
-      }
-
-      // Đồng bộ đăng nhập sang các tab khác qua BroadcastChannel & Storage
-      authBroadcastChannel?.postMessage({
-        type: 'LOGIN',
-        user: safeUser,
-        token: receivedToken,
-        refreshToken: receivedRefreshToken,
-      });
-      try {
-        localStorage.setItem('freedom_login_signal', String(Date.now()));
-      } catch (_) {}
-
-      window.dispatchEvent(new Event('profile_updated'));
-      window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: safeUser }));
-      return { data: { token: receivedToken, refreshToken: receivedRefreshToken, ...safeUser } };
-    } catch (err) {
-      console.error('[Auth] Đăng nhập Google thất bại:', err);
-      throw err;
-    }
-  };
-
-  /**
-   * Cập nhật thông tin cá nhân của người dùng
-   */
-  const updateUserProfile = (updatedUser) => {
-    const { token: newToken, refreshToken: newRefreshToken, ...restUserData } = updatedUser;
+  const updateUserProfile = useCallback((updatedData) => {
     setUser((prev) => {
-      const merged = ensureAdminPrivileges({ ...(prev || {}), ...restUserData });
-      syncAuthStorage(
-        merged,
-        newToken || token,
-        newRefreshToken || localStorage.getItem('refreshToken') || localStorage.getItem('freedom_refresh_token')
-      );
+      if (!prev) return normalizeSessionUser(updatedData);
+      const merged = normalizeSessionUser({ ...prev, ...updatedData });
+      try {
+        window.dispatchEvent(new Event('profile_updated'));
+        window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: merged }));
+      } catch (_) {}
       return merged;
     });
+  }, []);
 
-    if (newToken) {
-      setToken(newToken);
+  const login = async (credentials) => {
+    const res = await authService.login(credentials);
+    const data = res?.data;
+    if (data?.token) {
+      applyAuthenticatedSession(data);
+      setIsAuthModalOpen(false);
     }
-    window.dispatchEvent(new Event('profile_updated'));
-    window.dispatchEvent(new CustomEvent('freedom_auth_changed', { detail: updatedUser }));
+    return res;
   };
 
-  /**
-   * Đăng xuất khỏi TẤT CẢ các thiết bị (Logout All Devices)
-   */
-  const logoutAll = async () => {
-    try {
-      await authService.logoutAll();
-    } catch (_) {}
-    await logout(false);
-    try {
-      const noticeMsg = '✓ Đã thu hồi toàn bộ phiên đăng nhập trên tất cả thiết bị thành công!';
-      sessionStorage.setItem('freedom_logout_notice', noticeMsg);
-      window.dispatchEvent(new CustomEvent('freedom_logout_notice', { detail: noticeMsg }));
-    } catch (_) {}
+  const register = async (userData) => {
+    const res = await authService.register(userData);
+    const data = res?.data;
+    if (data?.token) {
+      applyAuthenticatedSession(data);
+      setIsAuthModalOpen(false);
+    }
+    return res;
   };
 
-  const openLoginModal = () => {
-    setAuthModalMode('login');
+  const verifyRegisterOtp = async (payload) => {
+    const res = await authService.verifyRegisterOtp(payload);
+    const data = res?.data;
+    if (data?.token) {
+      applyAuthenticatedSession(data);
+      setIsAuthModalOpen(false);
+    }
+    return res;
+  };
+
+  const resendOtp = async (payload) => authService.resendOtp(payload);
+
+  const sendLoginOtp = async (payload) => authService.sendLoginOtp(payload);
+
+  const verifyLoginOtp = async (payload) => {
+    const res = await authService.verifyLoginOtp(payload);
+    const data = res?.data;
+    if (data?.token) {
+      applyAuthenticatedSession(data);
+      setIsAuthModalOpen(false);
+    }
+    return res;
+  };
+
+  const loginWithOtp = async (payload) => {
+    const res = await authService.verifyLoginOtp(payload);
+    const data = res?.data;
+    if (data?.token) {
+      applyAuthenticatedSession(data);
+      setIsAuthModalOpen(false);
+    }
+    return res;
+  };
+
+  const forgotPassword = async (payload) => authService.forgotPassword(payload);
+
+  const resetPassword = async (payload) => authService.resetPassword(payload);
+
+  const socialLogin = async (socialData) => {
+    const res = await authService.socialLogin(socialData);
+    const data = res?.data;
+    if (data?.token) {
+      applyAuthenticatedSession(data);
+      setIsAuthModalOpen(false);
+    }
+    return res;
+  };
+
+  const loginWithGoogle = async (credential, options = {}) => {
+    const { closeOnSuccess = true } = options;
+    const res = await authService.googleLogin(credential);
+    const data = res?.data;
+    if (data?.token) {
+      applyAuthenticatedSession(data);
+      if (closeOnSuccess) {
+        setIsAuthModalOpen(false);
+      }
+    }
+    return res;
+  };
+
+  const openLoginModal = useCallback((mode = 'login') => {
+    setAuthMode(mode === 'register' ? 'register' : 'login');
     setIsAuthModalOpen(true);
-  };
+  }, []);
 
-  const openRegisterModal = () => {
-    setAuthModalMode('register');
+  const openRegisterModal = useCallback(() => {
+    setAuthMode('register');
     setIsAuthModalOpen(true);
-  };
+  }, []);
 
-  const closeAuthModal = () => {
+  const closeAuthModal = useCallback(() => {
     setIsAuthModalOpen(false);
-  };
+  }, []);
 
-  const openProfileModal = (tab = 'info') => {
+  const openProfileModal = useCallback((tab = 'info') => {
     if (typeof tab === 'string' && ['info', 'layout', 'music'].includes(tab)) {
       setProfileModalTab(tab);
     } else {
       setProfileModalTab('info');
     }
     setIsProfileModalOpen(true);
-  };
+  }, []);
 
-  const closeProfileModal = () => {
+  const closeProfileModal = useCallback(() => {
     setIsProfileModalOpen(false);
-  };
+  }, []);
+
+  const handleSetToken = useCallback((nextTok) => {
+    if (nextTok && typeof nextTok === 'string') {
+      persistSessionTokensOnly(nextTok, '');
+      setToken(nextTok);
+    } else {
+      clearStoredSessionTokens();
+      setToken(null);
+    }
+  }, []);
+
+  const handleSetUser = useCallback((nextUserOrUpdater) => {
+    setUser((prev) => {
+      const resolved =
+        typeof nextUserOrUpdater === 'function' ? nextUserOrUpdater(prev) : nextUserOrUpdater;
+      return normalizeSessionUser(resolved);
+    });
+  }, []);
 
   return (
     <AuthContext.Provider
       value={{
         user,
         token,
-        isAuthenticated: Boolean(user && token),
         loading,
-        login,
-        loginWithOtp,
-        loginWithGoogle,
-        register,
-        socialLogin,
-        updateUserProfile,
-        logout,
-        logoutAll,
-        setUser,
-        setToken,
+        authInitError,
+        isAuthenticated: Boolean(user && token),
         isAuthModalOpen,
-        authModalMode,
-        setAuthModalMode,
+        setIsAuthModalOpen,
+        authMode,
+        setAuthMode,
         openLoginModal,
         openRegisterModal,
         closeAuthModal,
@@ -708,6 +425,24 @@ export const AuthProvider = ({ children }) => {
         openProfileModal,
         closeProfileModal,
         setIsProfileModalOpen: openProfileModal,
+        login,
+        loginWithOtp,
+        register,
+        verifyRegisterOtp,
+        resendOtp,
+        sendLoginOtp,
+        verifyLoginOtp,
+        forgotPassword,
+        resetPassword,
+        socialLogin,
+        loginWithGoogle,
+        logout,
+        logoutAll,
+        refreshUser,
+        updateUserProfile,
+        applyAuthenticatedSession,
+        setUser: handleSetUser,
+        setToken: handleSetToken,
       }}
     >
       {children}
@@ -716,9 +451,9 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error('useAuth phải được sử dụng bên trong AuthProvider');
   }
-  return context;
+  return ctx;
 };

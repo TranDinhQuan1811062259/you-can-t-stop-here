@@ -17,7 +17,7 @@ const otpVerificationSchema = new mongoose.Schema(
     },
     purpose: {
       type: String,
-      enum: ['login', 'register', 'admin_gate'],
+      enum: ['login', 'register', 'reset_password', 'admin_gate'],
       default: 'login',
       lowercase: true,
       trim: true,

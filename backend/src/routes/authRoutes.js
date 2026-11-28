@@ -1,13 +1,18 @@
 import express from 'express';
 import {
   register,
+  verifyRegisterOtp,
+  resendOtp,
   login,
+  sendLoginOtp,
+  verifyLoginOtp,
+  forgotPassword,
+  resetPassword,
   googleLogin,
   socialLogin,
   getMe,
   updateProfile,
   getUserProfile,
-  sendLoginOtp,
   verifyOtpAndLogin,
   initiateOAuth,
   handleOAuthCallback,
@@ -49,9 +54,15 @@ router.post('/qr/simulate', (req, res, next) => {
   next();
 }, simulateQrSessionScan);
 
-// Xác thực & Tài khoản (Bảo vệ bởi Rate Limiting & Cooldown chống Brute-force & Spam bom mail)
+// Xác thực & Tài khoản (Bảo vệ bởi Rate Limiting & Cooldown chống Brute-force & Spam)
 router.post('/register', otpTargetCooldownLimiter, otpSendLimiter, register);
+router.post('/verify-register-otp', authLimiter, verifyRegisterOtp);
+router.post('/resend-otp', otpTargetCooldownLimiter, otpSendLimiter, resendOtp);
 router.post('/login', authLimiter, login);
+router.post('/send-login-otp', otpTargetCooldownLimiter, otpSendLimiter, sendLoginOtp);
+router.post('/verify-login-otp', authLimiter, verifyLoginOtp);
+router.post('/forgot-password', otpTargetCooldownLimiter, otpSendLimiter, forgotPassword);
+router.post('/reset-password', authLimiter, resetPassword);
 router.post('/google', authLimiter, googleLogin);
 router.post('/refresh-token', authLimiter, refreshToken);
 router.post('/logout', authLimiter, optionalProtect, logout);

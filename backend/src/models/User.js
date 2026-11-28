@@ -10,14 +10,15 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: [true, 'Vui lòng nhập email'],
       unique: true,
+      sparse: true,
       trim: true,
       lowercase: true,
     },
     phone: {
       type: String,
-      default: '',
+      unique: true,
+      sparse: true,
       trim: true,
     },
     password: {
@@ -36,10 +37,14 @@ const userSchema = new mongoose.Schema(
       default: 'active',
       index: true,
     },
-    // Trạng thái kích hoạt và mã OTP cho luồng đăng ký / đăng nhập bằng email
+    // Trạng thái kích hoạt và bảo mật OTP (chỉ lưu hash OTP)
     isVerified: {
       type: Boolean,
       default: false,
+    },
+    otpHash: {
+      type: String,
+      default: null,
     },
     otpCode: {
       type: String,
@@ -52,6 +57,22 @@ const userSchema = new mongoose.Schema(
     otpAttempts: {
       type: Number,
       default: 0,
+      min: 0,
+    },
+    otpLastSentAt: {
+      type: Date,
+      default: null,
+    },
+    otpPurpose: {
+      type: String,
+      enum: ['register', 'login', 'reset_password', null],
+      default: null,
+    },
+    otpTargetEmail: {
+      type: String,
+      default: null,
+      lowercase: true,
+      trim: true,
     },
     tokenVersion: {
       type: Number,
@@ -193,6 +214,28 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Chuẩn hóa email/phone rỗng thành undefined để sparse unique index không xung đột
+userSchema.pre('validate', function (next) {
+  if (typeof this.email === 'string') {
+    const cleanEmail = this.email.trim().toLowerCase();
+    this.email = cleanEmail || undefined;
+  } else if (this.email === null) {
+    this.email = undefined;
+  }
+
+  if (typeof this.phone === 'string') {
+    const cleanPhone = this.phone.trim();
+    this.phone = cleanPhone || undefined;
+  } else if (this.phone === null) {
+    this.phone = undefined;
+  }
+
+  if (!this.email && !this.phone) {
+    this.invalidate('email', 'Tài khoản bắt buộc phải có ít nhất Email hoặc Số điện thoại');
+  }
+  next();
+});
 
 // Hash password trước khi lưu (chống double-hash nếu password đã ở dạng hash)
 userSchema.pre('save', async function (next) {

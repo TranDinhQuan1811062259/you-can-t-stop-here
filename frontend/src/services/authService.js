@@ -1,24 +1,16 @@
 import apiClient from './apiClient';
 
-const WARM_PROFILE_CACHE_TTL_MS = 45 * 1000; // 45 giây TTL cho hồ sơ người dùng
-const WARM_PROFILE_CACHE_MAX_ENTRIES = 20;   // Tối đa 20 hồ sơ trong bộ nhớ đệm LRU
-
-const warmUserProfileCache = new Map();
-const inFlightUserProfileRequests = new Map();
-let warmUserProfileEpoch = 0;
+const PROFILE_WARM_CACHE_TTL_MS = 60 * 1000;
+const PROFILE_WARM_CACHE_MAX_ENTRIES = 25;
+const warmProfileCache = new Map();
+const inFlightProfileRequests = new Map();
+let profileCacheEpoch = 0;
 
 const getAuthCacheScope = () => {
   if (typeof window === 'undefined') return 'ssr';
   try {
     const token = localStorage.getItem('token') || localStorage.getItem('freedom_token') || '';
     if (!token) return 'guest';
-    const rawUser = localStorage.getItem('user');
-    if (rawUser) {
-      const parsed = JSON.parse(rawUser);
-      if (parsed?._id || parsed?.id) {
-        return `user:${parsed._id || parsed.id}`;
-      }
-    }
     return `auth:${token.slice(-12)}`;
   } catch (_) {
     return 'guest';
@@ -26,191 +18,266 @@ const getAuthCacheScope = () => {
 };
 
 export const buildUserProfileCacheKey = (userId) => {
-  const normalizedId = String(userId || '').trim().toLowerCase();
-  return JSON.stringify({
-    scope: getAuthCacheScope(),
-    userId: normalizedId,
-  });
+  const normalizedId = String(userId || '').trim();
+  if (!normalizedId) return '';
+  return `${getAuthCacheScope()}::${normalizedId}`;
 };
 
 export const getWarmCachedUserProfile = (userId) => {
-  if (!userId) return null;
   const key = buildUserProfileCacheKey(userId);
-  const entry = warmUserProfileCache.get(key);
-  if (!entry) return null;
-
-  if (Date.now() - entry.cachedAt > WARM_PROFILE_CACHE_TTL_MS) {
-    warmUserProfileCache.delete(key);
+  if (!key) return null;
+  const cached = warmProfileCache.get(key);
+  if (!cached) return null;
+  if (Date.now() - cached.savedAt > PROFILE_WARM_CACHE_TTL_MS) {
+    warmProfileCache.delete(key);
     return null;
   }
-
-  // Cập nhật LRU: đưa entry vừa đọc về cuối Map
-  warmUserProfileCache.delete(key);
-  warmUserProfileCache.set(key, entry);
-  return entry.response;
+  warmProfileCache.delete(key);
+  warmProfileCache.set(key, cached);
+  return cached.response;
 };
 
-const setWarmCachedUserProfile = (key, response) => {
-  if (!response) return;
-  if (warmUserProfileCache.has(key)) {
-    warmUserProfileCache.delete(key);
-  } else if (warmUserProfileCache.size >= WARM_PROFILE_CACHE_MAX_ENTRIES) {
-    const oldestKey = warmUserProfileCache.keys().next().value;
-    if (oldestKey !== undefined) {
-      warmUserProfileCache.delete(oldestKey);
-    }
+const setWarmCachedUserProfile = (key, response, expectedEpoch) => {
+  if (!key || !response || expectedEpoch !== profileCacheEpoch) return;
+  if (warmProfileCache.has(key)) {
+    warmProfileCache.delete(key);
+  } else if (warmProfileCache.size >= PROFILE_WARM_CACHE_MAX_ENTRIES) {
+    const oldestKey = warmProfileCache.keys().next().value;
+    if (oldestKey) warmProfileCache.delete(oldestKey);
   }
-  warmUserProfileCache.set(key, {
+  warmProfileCache.set(key, {
     response,
-    cachedAt: Date.now(),
+    savedAt: Date.now(),
   });
 };
 
 export const invalidateUserProfileCache = () => {
-  warmUserProfileEpoch += 1;
-  warmUserProfileCache.clear();
-  inFlightUserProfileRequests.clear();
+  profileCacheEpoch += 1;
+  warmProfileCache.clear();
+  inFlightProfileRequests.clear();
 };
 
-if (typeof window !== 'undefined' && !window.__freedomUserProfileCacheEventsBound) {
-  window.__freedomUserProfileCacheEventsBound = true;
-  const handleProfileInvalidation = () => invalidateUserProfileCache();
-  window.addEventListener('profile_updated', handleProfileInvalidation);
-  window.addEventListener('freedom_auth_changed', handleProfileInvalidation);
-  window.addEventListener('user_followed', handleProfileInvalidation);
-  window.addEventListener('user_unfollowed', handleProfileInvalidation);
-}
+const clearLegacyStoredAuthKeys = () => {
+  try {
+    localStorage.removeItem('user');
+    localStorage.removeItem('freedom_persisted_profile');
+    localStorage.removeItem('saved_google_accounts');
+  } catch (_) {}
+};
+
+const saveSessionTokens = (payload) => {
+  if (!payload?.token) return;
+  try {
+    clearLegacyStoredAuthKeys();
+    localStorage.setItem('token', payload.token);
+    localStorage.setItem('freedom_token', payload.token);
+    if (payload.refreshToken) {
+      localStorage.setItem('refreshToken', payload.refreshToken);
+      localStorage.setItem('freedom_refresh_token', payload.refreshToken);
+    }
+    invalidateUserProfileCache();
+  } catch (_) {}
+};
+
+export const clearStoredSessionTokens = () => {
+  try {
+    localStorage.removeItem('token');
+    localStorage.removeItem('freedom_token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('freedom_refresh_token');
+    clearLegacyStoredAuthKeys();
+  } catch (_) {}
+  invalidateUserProfileCache();
+};
 
 export const authService = {
-  // Đăng ký tài khoản mới
-  register: (userData) => apiClient.post('/auth/register', userData),
+  /**
+   * Bước 1 Đăng ký bằng Email hoặc Số điện thoại (chưa cấp JWT, trả requiresOtp: true)
+   */
+  register: async (userData) => {
+    const res = await apiClient.post('/auth/register', userData);
+    if (res?.data?.token) {
+      saveSessionTokens(res.data);
+    }
+    return res;
+  },
 
-  // Đăng nhập
-  login: (credentials) => apiClient.post('/auth/login', credentials),
+  /**
+   * Bước 2 Đăng ký: Xác thực OTP 6 số -> kích hoạt tài khoản & nhận JWT
+   */
+  verifyRegisterOtp: async (payload) => {
+    const res = await apiClient.post('/auth/verify-register-otp', payload);
+    if (res?.data?.token) {
+      saveSessionTokens(res.data);
+    }
+    return res;
+  },
 
-  // Đăng nhập bằng Google Identity Services (Client-side ID Token)
-  googleLogin: (credential) => apiClient.post('/auth/google', { credential }),
+  /**
+   * Gửi lại OTP cho đăng ký / đăng nhập / quên mật khẩu (cooldown 60s)
+   */
+  resendOtp: async (payload) => {
+    return apiClient.post('/auth/resend-otp', payload);
+  },
 
-  // Làm mới Access Token ngầm (Silent Refresh Token)
-  refreshToken: (data) => apiClient.post('/auth/refresh-token', data),
+  /**
+   * Đăng nhập bằng Mật khẩu (Email hoặc Số điện thoại)
+   */
+  login: async (credentials) => {
+    const res = await apiClient.post('/auth/login', credentials);
+    if (res?.data?.token) {
+      saveSessionTokens(res.data);
+    }
+    return res;
+  },
 
-  // Đăng xuất tài khoản và thu hồi phiên làm việc hiện tại
-  logout: (data) => apiClient.post('/auth/logout', data || {}),
+  /**
+   * Gửi OTP đăng nhập không mật khẩu (Email hoặc Số điện thoại)
+   */
+  sendLoginOtp: async (payload) => {
+    const body = typeof payload === 'string' ? { identifier: payload } : payload;
+    return apiClient.post('/auth/send-login-otp', body);
+  },
 
-  // Thu hồi phiên đăng nhập trên TẤT CẢ các thiết bị
-  logoutAll: () => apiClient.post('/auth/logout-all'),
+  /**
+   * Xác thực OTP đăng nhập -> nhận JWT
+   */
+  verifyLoginOtp: async (payload) => {
+    const res = await apiClient.post('/auth/verify-login-otp', payload);
+    if (res?.data?.token) {
+      saveSessionTokens(res.data);
+    }
+    return res;
+  },
 
-  // Gửi mã xác nhận OTP qua Email
-  sendOtp: (data = {}) => {
-    const rawEmail = data.email ?? (typeof data.identifier === 'string' && data.identifier.includes('@') ? data.identifier : undefined);
-    const rawIdentifier = data.identifier ?? rawEmail ?? data.phone;
-    const normalizeId = (val) => {
-      if (typeof val !== 'string') return val;
-      const trimmed = val.trim();
-      return trimmed.includes('@') ? trimmed.toLowerCase() : trimmed.replace(/\s+/g, '');
-    };
-    return apiClient.post('/auth/send-otp', {
-      ...data,
-      ...(rawEmail !== undefined ? { email: normalizeId(rawEmail) } : {}),
-      ...(rawIdentifier !== undefined ? { identifier: normalizeId(rawIdentifier) } : {}),
+  /**
+   * Alias tương thích cũ
+   */
+  sendOtp: async (target) => {
+    return apiClient.post('/auth/send-login-otp', { identifier: target });
+  },
+
+  verifyOtp: async (payload) => {
+    const res = await apiClient.post('/auth/verify-otp', payload);
+    if (res?.data?.token) {
+      saveSessionTokens(res.data);
+    }
+    return res;
+  },
+
+  /**
+   * Quên mật khẩu: Gửi OTP đặt lại mật khẩu
+   */
+  forgotPassword: async (payload) => {
+    const body = typeof payload === 'string' ? { identifier: payload } : payload;
+    return apiClient.post('/auth/forgot-password', body);
+  },
+
+  /**
+   * Đặt lại mật khẩu mới bằng OTP
+   */
+  resetPassword: async (payload) => {
+    return apiClient.post('/auth/reset-password', payload);
+  },
+
+  googleLogin: async (credential) => {
+    const res = await apiClient.post('/auth/google', { credential });
+    if (res?.data?.token) {
+      saveSessionTokens(res.data);
+    }
+    return res;
+  },
+
+  socialLogin: async (socialData) => {
+    const res = await apiClient.post('/auth/social-login', socialData);
+    if (res?.data?.token) {
+      saveSessionTokens(res.data);
+    }
+    return res;
+  },
+
+  initQrSession: async () => apiClient.get('/auth/qr/generate'),
+
+  checkQrStatus: async (sessionId) => apiClient.get(`/auth/qr/status/${sessionId}`),
+
+  simulateQrScan: async (sessionId, email = '') =>
+    apiClient.post('/auth/qr/simulate', { sessionId, email }),
+
+  verifyQrSession: async (sessionId) =>
+    apiClient.post('/auth/qr/verify', { sessionId }),
+
+  getMe: async (options = {}) => {
+    return apiClient.get('/auth/me', {
+      timeout: options.timeout || 25000,
     });
   },
 
-  // Xác thực OTP và đăng nhập
-  verifyOtp: (data = {}) => {
-    const rawEmail = data.email ?? (typeof data.identifier === 'string' && data.identifier.includes('@') ? data.identifier : undefined);
-    const rawIdentifier = data.identifier ?? rawEmail ?? data.phone;
-    const normalizeId = (val) => {
-      if (typeof val !== 'string') return val;
-      const trimmed = val.trim();
-      return trimmed.includes('@') ? trimmed.toLowerCase() : trimmed.replace(/\s+/g, '');
-    };
-    return apiClient.post('/auth/verify-otp', {
-      ...data,
-      ...(rawEmail !== undefined ? { email: normalizeId(rawEmail) } : {}),
-      ...(rawIdentifier !== undefined ? { identifier: normalizeId(rawIdentifier) } : {}),
-      otpCode: String(data.otpCode || '').replace(/\s+/g, '').trim(),
-    });
-  },
-
-  // Đăng nhập / Đăng ký qua nền tảng Mạng xã hội (Google, Facebook, X, LinkedIn, GitHub)
-  socialLogin: (socialData) => apiClient.post('/auth/social-login', socialData),
-
-  // Lấy thông tin user hiện tại
-  getMe: () => apiClient.get('/auth/me'),
-
-  // Cập nhật thông tin cá nhân & đổi mật khẩu
-  updateProfile: (profileData) =>
-    apiClient.put('/auth/profile', profileData).then((res) => {
+  updateProfile: async (profileData) => {
+    const res = await apiClient.put('/auth/profile', profileData);
+    if (res?.success) {
       invalidateUserProfileCache();
-      return res;
-    }),
+    }
+    return res;
+  },
 
-  // Lấy trang cá nhân công khai theo userId hoặc tên (hỗ trợ Warm-Cache 45s & In-Flight Request Deduplication)
   getUserProfile: async (userId, options = {}) => {
-    if (!userId) throw new Error('ID người dùng không hợp lệ');
-    const force = Boolean(options?.force);
-    const normalizedId = String(userId).trim();
+    const normalizedId = String(userId || '').trim();
+    if (!normalizedId) throw new Error('Thiếu mã định danh người dùng.');
+
     const cacheKey = buildUserProfileCacheKey(normalizedId);
+    const force = Boolean(options.force);
+    const requestEpoch = profileCacheEpoch;
 
-    if (!force) {
-      const warmHit = getWarmCachedUserProfile(normalizedId);
-      if (warmHit) {
-        return warmHit;
-      }
-
-      const existingPromise = inFlightUserProfileRequests.get(cacheKey);
-      if (existingPromise) {
-        return existingPromise;
+    if (!force && cacheKey) {
+      const cached = getWarmCachedUserProfile(normalizedId);
+      if (cached) return cached;
+      if (inFlightProfileRequests.has(cacheKey)) {
+        return inFlightProfileRequests.get(cacheKey);
       }
     }
-
-    const requestEpoch = warmUserProfileEpoch;
 
     const requestPromise = (async () => {
-      const res = await apiClient.get(`/auth/user/${encodeURIComponent(normalizedId)}`);
-      if (res && res.data) {
-        if (requestEpoch === warmUserProfileEpoch) {
-          setWarmCachedUserProfile(cacheKey, res);
+      try {
+        const res = await apiClient.get(`/auth/user/${encodeURIComponent(normalizedId)}`);
+        if (cacheKey && res?.success && res?.data?.user) {
+          setWarmCachedUserProfile(cacheKey, res, requestEpoch);
         }
+        return res;
+      } finally {
+        if (cacheKey) inFlightProfileRequests.delete(cacheKey);
       }
-      return res;
     })();
 
-    if (!force) {
-      inFlightUserProfileRequests.set(cacheKey, requestPromise);
+    if (cacheKey) {
+      inFlightProfileRequests.set(cacheKey, requestPromise);
     }
 
-    try {
-      return await requestPromise;
-    } finally {
-      if (inFlightUserProfileRequests.get(cacheKey) === requestPromise) {
-        inFlightUserProfileRequests.delete(cacheKey);
-      }
-    }
+    return requestPromise;
   },
 
-  // Hệ thống Đăng nhập bằng mã QR (QR Code Login)
-  generateQrSession: () => apiClient.get('/auth/qr/generate'),
-  checkQrStatus: (sessionId) => apiClient.get(`/auth/qr/status/${sessionId}`),
-  verifyQrSession: (sessionId) => apiClient.post('/auth/qr/verify', { sessionId }),
-  simulateQrScan: (sessionId, email) => apiClient.post('/auth/qr/simulate', { sessionId, email }),
+  logout: async () => {
+    const refreshToken = localStorage.getItem('refreshToken') || localStorage.getItem('freedom_refresh_token');
+    try {
+      if (refreshToken) {
+        await apiClient.post('/auth/logout', { refreshToken });
+      }
+    } catch (_) {}
+    clearStoredSessionTokens();
+  },
+
+  logoutAll: async () => {
+    try {
+      await apiClient.post('/auth/logout-all');
+    } catch (_) {}
+    clearStoredSessionTokens();
+  },
 };
 
-/**
- * Predictive User Profile Warm-Cache Prefetcher:
- * Nạp trước âm thầm hồ sơ người dùng khi hover 120ms hoặc focus bàn phím vào avatar/tên tác giả.
- * Tận dụng In-Flight Deduplication để không bao giờ tạo request trùng lặp.
- */
 export const prefetchUserProfile = (userId) => {
-  if (!userId) return Promise.resolve(null);
-  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-    return Promise.resolve(null);
-  }
-  const cleanId = String(userId).trim();
-  const existingWarm = getWarmCachedUserProfile(cleanId);
-  if (existingWarm) {
-    return Promise.resolve(existingWarm);
-  }
-  return authService.getUserProfile(cleanId).catch(() => null);
+  const normalizedId = String(userId || '').trim();
+  if (!normalizedId) return;
+  if (getWarmCachedUserProfile(normalizedId)) return;
+  const cacheKey = buildUserProfileCacheKey(normalizedId);
+  if (cacheKey && inFlightProfileRequests.has(cacheKey)) return;
+  authService.getUserProfile(normalizedId).catch(() => {});
 };

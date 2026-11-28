@@ -291,7 +291,7 @@ export const sendOtpEmail = async (toEmail, otpCode, purpose = 'register') => {
     ? 'mở khóa khu vực Quản Trị (Lớp 2)'
     : isRegister
     ? 'kích hoạt tài khoản mới'
-    : purpose === 'forgot_password'
+    : purpose === 'forgot_password' || purpose === 'reset_password'
     ? 'đặt lại mật khẩu'
     : 'đăng nhập';
   const subject = isAdminGate

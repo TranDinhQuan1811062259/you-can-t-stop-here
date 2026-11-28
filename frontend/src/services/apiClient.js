@@ -53,11 +53,7 @@ const isValidStoredToken = (val) => {
 const hasPersistedUserSession = () => {
   try {
     const rawToken = localStorage.getItem('token') || localStorage.getItem('freedom_token');
-    const rawUser = localStorage.getItem('user') || localStorage.getItem('freedom_persisted_profile');
-    if (!isValidStoredToken(rawToken)) return false;
-    if (!rawUser || typeof rawUser !== 'string') return false;
-    const trimmedUser = rawUser.trim();
-    return !['', 'null', 'undefined', 'false', '{}'].includes(trimmedUser);
+    return isValidStoredToken(rawToken);
   } catch (_) {
     return false;
   }

@@ -19,7 +19,7 @@ export const DEFAULT_EMPTY_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www
 
 export const getProfileAvatarSrc = (targetUser) => {
   if (!targetUser) return DEFAULT_EMPTY_AVATAR;
-  const isAdm = targetUser.role === 'admin' || targetUser.email === 'anthonyq012025@gmail.com';
+  const isAdm = targetUser.role === 'admin';
   if (targetUser.avatar && !targetUser.avatar.includes('/images/man.jpg') && !targetUser.avatar.includes('google_avatar')) {
     return targetUser.avatar;
   }
